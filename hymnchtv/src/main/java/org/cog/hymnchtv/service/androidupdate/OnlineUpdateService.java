@@ -29,7 +29,6 @@ import androidx.core.app.NotificationCompat;
 
 import java.util.Calendar;
 
-import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.MainActivity;
 import org.cog.hymnchtv.R;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
@@ -103,7 +102,7 @@ public class OnlineUpdateService extends IntentService {
             nBuilder.setAutoCancel(true);
             nBuilder.setTicker(msgString);
             // Use HymnsApp.getResString to get locale string
-            nBuilder.setContentTitle(HymnsApp.getResString(R.string.app_title_main));
+            nBuilder.setContentTitle(getString(R.string.app_title_main));
             nBuilder.setContentText(msgString);
 
             Intent intent = new Intent(getApplicationContext(), OnlineUpdateService.class);
@@ -123,8 +122,8 @@ public class OnlineUpdateService extends IntentService {
     }
 
     private void setNextAlarm(int nextAlarmTime) {
-        AlarmManager alarmManager = (AlarmManager) this.getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(this.getApplicationContext(), OnlineUpdateService.class);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(getApplicationContext(), OnlineUpdateService.class);
         intent.setAction(ACTION_AUTO_UPDATE_APP);
         PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent,
                 getPendingIntentFlag(false, true));
@@ -136,8 +135,8 @@ public class OnlineUpdateService extends IntentService {
     }
 
     private void stopAlarm() {
-        AlarmManager alarmManager = (AlarmManager) this.getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(this.getApplicationContext(), OnlineUpdateService.class);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(getApplicationContext(), OnlineUpdateService.class);
         intent.setAction(ACTION_AUTO_UPDATE_APP);
         PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent,
                 getPendingIntentFlag(false, true));

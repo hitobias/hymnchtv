@@ -144,6 +144,11 @@
     <string name="file_download_failed">下载文件时发生错误：%1$s</string>
     <string name="file_open_no_application">诗歌本找不到与此文件类型关联的应用程序</string>
 
+    <string name="web_scrap_callback_received">网站抓取回调已收到。</string>
+    <string name="web_scrap_failed">网站内容抓取失败：%1$s</string>
+    <string name="web_scrap_started">网站内容抓取已开始：%1$s</string>
+    <string name="web_scrap_timeout">网站内容抓取超时错误：%1$s</string>
+
     <string name="personal_password">个人密码</string>
     <string name="password">密码:</string>
     <string name="sign_in">登入</string>
@@ -165,7 +170,7 @@
     <string name="send_logs">提報错误</string>
     <string name="send_logs_subject">诗歌本错误报告</string>
     <string name="send_logs_title">通过电子邮件报告诗歌本错误</string>
-    <string name="semd_logs_info">您提供的以下信息可以帮助开发人员解决问题：
+    <string name="send_logs_info">您提供的以下信息可以帮助开发人员解决问题：
         \n\n1.在问题发生之前您做的最后一件事是什么？
         \n\n\n2.您看到的问题是什么，如果有的话，还包括显示屏的快照？
         \n\n\n3.您能否或如何重现问题？</string>
@@ -240,7 +245,7 @@
     <string name="nn8">8</string>
     <string name="nn9">9</string>
     <string name="nn10">附</string>
-    <string name="nn11">Del</string>
+    <string name="nn11">删</string>
 
     <string name="edit">编辑</string>
     <string name="help">帮助</string>
@@ -287,7 +292,7 @@
     <string name="theme_menu">应用界面主题</string>
     <string name="theme_dark">深色</string>
     <string name="theme_light">浅色</string>
-    <string name="score_color_change">诗谱颜色切换</string>
+    <string name="score_color_change">简谱颜色切换</string>
 
     <!-- Locale -->
     <string name="locale_menu">应用界面语言</string>

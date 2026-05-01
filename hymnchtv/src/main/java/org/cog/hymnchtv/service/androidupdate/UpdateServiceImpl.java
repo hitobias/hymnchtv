@@ -32,6 +32,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 
 import androidx.core.content.ContextCompat;
 
@@ -41,10 +42,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.IOUtils;
 import org.cog.hymnchtv.BuildConfig;
 import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.MainActivity;
@@ -53,7 +58,9 @@ import org.cog.hymnchtv.mediaconfig.MediaConfig;
 import org.cog.hymnchtv.persistance.FileBackend;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
+import org.cog.hymnchtv.utils.CustomDialogWv;
 import org.cog.hymnchtv.utils.DialogActivity;
+import org.jetbrains.annotations.NotNull;
 
 import timber.log.Timber;
 
@@ -77,6 +84,7 @@ public class UpdateServiceImpl {
 
     // Url import link file location
     private static final String urlImport = "https://raw.githubusercontent.com/cmeng-git/hymnchtv/master/hymnchtv/src/main/assets/url_import.txt";
+    private static final String changeLog = "https://raw.githubusercontent.com/cmeng-git/hymnchtv/master/hymnchtv/src/main/res/xml/changelog_master.xml";
 
     /**
      * Apk mime type constant.
@@ -99,7 +107,6 @@ public class UpdateServiceImpl {
      */
     private String latestVersion;
     private long latestVersionCode;
-
     private boolean mIsLatest = false;
 
     /* DownloadManager Broadcast Receiver Handler */
@@ -139,25 +146,56 @@ public class UpdateServiceImpl {
             if (!mIsLatest) {
                 if (checkLastDLFileAction() < DownloadManager.ERROR_UNKNOWN)
                     return;
+                // currentVersion = "2.7.1";
 
-                DialogActivity.showConfirmDialog(HymnsApp.getGlobalContext(),
-                        R.string.app_update_install,
-                        R.string.app_version_new_available,
-                        R.string.download,
-                        new DialogActivity.DialogListener() {
+                Context context = HymnsApp.getInstance();
+                String title = context.getString(R.string.app_update_install);
+                String message = context.getString(R.string.app_version_new_available, latestVersion,
+                        String.valueOf(latestVersionCode), fileNameApk, currentVersion, String.valueOf(currentVersionCode));
+                String btnText = context.getString(R.string.download);
+
+                String historyText = "&#9210; 无更新";
+                if (isValidateLink(changeLog.replace("%s", latestVersion))) {
+                    try {
+                        InputStream inputStream = mHttpConnection.getInputStream();
+                        String releaseNotes = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+
+                        //  Pattern pattern = Pattern.compile("(Project hymnchtv.+?Author:.+?)Version:\\s+" + currentVersion, Pattern.DOTALL);
+                        Pattern pattern = Pattern.compile("<changelog>.+?(<release version.+?)<release version=\""+currentVersion, Pattern.DOTALL);
+                        Matcher matcher = pattern.matcher(releaseNotes);
+                        if (matcher.find()) {
+                            historyText = matcher.group(1);
+                            if (historyText != null) {
+                                historyText = historyText
+                                        .replaceAll("<release", "<b>Release")
+                                        .replaceAll("versioncode.+?\">", "</b>")
+                                        .replaceAll("<change", "&#9210; <change" )
+                                        .replaceAll("\n", "<br />");
+                            }
+                        }
+                    }
+                    catch (IOException e) {
+                        Timber.d("Invalid release Notes link: %s", e.getMessage());
+                        return;
+                    }
+                }
+
+                Bundle args = new Bundle();
+                args.putString(CustomDialogWv.ARG_MESSAGE, message);
+                args.putString(CustomDialogWv.ARG_HISTORY, historyText);
+
+                DialogActivity.showCustomDialog(HymnsApp.getInstance(), title, CustomDialogWv.class.getName(),
+                        args, btnText, new DialogActivity.DialogListener() {
                             @Override
                             public boolean onConfirmClicked(DialogActivity dialog) {
-                                if (PermissionUtils.checkWriteStoragePermission(MainActivity.getInstance())) {
-                                    downloadApk();
-                                }
+                                downloadApk();
                                 return true;
                             }
 
                             @Override
-                            public void onDialogCancelled(DialogActivity dialog) {
+                            public void onDialogCancelled(@NotNull DialogActivity dialog) {
                             }
-                        }, fileNameApk, latestVersion, latestVersionCode, currentVersion, currentVersionCode
-                );
+                        }, null);
             }
             else {
                 // Notify that running version is up to date

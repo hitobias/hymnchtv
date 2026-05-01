@@ -432,7 +432,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             animator.setRepeatCount(Animation.REVERSE);
             // It will be repeated up to infinite time
             animator.setRepeatCount(Animation.INFINITE);
-            animator.start();
+            // animator.start(); stop animate
         }
         else {
             btn_update.setVisibility(View.GONE);
@@ -1020,7 +1020,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         btn_english = findViewById(R.id.btn_english);
 
         // Create an ArrayAdapter using the string array and hymnApp default spinner layout
-        ArrayAdapter<String> mAdapter = new ArrayAdapter<String>(this, R.layout.simple_spinner_item, hymnTocPage);
+        ArrayAdapter<String> mAdapter = new ArrayAdapter<>(this, R.layout.simple_spinner_item, hymnTocPage);
         // Specify the layout to use when the list of choices appears
         mAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_radio);
 
@@ -1092,7 +1092,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     @SuppressLint("ClickableViewAccessibility")
     private void initHistoryList() {
         List<HistoryRecord> historyRecords = mDB.getHistoryRecords();
-        mHistoryAdapter = new MySwipeListAdapter<HistoryRecord>(this, historyRecords) {
+        mHistoryAdapter = new MySwipeListAdapter<>(this, historyRecords) {
             @Override
             public void remove(HistoryRecord sRecord) {
                 int count = mDB.deleteHymnHistory(sRecord);
@@ -1218,6 +1218,8 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     private void doRestart() {
         PackageManager pm = getPackageManager();
         Intent intent = pm.getLaunchIntentForPackage(getPackageName());
+        if (intent == null)
+            return;
         ComponentName componentName = intent.getComponent();
         Intent mainIntent = Intent.makeRestartActivityTask(componentName);
         startActivity(mainIntent);

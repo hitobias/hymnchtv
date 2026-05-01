@@ -539,7 +539,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         if (hasEnglishLyrics) {
             lyricsEnglish.setVisibility(View.VISIBLE);
-            Timber.d("Lyrics loaded: %s", mLyricsLoaded);
+            Timber.d("Lyrics English #%s loaded: %s", mHymnNoEng, mLyricsLoaded);
             if (!mLyricsLoaded) {
                 showLyricsEnglish(LyricsEnglishRecord
                         .toHtml("<h3>" + getResources().getString(R.string.download_wait) + "</h3>"));
@@ -560,6 +560,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public void showLyricsEnglish(final String lyrics) {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (lyrics != null) {
+                // Timber.d("Show Lyrics English: %s", lyrics.length());
                 mLyricsLoaded = true;
                 lyricsEnglish.loadDataWithBaseURL(null, lyrics, "text/html", "utf8", null);
             }

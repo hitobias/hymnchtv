@@ -9,14 +9,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.R;
 import org.cog.hymnchtv.persistance.FileBackend;
 import org.cog.hymnchtv.service.androidupdate.VersionServiceImpl;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import timber.log.Timber;
 
@@ -27,8 +27,7 @@ import timber.log.Timber;
  * @author Pawel Domas
  * @author Eng Chong Meng
  */
-public class LogUploadServiceImpl
-{
+public class LogUploadServiceImpl {
     /**
      * List of log files created for sending logs purpose. There is no easy way of waiting until
      * email is sent and deleting temp log file, so they are cached and removed on OSGI service stop action.
@@ -42,8 +41,7 @@ public class LogUploadServiceImpl
      * @param subject the subject if available
      * @param title the title for the action, used any intermediate dialogs that need to be shown, like "Choose action:".
      */
-    public void sendLogs(String[] destinations, String subject, String title)
-    {
+    public void sendLogs(String[] destinations, String subject, String title) {
         /* The path pointing to directory used to store temporary log archives. */
         File logStorageDir = FileBackend.getHymnchtvStore("logs", true);
         if (logStorageDir != null) {
@@ -55,16 +53,15 @@ public class LogUploadServiceImpl
                     logcatDir.mkdirs();
                 }
                 File logcatFile = new File(logcatDir, "hymnchtv-logcat.txt");
-
                 Runtime.getRuntime().exec("logcat -v time -f " + logcatFile.getAbsolutePath());
                 // just wait for 100ms before collect logs - note: process redirect to file, and does not exit
                 Thread.sleep(100);
                 externalStorageFile = LogsCollector.collectLogs(logStorageDir, null);
-            } catch (Exception ex) {
+            }
+            catch (Exception ex) {
                 HymnsApp.showToastMessage("Error creating logs file archive: " + ex.getMessage());
                 return;
             }
-
             // Stores file name to remove it on service shutdown
             storedLogFiles.add(externalStorageFile);
             Context ctx = HymnsApp.getGlobalContext();
@@ -75,7 +72,7 @@ public class LogUploadServiceImpl
             sendIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
             sendIntent.setType("application/zip");
             sendIntent.putExtra(Intent.EXTRA_STREAM, logsUri);
-            sendIntent.putExtra(Intent.EXTRA_TEXT, ctx.getString(R.string.semd_logs_info));
+            sendIntent.putExtra(Intent.EXTRA_TEXT, ctx.getString(R.string.send_logs_info));
 
             Intent chooserIntent = Intent.createChooser(sendIntent, title);
             ctx.grantUriPermission("android", logsUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -93,13 +90,13 @@ public class LogUploadServiceImpl
     /**
      * Extract debug info for android device OS and hymnchtv installed version
      */
-    private void debugPrintInfo()
-    {
+    private void debugPrintInfo() {
         String property = "http.agent";
         try {
             String sysProperty = System.getProperty(property);
             Timber.i("%s = %s", property, sysProperty);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Timber.w(e, "An exception occurred while writing debug info");
         }
 
@@ -112,8 +109,7 @@ public class LogUploadServiceImpl
      * Frees resources allocated by this service.
      * Purge all files log directory and log sent.
      */
-    public void dispose()
-    {
+    public void dispose() {
         System.err.println("DISPOSE!!!!!!!!!!!!!");
         for (File logFile : storedLogFiles) {
             logFile.delete();
@@ -126,8 +122,7 @@ public class LogUploadServiceImpl
     /**
      * Process to purge all debug log files in case it gets too large to handle Static access from other module
      */
-    public static void purgeDebugLog()
-    {
+    public static void purgeDebugLog() {
         File logDir = new File(HymnsApp.getGlobalContext().getFilesDir() + "/log");
         if (logDir.exists()) {
             final File[] files = logDir.listFiles();

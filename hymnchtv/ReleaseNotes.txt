@@ -1,8 +1,19 @@
 Project hymnchtv Release Notes
 =========================================================================
+Version:        2.8.2 (208020)
+Release Date:   05/01/2026
 Author:         cmeng
-Upload Date:    12/04/2025
+- When checking or before update, show all the new changes info when there is a new version found.
+- Include a 5-second timeout timer to exit when loading English lyrics has error.
+- Add more debug info when retrieving English lyrics to help root cause analysis.
+- Make corrections to hymn Lyrics text and score: bb3.png, bb464.png, bb464.txt, db134.png, db305.png, and db528.png.
+- Remove the animation in new update button indication.
+- UI improvement.
+
+=========================================================================
 Version:        2.8.1 (208011)
+Release Date:   12/04/2025
+Author:         cmeng
 - Lyrics text size scaleFactor changes via context menu not saved to preference.
 - Improve youtube video playlist verification.
 
@@ -12,9 +23,9 @@ Observation:
   * Zoom pivot point always from center, and zoom text to be outside display; pane not working
 
 =========================================================================
-Author:         cmeng
-Upload Date:    11/27/2025
 Version:        2.8.0 (208000)
+Release Date:   11/27/2025
+Author:         cmeng
 - Improve Simplified and Traditional lyrics content Pinch-To-Zoom UI response.
 - When user selected hymn via main UI, and lyrics is empty, launch JiaoChang site access if available; else hint user to access JiaoChang online.
 - Must set YT parameter 'origin' to other than YT site i.e.'https://www.youtube.com'; else embed video player has error.
@@ -23,9 +34,9 @@ Version:        2.8.0 (208000)
 - Local recompile of OpenCC to support 16 KB devices, using 16 KB ELF alignment
 
 =========================================================================
-Author:         cmeng
-Upload Date:    08/12/2025
 Version:        2.7.1 (207011)
+Release Date:   08/12/2025
+Author:         cmeng
 - Extend auto next media playback feature to all media types, excluding media jiaochang.
 - Move the IFrame Player API JavaScript code loading from Head to Body (asynchronously) section;
   to resolve API JavaScript loading and onYouTubeIframeAPIReady not called problem, if previous video play failed.
@@ -33,9 +44,9 @@ Version:        2.7.1 (207011)
 - Some UI improvement.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    08/08/2025
 Version:        2.7.0 (207000)
+Release Date:   08/08/2025
+Author:         cmeng
 - Support auto next media playback/download for ChangSi when long press on Play button.
 - Ensure local media file fetching for playback is unique for selected hymnNo with proper HymnNo pattern matching algorithm. see ContentHandler#isFileExist().
 - BackKey does not set the hidden Exo and YouTube Player UI to be visible, and just exit instead.
@@ -46,9 +57,9 @@ Version:        2.7.0 (207000)
 - Not implement: ExoPlayer playback speed range/step change required PlayerControlView class changes..
 
 =========================================================================
-Author:         cmeng
-Upload Date:    08/01/2025
 Version:        2.6.0 (206000)
+Release Date:   08/01/2025
+Author:         cmeng
 - Upgrade Hymnchtv to support Android-16 Baklava (API-36) with the following changes:
   * Android Studio Narwhal | 2025.1.1
   * https://services.gradle.org/distributions/gradle-8.14.2-bin.zip
@@ -63,18 +74,18 @@ Version:        2.6.0 (206000)
 - Migrate deprecated onBackKey, intent.getSerializableExtra().
 
 =========================================================================
-Author:         cmeng
-Upload Date:    05/27/2025
 Version:        2.5.2 (205021)
+Release Date:   05/27/2025
+Author:         cmeng
 - Fix WebView does not support html element hidden attribute in English lyrics;
   Add CSS "article .verse div.chord-container.hidden { display: none; } to support hidden attribute
 - Remove unwanted <div class="chord-container hidden"></div> from the download English lyrics to save storage space.
 - Clean up hymn Lyrics text and score
 
 =========================================================================
-Author:         cmeng
-Upload Date:    12/03/2024
 Version:        2.5.1 (205011)
+Release Date:   12/03/2024
+Author:         cmeng
 - Relocate QingNian cross reference table creation to main activity; use in History record and PagerSlider
 - Need to handle history record creation specially for QingNian hymn.
 - Always use QingNian hymn number even it uses a cross referenced hymn.
@@ -82,9 +93,9 @@ Version:        2.5.1 (205011)
 - Cleanup QingNian lyrics text files.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    11/30/2024
 Version:        2.5.0 (205001)
+Release Date:   11/30/2024
+Author:         cmeng
 - Add support for 青年诗歌 including new database creation.
 - Add Notion links download support for 青年诗歌.
 - Use the same font size for displaying both the old and newly retrieved english lyrics text.
@@ -104,9 +115,9 @@ Version:        2.4.3 (204031)
 - Enable update service on both debug and release version
 
 =========================================================================
-Author:         cmeng
-Upload Date:    08/28/2024
 Version:        2.4.2 (204021)
+Release Date:   08/28/2024
+Author:         cmeng
 - Update English lyrics scrapping matching patterns for new hymnal.net site UI design.
 - Need to close opened inputStream on end of http connection access.
 - Update permission request to include all API variations.
@@ -114,18 +125,18 @@ Version:        2.4.2 (204021)
 - Update used libraries to latest releases.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/26/2024
 Version:        2.4.1 (204010)
+Release Date:   06/26/2024
+Author:         cmeng
 - Add user selectable crop aspect ratio per device portrait and landscape screen size when creating main UI wallpaper.
 - Modify Notion record pattern matching to cater for source file variations.
 - Change version and update asset url_import file content.
 - Reassign XB number number #169 to #167 and update relevant supported functions
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/17/2024
 Version:        2.4.0 (204000)
+Release Date:   06/17/2024
+Author:         cmeng
 - Clean and reformat XinShi lyrics text.
 - Remove '自建导入" auto import file creation option. Not required since v2.2.0
 - Remove option for export all url links and local file paths operation
@@ -138,31 +149,31 @@ Version:        2.4.0 (204000)
 - Remove unused NotionRecordScrape and WebScraper java classes.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/04/2024
 Version:        2.3.0 (203000)
+Release Date:   06/04/2024
+Author:         cmeng
 - Add new XinShi 新诗 group with 205 hymn titles.
 - Add all associated support features for the new added XinShi group.
 - Reimplement LocaleHelper to fix cannot be cast to android.app.ContextImpl
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/04/2024
 Version:        2.2.3 (202031)
+Release Date:   06/04/2024
+Author:         cmeng
 - Intermediate release to support >100MB apk download from github release.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    05/24/2024
 Version:        2.2.2 (202020)
+Release Date:   05/24/2024
+Author:         cmeng
 - MediaConfig#hasMediaRecord must check null for mediaRecord before proceed.
 - when user share an external url link, highlight media url link in RED if it overwrites an existing record..
 - Must update media url link text color when user changes any of the hymn field entry i.e. HymnType/MediaType/HymnNo/Fu.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    05/22/2024
 Version:        2.2.1 (202010)
+Release Date:   05/22/2024
+Author:         cmeng
 - Hymnchtv will check for any existing mediaRecord url link in DB, including the local media file in hymnchtv sub-directory; and alert user of possible record overwritten when saving in mediaConfig.
 - Remove android file picker option for local media file in mediaConfig. The file path returned by android is a temporary url, and the url link saved in DB is invalid for later access.
 - After user has entered all required hymn info in MediaConfig UI, the media url link field is now auto filled with media record in DB, or local local media file found in hymnchtv directory.
@@ -171,9 +182,9 @@ Version:        2.2.1 (202010)
 - When a new apk is found, make Update button visible and flash its text color to alert user to proceed with the app update.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    04/12/2024
 Version:        2.2.0 (202000)
+Release Date:   04/12/2024
+Author:         cmeng
 - Improve English lyrics fetching process reliability.
 - Fix ContentHandler#getHymnMediaState that iterates only the first 3 items i.e. missed out ChangShi.
 - Rearrange the priorities in directory searching for available media file playback.
@@ -189,9 +200,9 @@ Version:        2.2.0 (202000)
 - Upgrade to support android Tiramisu API-34, and add new required permissions request.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    07/06/2023
 Version:        2.1.3 (201030)
+Release Date:   07/06/2023
+Author:         cmeng
 - Provide user indication for button that has long press action with underlined text or '...'
 - Launch app update dialog once if a new version found, only if hymnchtv is in foreground with device is unlocked state.
 - Show app update button in main UI when a new version is found.
@@ -200,9 +211,9 @@ Version:        2.1.3 (201030)
 - Update matching Pattern in Web Scraping for English lyrics and minimize race condition.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/18/2023
 Version:        2.1.2 (201021)
+Release Date:   06/18/2023
+Author:         cmeng
 - Allow direct entry of English hymn number; display the corresponding chinese hymn if exist,
   else just display the English lyrics.
 - Short press 'English' button to access to corresponding BB Chinese hymn lyrics,
@@ -210,18 +221,18 @@ Version:        2.1.2 (201021)
 - showContent() optional item is empty and not null - check error.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    05/13/2023
 Version:        2.1.1 (201010)
+Release Date:   05/13/2023
+Author:         cmeng
 - Provide user option to toggle 4 color settings for the hymn score view.
 - Make mediaConfig 'Exit' button returns to its parent on click i.e. contentView or Main UI.
 - Ensure main UI 'TOC' option button layout position and text color as per design intent.
 - Show android notification bar in hymn content view UI; fullScreen mode if enabled has blank taskbar
 
 =========================================================================
-Author:         cmeng
-Upload Date:    04/13/2023
 Version:        2.1.0 (201002)
+Release Date:   04/13/2023
+Author:         cmeng
 - Upgrade hymnchtv to support android Tiramisu API-33
 - Add user selectable UI Theme support: Theme.DARK and Theme.LIGHT; supporting also webView class.
 - Add user selectable Locale : Chinese Simplify and English;
@@ -239,9 +250,9 @@ Version:        2.1.0 (201002)
 - Application Theme and Locale not set properly for user-wallpaper and ChineseS2T option selection.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    12/21/2022
 Version:        2.0.3 (200030)
+Release Date:   12/21/2022
+Author:         cmeng
 - Add user share option for hymn score, lyrics, and mediaUrl if available via an external chat app.
 - Support user English lyrics font size change in portrait and landscape modes.
 - Do not display an invalid xb hymn page to user.
@@ -250,9 +261,9 @@ Version:        2.0.3 (200030)
 - Update lyrics url import file to include version update, avoid repeated action in updateServiceImpl call.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    11/16/2022
 Version:        2.0.2 (200020)
+Release Date:   11/16/2022
+Author:         cmeng
 - Add support to auto update the local database media records from online new media import links.
 - Use lyrics phrase in search string to improve content matching hit rate during youtube and web search.
 - History summary text will use lyrics phrase instead for hymn title.
@@ -261,18 +272,18 @@ Version:        2.0.2 (200020)
 - Remove auto clipboard search text insertion, android API-33 always pop-up a nuisance notification.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    11/05/2022
 Version:        2.0.1 (200010)
+Release Date:   11/05/2022
+Author:         cmeng
 - Fix partial lyrics text being partially obscured when youtube or exo player is active; cannot use FrameLayout, switch to use R.id.mediaPlayer as container
 - Copy the user selected media file, if rename of file to destFile failed during mediaConfig new record creation
 - Only perform mediaHymns.clear() if it is not in play state; else user is unable to stop the player.
 - Enhance update service to auto generate the required apk for the BuildConfig.BUILD_TYPE, and check for valid downloadable apk.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/26/2022
 Version:        2.0.0 (200000)
+Release Date:   10/26/2022
+Author:         cmeng
 - Auto translate Chinese Traditional to Simplify text before content search start.
 - Support Chinese Simplify to Traditional (HK, TW or TWP) conversion in Chinese lyrics display.
 - Support English lyrics display in pager if available, else via external url link (non-secure SSL http blocked by android if access).
@@ -287,9 +298,9 @@ Version:        2.0.0 (200000)
 - Purge all Chinese Traditional lyrics text files
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/12/2022
 Version:        1.7.6 (107060)
+Release Date:   10/12/2022
+Author:         cmeng
 - Change hymnchtv "Search" button operations to:
   * single click to perform hymn info search via youtube.com
   * long press to perform hymn info search via google.com
@@ -306,9 +317,9 @@ Version:        1.7.6 (107060)
 - Add additional check to extract a valid youtubeId for various possible format in YoutubePlayerFragment#getVideoId
 
 =========================================================================
-Author:         cmeng
-Upload Date:    07/05/2022
 Version:        1.7.5 (107052)
+Release Date:   07/05/2022
+Author:         cmeng
 - Long press '数库导入' button to import the pre-fetch notion url records from asset file notion_url_import.txt
 - Short press 'NQ' for notion url retrieval using webView scrapping;
   * On Note-10; full fetch completed successfully after ~4 minutes on WiFi and ~ 7 minutes on mobile
@@ -325,9 +336,9 @@ Version:        1.7.5 (107052)
 - Double click 'NQ' for Notion url retrieval via scrapingAnt; only 10,000 records for free account using x-api-key
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/15/2022
 Version:        1.7.4 (107040)
+Release Date:   06/15/2022
+Author:         cmeng
 - Replace partial inaccessible QQ web url with the new Notion web url in content search
 - All QQ media url links for HYMN_DB will be ignored and default to main Notion web url
 - Allow store of notion or qq url to other media type storage location;
@@ -338,9 +349,9 @@ Version:        1.7.4 (107040)
 - Fix QQ record fetch/creation error: Must remove comment sub string before submit for JSONArray(str) conversation
 
 =========================================================================
-Author:         cmeng
-Upload Date:    05/28/2022
 Version:        1.7.3 (107030)
+Release Date:   05/28/2022
+Author:         cmeng
 - Fix MediaConfig#createAutoImportFile failed to generate media import file; must createNewFile() if not exist
 - MediaConfig#createAutoImportFile now uses user selected HymnType and MediaType as source directory/files for import file generation.
 - Update deprecated LifecycleObserver with LifecycleEventObserver in android-youtube-player
@@ -348,9 +359,9 @@ Version:        1.7.3 (107030)
 - Use NetworkCallBack in place of deprecated Broadcast Receiver in android-youtube-player
 
 =========================================================================
-Author:         cmeng
-Upload Date:    01/14/2022
 Version:        1.7.2 (107020)
+Release Date:   01/14/2022
+Author:         cmeng
 - Add swipe left/right on hymn history list to reveal/hide open and delete action buttons
 - Fix media record saving failed if the destination directory contains the same file name
 - Ensure MediaConfig#updateMediaRecord() always provide user with an update status message
@@ -360,9 +371,9 @@ Version:        1.7.2 (107020)
 - remove invalid maven {url 'https://dl.bintray.com/google/exoplayer/'} in build.gradle
 
 =========================================================================
-Author:         cmeng
-Upload Date:    01/06/2022
 Version:        1.7.1 (107013)
+Release Date:   01/06/2022
+Author:         cmeng
 - Add TouchListener class to support SingleTap, DoubleTap and LongPress
 - Update and redefine hymn info search function button in the media content playback UI to support:
   * singleTap to perform hymn info search via qq.com (main page if none found)
@@ -385,9 +396,9 @@ Version:        1.7.1 (107013)
 - Bug fix errors found in app version code 107010
 
 =========================================================================
-Author:         cmeng
-Upload Date:    12/31/2021
 Version:        1.7.0 (107000)
+Release Date:   12/31/2021
+Author:         cmeng
 - Full implementation of all the features as in 1.7.1, but using a separate hymn_qq database.
 - Add QQ function button in MediaConfig UI
   * singleTap to build QQ-info DB; on confirmation by user
@@ -398,9 +409,9 @@ Version:        1.7.0 (107000)
 - Source v1.7.0 check in for future reference only, but no public app released
 
 =========================================================================
-Author:         cmeng
-Upload Date:    12/24/2022
 Version:        1.6.4 (106040)
+Release Date:   12/24/2022
+Author:         cmeng
 - Add hymn info search function button in the media content playback UI
   * single click to perform hymn info search via youtube.com
   * long press to perform hymn info search via google.com
@@ -408,16 +419,16 @@ Version:        1.6.4 (106040)
 - Replace deprecated LifecycleObserver with LifecycleEventObserver in hymnchtv
 
 =========================================================================
-Author:         cmeng
-Upload Date:    11/16/2021
 Version:        1.6.3 (106030)
+Release Date:   11/16/2021
+Author:         cmeng
 - Fixed crashes when user clicks share link without a valid media info entry
 - Upgrade build to support android-12(S) i.e. API-31
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/20/2021
 Version:        1.6.2 (106020)
+Release Date:   09/20/2021
+Author:         cmeng
 - Allow dynamic setting of playback speed in audio mediaPlayer playback
 - Fix app crashes when user supplies an invalid media url for playback causing IOException | IllegalStateException
 - Fix checkLoopSyncAction() with NullPointerException when playbackCounts.get(key) return null
@@ -426,9 +437,9 @@ Version:        1.6.2 (106020)
 - Remove unused youtubeExtractor implementation
 
 =========================================================================
-Author:         cmeng
-Upload Date:    08/07/2021
 Version:        1.6.1 (106010)
+Release Date:   08/07/2021
+Author:         cmeng
 - Add Lyrics text size change options in context menu and simplify UI.
   Remove 2-point touch for lyrics size changed; too much interference with andorid native context menu.
 - Lyrics text size change settings are saved, restored and applied to existing and all new hymn content display.
@@ -449,9 +460,9 @@ Version:        1.6.1 (106010)
   Add android:theme="@style/Theme.AppCompat.Light.NoActionBar" in ContentHandler in manifest file
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/26/2021
 Version:        1.6.0 (106000)
+Release Date:   06/26/2021
+Author:         cmeng
 - Add android youtube player using IFrame Player API to avoid video link extraction error
 - HymnConfig playback for local media or youtube link, will always via the hymn content ui for user lyrics confirmation
 - HymnConfig playback click will auto start playing
@@ -461,9 +472,9 @@ Version:        1.6.0 (106000)
         extends Service onDestroy only get executed once when hymnchtv exit
 
 =========================================================================
-Author:         cmeng
-Upload Date:    06/14/2021
 Version:        1.5.8 (105080)
+Release Date:   06/14/2021
+Author:         cmeng
 - Main menu can now be placed in landscape mode, use in android tv box
 - Upgrade to 'com.github.HaarigerHarald:android-youtubeExtractor:46579d1'
   Fix java.io.FileNotFoundException in youtube link extraction.
@@ -474,9 +485,9 @@ Version:        1.5.8 (105080)
 - upgrade all available libraries' versions.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    04/14/2021
 Version:        1.5.7 (105070)
+Release Date:   04/14/2021
+Author:         cmeng
 - Implement ExoPlayer in a fragment, to allow coexistence of lyrics view and video playback
 - User toggles of media controller gui view is persistent across screen rotations
 - Allow removal of hymn playback history item
@@ -487,17 +498,17 @@ Version:        1.5.7 (105070)
 - Upgrade exoplayer to v2.13.2
 
 =========================================================================
-Author:         cmeng
-Upload Date:    03/07/2021
 Version:        1.5.6 (105060)
+Release Date:   03/07/2021
+Author:         cmeng
 - Lyrics zoom double fingers tap UI improvement in size reduction steps
 - Intelligently auto clear the previous entered hymnNo on user digit entry
 - Only clear the user entered hymnNo if user entry is Fu and HymnType is not HYMN_DB
 
 =========================================================================
-Author:         cmeng
-Upload Date:    02/16/2021
 Version:        1.5.5 (105050)
+Release Date:   02/16/2021
+Author:         cmeng
 - Implement ZoomTextView class for lyrics text allowing user zoomIn/zoomOut with pin action or with 2-point double touch detection
 - Add user option to set max lyrics scale factor (or zoomIn)
 - Release ExoPlayer resources in onPause life cycle to take care (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
@@ -514,9 +525,9 @@ Version:        1.5.5 (105050)
 - Clean database and log utilities to remove stray info for hymnchtv
 
 =========================================================================
-Author:         cmeng
-Upload Date:    02/02/2021
 Version:        1.5.4 (105040)
+Release Date:   02/02/2021
+Author:         cmeng
 - MediaConfig DB record list if visible, will be updated when user selects other HymnType
 - Highlight user selected media record item (See SimpleList Adapter implementation)
 - Support media records export for all the four hymnType in a single file by long press "DB Export"
@@ -530,17 +541,17 @@ Version:        1.5.4 (105040)
 - Add support for user to report bug with attached logcat in About menu
 
 =========================================================================
-Author:         cmeng
-Upload Date:    01/15/2021
 Version:        1.5.3 (105030)
+Release Date:   01/15/2021
+Author:         cmeng
 - Fix UnsupportedOperationException: in Xiaomi Mi 11 Android 11 (SDK 30)
  * Change deprecated mInstance.getDisplay().getSize(size) to getCurrentWindowMetrics().getBounds()
 - Rebuild with AS v4.2-Beta3, seems to resolve SM-J730GM random abort problem
 
 =========================================================================
-Author:         cmeng
-Upload Date:    01/09/2021
 Version:        1.5.2 (105020)
+Release Date:   01/09/2021
+Author:         cmeng
 - Add history for recently selected hymn title
 - Migrate FragmentStatePagerAdapter to the latest improved viewpager2.adapter.FragmentStateAdapter:
   stable version and fixes many of the weaknesses.
@@ -551,9 +562,9 @@ Version:        1.5.2 (105020)
 - Remove openFileChooser() support in WebViewFragment
 
 =========================================================================
-Author:         cmeng
-Upload Date:    01/01/2021
 Version:        1.5.1 (105010)
+Release Date:   01/01/2021
+Author:         cmeng
 - Support user defined wall paper with integrated image editor zoom/crop to ease user defined wallpaper setup
 - Extends MyPagerAdapter to use FragmentStatePagerAdapter instead of FragmentPagerAdapter to minimize memory usage
   see: https://stackoverflow.com/questions/18747975/what-is-the-difference-between-fragmentpageradapter-and-fragmentstatepageradapte
@@ -572,9 +583,9 @@ Version:        1.5.1 (105010)
 - Remove playVideoUrl_mp support source using mediaPlayer - not used.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    12/26/2020
 Version:        1.5.0 (105001)
+Release Date:   12/26/2020
+Author:         cmeng
 - Add support for User Defined Media Contents i.e. video and audio per hymn title for play back
 - Support android share sheet to add media content or url link from external application as user defined media content
 - Allow export of the user defined media contents saved in predefined directory to share with other devices via import
@@ -597,16 +608,16 @@ Version:        1.5.0 (105001)
 - Rename MediaController to MediaGuiController to avoid conflict with android class
 
 =========================================================================
-Author:         cmeng
-Upload Date:    11/15/2020
 Version:        1.4.2 (104020)
+Release Date:   11/15/2020
+Author:         cmeng
 - Add back accidentally removed feature: auto hide media player UI when device is in landscape mode
 - Remove local English lyrics content display feature - keep the web access
 
 =========================================================================
-Author:         cmeng
-Upload Date:    11/12/2020
 Version:        1.4.1 (104010)
+Release Date:   11/12/2020
+Author:         cmeng
 - Fix MediaPlayer UI does not update its UI when playback end-occur if last playback is manually stop.
   * Must clear playbackCounts value for the key mp after it is stopped and released;
     else it has loopCount value == 1 in checkLoopSyncAction() and PlaybackState.stop is not broadcast
@@ -616,9 +627,9 @@ Version:        1.4.1 (104010)
 - Correct mistakes in lyrics bb139 and dds & bbs English cross-references
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/25/2020
 Version:        1.4.0 (104000)
+Release Date:   10/25/2020
+Author:         cmeng
 - Implement Play Asset Delivery to meet play store requirements
   https://developer.android.com/guide/app-bundle/asset-delivery
 - Add support for PAD AssetFile object access and InputStream for Glide image loader
@@ -631,9 +642,9 @@ Version:        1.4.0 (104000)
 - Remove the unused flag ContentHanlder#mPlayMode
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/21/2020
 Version:        1.3.5 (103050)
+Release Date:   10/21/2020
+Author:         cmeng
 - Migrate to use android OBB objects to reduce the size of the main apk file
 - Add support OBBFile object and InputStream to Glide image loader
 - Import play-apk-expansion and play-licensing for OBB support
@@ -646,17 +657,17 @@ Version:        1.3.5 (103050)
   https://developer.android.com/guide/app-bundle/asset-delivery
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/13/2020
 Version:        1.3.4 (103040)
+Release Date:   10/13/2020
+Author:         cmeng
 - Implement multiple midi media repeat playback synchronization solution to within 'for' loop (< 5ms)
 - Ensure MediaController#MpBroadcastReceiver() handler correctly for multiple midi file playback
 - Incorrect pass "1.1x" in playback speed for AudioBgService Float.parseFloat(speed) - system crash
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/12/2020
 Version:        1.3.3 (103030)
+Release Date:   10/12/2020
+Author:         cmeng
 - Add new hymns' toc categories for user direct hymnNo select
 - Generate all required cross-reference text files for TOC categories creation
 - Remove support and deleted all old toc layouts and toc png contents (images only)
@@ -666,9 +677,9 @@ Version:        1.3.3 (103030)
 - Change UI to handle fu entry
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/05/2020
 Version:        1.3.2 (103020)
+Release Date:   10/05/2020
+Author:         cmeng
 - Remove deprecated .setTextColor(getResources().getColor()) and remove drawable.xml
 - Make some change to the color choice for user selection
 - Fix btn_er missed out in setFont color
@@ -678,18 +689,18 @@ Version:        1.3.2 (103020)
   action falls through to underlying fragment e.g. file_xfer_ui.xml
 
 =========================================================================
-Author:         cmeng
-Upload Date:    10/02/2020
 Version:        1.3.1 (103010)
+Release Date:   10/02/2020
+Author:         cmeng
 - Add media playback for 儿童诗歌 changShi
 - Fix incorrect save directories specified for both 儿童诗歌 and 新歌颂咏
 - MainActivity: remove unused pop handler and add xbpop handler for xb_Toc
 - Fix hymnchtv exits app when closing the xb toc.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/29/2020
 Version:        1.3.0 (103000)
+Release Date:   09/29/2020
+Author:         cmeng
 - Add er lyrics text and include them in the content view and search items
 - Implement file transfer and media content download from the web and stored in local directories for later use
 - Implement media playback speed control from 0.7x ~ 1.3x for all the media types
@@ -703,9 +714,9 @@ Version:        1.3.0 (103000)
   * Background concurrent copying GC freed 31304(10MB) AllocSpace objects, 0(0B) LOS objects, 49% free, 16MB/33MB, paused 43us total 316.862ms
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/20/2020
 Version:        1.2.1 (102010)
+Release Date:   09/20/2020
+Author:         cmeng
 - HymnNo2IdxConvert limit check should use <= e.g. if (hymnNo <= HYMN_BB_NO_MAX) {}
 - Incorrect using of LYRICS_DB_SCORE for text search, should use LYRICS_DB_TEXT => app aborted
 - Increase maximum search items to 100 with length=100 (5-line result); always display the matched result at start of line
@@ -715,9 +726,9 @@ Version:        1.2.1 (102010)
 - Clean up java source and comments
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/17/2020
 Version:        1.2.0 (102001)
+Release Date:   09/17/2020
+Author:         cmeng
 - All hymn contents i.e. raw, png, txt reference are now using hymn no.
 - All lyrics contents are now stored in asset for max application control.
 - Add utilities to support HymnNo2Idx and HymnIdx2No conversion.
@@ -731,25 +742,25 @@ Version:        1.2.0 (102001)
 - Make corrections to all lyrics text, standardize the format and closing ' before ,.!
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/14/2020
 Version:        1.1.1a (101011)
+Release Date:   09/14/2020
+Author:         cmeng
 - Release for source reference only before major changes to use lyrics number (no for apk release)
 - Migrate all content files from res to asset directory
 - Implement routines to rename all content files i.e. .png and .md for DB, BB and NB to use hymn number
 - Implement hymn index to actual hymn lyrics number converter
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/12/2020
 Version:        1.1.1 (101010)
+Release Date:   09/12/2020
+Author:         cmeng
 - Add CopyRights and source cleanup
 - Add readme file and necessary info for github release
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/11/2020
 Version:        1.1.0 (101000)
+Release Date:   09/11/2020
+Author:         cmeng
 Use FragmentPagerAdapter approach and clean up:
 - Activate contextMenu in contentView Fragment
 - On return to home, stop the player
@@ -761,18 +772,18 @@ Use FragmentPagerAdapter approach and clean up:
 - Make simplified Chinese lyrics as the first to search for user entry text.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/07/2020
 Version:        1.0.1a (10011)
+Release Date:   09/07/2020
+Author:         cmeng
 - Replace FragmentPagerAdapter (ViewPager) with GalleryAdapter (BaseAdapter) class
 - ViewPager has fixed Note5 crashes when slide hymn content while playing is in progress
   i.e. Fix OutOfMemoryError when using GalleryAdapter
 - Use Glide to display hymn content without zoom function.
 
 =========================================================================
-Author:         cmeng
-Upload Date:    09/04/2020
 Version:        1.0.1 (10010)
+Release Date:   09/04/2020
+Author:         cmeng
 - Change package name Id from com.example.song to org.cog.hymnchtv
 - Rewrite MainActivity and contentHandler classes
 - Add application HymnsApp class for future expansion
@@ -781,10 +792,9 @@ Version:        1.0.1 (10010)
 - Add MediaController and AudioBgService to support full media playback with full UI and control
 
 =========================================================================
-Author:         cmeng
-Upload Date:    08/29/2020
 Version:        1.0.0 (10000)
-
+Release Date:   08/29/2020
+Author:         cmeng
 - first release based on hymnchtv decompiled source
 - Clean up original sources and remove redundant sources
 

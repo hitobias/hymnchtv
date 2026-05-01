@@ -18,6 +18,7 @@ package org.cog.hymnchtv.mediaconfig;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -29,6 +30,7 @@ import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.cog.hymnchtv.About;
 import org.cog.hymnchtv.HymnsApp;
@@ -113,9 +115,11 @@ public class LyricsEnglishRecord {
         String webUrl = (isErGe ? HYMNAL_LINK_MAIN_ER : HYMNAL_LINK_MAIN) + hymnNoEng;
         final int hymnNo = hymnNoEng + (isErGe ? ER_GE_ENG_OFFSET : 0);
 
-        mLyricsEnglish = mDB.getLyricsEnglish(hymnNo);
-        if (mLyricsEnglish != null) {
+        mLyricsEnglish = StringUtils.trim(mDB.getLyricsEnglish(hymnNo));
+        if (StringUtils.isNotEmpty(mLyricsEnglish)) {
             showLyrics(mLyricsEnglish);
+            if (mLyricsEnglish.length() < 300)
+                Timber.d("Show English lyrics from DB: %s (%s)", hymnNo, mLyricsEnglish);
             return;
         }
 
@@ -126,7 +130,7 @@ public class LyricsEnglishRecord {
             }
             else {
                 Timber.d("No English lyrics found for: %s", webUrl);
-                showLyrics(toHtml("<h4>" + HymnsApp.getResString(R.string.file_download_failed, webUrl) + "</h4>"));
+                showLyrics("<h5>" + HymnsApp.getResString(R.string.file_download_failed, webUrl) + "</h5>");
             }
         });
     }
@@ -192,15 +196,37 @@ public class LyricsEnglishRecord {
     private void getURLSource(String urlToLoad, final ValueCallback<String> valueCallback) {
         Pattern pattern = Pattern.compile("<div class=\"row main-content\">(.+?</div></div></article>).+?");
 
+        Timber.d("Starting web scrapping: %s", urlToLoad);
+        HymnsApp.showToastMessage("Starting web scrapping: " + urlToLoad);
         WebView webView = initWebView(mContext);
         webView.loadUrl(urlToLoad); // preload url and wait for 0.1 sec before checking onPageFinished().
-        Timber.d("Web scrapping started: %s", urlToLoad);
+
+        // Define the timeout action
+        timeoutRunnable = () -> {
+            if (webView.getProgress() < 100) {
+                // This block executes if onPageFinished has not been called within the timeout
+                // Stop the loading process
+                webView.stopLoading();
+                showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_timeout, urlToLoad) + "</h5>");
+            }
+        };
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_started, url) + "</h5>");
+                startTimeoutHandler();
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                Timber.d("On Page Finished Call: %s: %s", webView.getProgress(), url);
+                cancelTimeoutHandler();
+
+                Timber.d("OnPageFinished Callback: %s%%: %s", webView.getProgress(), url);
+                showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_callback_received) + "</h5>");
+
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     try {
                         webView.evaluateJavascript("document.documentElement.outerHTML", data -> {
@@ -211,16 +237,41 @@ public class LyricsEnglishRecord {
                             }
                             else {
                                 Timber.w("Web scrapping failed: %s", urlToLoad);
+                                showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_failed, url) + "</h5>");
                                 valueCallback.onReceiveValue(null);
                             }
                         });
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         Timber.e("Web scrapping failed: %s", e.getMessage());
+                        showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_failed, url) + "</h5>");
                         valueCallback.onReceiveValue(null);
                     }
                 }, 100);
             }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                cancelTimeoutHandler();
+
+                showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_failed, description) + "</h5>");
+            }
         });
+    }
+
+    private static final int TIMEOUT_DURATION = 5000;
+    private final Handler handler = new Handler();
+    private Runnable timeoutRunnable;
+
+    // Post the timeout check with a delay
+    private void startTimeoutHandler() {
+        handler.postDelayed(timeoutRunnable, TIMEOUT_DURATION);
+    }
+
+    // Remove any pending timeout callbacks
+    private void cancelTimeoutHandler() {
+        handler.removeCallbacks(timeoutRunnable);
     }
 
     /**

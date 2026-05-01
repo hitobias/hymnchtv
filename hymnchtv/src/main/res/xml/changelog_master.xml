@@ -6,8 +6,17 @@
      They are automatically updated with "ant bump-version".
 -->
 <changelog>
-    <release version="2.8.1 (12/04/2025)" versioncode="208011">
+    <release version="2.8.2 (05/01/2026)" versioncode="208020">
         <change>使用前请检阅 &lt;a href='https://cmeng-git.github.io/hymnchtv/faq.html'&gt;诗歌本新应用程序功能&lt;/a&gt;。</change>
+        <change>检查或在新更新之前，如果发现新版本，则显示所有新增变更信息。</change>
+        <change>添加一个 5 秒超时计时器，当加载英文歌词出错时退出。</change>
+        <change>获取英文歌词时添加更多调试信息，以帮助进行根本原因分析。</change>
+        <change>修改诗歌词文本和简谱：bb3.png、bb464.png、bb464.txt、db134.png、db305.png 和 db528.png。</change>
+        <change>移除新更新按钮指示中的动画。</change>
+        <change>错误修复和改进。</change>
+    </release>
+
+    <release version="2.8.1 (12/04/2025)" versioncode="208011">
         <change>歌词文本大小缩放比例通过上下文菜单更改，但未保存到首选项中。</change>
         <change>错误修复和改进。</change>
     </release>

@@ -143,6 +143,11 @@
     <string name="file_download_failed">An error occurred while downloading the file: %1$s</string>
     <string name="file_open_no_application">App could not find an app associated with this file type</string>
 
+    <string name="web_scrap_callback_received">OnPageFinished Callback received:</string>
+    <string name="web_scrap_failed">Web scrapping failed: %1$s</string>
+    <string name="web_scrap_started">Web scrapping started: %1$s</string>
+    <string name="web_scrap_timeout">Web scrapping timed out: %1$s</string>
+
     <string name="personal_password">Personal Password</string>
     <string name="password">Password:</string>
     <string name="sign_in">Login</string>
@@ -164,7 +169,7 @@
     <string name="send_logs">Bug Rpt</string>
     <string name="send_logs_subject">Hymncv bug report</string>
     <string name="send_logs_title">Report Hymnch Errors by Email</string>
-    <string name="semd_logs_info">The following information you provide can help developers solve the problem:
+    <string name="send_logs_info">The following information you provide can help developers solve the problem:
         \n\n1. What was the last thing you did before the problem occurred?
         \n\n\n2. What problems do you see, if any, and a snapshot of the display?
         \n\n\n3. Can or how can you reproduce the problem?</string>
@@ -291,7 +296,7 @@
     <string name="theme_menu">Theme</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
-    <string name="score_color_change">score color change</string>
+    <string name="score_color_change">NMN color change</string>
 
     <!-- Locale -->
     <string name="locale_menu">Language</string>

@@ -94,7 +94,7 @@ public class HymnNoValidate {
     }
 
     // 新歌颂咏 - invalid hymn number
-    public static final List<Integer> rangeXbInvalid = new ArrayList<Integer>() {{
+    public static final List<Integer> rangeXbInvalid = new ArrayList<>() {{
         add(168);
         add(169);
         add(170);
