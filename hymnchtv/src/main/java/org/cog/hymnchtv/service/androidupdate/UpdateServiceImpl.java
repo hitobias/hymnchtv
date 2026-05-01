@@ -487,6 +487,7 @@ public class UpdateServiceImpl {
                     else {
                         downloadLink = null;
                     }
+                    break;
                 }
             } catch (IOException e) {
                 Timber.w("Could not retrieve version.properties for checking: %s", e.getMessage());
