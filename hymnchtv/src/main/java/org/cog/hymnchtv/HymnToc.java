@@ -78,15 +78,15 @@ import timber.log.Timber;
 public class HymnToc extends BaseActivity {
     /* 大本诗歌 db toc category */
     public static final String[] hymnCategoryDb
-            = new String[]{"颂赞三一神", "敬拜父", "赞美主", "圣灵的丰满", "得救的证实与快乐", "羡慕", "奉献", "与基督的联合",
-            "经历基督", "经历神", "十字架的夸耀", "十字架的道路", "复活的生命", "鼓励", "试炼中的安慰", "里面生命的各方面", "神医",
-            "祷告", "读经", "召会", "聚会", "属灵的争战", "事奉", "传扬福音", "福音", "受浸", "国度", "荣耀的盼望", "终极的显出", "附"
+            = new String[]{"颂三一神", "敬拜父", "赞美主", "圣灵丰满", "得救证实", "羡慕", "奉献", "联合基督",
+            "经历基督", "经历神", "十架夸耀", "十架道路", "复活生命", "鼓励", "试炼安慰", "里面生命", "神医",
+            "祷告", "读经", "召会", "聚会", "属灵争战", "事奉", "传扬福音", "福音", "受浸", "国度", "荣耀盼望", "终极显出", "附"
     };
 
     /* 补充本 bb toc category */
     public static final String[] hymnCategoryBb
-            = new String[]{"赞美的话", "灵与生命", "享受基督", "爱慕耶稣", "追求与长进", "教会的异象", "建造与合一", "教会的生活",
-            "事奉与福音", "盼望与预备", "神的经纶"
+            = new String[]{"赞美的话", "灵与生命", "享受基督", "爱慕耶稣", "追求长进", "教会异象", "建造合一", "教会生活",
+            "事奉福音", "盼望预备", "新约经纶"
     };
 
     /* 新诗歌本 xg toc category */
@@ -94,7 +94,7 @@ public class HymnToc extends BaseActivity {
             = new String[]{"新诗歌"
     };
 
-    public static final String[] hymnCategoryyb
+    public static final String[] hymnCategoryYb
             = new String[]{"青年诗歌"
     };
 
@@ -105,8 +105,8 @@ public class HymnToc extends BaseActivity {
 
     /* 儿童诗歌 er toc category */
     public static final String[] hymnCategoryEr
-            = new String[]{"神的创造", "主的爱", "圣灵的同在", "主的看顾", "赞美与喜乐", "祷告与读经", "爱主", "亲近倚靠主",
-            "彰显主", "召会聚会", "传扬福音", "发光并争战", "经文故事篇"
+            = new String[]{"神的创造", "主的爱", "圣灵同在", "主的看顾", "赞美喜乐", "祷告读经", "爱主", "亲近倚靠",
+            "彰显主", "召会聚会", "传扬福音", "发光争战", "经文故事"
     };
 
     // TocType for user selection
@@ -151,8 +151,8 @@ public class HymnToc extends BaseActivity {
     public static final int[] category_db = new int[]{1, 6, 53, 194, 229, 269, 330, 356, 367, 441, 454, 458, 472,
             474, 490, 529, 548, 551, 579, 592, 624, 632, 650, 662, 670, 740, 745, 752, 768, 781, 787};
 
-    public static final int[] category_er = new int[]{1, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001, 1101, 1201, 1301};
     public static final int[] category_bb = new int[]{1, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001, 1101};
+    public static final int[] category_er = new int[]{1, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001, 1101, 1201, 1301};
     public static final int[] category_xg = new int[]{1, 300};
     public static final int[] category_xb = new int[]{1, 40, 74, 110, 131, 143, 170};
     public static final int[] category_yb = new int[]{1, 300};
@@ -468,7 +468,7 @@ public class HymnToc extends BaseActivity {
                                             break;
                                         }
                                     }
-                                    tocListDetail.put(hymnCategoryyb[x], tocItems);
+                                    tocListDetail.put(hymnCategoryYb[x], tocItems);
                                 }
                             }
                         } catch (IOException e) {
@@ -730,7 +730,7 @@ public class HymnToc extends BaseActivity {
         stroke.put("八画", "事凭咒哎国坦夜奇宝屈建怜或所现空耶若贫转迫降非奔彼呼享取话拣朋知终佳单奉担经");
         stroke.put("九画", "亲保信前受变哪城复带战既昨是活盼看神绝美荡荣要重除相标思珍拯将显毗轻选");
         stroke.put("十画", "凉哦宴恩流爱真破紧莫被请诸谁赶速都颂高啊哦乘家陪涌借桃起难");
-        stroke.put("十一画", "基常得惊惟惨接救教深甜祭祷脱随领第清唯唱隐婚");
+        stroke.put("十一画", "基常得惊惟唯惨接救教深甜祭祷脱随领第清唯唱隐婚");
         stroke.put("十二画", "喂喜曾最焚等联谦释遇答葡善就属筑谢雅道");
         stroke.put("十三画", "意慈摸数新暗照福罪跟路献蓝感盟蒙锡");
         stroke.put("十四画", "儆愿模稳需歌滴竭");

@@ -16,7 +16,7 @@
  */
 package org.cog.hymnchtv.mediaplayer;
 
-import android.content.Context;
+import android.app.Service;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
@@ -24,13 +24,13 @@ import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.media.PlaybackParams;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.text.TextUtils;
 
-import androidx.core.app.JobIntentService;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
@@ -55,7 +55,7 @@ import timber.log.Timber;
  *
  * @author Eng Chong Meng
  */
-public class AudioBgService extends JobIntentService implements MediaPlayer.OnCompletionListener {
+public class AudioBgService extends Service implements MediaPlayer.OnCompletionListener {
     // ==== Media player actions ====
     public static final String ACTION_PLAYER_INIT = "player_init";
     public static final String ACTION_PLAYER_START = "player_start";
@@ -81,7 +81,7 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
     private static final Map<MediaPlayer, Integer> playbackCounts = new ConcurrentHashMap<>();
 
     // Handler for media player playback status broadcast
-    private Handler mHandlerPlayback = new Handler(Looper.getMainLooper());
+    private Handler mHandlerPlayback;
 
     private MediaPlayer mPlayer = null;
     private Uri fileUri;
@@ -135,108 +135,112 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
      */
     static final int JOB_ID = 1000;
 
-    public static void enqueueWork(Context context, Intent work) {
-        enqueueWork(context, AudioBgService.class, JOB_ID, work);
-    }
-
     @Override
-    protected void onHandleWork(Intent intent) {
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        super.onStartCommand(intent, flags, startId);
         switch (intent.getAction()) {
-            case ACTION_PLAYER_INIT:
-                fileUri = intent.getData();
-                playerInit(fileUri);
-                break;
+        case ACTION_PLAYER_INIT:
+            fileUri = intent.getData();
+            playerInit(fileUri);
+            break;
 
-            case ACTION_PLAYER_START:
-                fileUri = intent.getData();
-                playerStart(fileUri);
-                break;
+        case ACTION_PLAYER_START:
+            fileUri = intent.getData();
+            playerStart(fileUri);
+            break;
 
-            case ACTION_PLAYER_PAUSE:
-                fileUri = intent.getData();
-                playerPause(fileUri);
-                break;
+        case ACTION_PLAYER_PAUSE:
+            fileUri = intent.getData();
+            playerPause(fileUri);
+            break;
 
-            case ACTION_PLAYER_STOP:
-                fileUri = intent.getData();
-                playerRelease(fileUri);
-                break;
+        case ACTION_PLAYER_STOP:
+            fileUri = intent.getData();
+            playerRelease(fileUri);
+            break;
 
-            case ACTION_PLAYER_SEEK:
-                fileUri = intent.getData();
-                int seekPosition = intent.getIntExtra(PLAYBACK_POSITION, 0);
-                playerSeek(fileUri, seekPosition);
-                break;
+        case ACTION_PLAYER_SEEK:
+            fileUri = intent.getData();
+            int seekPosition = intent.getIntExtra(PLAYBACK_POSITION, 0);
+            playerSeek(fileUri, seekPosition);
+            break;
 
-            case ACTION_PLAYBACK_PLAY:
-                fileUri = intent.getData();
-                playerPlay(fileUri);
-                break;
+        case ACTION_PLAYBACK_PLAY:
+            fileUri = intent.getData();
+            playerPlay(fileUri);
+            break;
 
-            case ACTION_PLAYBACK_LOOP:
-                mLoopCount = 1;
-                try {
-                    String loopValue = intent.getType();
-                    mLoopCount = Integer.parseInt(loopValue);
-                } catch (NumberFormatException e) {
-                    Timber.w("loopCount must be integer in string!");
-                }
-                break;
+        case ACTION_PLAYBACK_LOOP:
+            mLoopCount = 1;
+            try {
+                String loopValue = intent.getType();
+                mLoopCount = Integer.parseInt(loopValue);
+            }
+            catch (NumberFormatException e) {
+                Timber.w("loopCount must be integer in string!");
+            }
+            break;
 
-            case ACTION_PLAYBACK_SPEED:
-                String speed = intent.getType();
-                if (!TextUtils.isEmpty(speed)) {
-                    playbackSpeed = Float.parseFloat(speed);
-                    setPlaybackSpeed();
-                }
-                break;
+        case ACTION_PLAYBACK_SPEED:
+            String speed = intent.getType();
+            if (!TextUtils.isEmpty(speed)) {
+                playbackSpeed = Float.parseFloat(speed);
+                setPlaybackSpeed();
+            }
+            break;
 
-            case ACTION_RECORDING:
-                mHandlerRecord = new Handler(Looper.getMainLooper());
-                recordAudio();
-                break;
+        case ACTION_RECORDING:
+            mHandlerRecord = new Handler(Looper.getMainLooper());
+            recordAudio();
+            break;
 
-            case ACTION_SEND:
-                stopTimer();
-                stopRecording();
-                if (audioFile != null) {
-                    // sendBroadcast(FileAccess.getUriForFile(this, audioFile));
-                    String filePath = audioFile.getAbsolutePath();
-                    sendBroadcast(filePath);
-                }
-                break;
+        case ACTION_SEND:
+            stopTimer();
+            stopRecording();
+            if (audioFile != null) {
+                // sendBroadcast(FileAccess.getUriForFile(this, audioFile));
+                String filePath = audioFile.getAbsolutePath();
+                sendBroadcast(filePath);
+            }
+            break;
 
-            case ACTION_CANCEL:
-                stopTimer();
-                stopRecording();
-                if (audioFile != null) {
-                    File soundFile = new File(audioFile.getAbsolutePath());
-                    soundFile.delete();
-                    audioFile = null;
-                }
-                stopSelf();
-                break;
+        case ACTION_CANCEL:
+            stopTimer();
+            stopRecording();
+            if (audioFile != null) {
+                File soundFile = new File(audioFile.getAbsolutePath());
+                soundFile.delete();
+                audioFile = null;
+            }
+            stopSelf();
+            break;
         }
+        return START_NOT_STICKY;
     }
 
-    //    @Override
-    //    public void onDestroy()
-    //    {
-    //        super.onDestroy();
-    //        Timber.e("AudioBgService is destroyed");
-    //        stopTimer();
-    //        stopRecording();
+    // @Override
+    // public void onDestroy() {
+    //     super.onDestroy();
+    //     Timber.e("AudioBgService is destroyed");
+    //     stopTimer();
+    //     stopRecording();
     //
-    //        if (mHandlerPlayback != null) {
-    //            mHandlerPlayback.removeCallbacks(playbackStatus);
-    //            mHandlerPlayback = null;
-    //        }
+    //     if (mHandlerPlayback != null) {
+    //         mHandlerPlayback.removeCallbacks(playbackStatus);
+    //         mHandlerPlayback = null;
+    //     }
     //
-    //        for (Uri uri : uriPlayers.keySet()) {
-    //            fileUri = uri;
-    //            playerRelease(uri);
-    //        }
-    //    }
+    //     for (Uri uri : uriPlayers.keySet()) {
+    //         fileUri = uri;
+    //         playerRelease(uri);
+    //     }
+    // }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
     /* =============================================================
      * Media player handlers
@@ -253,6 +257,9 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
         if (uri == null)
             return false;
 
+        if (mHandlerPlayback == null)
+            mHandlerPlayback = new Handler(Looper.getMainLooper());
+
         mPlayer = new MediaPlayer();
         uriPlayers.put(uri, mPlayer);
         mPlayer.setAudioAttributes(new AudioAttributes.Builder().setLegacyStreamType(AudioManager.STREAM_MUSIC).build());
@@ -266,7 +273,8 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
                 mPlayer.setDataSource(this, uri);
             }
             mPlayer.prepare();
-        } catch (IOException | IllegalStateException e) {
+        }
+        catch (IOException e) {
             HymnsApp.showToastMessage(R.string.error_media_url_invalid, uri);
             Timber.e("Media player creation error for: %s", uri.getPath());
             playerRelease(uri);
@@ -285,7 +293,10 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
         if (uri == null)
             return;
 
-        // Check player status on return to chatSession before start new;
+        if (mHandlerPlayback == null)
+            mHandlerPlayback = new Handler(Looper.getMainLooper());
+
+        // Check player status on return to chatSession before start new
         // Not applicable to hymnchtv, audio playback stops on exit content view page
         mPlayer = uriPlayers.get(uri);
         if (mPlayer != null) {
@@ -368,15 +379,14 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
         }
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                PlaybackParams playPara = mPlayer.getPlaybackParams().setSpeed(playbackSpeed);
-                mPlayer.setPlaybackParams(playPara);
-            }
+            PlaybackParams playPara = mPlayer.getPlaybackParams().setSpeed(playbackSpeed);
+            mPlayer.setPlaybackParams(playPara);
             // mPlayer.setLooping(mLoopCount > 1);
             playbackCounts.put(mPlayer, mLoopCount);
             mPlayer.start();
             playbackState(PlaybackState.play, uri);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Timber.e("Playback failed: %s", e.getMessage());
             playerRelease(uri);
         }
@@ -402,7 +412,8 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
             mPlayer.seekTo(seekPosition);
             if (!mPlayer.isPlaying())
                 playbackState(PlaybackState.pause, uri);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Timber.e("Playback failed");
             playerRelease(uri);
         }
@@ -412,22 +423,21 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
      * Setting of playback speed is only support in Android.M
      */
     private void setPlaybackSpeed() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            for (Map.Entry<Uri, MediaPlayer> entry : uriPlayers.entrySet()) {
-                MediaPlayer player = entry.getValue();
-                Uri uri = entry.getKey();
-                if (player == null)
-                    continue;
+        for (Map.Entry<Uri, MediaPlayer> entry : uriPlayers.entrySet()) {
+            MediaPlayer player = entry.getValue();
+            Uri uri = entry.getKey();
+            if (player == null)
+                continue;
 
-                try {
-                    PlaybackParams playPara = player.getPlaybackParams().setSpeed(playbackSpeed);
-                    player.setPlaybackParams(playPara);
+            try {
+                PlaybackParams playPara = player.getPlaybackParams().setSpeed(playbackSpeed);
+                player.setPlaybackParams(playPara);
 
-                    // Update player state: play will start upon speed change if it was in pause state
-                    playbackState(PlaybackState.play, uri);
-                } catch (IllegalStateException e) {
-                    Timber.e("Playback setSpeed failed: %s", e.getMessage());
-                }
+                // Update player state: play will start upon speed change if it was in pause state
+                playbackState(PlaybackState.play, uri);
+            }
+            catch (IllegalStateException e) {
+                Timber.e("Playback setSpeed failed: %s", e.getMessage());
             }
         }
     }
@@ -517,7 +527,8 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
                 for (MediaPlayer mpx : mps) {
                     mpx.start();
                 }
-            } catch (IllegalStateException e) {
+            }
+            catch (IllegalStateException e) {
                 Timber.w("MediaPlayer start with illegal state: %s", e.getMessage());
             }
         }
@@ -625,9 +636,11 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
         try {
             mRecorder.prepare();
             mRecorder.start();
-        } catch (IllegalStateException e) {
-            Timber.e("Record audio: %s", e.getMessage());
-        } catch (IOException e) {
+        }
+        catch (IllegalStateException e) {
+            Timber.w("Record audio: %s", e.getMessage());
+        }
+        catch (IOException e) {
             Timber.e("io problems while recording [%s]: %s", audioFile.getAbsolutePath(), e.getMessage());
         }
 
@@ -642,13 +655,14 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
                 mRecorder.reset();
                 mRecorder.release();
                 mRecorder = null;
-            } catch (RuntimeException ex) {
+            }
+            catch (RuntimeException ex) {
                 /*
                  * Note that a RuntimeException is intentionally thrown to the application, if no
                  * valid audio/video data has been received when stop() is called. This happens
                  * if stop() is called immediately after start().
                  */
-                ex.printStackTrace();
+                Timber.w("Stop record audio: %s", ex.getMessage());
             }
         }
     }
@@ -725,7 +739,8 @@ public class AudioBgService extends JobIntentService implements MediaPlayer.OnCo
 
         try {
             voiceFile = File.createTempFile("voice-", ".3gp", mediaDir);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.w("Fail to create Media voice file!");
         }
         return voiceFile;

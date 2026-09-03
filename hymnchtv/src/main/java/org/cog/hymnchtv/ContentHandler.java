@@ -27,10 +27,21 @@ import static org.cog.hymnchtv.ContentView.SCORE_DB_DIR;
 import static org.cog.hymnchtv.ContentView.SCORE_ER_DIR;
 import static org.cog.hymnchtv.ContentView.SCORE_XB_DIR;
 import static org.cog.hymnchtv.ContentView.SCORE_XG_DIR;
+import static org.cog.hymnchtv.HymnToc.category_bb;
+import static org.cog.hymnchtv.HymnToc.category_db;
+import static org.cog.hymnchtv.HymnToc.category_er;
+import static org.cog.hymnchtv.HymnToc.category_xb;
+import static org.cog.hymnchtv.HymnToc.hymnCategoryBb;
+import static org.cog.hymnchtv.HymnToc.hymnCategoryDb;
+import static org.cog.hymnchtv.HymnToc.hymnCategoryEr;
+import static org.cog.hymnchtv.HymnToc.hymnCategoryXb;
+import static org.cog.hymnchtv.HymnToc.hymnCategoryYb;
 import static org.cog.hymnchtv.MainActivity.ATTR_AUTO_PLAY;
 import static org.cog.hymnchtv.MainActivity.ATTR_ENGLISH_NO;
 import static org.cog.hymnchtv.MainActivity.ATTR_HYMN_NUMBER;
 import static org.cog.hymnchtv.MainActivity.ATTR_HYMN_TYPE;
+import static org.cog.hymnchtv.MainActivity.ATTR_MEDIA_TYPE;
+import static org.cog.hymnchtv.MainActivity.ATTR_MEDIA_URI;
 import static org.cog.hymnchtv.MainActivity.HYMN_BB;
 import static org.cog.hymnchtv.MainActivity.HYMN_DB;
 import static org.cog.hymnchtv.MainActivity.HYMN_ER;
@@ -44,6 +55,7 @@ import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_BB_DUMMY;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_MAX;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_TMAX;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -55,9 +67,11 @@ import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.fragment.app.FragmentManager;
 import androidx.viewpager2.widget.ViewPager2;
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback;
 
@@ -67,6 +81,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -102,8 +117,10 @@ import timber.log.Timber;
  */
 public class ContentHandler extends BaseActivity {
     public static String HYMNCHTV_FAQ_PLAYBACK = "https://cmeng-git.github.io/hymnchtv/faq.html#hymnch_0050";
+    public static final String btAddr = "https://bibletool.online";
+    public static final String btMp3Link = "https://bibletool.online/hymnal/playnew.php?file=hymns/%s/%s#%s";
 
-    // sub-directory for various media type
+    // subdirectory for various media type
     public static String MEDIA_MEDIA = "/media_media/";
     public static String MEDIA_JIAOCHANG = "/media_jiaochang/";
     public static String MEDIA_CHANGSHI = "/media_changshi/";
@@ -123,25 +140,54 @@ public class ContentHandler extends BaseActivity {
             HYMN_YB, "青年诗歌"
     );
 
+    // DB MP3 links non-standard naming conventions
+    private static final Map<Integer, String> DB_Links = new HashMap<>();
+
+    static {
+        DB_Links.put(65, "D65耶稣大名");
+        DB_Links.put(199, "D199荣耀的主");
+        DB_Links.put(205, "D205活水涌流");
+        DB_Links.put(245, "D245路途遥远");
+        DB_Links.put(247, "D247惊人恩典");
+        DB_Links.put(277, "D277请进,哦请进");
+        DB_Links.put(326, "D326求主光照");
+        DB_Links.put(340, "D340完全地交出");
+        DB_Links.put(348, "D348我今撇下一切事物背起十架跟耶稣");
+        DB_Links.put(359, "D359与你合一");
+        DB_Links.put(466, "D466若是死了");
+        DB_Links.put(499, "D499非我所是");
+        DB_Links.put(527, "D527迫得太紧");
+        DB_Links.put(561, "D561凭信心求");
+        DB_Links.put(599, "D599召会的种子乃基督自己作生命子粒");
+        DB_Links.put(630, "D630为着你同在");
+        DB_Links.put(669, "D669我有一救主在天为我祈");
+        DB_Links.put(751, "D751今天神的国度对我是操练");
+        DB_Links.put(763, "D763荣耀盼望是基督我的生命是祂");
+        DB_Links.put(769, "D769神的永远心意是与人联合");
+    }
+
     public final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
     private MediaContentHandler mMediaContentHandler;
 
     private boolean isShowPlayerUi;
 
-    // True if either youtube or exoPlayer is playing
+    // True if either YouTube or exoPlayer is playing
     private boolean isMediaPlayerUi = false;
 
     // Both flogs are defined here as MediaGuiController can be destroyed when play video
     private boolean mAutoPlay = false; // start playing on content shown
-    private boolean mAutoStream = false; // Auto play next video
+    private boolean mAutoStream = false; // Autoplay next video
 
     // Hymn Type and number selected by user
     public boolean mAutoEnglish = false;
-    // Allow showing of JiaoChang web site if available, if lyrics text is empty and from main entry only.
+    // Allow showing of JiaoChang website if available, if lyrics text is empty and from main entry only.
     private boolean mAutoJC = false;
     public String mHymnType;
     private int mHymnNo;
     private int hymnIdx = -1;
+
+    private String mDir = "";
+    private String mFileName = "";
 
     // Null if there is no corresponding English lyrics
     private Integer mHymnNoEng = null;
@@ -160,7 +206,8 @@ public class ContentHandler extends BaseActivity {
         hymnGoogleSearch,
         hymnYoutubeSearch,
         hymnNotionSearch,
-        hymnQqSearch
+        hymnQqSearch,
+        hymnBibleTool
     }
 
     private MyPagerAdapter mPagerAdapter;
@@ -175,7 +222,7 @@ public class ContentHandler extends BaseActivity {
     private MediaGuiController mMediaGuiController;
     private MediaDownloadHandler mMediaDownloadHandler;
 
-    private View mWebView;
+    private LinearLayout mWebView;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -222,15 +269,15 @@ public class ContentHandler extends BaseActivity {
         }
 
         switch (mHymnType) {
-            // Convert the user input hymn number i.e: hymn #1 => #0 i.e.index number
-            case HYMN_ER:
-            case HYMN_XB:
-            case HYMN_XG:
-            case HYMN_YB:
-            case HYMN_BB:
-            case HYMN_DB:
-                hymnIdx = HymnNo2IdxConvert.hymnNo2IdxConvert(mHymnType, mHymnNo);
-                break;
+        // Convert the user input hymn number i.e: hymn #1 => #0 i.e.index number
+        case HYMN_ER:
+        case HYMN_XB:
+        case HYMN_XG:
+        case HYMN_YB:
+        case HYMN_BB:
+        case HYMN_DB:
+            hymnIdx = HymnNo2IdxConvert.hymnNo2IdxConvert(mHymnType, mHymnNo);
+            break;
         }
 
         // The pager adapter, which provides the pages to the view pager widget.
@@ -349,6 +396,16 @@ public class ContentHandler extends BaseActivity {
         }
     };
 
+    /**
+     * When user exit via Home button; stop media player if any.
+     */
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        // The user pressed the Home button or Overview button to leave the app
+        backPressedCallback.handleOnBackPressed();
+    }
+
     // Do this only in PagerView Fragment, otherwise contextMenu is duplicated (display twice)
     // public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
     // {
@@ -361,63 +418,87 @@ public class ContentHandler extends BaseActivity {
         ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
 
         switch (item.getItemId()) {
-            case R.id.alwayshow:
-                isShowPlayerUi = true;
-                editor.putBoolean(PREF_MENU_SHOW, true);
-                editor.apply();
-                showPlayerUi(true);
-                return true;
+        case R.id.alwayshow:
+            isShowPlayerUi = true;
+            editor.putBoolean(PREF_MENU_SHOW, true);
+            editor.apply();
+            showPlayerUi(true);
+            return true;
 
-            case R.id.alwayhide:
-                isShowPlayerUi = false;
-                editor.putBoolean(PREF_MENU_SHOW, false);
-                editor.apply();
-                showPlayerUi(false);
-                return true;
+        case R.id.alwayhide:
+            isShowPlayerUi = false;
+            editor.putBoolean(PREF_MENU_SHOW, false);
+            editor.apply();
+            showPlayerUi(false);
+            return true;
 
-            case R.id.menutoggle:
-                isShowPlayerUi = !(isShowPlayerUi && mMediaGuiController.isShown());
-                showPlayerUi(isShowPlayerUi);
-                return true;
+        case R.id.menutoggle:
+            isShowPlayerUi = !(isShowPlayerUi && mMediaGuiController.isShown());
+            showPlayerUi(isShowPlayerUi);
+            return true;
 
-            case R.id.scoreColorChange:
-                if (contentView != null)
-                    contentView.toggleScoreColor();
-                return true;
+        case R.id.scoreColorChange:
+            if (contentView != null)
+                contentView.toggleScoreColor();
+            return true;
 
-            case R.id.lyrcsTextSizeInc:
-            case R.id.lyrcsTextSizeDec:
-                if (contentView != null)
-                    contentView.setLyricsTextSize(item.getItemId() == R.id.lyrcsTextSizeInc);
-                return true;
+        case R.id.lyrcsTextSizeInc:
+        case R.id.lyrcsTextSizeDec:
+            if (contentView != null)
+                contentView.setLyricsTextSize(item.getItemId() == R.id.lyrcsTextSizeInc);
+            return true;
 
-            case R.id.lyrcsEnglish:
-                if (mHymnNoEng == null) {
-                    HymnsApp.showToastMessage(R.string.error_english_lyrics_null, mHymnNo);
-                    return true;
+        case R.id.media_config:
+            MediaType mediaType = mMediaGuiController.getMediaType();
+            String dir = mHymnType + MediaConfig.mediaDir.get(mediaType);
+
+            // Default to not empty string so mediaConfig will fill all other provided bundle info.
+            String mediaUrl = " ";
+            List<Uri> uriList = new ArrayList<>();
+            if (mMediaContentHandler.getMediaUris(mHymnType, mHymnNo, mediaType, uriList)
+                    || isFileExist(dir, mHymnNo, uriList)) {
+                if (!uriList.isEmpty()) {
+                    mediaUrl = uriList.get(0).toString();
                 }
-                initWebView(UrlType.englishLyrics);
-                return true;
+            }
 
-            case R.id.lyrcsEnglishDelete:
-                mDB.deleteLyricsEng(mHymnNoEng);
-                return true;
+            Intent intent = new Intent(this, MediaConfig.class);
+            Bundle bundle = new Bundle();
+            bundle.putString(ATTR_MEDIA_URI, mediaUrl);
+            bundle.putInt(ATTR_MEDIA_TYPE, mediaType.getValue());
+            bundle.putString(ATTR_HYMN_TYPE, mHymnType);
+            bundle.putInt(ATTR_HYMN_NUMBER, mHymnNo);
+            intent.putExtras(bundle);
+            startActivity(intent);
+            return true;
 
-            case R.id.lyrcsShare:
-                lyricsShare();
+        case R.id.lyrcsEnglish:
+            if (mHymnNoEng == null) {
+                HymnsApp.showToastMessage(R.string.error_english_lyrics_null, mHymnNo);
                 return true;
+            }
+            initWebView(UrlType.englishLyrics);
+            return true;
 
-            case R.id.help:
-                // About.hymnUrlAccess(this, HYMNCHTV_FAQ_PLAYBACK);
-                initWebView(UrlType.onlineHelp);
-                return true;
+        case R.id.lyrcsEnglishDelete:
+            mDB.deleteLyricsEng(mHymnNoEng);
+            return true;
 
-            case R.id.home:
-                backToHome();
-                return true;
+        case R.id.lyrcsShare:
+            lyricsShare();
+            return true;
 
-            default:
-                return false;
+        case R.id.help:
+            // About.hymnUrlAccess(this, HYMNCHTV_FAQ_PLAYBACK);
+            initWebView(UrlType.onlineHelp);
+            return true;
+
+        case R.id.home:
+            backToHome();
+            return true;
+
+        default:
+            return false;
         }
     }
 
@@ -434,35 +515,35 @@ public class ContentHandler extends BaseActivity {
         String resFName = "";
 
         switch (mHymnType) {
-            case HYMN_ER:
-                resPrefix = SCORE_ER_DIR + mHymnNo;
-                resFName = LYRICS_ER_DIR + "er" + mHymnNo;
-                break;
+        case HYMN_ER:
+            resPrefix = SCORE_ER_DIR + mHymnNo;
+            resFName = LYRICS_ER_DIR + "er" + mHymnNo;
+            break;
 
-            case HYMN_XB:
-                resPrefix = SCORE_XB_DIR + "xb" + mHymnNo;
-                resFName = LYRICS_XB_DIR + "xb" + mHymnNo;
-                break;
+        case HYMN_XB:
+            resPrefix = SCORE_XB_DIR + "xb" + mHymnNo;
+            resFName = LYRICS_XB_DIR + "xb" + mHymnNo;
+            break;
 
-            case HYMN_XG:
-                resPrefix = SCORE_XG_DIR + "xg" + mHymnNo;
-                resFName = LYRICS_XG_DIR + "xg" + mHymnNo;
-                break;
+        case HYMN_XG:
+            resPrefix = SCORE_XG_DIR + "xg" + mHymnNo;
+            resFName = LYRICS_XG_DIR + "xg" + mHymnNo;
+            break;
 
-            case HYMN_YB:
-                resPrefix = SCORE_XB_DIR + "yb" + mHymnNo;
-                resFName = LYRICS_XB_DIR + "yb" + mHymnNo;
-                break;
+        case HYMN_YB:
+            resPrefix = SCORE_XB_DIR + "yb" + mHymnNo;
+            resFName = LYRICS_XB_DIR + "yb" + mHymnNo;
+            break;
 
-            case HYMN_BB:
-                resPrefix = SCORE_BB_DIR + "bb" + mHymnNo;
-                resFName = LYRICS_BB_DIR + "bb" + mHymnNo;
-                break;
+        case HYMN_BB:
+            resPrefix = SCORE_BB_DIR + "bb" + mHymnNo;
+            resFName = LYRICS_BB_DIR + "bb" + mHymnNo;
+            break;
 
-            case HYMN_DB:
-                resPrefix = SCORE_DB_DIR + "db" + mHymnNo;
-                resFName = LYRICS_DB_DIR + "db" + mHymnNo;
-                break;
+        case HYMN_DB:
+            resPrefix = SCORE_DB_DIR + "db" + mHymnNo;
+            resFName = LYRICS_DB_DIR + "db" + mHymnNo;
+            break;
         }
 
         String fnScore = resPrefix + ".png";
@@ -488,7 +569,8 @@ public class ContentHandler extends BaseActivity {
             imageUris.add(FileBackend.getUriForFile(this, fileScore));
             imageUris.add(FileBackend.getUriForFile(this, fileLyrics));
             ShareWith.share(this, getMediaUrl(), imageUris);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.e("lyrics shared: %s", e.getMessage());
         }
     }
@@ -542,7 +624,7 @@ public class ContentHandler extends BaseActivity {
      * c. The text color of the Button Media
      */
     public void updateMediaPlayerInfo() {
-        // Update both mHymnType and mHymnNo for share auto-fill
+        // Update both mHymnType and mHymnNo for share autofill.
         MainActivity.setHymnTypeNo(mHymnType, mHymnNo);
         if (mHymnNo != HYMN_BB_DUMMY) {
             mHymnNoEng = HymnNoCh2EngXRef.hymnNoCh2EngConvert(mHymnType, mHymnNo);
@@ -613,8 +695,8 @@ public class ContentHandler extends BaseActivity {
         }
     }
 
-    // 第112首 神生命的种子 http://g.cgbr.org/music/x/media/112x.mp3
-    // http://g.cgbr.org/music/x/media/139.mp3
+// 第112首 神生命的种子 https://g.cgbr.org/music/x/media/112x.mp3
+// https://g.cgbr.org/music/x/media/139.mp3
 
     /**
      * First priority: fetch the user defined DB media links/contents for the selected hymnType/hymnNo.
@@ -647,206 +729,220 @@ public class ContentHandler extends BaseActivity {
         String dir = null;
         String fbLink = null;
         String fileName = mHymnNo + getHymnTitle();
-        // http://mana.stmn1.com/
 
         switch (mHymnType) {
-            case HYMN_ER:
-                switch (mediaType) {
-                    case HYMN_MEDIA:
-                        dir = mHymnType + MEDIA_MEDIA;
-                        if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
+        // HYMN_ER, "儿童诗歌"
+        case HYMN_ER:
+            switch (mediaType) {
+            case HYMN_MEDIA:
+                dir = mHymnType + MEDIA_MEDIA;
+                if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
 
-                    case HYMN_JIAOCHANG:
-                        dir = mHymnType + MEDIA_JIAOCHANG;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+            case HYMN_JIAOCHANG:
+                dir = mHymnType + MEDIA_JIAOCHANG;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                    case HYMN_CHANGSHI:
-                        dir = mHymnType + MEDIA_CHANGSHI;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+            case HYMN_CHANGSHI:
+                dir = mHymnType + MEDIA_CHANGSHI;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                        if (proceedDownLoad) {
-                            fileName = "C" + fileName + ".mp3";
-                            // fbLink = String.format(Locale.US, "http://www.lightinnj.org/mp3/k-mp3/C%04d.mp3", mHymnNo);
-                            fbLink = String.format(Locale.US, "http://mana.stmn1.com/sg/er/mp3/er%d.mp3", mHymnNo);
-                            break;
-                        }
-
-                    case HYMN_BANZOU:
-                        dir = mHymnType + MEDIA_BANZOU;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+                if (proceedDownLoad) {
+                    fileName = "C" + fileName + ".mp3";
+                    // fbLink = String.format(Locale.US, "https://www.lightinnj.org/mp3/k-mp3/C%04d.mp3", mHymnNo);
+                    fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/er/mp3/er%d.mp3", mHymnNo);
+                    break;
                 }
-                break;
 
-            case HYMN_XB:
-                switch (mediaType) {
-                    case HYMN_MEDIA:
-                        dir = mHymnType + MEDIA_MEDIA;
-                        if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
+            case HYMN_BANZOU:
+                dir = mHymnType + MEDIA_BANZOU;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+            }
+            break;
 
-                    case HYMN_JIAOCHANG:
-                        dir = mHymnType + MEDIA_JIAOCHANG;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+        // HYMN_XB, "新歌颂咏"
+        case HYMN_XB:
+            switch (mediaType) {
+            case HYMN_MEDIA:
+                dir = mHymnType + MEDIA_MEDIA;
+                if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
 
-                    case HYMN_CHANGSHI:
-                        dir = mHymnType + MEDIA_CHANGSHI;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+            case HYMN_JIAOCHANG:
+                dir = mHymnType + MEDIA_JIAOCHANG;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                        if (proceedDownLoad) {
-                            fileName = "X" + fileName + ".mp3";
-                            // fbLink = String.format(Locale.US, "http://g.cgbr.org/music/x/media/%03d.mp3", mHymnNo);
-                            // fbLink = String.format(Locale.US, "http://mana.stmn1.com/sg/xin/mp3/X%d.mp3", mHymnNo);
-                            fbLink = String.format(Locale.US, "http://four.soqimp.com/sg/xin/mp3/X%d.mp3", mHymnNo);
-                            break;
-                        }
+            case HYMN_CHANGSHI:
+                dir = mHymnType + MEDIA_CHANGSHI;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                    case HYMN_BANZOU:
-                        dir = mHymnType + MEDIA_BANZOU;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+                if (proceedDownLoad) {
+                    fileName = "X" + fileName + ".mp3";
+                    // fbLink = String.format(Locale.US, "https://g.cgbr.org/music/x/media/%03d.mp3", mHymnNo);
+                    // fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/xin/mp3/X%d.mp3", mHymnNo);
+                    fbLink = String.format(Locale.US, "https://four.soqimp.com/sg/xin/mp3/X%d.mp3", mHymnNo);
+                    break;
                 }
-                break;
 
-            case HYMN_XG:
-                switch (mediaType) {
-                    case HYMN_MEDIA:
-                        dir = mHymnType + MEDIA_MEDIA;
-                        if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
+            case HYMN_BANZOU:
+                dir = mHymnType + MEDIA_BANZOU;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+            }
+            break;
 
-                    case HYMN_JIAOCHANG:
-                        dir = mHymnType + MEDIA_JIAOCHANG;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+        // HYMN_XG, "新诗歌本"
+        case HYMN_XG:
+            switch (mediaType) {
+            case HYMN_MEDIA:
+                dir = mHymnType + MEDIA_MEDIA;
+                if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
 
-                    case HYMN_CHANGSHI:
-                        dir = mHymnType + MEDIA_CHANGSHI;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+            case HYMN_JIAOCHANG:
+                dir = mHymnType + MEDIA_JIAOCHANG;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                        if (proceedDownLoad) {
-                            fileName = "xg" + fileName + ".mp3";
-                            // http://mana.stmn1.com/sg/csr/mp3/csr20.mp3
-                            // fbLink = String.format(Locale.US, "http://mana.stmn1.com/sg/csr/mp3/csr%d.mp3", mHymnNo);
-                            fbLink = String.format(Locale.US, "http://four.soqimp.com/sg/csr/mp3/csr%d.mp3", mHymnNo);
-                            break;
-                        }
+            case HYMN_CHANGSHI:
+                dir = mHymnType + MEDIA_CHANGSHI;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                    case HYMN_BANZOU:
-                        dir = mHymnType + MEDIA_BANZOU;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+                if (proceedDownLoad) {
+                    fileName = "xg" + fileName + ".mp3";
+                    // https://mana.stmn1.com/sg/csr/mp3/csr20.mp3
+                    // fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/csr/mp3/csr%d.mp3", mHymnNo);
+                    fbLink = String.format(Locale.US, "https://four.soqimp.com/sg/csr/mp3/csr%d.mp3", mHymnNo);
+                    break;
                 }
-                break;
 
-            case HYMN_YB:
-                switch (mediaType) {
-                    case HYMN_MEDIA:
-                        dir = mHymnType + MEDIA_MEDIA;
-                        if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
+            case HYMN_BANZOU:
+                dir = mHymnType + MEDIA_BANZOU;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+            }
+            break;
 
-                    case HYMN_JIAOCHANG:
-                        dir = mHymnType + MEDIA_JIAOCHANG;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+        // HYMN_YB, "青年诗歌"
+        case HYMN_YB:
+            switch (mediaType) {
+            case HYMN_MEDIA:
+                dir = mHymnType + MEDIA_MEDIA;
+                if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
 
-                    case HYMN_CHANGSHI:
-                        dir = mHymnType + MEDIA_CHANGSHI;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+            case HYMN_JIAOCHANG:
+                dir = mHymnType + MEDIA_JIAOCHANG;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                        if (proceedDownLoad) {
-                            fileName = "xg" + fileName + ".mp3";
-                            // fbLink = String.format(Locale.US, "http://mana.stmn1.com/sg/yb/mp3/csr%d.mp3", mHymnNo);
-                            break;
-                        }
+            case HYMN_CHANGSHI:
+                dir = mHymnType + MEDIA_CHANGSHI;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                    case HYMN_BANZOU:
-                        dir = mHymnType + MEDIA_BANZOU;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+                if (proceedDownLoad) {
+                    fileName = "Q" + fileName + ".mp3";
+                    fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/yb/mp3/Q%d.mp3", mHymnNo);
+
+                    // Translate YB to other if specified.
+                    String hymnTN = ybXTable.get(mHymnNo);
+                    if (hymnTN != null) {
+                        mHymnType = MainActivity.getHymnType(hymnTN);
+                        mHymnNo = Integer.parseInt(hymnTN.substring(2));
+                    }
+                    uriList.add(Uri.parse(getHymnUri()));
+                    return uriList;
                 }
-                break;
 
-            case HYMN_BB:
-                switch (mediaType) {
-                    case HYMN_MEDIA:
-                        dir = mHymnType + MEDIA_MEDIA;
-                        if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
+            case HYMN_BANZOU:
+                dir = mHymnType + MEDIA_BANZOU;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+            }
+            break;
 
-                    case HYMN_JIAOCHANG:
-                        dir = mHymnType + MEDIA_JIAOCHANG;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+        // HYMN_BB, "补充本"
+        case HYMN_BB:
+            switch (mediaType) {
+            case HYMN_MEDIA:
+                dir = mHymnType + MEDIA_MEDIA;
+                if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
 
-                    case HYMN_CHANGSHI:
-                        dir = mHymnType + MEDIA_CHANGSHI;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
+            case HYMN_JIAOCHANG:
+                dir = mHymnType + MEDIA_JIAOCHANG;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                        if (proceedDownLoad) {
-                            fileName = "B" + fileName + ".mp3";
-                            // https://www.hymnal.net/Hymns/Chinese/mp3/ch_0048_vocal.mp3
-                            // fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ts/%d/f=sing", mHymnNo);
-                            // fbLink = String.format(Locale.US, "http://four.soqimp.com/sg/bu/mp3/B%d.mp3", mHymnNo);
-                            fbLink = String.format(Locale.US, "http://mana.stmn1.com/sg/bu/mp3/B%d.mp3", mHymnNo);
-                            break;
-                        }
+            case HYMN_CHANGSHI:
+                dir = mHymnType + MEDIA_CHANGSHI;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
 
-                    case HYMN_BANZOU:
-                        // proceed to use HYMN_BANZOU if no midi files available
-                        if (HymnsApp.getFileResId(MIDI_BB + mHymnNo, "raw") != 0) {
-                            uriList.add(HymnsApp.getRawUri(MIDI_BB + mHymnNo));
-                            uriList.add(HymnsApp.getRawUri(MIDI_BBC + mHymnNo));
-                            return uriList;
-                        }
-
-                        dir = mHymnType + MEDIA_BANZOU;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
-
-                        if (proceedDownLoad) {
-                            fileName = "B" + fileName + ".mid";
-                            // fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ts/%d/f=mid", mHymnNo);
-                            // https://www.hymnal.net/Hymns/ChineseTS/midi/tunes/ts0014_tune.midi
-                            fbLink = String.format(Locale.US, "https://www.hymnal.net/Hymns/ChineseTS/midi/tunes/ts%04d_tune.midi", mHymnNo);
-                            break;
-                        }
+                if (proceedDownLoad) {
+                    fileName = "B" + fileName + ".mp3";
+                    // https://www.hymnal.net/Hymns/Chinese/mp3/ch_0048_vocal.mp3
+                    // fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ts/%d/f=sing", mHymnNo);
+                    // fbLink = String.format(Locale.US, "https://four.soqimp.com/sg/bu/mp3/B%d.mp3", mHymnNo);
+                    fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/bu/mp3/B%d.mp3", mHymnNo);
+                    break;
                 }
-                break;
 
-            case HYMN_DB:
-                switch (mediaType) {
-                    case HYMN_MEDIA:
-                        dir = mHymnType + MEDIA_MEDIA;
-                        if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
-
-                    case HYMN_JIAOCHANG:
-                        dir = mHymnType + MEDIA_JIAOCHANG;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
-
-                    case HYMN_CHANGSHI:
-                        dir = mHymnType + MEDIA_CHANGSHI;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
-
-                        if (proceedDownLoad) {
-                            fileName = "D" + fileName + ".mp3";
-                            // http://g.cgbr.org/music/d/media/48m.mp3
-                            // fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ch/%d/f=sing", mHymnNo);
-                            fbLink = String.format(Locale.US, "http://mana.stmn1.com/sg/da/Dmp3/D%d.mp3", mHymnNo);
-                            break;
-                        }
-
-                    case HYMN_BANZOU:
-                        // proceed to use HYMN_BANZOU if no midi files available
-                        if (HymnsApp.getFileResId(MIDI_DB + mHymnNo, "raw") != 0) {
-                            uriList.add(HymnsApp.getRawUri(MIDI_DB + mHymnNo));
-                            uriList.add(HymnsApp.getRawUri(MIDI_DBC + mHymnNo));
-                            return uriList;
-                        }
-
-                        dir = mHymnType + MEDIA_BANZOU;
-                        if (isFileExist(dir, mHymnNo, uriList)) break;
-
-                        if (proceedDownLoad) {
-                            fileName = "D" + fileName + ".mid";
-                            fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ch/%d/f=mid", mHymnNo);
-                            break;
-                        }
+            case HYMN_BANZOU:
+                // proceed to use HYMN_BANZOU if no midi files available
+                if (HymnsApp.getFileResId(MIDI_BB + mHymnNo, "raw") != 0) {
+                    uriList.add(HymnsApp.getRawUri(MIDI_BB + mHymnNo));
+                    uriList.add(HymnsApp.getRawUri(MIDI_BBC + mHymnNo));
+                    return uriList;
                 }
-                break;
+
+                dir = mHymnType + MEDIA_BANZOU;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+
+                if (proceedDownLoad) {
+                    fileName = "B" + fileName + ".mid";
+                    // fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ts/%d/f=mid", mHymnNo);
+                    // https://www.hymnal.net/Hymns/ChineseTS/midi/tunes/ts0014_tune.midi
+                    fbLink = String.format(Locale.US, "https://www.hymnal.net/Hymns/ChineseTS/midi/tunes/ts%04d_tune.midi", mHymnNo);
+                    break;
+                }
+            }
+            break;
+
+        // HYMN_DB, "大本诗歌"
+        case HYMN_DB:
+            switch (mediaType) {
+            case HYMN_MEDIA:
+                dir = mHymnType + MEDIA_MEDIA;
+                if (isFileExist(dir, mHymnNo, uriList) || mAutoStream) break;
+
+            case HYMN_JIAOCHANG:
+                dir = mHymnType + MEDIA_JIAOCHANG;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+
+            case HYMN_CHANGSHI:
+                dir = mHymnType + MEDIA_CHANGSHI;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+
+                if (proceedDownLoad) {
+                    // Use lyricsPhrase for DB filename for reference.
+                    fileName = "D" + mHymnNo + lyricsPhrase + ".mp3";
+                    // https://g.cgbr.org/music/d/media/48m.mp3
+                    // fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ch/%d/f=sing", mHymnNo);
+                    fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/da/Dmp3/D%d.mp3", mHymnNo);
+                    break;
+                }
+
+            case HYMN_BANZOU:
+                // proceed to use HYMN_BANZOU if no midi files available
+                if (HymnsApp.getFileResId(MIDI_DB + mHymnNo, "raw") != 0) {
+                    uriList.add(HymnsApp.getRawUri(MIDI_DB + mHymnNo));
+                    uriList.add(HymnsApp.getRawUri(MIDI_DBC + mHymnNo));
+                    return uriList;
+                }
+
+                dir = mHymnType + MEDIA_BANZOU;
+                if (isFileExist(dir, mHymnNo, uriList)) break;
+
+                if (proceedDownLoad) {
+                    fileName = "D" + fileName + ".mid";
+                    fbLink = String.format(Locale.US, "https://www.hymnal.net/cn/hymn/ch/%d/f=mid", mHymnNo);
+                    break;
+                }
+            }
+            break;
         }
 
         if (!TextUtils.isEmpty(fbLink) && !TextUtils.isEmpty(fileName)) {
-            Timber.d("Download Info: FileName = %s%s; fbLink = %s", dir, fileName, fbLink);
+            // Timber.d("Download Info: FileName = %s%s; fbLink = %s", dir, fileName, fbLink);
             mMediaDownloadHandler.initHttpFileDownload(fbLink, dir, fileName);
             return uriList;
         }
@@ -856,6 +952,125 @@ public class ContentHandler extends BaseActivity {
             return uriList;
         }
         return mMediaContentHandler.playIfVideo(uriList);
+    }
+
+    /**
+     * Show BibleTool linked page if download failed.
+     */
+    public void showBibleToolHymnal() {
+        String url = getHymnUri();
+        initWebView(ContentHandler.UrlType.hymnBibleTool, url);
+    }
+
+    /**
+     * Start to download the bibletool.online media when user click 下载： Mp3
+     *
+     * @param fbLink the download link provided.
+     * @param mimeType the mimeType of the media to download.
+     */
+    public void startFileDownload(String fbLink, String mimeType) {
+        if (mimeType.startsWith("video")) {
+            mFileName = mFileName.replaceAll("[^.]+$", mimeType.split("/")[1]);
+        }
+
+        if (mimeType.startsWith("audio") || mimeType.startsWith("video")) {
+            HymnsApp.showToastMessage(R.string.nq_download_starting, mFileName);
+            mMediaDownloadHandler.initHttpFileDownload(fbLink, mDir, mFileName);
+        }
+        else {
+            HymnsApp.showToastMessage(R.string.error_invalid_mimetype_download, mimeType);
+        }
+    }
+
+    /**
+     * Function use as fallback when download of MEDIA_CHANGSHI failed.
+     * It proceeds to show the media content from bibletool.online site.
+     *
+     * @return the bibletool.online media url link.
+     */
+    public String getHymnUri() {
+        String uri = null;
+        String hymnType = HymnTypeMap.get(mHymnType);
+        String subLink = "";
+        String resName = "";
+
+        mDir = mHymnType + MEDIA_CHANGSHI;
+        String hymnTitle = getHymnTitle();
+        String fileName = mHymnNo + hymnTitle;
+
+        switch (mHymnType) {
+        case HYMN_ER:
+            for (int idx = 0; idx < category_er.length; idx++) {
+                if (mHymnNo < category_er[idx]) {
+                    subLink = String.format(Locale.CHINA, "%02d%s", (idx - 1), hymnCategoryEr[idx - 1]);
+                    break;
+                }
+            }
+            // Generate the resName for link creation
+            resName = "C" + fileName;
+            uri = String.format(Locale.CHINA, btMp3Link, hymnType, subLink, resName);
+            break;
+
+        case HYMN_XB:
+            // dnlink for xB does not use the last hymn category for fetching
+            for (int idx = 0; idx < category_xb.length; idx++) {
+                if (mHymnNo < category_xb[idx]) {
+                    subLink = String.format(Locale.CHINA, "%02d%s", idx, hymnCategoryXb[idx - 1]);
+                    break;
+                }
+            }
+            // Generate the resName for link creation
+            resName = "X" + fileName;
+            uri = String.format(Locale.CHINA, btMp3Link, hymnType, subLink, resName);
+            break;
+
+        case HYMN_XG:
+            break;
+
+        case HYMN_YB:
+            hymnType = "其他诗歌";
+            subLink = hymnCategoryYb[0];
+            resName = "Q" + fileName;
+            uri = String.format(Locale.CHINA, btMp3Link, hymnType, subLink, resName);
+            break;
+
+        case HYMN_BB:
+            for (int idx = 0; idx < category_bb.length; idx++) {
+                if (mHymnNo < category_bb[idx]) {
+                    subLink = String.format(Locale.CHINA, "%02d%s", (idx - 1), hymnCategoryBb[idx - 1]);
+                    break;
+                }
+            }
+            resName = "B" + fileName;
+            uri = String.format(Locale.CHINA, btMp3Link, hymnType, subLink, resName);
+            break;
+
+        case HYMN_DB:
+            for (int idx = 0; idx < category_db.length; idx++) {
+                if (mHymnNo < category_db[idx]) {
+                    subLink = String.format(Locale.CHINA, "%02d%s", idx, hymnCategoryDb[idx - 1]);
+                    break;
+                }
+            }
+            // Generate the resName for link creation; DB uses lyricsPhrase
+            resName = DB_Links.get(mHymnNo);
+            if (resName == null) {
+                if (mHymnNo > HYMN_DB_NO_MAX) {
+                    resName = "DF" + (mHymnNo - HYMN_DB_NO_MAX) + lyricsPhrase;
+                }
+                else {
+                    resName = "D" + mHymnNo + lyricsPhrase;
+                }
+            }
+            uri = String.format(Locale.CHINA, btMp3Link, hymnType, subLink, resName);
+            break;
+        }
+
+        // Use supported filename for DB Fu hymn when saving media file.
+        resName = resName.replaceFirst("DF\\d+", "D" + mHymnNo);
+        mFileName = resName + ".mp3";
+        Timber.d("bibleTool: %s", uri);
+        return uri;
     }
 
     /**
@@ -914,19 +1129,19 @@ public class ContentHandler extends BaseActivity {
         boolean isFu = mHymnType.equals(HYMN_DB) && (mHymnNo > HYMN_DB_NO_MAX);
 
         switch (mHymnType) {
-            case HYMN_ER:
-            case HYMN_XB:
-            case HYMN_XG:
-            case HYMN_YB:
-                break;
+        case HYMN_ER:
+        case HYMN_XB:
+        case HYMN_XG:
+        case HYMN_YB:
+            break;
 
-            case HYMN_BB:
-                isAvailable[3] = HymnsApp.getFileResId(MIDI_BB + mHymnNo, "raw") != 0;
-                break;
+        case HYMN_BB:
+            isAvailable[3] = HymnsApp.getFileResId(MIDI_BB + mHymnNo, "raw") != 0;
+            break;
 
-            case HYMN_DB:
-                isAvailable[3] = HymnsApp.getFileResId(MIDI_DB + mHymnNo, "raw") != 0;
-                break;
+        case HYMN_DB:
+            isAvailable[3] = HymnsApp.getFileResId(MIDI_DB + mHymnNo, "raw") != 0;
+            break;
         }
 
         String dir;
@@ -940,25 +1155,25 @@ public class ContentHandler extends BaseActivity {
                 continue;
 
             switch (mediaType) {
-                case HYMN_MEDIA:
-                    dir = mHymnType + MEDIA_MEDIA;
-                    isAvailable[0] = isFileExist(dir, mHymnNo, null);
-                    break;
+            case HYMN_MEDIA:
+                dir = mHymnType + MEDIA_MEDIA;
+                isAvailable[0] = isFileExist(dir, mHymnNo, null);
+                break;
 
-                case HYMN_JIAOCHANG:
-                    dir = mHymnType + MEDIA_JIAOCHANG;
-                    isAvailable[1] = isFileExist(dir, mHymnNo, null);
-                    break;
+            case HYMN_JIAOCHANG:
+                dir = mHymnType + MEDIA_JIAOCHANG;
+                isAvailable[1] = isFileExist(dir, mHymnNo, null);
+                break;
 
-                case HYMN_CHANGSHI:
-                    dir = mHymnType + MEDIA_CHANGSHI;
-                    isAvailable[2] = isFileExist(dir, mHymnNo, null);
-                    break;
+            case HYMN_CHANGSHI:
+                dir = mHymnType + MEDIA_CHANGSHI;
+                isAvailable[2] = isFileExist(dir, mHymnNo, null);
+                break;
 
-                case HYMN_BANZOU:
-                    dir = mHymnType + MEDIA_BANZOU;
-                    isAvailable[3] |= isFileExist(dir, mHymnNo, null);
-                    break;
+            case HYMN_BANZOU:
+                dir = mHymnType + MEDIA_BANZOU;
+                isAvailable[3] |= isFileExist(dir, mHymnNo, null);
+                break;
             }
         }
         return isAvailable;
@@ -996,35 +1211,35 @@ public class ContentHandler extends BaseActivity {
         }
 
         switch (mHymnType) {
-            case HYMN_ER:
-                fileName = LYRICS_ER_DIR + "er" + mHymnNo + ".txt";
-                break;
+        case HYMN_ER:
+            fileName = LYRICS_ER_DIR + "er" + mHymnNo + ".txt";
+            break;
 
-            case HYMN_XG:
-                fileName = LYRICS_XG_DIR + "xg" + mHymnNo + ".txt";
-                break;
+        case HYMN_XG:
+            fileName = LYRICS_XG_DIR + "xg" + mHymnNo + ".txt";
+            break;
 
-            case HYMN_XB:
-                fileName = LYRICS_XB_DIR + "xb" + mHymnNo + ".txt";
-                break;
+        case HYMN_XB:
+            fileName = LYRICS_XB_DIR + "xb" + mHymnNo + ".txt";
+            break;
 
-            case HYMN_YB:
-                String hymnTN = ybXTable.get(mHymnNo);
-                if (hymnTN != null) {
-                    fileName = getHymnDir(hymnTN) + hymnTN + ".txt";
-                }
-                else {
-                    fileName = LYRICS_YB_DIR + "yb" + mHymnNo + ".txt";
-                }
-                break;
+        case HYMN_YB:
+            String hymnTN = ybXTable.get(mHymnNo);
+            if (hymnTN != null) {
+                fileName = getHymnDir(hymnTN) + hymnTN + ".txt";
+            }
+            else {
+                fileName = LYRICS_YB_DIR + "yb" + mHymnNo + ".txt";
+            }
+            break;
 
-            case HYMN_BB:
-                fileName = LYRICS_BB_DIR + "bb" + mHymnNo + ".txt";
-                break;
+        case HYMN_BB:
+            fileName = LYRICS_BB_DIR + "bb" + mHymnNo + ".txt";
+            break;
 
-            case HYMN_DB:
-                fileName = LYRICS_DB_DIR + "db" + mHymnNo + ".txt";
-                break;
+        case HYMN_DB:
+            fileName = LYRICS_DB_DIR + "db" + mHymnNo + ".txt";
+            break;
         }
 
         try {
@@ -1054,36 +1269,39 @@ public class ContentHandler extends BaseActivity {
 
             lyricsPhrase = "";
             mList = tmp.split("[，、‘’！：；。？]");
+
+            // Do not change value 5: is the magic length to extract correct hymn phrase for bibletool access.
             for (String s : mList) {
-                if (lyricsPhrase.length() < 6) {
+                if (lyricsPhrase.length() < 5) {
                     lyricsPhrase += s;
                 }
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.w("Error getting info for hymn %s: %s", fileName, e.getMessage());
             hymnTitle += getString(R.string.error_file_not_found, fileName);
         }
 
         int resId = -1;
         switch (mHymnType) {
-            case HYMN_ER:
-                resId = R.string.hymn_title_mc_er;
-                break;
-            case HYMN_XB:
-                resId = R.string.hymn_title_mc_xb;
-                break;
-            case HYMN_XG:
-                resId = R.string.hymn_title_mc_xg;
-                break;
-            case HYMN_YB:
-                resId = R.string.hymn_title_mc_yb;
-                break;
-            case HYMN_BB:
-                resId = R.string.hymn_title_mc_bb;
-                break;
-            case HYMN_DB:
-                resId = (mHymnNo > HYMN_DB_NO_MAX) ? R.string.hymn_title_mc_dbs : R.string.hymn_title_mc_db;
-                break;
+        case HYMN_ER:
+            resId = R.string.hymn_title_mc_er;
+            break;
+        case HYMN_XB:
+            resId = R.string.hymn_title_mc_xb;
+            break;
+        case HYMN_XG:
+            resId = R.string.hymn_title_mc_xg;
+            break;
+        case HYMN_YB:
+            resId = R.string.hymn_title_mc_yb;
+            break;
+        case HYMN_BB:
+            resId = R.string.hymn_title_mc_bb;
+            break;
+        case HYMN_DB:
+            resId = (mHymnNo > HYMN_DB_NO_MAX) ? R.string.hymn_title_mc_dbs : R.string.hymn_title_mc_db;
+            break;
         }
 
         mHymnSearch = res.getString(resId, mHymnNo, lyricsPhrase);
@@ -1093,6 +1311,10 @@ public class ContentHandler extends BaseActivity {
 
     public Integer getHymnNoEng() {
         return mHymnNoEng;
+    }
+
+    public int getHymnNo() {
+        return mHymnNo;
     }
 
     public static String getHymnDir(String hymnTN) {
@@ -1118,37 +1340,40 @@ public class ContentHandler extends BaseActivity {
     }
 
     /**
-     * Use android default browser for all web url access except for 'englishLyrics', avoid reload webPage for
-     * englishLyrics if use access to the same english hymn no.
+     * Use android default browser for all web url access except for 'englishLyrics';
+     * avoid reload webPage for englishLyrics if user accesses to the same english hymn no.
      * <p>
-     * WebView UI is not user friendly, and offers limited share links for youtube.com/google.com string search.
+     * WebView UI is not user-friendly, and offers limited share links for youtube.com/google.com string search.
      * i.e. The webView does not offer all the share app, and excluded hymnchtv for user selection.
      *
      * @param type UrlType enum type
      */
     public void initWebView(UrlType type, String... url) {
         switch (type) {
-            case onlineHelp:
-                mWebUrl = HYMNCHTV_FAQ_PLAYBACK;
-                break;
-            case englishLyrics:
-                String HymnalLink = "https://www.hymnal.net/en/hymn/h/";
-                mWebUrl = (mHymnNoEng == null) ? null : HymnalLink + mHymnNoEng;
-                break;
-            case hymnGoogleSearch:
-                mWebUrl = (mHymnInfo == null) ? null : "https://www.google.com/search?q=" + mHymnSearch;
-                break;
-            case hymnYoutubeSearch:
-                mWebUrl = (mHymnInfo == null) ? null : "https://m.youtube.com/results?search_query=" + mHymnSearch;
-                break;
-            case hymnNotionSearch:
-                mWebUrl = ((url.length < 1) || (url[0] == null)) ? NotionRecord.HYMNCHTV_NOTION : url[0];
-                break;
-            case hymnQqSearch:
-                mWebUrl = ((url.length < 1) || (url[0] == null)) ? QQRecord.HYMNCHTV_QQ_MAIN : url[0];
-                break;
-            default:
-                mWebUrl = null;
+        case onlineHelp:
+            mWebUrl = HYMNCHTV_FAQ_PLAYBACK;
+            break;
+        case englishLyrics:
+            String HymnalLink = "https://www.hymnal.net/en/hymn/h/";
+            mWebUrl = (mHymnNoEng == null) ? null : HymnalLink + mHymnNoEng;
+            break;
+        case hymnGoogleSearch:
+            mWebUrl = (mHymnInfo == null) ? null : "https://www.google.com/search?q=" + mHymnSearch;
+            break;
+        case hymnYoutubeSearch:
+            mWebUrl = (mHymnInfo == null) ? null : "https://m.youtube.com/results?search_query=" + mHymnSearch;
+            break;
+        case hymnNotionSearch:
+            mWebUrl = ((url.length < 1) || (url[0] == null)) ? NotionRecord.HYMNCHTV_NOTION : url[0];
+            break;
+        case hymnQqSearch:
+            mWebUrl = ((url.length < 1) || (url[0] == null)) ? QQRecord.HYMNCHTV_QQ_MAIN : url[0];
+            break;
+        case hymnBibleTool:
+            mWebUrl = url[0];
+            break;
+        default:
+            mWebUrl = null;
         }
 
         // Timber.d("Web URL link: %s", mWebUrl);
@@ -1157,21 +1382,21 @@ public class ContentHandler extends BaseActivity {
             return;
         }
 
-        // Proceed to use android default browser if it is not englishLyrics access
-        if (UrlType.englishLyrics != type) {
-            About.hymnUrlAccess(this, mWebUrl);
-            return;
-        }
-
-        // Not actually being used in current implementation
-        WebViewFragment mWebFragment = (WebViewFragment) getSupportFragmentManager().findFragmentById(R.id.webView);
+        // 20260829: Change to use this implementation; Backkey will return to parent,
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        WebViewFragment mWebFragment = (WebViewFragment) fragmentManager.findFragmentById(R.id.webView);
         if (mWebFragment == null) {
             mWebFragment = new WebViewFragment();
         }
         else {
             mWebFragment.initWebView();
         }
-        getSupportFragmentManager().beginTransaction().replace(R.id.webView, mWebFragment).commit();
+
+        fragmentManager.beginTransaction()
+                .replace(R.id.webView, mWebFragment)
+                .setReorderingAllowed(true)
+                .addToBackStack(null)
+                .commit();
         mWebView.setVisibility(View.VISIBLE);
     }
 

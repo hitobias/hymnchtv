@@ -6,8 +6,25 @@
      They are automatically updated with "ant bump-version".
 -->
 <changelog>
-    <release version="2.8.2 (05/01/2026)" versioncode="208020">
+    <release version="2.9.0 (09/03/2026)" versioncode="209000">
         <change>使用前请检阅 &lt;a href='https://cmeng-git.github.io/hymnchtv/faq.html'&gt;诗歌本新应用程序功能&lt;/a&gt;。</change>
+        <change>当选择英文歌词，但未有对应的中文诗歌编号时，应用会在页面滑动时崩溃。</change>
+        <change>更新服务现在仅检查 GitHub 仓库中的 version.properties 文件进行更新。
+            当发现新版本时，显示更新日志内容信息。</change>
+        <change>如果'唱诗'媒体下载失败，应用将显示 BibleTool 网站上的媒体内容。</change>
+        <change>用户可以在 BibleTool 界面点击 MP3 下载按钮；应用将开始下载，并将媒体保存在后台。下载完成后开始播放。</change>
+        <change>长按'唱诗'按钮将立即显示 BibleTool 媒体页面。</change>
+        <change>在'教唱'或'唱诗'页面，按下返回键现在会返回诗歌内容显示页面，而不是主页面。</change>
+        <change>在获取英文歌词的过程中提供更多调试信息。如果获取到的英文歌词未在 webView 中正确显示，应用将自动重新获取英文歌词。</change>
+        <change>长按'中英文'切换按钮（当英文歌词未显示时）将重新获取英文歌词。</change>
+        <change>在媒体内容显示界面中可直接访问 media_config；方便用户在必要时管理数据库，例如清除错误的数据库内容。</change>
+        <change>提升 minSdk = 24，以兼容应用中使用的第三方库；并将应用升级以支持 API-37 (CinnamonBun)。</change>
+        <change>当用户通过'主页' (HOME) 键离开应用时，停止所有媒体播放器的播放。否则，用户返回时不会显示结束播放的界面。</change>
+        <change>将 OpenCC 库版本从 1.1.9 升级到 1.2.0。</change>
+        <change>错误修复和改进。</change>
+    </release>
+
+    <release version="2.8.2 (05/01/2026)" versioncode="208020">
         <change>检查或在新更新之前，如果发现新版本，则显示所有新增变更信息。</change>
         <change>添加一个 5 秒超时计时器，当加载英文歌词出错时退出。</change>
         <change>获取英文歌词时添加更多调试信息，以帮助进行根本原因分析。</change>

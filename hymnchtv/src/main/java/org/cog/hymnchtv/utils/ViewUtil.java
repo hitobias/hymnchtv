@@ -40,12 +40,7 @@ public class ViewUtil {
         // Change to Spanned for proper display of "\n" or "br/> etc;
         text = text.replace("\n", "<br/>");
         Spanned msgBody;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            msgBody = Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY);
-        }
-        else {
-            msgBody = Html.fromHtml(text);
-        }
+        msgBody = Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY);
         tv.setText(msgBody);
     }
 

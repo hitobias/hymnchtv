@@ -28,7 +28,6 @@ import android.webkit.HttpAuthHandler;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebViewDatabase;
 import android.widget.CheckBox;
 import android.widget.EditText;
 
@@ -71,10 +70,10 @@ public class MyWebViewClient extends WebViewClient {
      */
     @Override
     public boolean shouldOverrideUrlLoading(WebView webView, WebResourceRequest request) {
-        // This user clicked url is from the same website, so do not override; let MyWebViewClient load the page
+        // If user clicked url is from the same website, then load using the same webView.
         String url = request.getUrl().toString();
         if (isDomainMatch(webView, url)) {
-            viewFragment.addLastUrl(url);
+            // Return false to tell Android to load the URL in the current WebView
             return false;
         }
 
@@ -83,7 +82,8 @@ public class MyWebViewClient extends WebViewClient {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setData(Uri.parse(url));
             viewFragment.startActivity(intent);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             // catch ActivityNotFoundException for xmpp:info@example.com. so let own webView load and display the error
             Timber.w("Failed to load url '%s' : %s", url, e.getMessage());
             String origin = Uri.parse(webView.getUrl()).getHost();

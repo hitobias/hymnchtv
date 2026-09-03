@@ -16,7 +16,7 @@
 
 # set -x
 
-LIB_OPENCC_VER="1.1.9"
+LIB_OPENCC_VER="1.2.0"
 LIB_OPENCC="OpenCC"
 
 if [[ -d ${LIB_OPENCC} ]] && [[ -f ${LIB_OPENCC}/package.json ]]; then

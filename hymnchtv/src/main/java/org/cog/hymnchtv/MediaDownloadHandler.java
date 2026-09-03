@@ -229,9 +229,10 @@ public class MediaDownloadHandler extends Fragment {
                             String uiLabel = fileLabel.getText().toString();
                             Timber.d("Downloaded file: %s (size: %s); label: %s; Playback GUI active: %s",
                                     destFName, mFileSize, uiLabel, fileXferUi.isShown());
+                            HymnsApp.showToastMessage(R.string.download_completed);
 
                             // Start playing only if the same player user still stay put.
-                            // Otherwise, ui is not sync and user has no control of the play back
+                            // Otherwise, ui is not sync and user has no control of the playback
                             if (fileXferUi.isShown() && uiLabel.startsWith(destFName)) {
                                 mContentHandler.startPlay();
                             }
@@ -245,6 +246,7 @@ public class MediaDownloadHandler extends Fragment {
                 }
                 else if (downloadJobStatus == DownloadManager.STATUS_FAILED) {
                     onError(HymnsApp.getResString(R.string.file_download_failed, dnLink));
+                    mContentHandler.showBibleToolHymnal();
                 }
             }
             // Remove lastDownloadId from downloadManager record and delete the tmp file
@@ -254,7 +256,6 @@ public class MediaDownloadHandler extends Fragment {
 
             if (fileDownloads.isEmpty())
                 fileXferUi.setVisibility(View.GONE);
-
         }
     }
 

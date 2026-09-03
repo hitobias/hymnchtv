@@ -87,6 +87,7 @@
     <string name="error_search_empty">Please enter string to search</string>
     <string name="error_file_not_found"> (Unable to get file: %1$s)</string>
     <string name="error_english_lyrics_null">Sorry! Hymn \'%1$d\' has no English lyrics</string>
+    <string name="error_invalid_mimetype_download">App does not support download mimeType: \'%s\'</string>
 
     <string name="hymn_info_bb_max">FuGe has only %1$d (%2$d)</string>
     <string name="hymn_info_bb_range_over">BuChong does not have hymn: %1$s~%2$s (%3$s)</string>
@@ -207,7 +208,7 @@
     <!-- hymnchtv media player interface gui names -->
     <!--
     <string name="hymn_media_banzou">BanZou</string>
-    <string name="hymn_media_changshi">ChangShi</string>
+    <string name="hymn_media_changshi"><u>ChangShi</u></string>
     <string name="hymn_media_jiaochang"><u>JiaChang</u></string>
     <string name="hymn_media_media"><u>Media</u></string>
     -->

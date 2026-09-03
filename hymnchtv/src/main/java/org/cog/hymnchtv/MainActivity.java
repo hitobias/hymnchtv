@@ -123,6 +123,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     public static final String ATTR_HYMN_TYPE = "hymn_type";
     public static final String ATTR_HYMN_NUMBER = "hymn_number";
     public static final String ATTR_MEDIA_URI = "media_uri";
+    public static final String ATTR_MEDIA_TYPE = "media_type";
 
     public static final String ATTR_SEARCH = "search";
     public static final String ATTR_PAGE = "page";
@@ -158,7 +159,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             151, 275
     );
 
-    // A cross reference table for YB hymn
+    // A cross-reference table for YB hymn
     public static final Map<Integer, String> ybXTable = new HashMap<>();
 
     private static String mHymnType = HYMN_DB;
@@ -346,7 +347,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             String sValue = tv_Search.getText().toString();
             if (!TextUtils.isEmpty(sValue)) {
                 sValue = ChineseConverter.convert(sValue, ConversionType.T2S, this);
-                sValue = sValue.replaceAll("他", "祂");
+                sValue = sValue.replace("他", "祂");
                 tv_Search.setText(sValue);
             }
             return true;
@@ -611,6 +612,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * @param hymnType lyrics content of the hymnType
      * @param hymnNo the content of hymnNo to display
      * @param autoPlay start media playback if true after the lyrics content is shown
+     * @param engNo optional english hymn no to show if present
      */
     public static void showContent(Context ctx, String hymnType, int hymnNo, boolean autoPlay, Integer... engNo) {
         // Save the user selection into history record
@@ -654,7 +656,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     /**
      * Generate the expandable TOC list from the given tocFile sorted by the stroke or pinyin
      *
-     * @param dbPage true to access the DB page instead of BB if exist.
+     * @param dbPage true to access the DB page instead of BB if existed.
      */
     private void showHymnFromEng(boolean dbPage) {
         if (isToc) {
@@ -698,7 +700,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
                     return;
                 }
             }
-            // Pass in an non-existence HYMN_BB_DUMMY for chinese hymnNo
+            // Pass in a non-existence HYMN_BB_DUMMY for Chinese hymnNo
             showContent(this, HYMN_BB, HYMN_BB_DUMMY, false, hymnEng);
         } catch (IOException e) {
             Timber.w("Content toc not available: %s", e.getMessage());
@@ -1055,7 +1057,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         mTocSpinnerItem.setTextColor(mFontColor);
     }
 
-    // Create the YB hymn cross reference table for use in History record and PagerSlider
+    // Create the YB hymn cross-reference table for use in History record and PagerSlider
     private void createYbXTable() {
         ybXTable.clear();
         try {

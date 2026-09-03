@@ -395,6 +395,9 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             else if (url.contains("mp.weixin.qq.com")) {
                 mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
             }
+            else if (url.contains(ContentHandler.btAddr)) {
+                mContentHandler.initWebView(ContentHandler.UrlType.hymnBibleTool, url);
+            }
             else {
                 mUri = uri;
                 playStart();
@@ -426,21 +429,21 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 mediaHymns.clear();
 
             switch (checkedId) {
-                case R.id.btn_media:
-                    mMediaType = MediaType.HYMN_MEDIA;
-                    break;
+            case R.id.btn_media:
+                mMediaType = MediaType.HYMN_MEDIA;
+                break;
 
-                case R.id.btn_jiaochang:
-                    mMediaType = MediaType.HYMN_JIAOCHANG;
-                    break;
+            case R.id.btn_jiaochang:
+                mMediaType = MediaType.HYMN_JIAOCHANG;
+                break;
 
-                case R.id.btn_changshi:
-                    mMediaType = MediaType.HYMN_CHANGSHI;
-                    break;
+            case R.id.btn_changshi:
+                mMediaType = MediaType.HYMN_CHANGSHI;
+                break;
 
-                case R.id.btn_banzhou:
-                    mMediaType = MediaType.HYMN_BANZOU;
-                    break;
+            case R.id.btn_banzhou:
+                mMediaType = MediaType.HYMN_BANZOU;
+                break;
             }
 
             if (mEditor != null) {
@@ -452,74 +455,82 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
     private void checkRadioButton(MediaType mediaType) {
         switch (mediaType) {
-            case HYMN_MEDIA:
-                mBtnMedia.setChecked(true);
-                break;
+        case HYMN_MEDIA:
+            mBtnMedia.setChecked(true);
+            break;
 
-            case HYMN_JIAOCHANG:
-                mBtnJiaoChang.setChecked(true);
-                break;
+        case HYMN_JIAOCHANG:
+            mBtnJiaoChang.setChecked(true);
+            break;
 
-            case HYMN_CHANGSHI:
-                mBtnChangShi.setChecked(true);
-                break;
+        case HYMN_CHANGSHI:
+            mBtnChangShi.setChecked(true);
+            break;
 
-            case HYMN_BANZOU:
-                mBtnBanZhou.setChecked(true);
-                break;
+        case HYMN_BANZOU:
+            mBtnBanZhou.setChecked(true);
+            break;
         }
+    }
+
+    public MediaType getMediaType() {
+        return mMediaType;
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
-            case R.id.playback_play:
-                startPlay();
-                break;
+        case R.id.playback_play:
+            startPlay();
+            break;
 
-            case R.id.btn_hymnSearch:
-                mContentHandler.initWebView(ContentHandler.UrlType.hymnYoutubeSearch);
-                break;
+        case R.id.btn_hymnSearch:
+            mContentHandler.initWebView(ContentHandler.UrlType.hymnYoutubeSearch);
+            break;
 
-            case R.id.btn_jiaochang:
-                if (!isJiaoChangAvailable) {
-                    // mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
-                    mContentHandler.showNotionSite();
-                }
-                break;
+        case R.id.btn_jiaochang:
+            if (!isJiaoChangAvailable) {
+                // mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
+                mContentHandler.showNotionSite();
+            }
+            break;
         }
     }
 
     @Override
     public boolean onLongClick(View v) {
         switch (v.getId()) {
-            case R.id.playback_play:
-                if (playerState == STATE_STOP) {
-                    if (mMediaType != MediaType.HYMN_JIAOCHANG) {
-                        confirmAutoStream();
-                    }
-                    else {
-                        HymnsApp.showToastMessage(R.string.auto_stream_unsupported,
-                                mContentHandler.hymnType2Text(), MediaType.mediaType2Text(mMediaType));
-                    }
+        case R.id.playback_play:
+            if (playerState == STATE_STOP) {
+                if (mMediaType != MediaType.HYMN_JIAOCHANG) {
+                    confirmAutoStream();
                 }
                 else {
-                    mContentHandler.setAutoStream(false);
-                    stopPlay();
+                    HymnsApp.showToastMessage(R.string.auto_stream_unsupported,
+                            mContentHandler.hymnType2Text(), MediaType.mediaType2Text(mMediaType));
                 }
-                return true;
+            }
+            else {
+                mContentHandler.setAutoStream(false);
+                stopPlay();
+            }
+            return true;
 
-            case R.id.btn_hymnSearch:
-                mContentHandler.initWebView(ContentHandler.UrlType.hymnGoogleSearch);
-                return true;
+        case R.id.btn_hymnSearch:
+            mContentHandler.initWebView(ContentHandler.UrlType.hymnGoogleSearch);
+            return true;
 
-            case R.id.btn_media:
-                mContentHandler.initWebView(ContentHandler.UrlType.hymnQqSearch);
-                return true;
+        case R.id.btn_media:
+            mContentHandler.initWebView(ContentHandler.UrlType.hymnQqSearch);
+            return true;
 
-            case R.id.btn_jiaochang:
-                mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
-                return true;
+        case R.id.btn_jiaochang:
+            mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
+            return true;
+
+        case R.id.btn_changshi:
+            mContentHandler.showBibleToolHymnal();
+            return true;
         }
         return false;
     }
@@ -589,7 +600,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 intent.setData(mUri);
                 intent.setAction(AudioBgService.ACTION_PLAYER_INIT);
-                AudioBgService.enqueueWork(mContentHandler, intent);
+                mContentHandler.startService(intent);
             }
             return true;
         }
@@ -606,7 +617,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 intent.setData(mUri);
                 intent.setAction(AudioBgService.ACTION_PLAYER_STOP);
-                AudioBgService.enqueueWork(mContentHandler, intent);
+                mContentHandler.startService(intent);
             }
         }
     }
@@ -623,7 +634,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             if (playerState == STATE_PLAY) {
                 intent.setData(mUri);
                 intent.setAction(AudioBgService.ACTION_PLAYER_PAUSE);
-                AudioBgService.enqueueWork(mContentHandler, intent);
+                mContentHandler.startService(intent);
                 return;
             }
             bcReceiverInit();
@@ -632,7 +643,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             intent.setData(mUri);
             // intent.setTypeAndNormalize("1.0");
-            AudioBgService.enqueueWork(mContentHandler, intent);
+            mContentHandler.startService(intent);
             return;
         }
 
@@ -647,7 +658,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         }
         try {
             mContentHandler.startActivity(intent);
-        } catch (ActivityNotFoundException e) {
+        }
+        catch (ActivityNotFoundException e) {
             HymnsApp.showToastMessage(R.string.file_open_no_application);
         }
     }
@@ -666,7 +678,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             intent.setData(mUri);
             intent.putExtra(AudioBgService.PLAYBACK_POSITION, position);
             intent.setAction(AudioBgService.ACTION_PLAYER_SEEK);
-            AudioBgService.enqueueWork(mContentHandler, intent);
+            mContentHandler.startService(intent);
         }
     }
 
@@ -674,7 +686,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         Intent intent = new Intent(mContentHandler, AudioBgService.class);
         intent.setType(speed);
         intent.setAction(AudioBgService.ACTION_PLAYBACK_SPEED);
-        AudioBgService.enqueueWork(mContentHandler, intent);
+        mContentHandler.startService(intent);
     }
 
     @Override
@@ -728,7 +740,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         Intent intent = new Intent(mContentHandler, AudioBgService.class);
         intent.setType(loopValue);
         intent.setAction(AudioBgService.ACTION_PLAYBACK_LOOP);
-        AudioBgService.enqueueWork(mContentHandler, intent);
+        mContentHandler.startService(intent);
     }
 
     /**
@@ -759,64 +771,64 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 Timber.d("Audio playback state: %s (%s/%s): %s", playbackState, position, audioDuration, uri.getPath());
 
                 switch (playbackState) {
-                    case init:
-                        playerState = STATE_IDLE;
-                        playbackDuration.setText(formatTime(audioDuration));
-                        playbackPosition.setText(formatTime(0));
-                        playbackSeekBar.setMax(audioDuration);
-                        playbackSeekBar.setProgress(0);
+                case init:
+                    playerState = STATE_IDLE;
+                    playbackDuration.setText(formatTime(audioDuration));
+                    playbackPosition.setText(formatTime(0));
+                    playbackSeekBar.setMax(audioDuration);
+                    playbackSeekBar.setProgress(0);
 
-                        mPlayerAnimate.stop();
-                        playbackPlay.setImageResource(R.drawable.ic_play_stop);
-                        break;
+                    mPlayerAnimate.stop();
+                    playbackPlay.setImageResource(R.drawable.ic_play_stop);
+                    break;
 
-                    case play:
-                        playerState = STATE_PLAY;
-                        playbackSeekBar.setMax(audioDuration);
-                        playerUi.clearAnimation();
+                case play:
+                    playerState = STATE_PLAY;
+                    playbackSeekBar.setMax(audioDuration);
+                    playerUi.clearAnimation();
 
-                        playbackPlay.setImageDrawable(null);
-                        mPlayerAnimate.start();
-                        break;
+                    playbackPlay.setImageDrawable(null);
+                    mPlayerAnimate.start();
+                    break;
 
-                    case stop:
-                        playerState = STATE_STOP;
-                        /*
-                         * actually bcRegisters contains the same receivers i.e. MediaGuiController.this
-                         * So can just handle once by first incoming midi uri instance
-                         */
-                        // bcRegisters.remove(uri);
-                        // mediaHymns.remove(uri);
-                        // if (mediaHymns.isEmpty())
-                        //    LocalBroadcastManager.getInstance(mContentHandler).unregisterReceiver(mReceiver);
+                case stop:
+                    playerState = STATE_STOP;
+                    /*
+                     * actually bcRegisters contains the same receivers i.e. MediaGuiController.this
+                     * So can just handle once by first incoming midi uri instance
+                     */
+                    // bcRegisters.remove(uri);
+                    // mediaHymns.remove(uri);
+                    // if (mediaHymns.isEmpty())
+                    //    LocalBroadcastManager.getInstance(mContentHandler).unregisterReceiver(mReceiver);
 
-                        bcRegisters.clear();
+                    bcRegisters.clear();
 
-                        // Clear the hymns list on stopPlay, allowing playback to fetch new if user changes the hymn
-                        Timber.d("Clear the mediaHymn Uri List");
-                        mediaHymns.clear();
+                    // Clear the hymns list on stopPlay, allowing playback to fetch new if user changes the hymn
+                    Timber.d("Clear the mediaHymn Uri List");
+                    mediaHymns.clear();
 
-                        LocalBroadcastManager.getInstance(mContentHandler).unregisterReceiver(mReceiver);
-                        mContentHandler.updateMediaPlayerInfo();
+                    LocalBroadcastManager.getInstance(mContentHandler).unregisterReceiver(mReceiver);
+                    mContentHandler.updateMediaPlayerInfo();
 
-                        // Auto next media if enabled via longPress playButton
-                        mContentHandler.onEndOrError(getString(R.string.playback_completed));
-                        // flow through to reset player state
+                    // Auto next media if enabled via longPress playButton
+                    mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                    // flow through to reset player state
 
-                    case pause:
-                        if (playerState != STATE_STOP) {
-                            playerState = STATE_PAUSE;
-                        }
+                case pause:
+                    if (playerState != STATE_STOP) {
+                        playerState = STATE_PAUSE;
+                    }
 
-                        playbackPosition.setText(formatTime(position));
-                        playbackDuration.setText(formatTime(audioDuration - position));
-                        playbackSeekBar.setMax(audioDuration);
-                        playbackSeekBar.setProgress(position);
+                    playbackPosition.setText(formatTime(position));
+                    playbackDuration.setText(formatTime(audioDuration - position));
+                    playbackSeekBar.setMax(audioDuration);
+                    playbackSeekBar.setProgress(position);
 
-                        mPlayerAnimate.stop();
-                        playbackPlay.setImageResource((playerState == STATE_PAUSE)
-                                ? R.drawable.ic_play_pause : R.drawable.ic_play_stop);
-                        break;
+                    mPlayerAnimate.stop();
+                    playbackPlay.setImageResource((playerState == STATE_PAUSE)
+                            ? R.drawable.ic_play_pause : R.drawable.ic_play_stop);
+                    break;
                 }
             }
         }

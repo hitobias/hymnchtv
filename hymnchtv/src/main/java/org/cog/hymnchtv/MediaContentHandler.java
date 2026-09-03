@@ -103,7 +103,7 @@ public class MediaContentHandler {
     }
 
     /**
-     * Start playback the given mediaUrl if it it is youtube link;
+     * Start playback the given mediaUrl if it is YouTube link;
      * or an internet video link, or local stored video media content
      * Return true if the link has been handled; with an empty uriList if played
      * or a populated uriList of audio content or download link;

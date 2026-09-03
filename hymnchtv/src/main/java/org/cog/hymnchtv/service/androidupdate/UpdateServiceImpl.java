@@ -17,8 +17,8 @@
 package org.cog.hymnchtv.service.androidupdate;
 
 import static org.cog.hymnchtv.MainActivity.PREF_SETTINGS;
-import static org.cog.hymnchtv.mediaconfig.MediaConfig.URL_IMPORT_VERSION;
 import static org.cog.hymnchtv.mediaconfig.MediaConfig.PREF_VERSION_URL;
+import static org.cog.hymnchtv.mediaconfig.MediaConfig.URL_IMPORT_VERSION;
 
 import android.annotation.SuppressLint;
 import android.app.DownloadManager;
@@ -66,24 +66,23 @@ import timber.log.Timber;
 
 /**
  * hymnchtv update service implementation. It checks for an update and schedules .apk download using <code>DownloadManager</code>.
- * It is only activated for the debug version. Android initials the auto-update from PlayStore for release version.
+ * All release/debug version has this implementated.
  *
  * @author Eng Chong Meng
  */
 public class UpdateServiceImpl {
     // Default update link; path is case-sensitive.
-    private static final String[] updateLinks = {
-            "https://raw.githubusercontent.com/cmeng-git/hymnchtv/master/hymnchtv/release/version.properties",
-            "https://atalk.sytes.net/releases/hymnchtv/version.properties"
-    };
+    private static final String updateLink =
+            "https://raw.githubusercontent.com/cmeng-git/hymnchtv/master/hymnchtv/release/version.properties";
 
     // filename is case-sensitive
     private static final String fileNameApk = String.format("/hymnchtv-%s.apk", BuildConfig.BUILD_TYPE);
-    // github apk is in the release directory; for large apk size download
+    // github apk is in the release directory; for apk download
     private static final String urlApk = "https://github.com/cmeng-git/hymnchtv/releases/download/%s";
 
     // Url import link file location
     private static final String urlImport = "https://raw.githubusercontent.com/cmeng-git/hymnchtv/master/hymnchtv/src/main/assets/url_import.txt";
+    // New changes info is extracted from changeLog
     private static final String changeLog = "https://raw.githubusercontent.com/cmeng-git/hymnchtv/master/hymnchtv/src/main/res/xml/changelog_master.xml";
 
     /**
@@ -155,13 +154,12 @@ public class UpdateServiceImpl {
                 String btnText = context.getString(R.string.download);
 
                 String historyText = "&#9210; 无更新";
-                if (isValidateLink(changeLog.replace("%s", latestVersion))) {
+                if (isValidateLink(changeLog)) {
                     try {
                         InputStream inputStream = mHttpConnection.getInputStream();
                         String releaseNotes = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
 
-                        //  Pattern pattern = Pattern.compile("(Project hymnchtv.+?Author:.+?)Version:\\s+" + currentVersion, Pattern.DOTALL);
-                        Pattern pattern = Pattern.compile("<changelog>.+?(<release version.+?)<release version=\""+currentVersion, Pattern.DOTALL);
+                        Pattern pattern = Pattern.compile("<changelog>.+?(<release version.+?)<release version=\"" + currentVersion, Pattern.DOTALL);
                         Matcher matcher = pattern.matcher(releaseNotes);
                         if (matcher.find()) {
                             historyText = matcher.group(1);
@@ -169,13 +167,13 @@ public class UpdateServiceImpl {
                                 historyText = historyText
                                         .replaceAll("<release", "<b>Release")
                                         .replaceAll("versioncode.+?\">", "</b>")
-                                        .replaceAll("<change", "&#9210; <change" )
+                                        .replaceAll("<change", "&#9210; <change")
                                         .replaceAll("\n", "<br />");
                             }
                         }
                     }
                     catch (IOException e) {
-                        Timber.d("Invalid release Notes link: %s", e.getMessage());
+                        Timber.d("Invalid changeLog link: %s", e.getMessage());
                         return;
                     }
                 }
@@ -280,12 +278,7 @@ public class UpdateServiceImpl {
                         Context context = HymnsApp.getGlobalContext();
                         // Need REQUEST_INSTALL_PACKAGES in manifest; Intent.ACTION_VIEW works for both
                         Intent intent;
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
-                        }
-                        else {
-                            intent = new Intent(Intent.ACTION_VIEW);
-                        }
+                        intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
                         intent.setDataAndType(fileUri, APK_MIME_TYPE);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -381,7 +374,8 @@ public class UpdateServiceImpl {
             try {
                 if (!idStr.isEmpty())
                     apkIds.add(Long.parseLong(idStr));
-            } catch (NumberFormatException e) {
+            }
+            catch (NumberFormatException e) {
                 Timber.e("Error parsing apk id for string: %s [%s]", idStr, storeStr);
             }
         }
@@ -455,44 +449,41 @@ public class UpdateServiceImpl {
         currentVersion = versionService.getCurrentVersionName();
         currentVersionCode = versionService.getCurrentVersionCode();
 
-        for (String aLink : updateLinks) {
-            try {
-                if (isValidateLink(aLink)) {
-                    InputStream inputStream = mHttpConnection.getInputStream();
-                    Properties mProperties = new Properties();
-                    mProperties.load(inputStream);
-                    inputStream.close();
+        try {
+            if (isValidateLink(updateLink)) {
+                InputStream inputStream = mHttpConnection.getInputStream();
+                Properties mProperties = new Properties();
+                mProperties.load(inputStream);
+                inputStream.close();
 
-                    latestVersion = mProperties.getProperty("last_version");
-                    latestVersionCode = Long.parseLong(mProperties.getProperty("last_version_code"));
+                latestVersion = mProperties.getProperty("last_version");
+                latestVersionCode = Long.parseLong(mProperties.getProperty("last_version_code"));
 
-                    try {
-                        int versionUrl = Integer.parseInt(mProperties.getProperty("version_import"));
-                        checkUrlImport(versionUrl);
-                    } catch (NumberFormatException e) {
-                        Timber.e("Url version unavailable: %s", e.getMessage());
-                    }
-
-                    if (aLink.contains("github")) {
-                        downloadLink = urlApk.replace("%s", latestVersion) + fileNameApk;
-                    } else {
-                        String aLinkPrefix = aLink.substring(0, aLink.lastIndexOf("/"));
-                        downloadLink = aLinkPrefix + fileNameApk;
-                    }
-                    if (isValidateLink(downloadLink)) {
-                        MainActivity.mHasUpdate = currentVersionCode < latestVersionCode;
-                        // return true if current running application is already the latest
-                        return (currentVersionCode >= latestVersionCode);
-                    }
-                    else {
-                        downloadLink = null;
-                    }
-                    break;
+                try {
+                    String urlImport = mProperties.getProperty("url_import");
+                    int versionUrl = Integer.parseInt(urlImport);
+                    checkUrlImport(versionUrl);
                 }
-            } catch (IOException e) {
-                Timber.w("Could not retrieve version.properties for checking: %s", e.getMessage());
+                catch (NumberFormatException e) {
+                    Timber.e("Url import info unavailable: %s", e.getMessage());
+                }
+
+                downloadLink = urlApk.replace("%s", latestVersion) + fileNameApk;
+                if (isValidateLink(downloadLink)) {
+                    MainActivity.mHasUpdate = currentVersionCode < latestVersionCode;
+                    // return true if current running application is already the latest
+                    return (currentVersionCode >= latestVersionCode);
+                }
+                // No apk found for update
+                else {
+                    downloadLink = null;
+                }
             }
         }
+        catch (IOException e) {
+            Timber.w("Could not retrieve version.properties for checking: %s", e.getMessage());
+        }
+
         // return true if all failed to force update.
         return true;
     }
@@ -513,7 +504,8 @@ public class UpdateServiceImpl {
                     MediaConfig.importUrlRecords(inputStream, false);
                     inputStream.close();
                 }
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 Timber.e("%s", e.getMessage());
             }
         }
@@ -543,7 +535,8 @@ public class UpdateServiceImpl {
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 return true;
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.d("Invalid url: %s", e.getMessage());
             return false;
         }

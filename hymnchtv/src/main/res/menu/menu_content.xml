@@ -26,6 +26,10 @@
         android:title="@string/lyrics_text_size_decrease" />
 
     <item
+        android:id="@+id/media_config"
+        android:title="@string/media_config" />
+
+    <item
         android:id="@+id/lyrcsEnglish"
         android:title="@string/lyrics_english" />
 

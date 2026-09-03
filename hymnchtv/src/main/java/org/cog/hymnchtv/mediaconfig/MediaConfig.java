@@ -22,6 +22,7 @@ import static org.cog.hymnchtv.ContentHandler.MEDIA_JIAOCHANG;
 import static org.cog.hymnchtv.ContentHandler.MEDIA_MEDIA;
 import static org.cog.hymnchtv.MainActivity.ATTR_HYMN_NUMBER;
 import static org.cog.hymnchtv.MainActivity.ATTR_HYMN_TYPE;
+import static org.cog.hymnchtv.MainActivity.ATTR_MEDIA_TYPE;
 import static org.cog.hymnchtv.MainActivity.ATTR_MEDIA_URI;
 import static org.cog.hymnchtv.MainActivity.HYMN_BB;
 import static org.cog.hymnchtv.MainActivity.HYMN_DB;
@@ -86,6 +87,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.util.EncodingUtils;
 import org.cog.hymnchtv.BaseActivity;
 import org.cog.hymnchtv.ContentHandler;
@@ -161,7 +163,7 @@ public class MediaConfig extends BaseActivity
     // Indicate this instance is trigger from share from
     private boolean mShare = false;
 
-    // Flag indicates the content is auto filled and may be overwritten when user changes the hymnNo ect.
+    // Flag indicates the content is autofilled and may be overwritten when user changes the hymnNo ect.
     private boolean isAutoFilled = true;
     private int mVisibleItem = 0;
 
@@ -316,7 +318,7 @@ public class MediaConfig extends BaseActivity
         if (bundle != null) {
             String mediaUri = bundle.getString(ATTR_MEDIA_URI);
             if (!TextUtils.isEmpty(mediaUri)) {
-                mShare = true;
+                mShare = true; // StringUtils.isNotEmpty(mediaUri.trim());
                 isAutoFilled = false;
                 tvMediaUri.setText(mediaUri);
                 if (mediaUri.contains("mp.weixin.qq.com") || mediaUri.contains(".notion.site")) {
@@ -325,6 +327,10 @@ public class MediaConfig extends BaseActivity
                 else if (mediaUri.contains("youtube.com")
                         || mediaUri.contains("hymnal.net")) {
                     mediaTypeSpinner.setSelection(0);
+                }
+                else {
+                    int mediaType = bundle.getInt(ATTR_MEDIA_TYPE);
+                    mediaTypeSpinner.setSelection(mediaType);
                 }
 
                 String hymnType = bundle.getString(ATTR_HYMN_TYPE);
@@ -386,84 +392,84 @@ public class MediaConfig extends BaseActivity
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
-            case R.id.help_text:
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(Uri.parse(HYMNCHTV_FAQ_UDC_RECORD));
-                startActivity(intent);
-                break;
+        case R.id.help_text:
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse(HYMNCHTV_FAQ_UDC_RECORD));
+            startActivity(intent);
+            break;
 
-            case R.id.help_video:
-                playVideoHelp();
-                break;
+        case R.id.help_video:
+            playVideoHelp();
+            break;
 
-            case R.id.shareMediaUri:
-                shareMediaRecord();
-                break;
+        case R.id.shareMediaUri:
+            shareMediaRecord();
+            break;
 
-            /* Decode the media uri, so it is user readable instead of %xx */
-            case R.id.decodeUri:
-                uriDecode();
-                break;
+        /* Decode the media uri, so it is user readable instead of %xx */
+        case R.id.decodeUri:
+            uriDecode();
+            break;
 
-            case R.id.button_add:
-                if (updateMediaRecord()) {
-                    Timber.d("Record saved successful: %s", tvMediaUri.getText());
-                }
-                break;
+        case R.id.button_add:
+            if (updateMediaRecord()) {
+                Timber.d("Record saved successful: %s", tvMediaUri.getText());
+            }
+            break;
 
-            // Manual deletion must be performed by user if the user modifies the link to point to different HymnType
-            case R.id.button_delete:
-                deleteMediaRecord();
-                break;
+        // Manual deletion must be performed by user if the user modifies the link to point to different HymnType
+        case R.id.button_delete:
+            deleteMediaRecord();
+            break;
 
-            case R.id.button_play:
-                startPlayOrActionView();
-                break;
+        case R.id.button_play:
+            startPlayOrActionView();
+            break;
 
-            case R.id.button_Exit:
-                checkExitAction(false);
-                break;
+        case R.id.button_Exit:
+            checkExitAction(false);
+            break;
 
-            // use Rich Text Editor to modify or view the import file content
-            case R.id.editFile:
-                String filename = ViewUtil.toString(tvImportFile);
-                if (filename != null)
-                    editFile(filename);
-                break;
+        // use Rich Text Editor to modify or view the import file content
+        case R.id.editFile:
+            String filename = ViewUtil.toString(tvImportFile);
+            if (filename != null)
+                editFile(filename);
+            break;
 
-            case R.id.button_NQ:
-                downloadNQRecord(Mode.NOTION_RECORD);
-                break;
+        case R.id.button_NQ:
+            downloadNQRecord(Mode.NOTION_RECORD);
+            break;
 
-            // Import the import file url links to the DB database
-            case R.id.button_import:
-                Timber.d("import Media Records");
-                importMediaRecords(null);
-                break;
+        // Import the import file url links to the DB database
+        case R.id.button_import:
+            Timber.d("import Media Records");
+            importMediaRecords(null);
+            break;
 
-            // Generate a text import file for all links start with "http(s)" from database for sharing
-            case R.id.button_export:
-                createExportLink();
-                break;
+        // Generate a text import file for all links start with "http(s)" from database for sharing
+        case R.id.button_export:
+            createExportLink();
+            break;
 
-            // Show the DB content for all user defined media link
-            case R.id.button_db_records:
-                showMediaRecords(-1);
-                break;
+        // Show the DB content for all user defined media link
+        case R.id.button_db_records:
+            showMediaRecords(-1);
+            break;
         }
     }
 
     @Override
     public boolean onLongClick(View v) {
         switch (v.getId()) {
-            case R.id.button_NQ:
-                downloadNQRecord(Mode.QQ_LINK);
-                return true;
+        case R.id.button_NQ:
+            downloadNQRecord(Mode.QQ_LINK);
+            return true;
 
-            case R.id.button_import:
-                Timber.d("import Media Records from: %s", ASSET_URL_IMPORT_FILE);
-                importMediaRecords(ASSET_URL_IMPORT_FILE);
-                return true;
+        case R.id.button_import:
+            Timber.d("import Media Records from: %s", ASSET_URL_IMPORT_FILE);
+            importMediaRecords(ASSET_URL_IMPORT_FILE);
+            return true;
         }
         return false;
     }
@@ -503,7 +509,8 @@ public class MediaConfig extends BaseActivity
                 }
                 try {
                     startActivity(openIntent);
-                } catch (ActivityNotFoundException e) {
+                }
+                catch (ActivityNotFoundException e) {
                     // showToastMessage(R.string.service_gui_FILE_OPEN_NO_APPLICATION);
                 }
             }
@@ -565,7 +572,8 @@ public class MediaConfig extends BaseActivity
                 if (inFile.renameTo(outFile)) {
                     uriPath = outFile.getAbsolutePath();
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 HymnsApp.showToastMessage(e.getMessage());
             }
         }
@@ -790,7 +798,8 @@ public class MediaConfig extends BaseActivity
                     filePath = outFile.getAbsolutePath();
                     mRecord.setFilePath(filePath);
                     mRecord.setMediaUri(null);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     HymnsApp.showToastMessage(e.getMessage());
                     isSuccess = false;
                 }
@@ -813,7 +822,7 @@ public class MediaConfig extends BaseActivity
 
     /**
      * Delete user selected media record on user confirmation.
-     * User must manually deleted the old media record if user changes uri to point to another HymnType
+     * User must manually delete the old media record if user changes uri to point to another HymnType
      */
     private void deleteMediaRecord() {
         String hymnNo = ViewUtil.toString(tvHymnNo);
@@ -913,7 +922,8 @@ public class MediaConfig extends BaseActivity
                 tvUriDecode.setVisibility(View.VISIBLE);
                 try {
                     tvUriDecode.setText(URLDecoder.decode(mediaUri, "UTF-8"));
-                } catch (UnsupportedEncodingException e) {
+                }
+                catch (UnsupportedEncodingException e) {
                     Timber.w("URI decode exception: %s", e.getMessage());
                 }
             }
@@ -1061,7 +1071,8 @@ public class MediaConfig extends BaseActivity
                             boolean isOverWrite = cbOverwrite.isChecked();
                             importUrlRecords(inputStream, isOverWrite);
                             inputStream.close();
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             Timber.w("Input file not accessible: %s", e.getMessage());
                         }
                         return true;
@@ -1108,7 +1119,8 @@ public class MediaConfig extends BaseActivity
                 if (TimberLog.isFinestEnable)
                     Timber.d("Import media record: %s; %s(%s); %s", nui, hymnNo, record, mRecord);
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.w("Import file read error: %s", e.getMessage());
         }
         HymnsApp.showToastMessage(R.string.db_import_record, record, urlRecords);
@@ -1127,7 +1139,8 @@ public class MediaConfig extends BaseActivity
             saveUrlImportFile(inputStream, URL_IMPORT_VERSION);
             inputStream.close();
 
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.w("Asset file not available: %s", e.getMessage());
         }
     }
@@ -1148,7 +1161,8 @@ public class MediaConfig extends BaseActivity
                 FileBackend.copy(inputStream, outputStream);
                 outputStream.close();
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.e("%s", e.getMessage());
         }
 
@@ -1196,7 +1210,8 @@ public class MediaConfig extends BaseActivity
                 else {
                     HymnsApp.showToastMessage(R.string.hymn_match_none);
                 }
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 Timber.e("Export media record exception: %s", e.getMessage());
             }
         }
@@ -1227,7 +1242,8 @@ public class MediaConfig extends BaseActivity
                 else {
                     return null;
                 }
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 Timber.e("Failed to create media export file: %s", e.getMessage());
             }
         }
@@ -1256,7 +1272,7 @@ public class MediaConfig extends BaseActivity
         // android.R.layout.simple_list_item_single_choice,
         /* Display the search result to the user */
         SimpleAdapter mediaAdapter = new SimpleAdapter(this, data,
-                R.layout.media_records_list, new String[]{"match"}, new int[]{R.id.item_record});
+                R.layout.media_records_list, new String[] {"match"}, new int[] {R.id.item_record});
 
         mListView.setAdapter(mediaAdapter);
         mListView.setVisibility(View.VISIBLE);

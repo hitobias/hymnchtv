@@ -105,12 +105,11 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
 
         // This helps to prevent WebView resets UI back to system default.
         // Must skip for < N else weired exceptions happen in Note-5
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                new WebView(this).destroy();
-            } catch (Exception e) {
-                Timber.e("WebView init exception: %s", e.getMessage());
-            }
+        try {
+            new WebView(this).destroy();
+        }
+        catch (Exception e) {
+            Timber.e("WebView init exception: %s", e.getMessage());
         }
 
         // Must initialize Notification channels before any notification is being issued.
@@ -326,13 +325,13 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     public static Uri getRawUri(String filename) {
         int resId = getFileResId(filename, "raw");
         return (resId != 0) ? Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"
-                + mInstance.getPackageName() + "/raw/" + resId) : null;
+                                        + mInstance.getPackageName() + "/raw/" + resId) : null;
     }
 
     public static Uri getDrawableUri(String filename) {
         int resId = getFileResId(filename, "drawable");
         return (resId != 0) ? Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"
-                + mInstance.getPackageName() + "/drawable/" + resId) : null;
+                                        + mInstance.getPackageName() + "/drawable/" + resId) : null;
     }
 
     /**

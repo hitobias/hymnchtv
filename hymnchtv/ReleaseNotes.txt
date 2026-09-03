@@ -1,5 +1,29 @@
 Project hymnchtv Release Notes
 =========================================================================
+Version:        2.9.0 (209000)
+Release Date:   09/03/2026
+Author:         cmeng
+- When an English lyrics is selected without a corresponding Chinese hymn no, the app crashes on page slide.
+- Update Service now check only the github repository version.properties file for update.
+  Change to show Changlog content info when there is a new version found.
+- When 唱诗 media downloading failed, app fallbacks to show the media content from BibleTool site.
+- User may click MP3 download button in BibleTool UI; app will proceed to download, save the media in background, and start playback on download completed.
+  i.e 下载： Mp3， 歌词， pdf，歌谱 at the bottom of the BibleTool web page.
+- LongClick on 唱诗 button will proceed to show bibletool media page immediately.
+- While in JiaoChang(教唱) or ChangSi(唱诗), pressing of backKey now return to hymn content view instead of the main page.
+- Provide more debug info during fetching of English lyrics in progress. app will re-fetching, if the fetched Enlgish lyrcis is not properly shown in webView.
+- Long press on Chinese->English button while english lyris is not shown will start English lyrics fetching again.
+- Direct access to media_config in media content view; ease user DB management if necessary; e.g. purged incorrect DB content.
+- Raised minSdk = 24, to be compatible with third parties libraries used in app; and upgarde app to support API-37 (CinnamonBun).
+- When user left the app via Home button, stops all media player playback. Otherwise no UI to end player on user return.
+- Upgrade OpenCC library version from 1.1.9 -> 1.2.0.
+
+Observation:
+- When upgrade OpenCC library version from 1.1.9 -> 1.3.2/1.4.2.
+  Crashes in convert(String text, String configFile, String absoluteDataFolderPath)
+  for prase containing 末后亚当?
+
+=========================================================================
 Version:        2.8.2 (208020)
 Release Date:   05/01/2026
 Author:         cmeng
@@ -28,7 +52,7 @@ Release Date:   11/27/2025
 Author:         cmeng
 - Improve Simplified and Traditional lyrics content Pinch-To-Zoom UI response.
 - When user selected hymn via main UI, and lyrics is empty, launch JiaoChang site access if available; else hint user to access JiaoChang online.
-- Must set YT parameter 'origin' to other than YT site i.e.'https://www.youtube.com'; else embed video player has error.
+- Must set YT parameter 'ORIGIN' to other than YT site i.e.'https://www.youtube.com'; else embed video player has error.
 - Incorrect extraction of youtube video Id e.g. https://youtu.be/qwlnX6YJrt8?si=sgdxTEb7kccLplx-
 - Support YT playback of playlist i.e. url contains 'list=' or playlist without 'PL' prefix
 - Local recompile of OpenCC to support 16 KB devices, using 16 KB ELF alignment

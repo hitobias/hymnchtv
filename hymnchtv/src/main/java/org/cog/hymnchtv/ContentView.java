@@ -25,6 +25,7 @@ import static org.cog.hymnchtv.MainActivity.HYMN_YB;
 import static org.cog.hymnchtv.MainActivity.PREF_SETTINGS;
 import static org.cog.hymnchtv.utils.ZoomTextView.STEP_SCALE_FACTOR;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -41,8 +42,10 @@ import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.ImageView;
 
@@ -59,6 +62,7 @@ import java.io.InputStreamReader;
 import com.zqc.opencc.android.lib.ChineseConverter;
 import com.zqc.opencc.android.lib.ConversionType;
 
+import org.apache.commons.lang3.StringUtils;
 import org.cog.hymnchtv.glide.MyGlideApp;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.utils.ChineseS2TSelection;
@@ -105,7 +109,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public static final String PREF_LYRICS_ENGLISH_SCALE_P = "LyricsScaleEP";
     public static final String PREF_LYRICS_ENGLISH_SCALE_L = "LyricsScaleEL";
 
-    public ContentHandler mContext;
+    public ContentHandler mContentHandler;
     private LyricsEnglishRecord mLyricsEnglishRecord;
     private ConversionType mConversionType = ConversionType.S2T;
 
@@ -123,7 +127,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private boolean mLyricsLoaded = false;
     private boolean hasEnglishLyrics = false;
 
-    private static final float[] mColorRange = new float[]{0, -0.9f, -0.8f, -0.7f};
+    private static final float[] mColorRange = new float[] {0, -0.9f, -0.8f, -0.7f};
     private static int mScoreColor = 0;
     private static ColorFilter mMatrix = null;
 
@@ -135,6 +139,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private String mResPrefix;
     private int[] mHymnScoreInfo;
 
+    private String mLyrics = null;
     private SharedPreferences mSharedPref;
     private SharedPreferences.Editor mEditor;
 
@@ -144,15 +149,16 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     @Override
     public void onAttach(@NonNull @NotNull Context context) {
         super.onAttach(context);
-        mContext = (ContentHandler) context;
+        mContentHandler = (ContentHandler) context;
 
-        mLyricsEnglishRecord = LyricsEnglishRecord.getInstanceFor(mContext);
+        mLyricsEnglishRecord = LyricsEnglishRecord.getInstanceFor(mContentHandler);
         mLyricsEnglishRecord.registerLyricsListener(this);
 
-        mSharedPref = mContext.getSharedPreferences(PREF_SETTINGS, 0);
+        mSharedPref = mContentHandler.getSharedPreferences(PREF_SETTINGS, 0);
         mEditor = mSharedPref.edit();
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         mConvertView = inflater.inflate(R.layout.content_lyrics, container, false);
@@ -175,6 +181,37 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
         lyricsEnglish.setBackgroundColor(Color.TRANSPARENT);
+
+        lyricsEnglish.getSettings().setJavaScriptEnabled(true);
+
+        // Setup to reinitEnglishLyrics if the webpage does not show the url loaded English Lyrics content.
+        lyricsEnglish.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+
+                view.evaluateJavascript("document.documentElement.outerHTML", new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String htmlContent) {
+                        // htmlContent contains the full HTML of the loaded page
+
+                        if (StringUtils.isNotEmpty(mLyrics)) {
+                            if (htmlContent != null) {
+                                if (htmlContent.contains(mLyrics)) {
+                                    // Here is your HTML body content
+                                    Timber.d("WebViewContent title matched: %s", mLyrics);
+                                } else {
+                                    reinitEnglishLyrics();
+                                }
+                            }
+                            else {
+                                reinitEnglishLyrics();
+                            }
+                        }
+                    }
+                });
+            }
+        });
 
         lyricsScaleP = mSharedPref.getFloat(PREF_LYRICS_SCALE_P, 1.0f);
         lyricsScaleL = mSharedPref.getFloat(PREF_LYRICS_SCALE_L, 1.0f);
@@ -211,9 +248,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         Timber.w("Content View on Resume");
 
         // get the corresponding English lyrics# or null if none
-        mHymnNoEng = mContext.getHymnNoEng();
+        mHymnNoEng = mContentHandler.getHymnNoEng();
         btn_english.setVisibility((mHymnNoEng != null) ? View.VISIBLE : View.GONE);
-        if (mContext.mAutoEnglish) {
+        if (mContentHandler.mAutoEnglish) {
             hasEnglishLyrics = true;
             toggleLyricsView();
         }
@@ -231,7 +268,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     @Override
     public void onCreateContextMenu(@NotNull ContextMenu menu, @NotNull View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
-        mContext.getMenuInflater().inflate(R.menu.menu_content, menu);
+        mContentHandler.getMenuInflater().inflate(R.menu.menu_content, menu);
 
         // Hide "英文歌词" if no associated English lyrics
         menu.findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);
@@ -264,14 +301,24 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public boolean onLongClick(View v) {
         switch (v.getId()) {
         case R.id.button_ts:
-            mStartForResult.launch(new Intent(mContext, ChineseS2TSelection.class));
+            mStartForResult.launch(new Intent(mContentHandler, ChineseS2TSelection.class));
             return true;
 
         case R.id.button_english:
-            mContext.initWebView(ContentHandler.UrlType.englishLyrics);
+            if (View.VISIBLE == lyricsEnglish.getVisibility()) {
+                mContentHandler.initWebView(ContentHandler.UrlType.englishLyrics);
+            }
+            else {
+                HymnsApp.showToastMessage("Reinit English lyrics");
+                reinitEnglishLyrics();
+            }
             return true;
         }
         return false;
+    }
+
+    private void reinitEnglishLyrics() {
+        MainActivity.showContent(mContentHandler, mContentHandler.mHymnType, mContentHandler.getHymnNo(), false, mHymnNoEng);
     }
 
     /**
@@ -346,7 +393,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     // Invert but make background color closer to theme dark with multiplier = -0.9f
     private static ColorFilter getColorMatrix(float multiplier) {
         return new ColorMatrixColorFilter(
-                new float[]{
+                new float[] {
                         multiplier, .0f, .0f, .0f, 255.0f,  // red
                         .0f, multiplier, .0f, .0f, 255.0f,  // green
                         .0f, .0f, multiplier, .0f, 255.0f,  // blue
@@ -444,8 +491,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
                 lyrics.append('\n');
             }
             lyricsSimplify.setText(lyrics);
-            lyricsTraditional.setText(ChineseConverter.convert(lyrics.toString(), mConversionType, mContext));
-
+            lyricsTraditional.setText(ChineseConverter.convert(lyrics.toString(), mConversionType, mContentHandler));
         }
         catch (IOException e) {
             Timber.w("Error reading file: %s", resFName);
@@ -453,7 +499,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         // Auto launch or hint user to view lyrics text via online JiaoChang if available; er,length > 47
         if (lyricsSimplify.getText().length() < 40) {
-            mContext.selectJC();
+            mContentHandler.selectJC();
         }
     }
 
@@ -537,12 +583,12 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsSimplify.setVisibility(View.GONE);
         lyricsEnglish.setVisibility(View.GONE);
 
-        if (hasEnglishLyrics) {
+        if (hasEnglishLyrics && mHymnNoEng != null) {
             lyricsEnglish.setVisibility(View.VISIBLE);
             Timber.d("Lyrics English #%s loaded: %s", mHymnNoEng, mLyricsLoaded);
             if (!mLyricsLoaded) {
                 showLyricsEnglish(LyricsEnglishRecord
-                        .toHtml("<h3>" + getResources().getString(R.string.download_wait) + "</h3>"));
+                        .toHtml("<h3>" + getResources().getString(R.string.download_wait) + "</h3>"), null);
             }
             mLyricsEnglishRecord.fetchLyrics(mHymnNoEng, isErGe);
         }
@@ -557,10 +603,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     }
 
     @Override
-    public void showLyricsEnglish(final String lyrics) {
+    public void showLyricsEnglish(final String lyrics, String title) {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (lyrics != null) {
                 // Timber.d("Show Lyrics English: %s", lyrics.length());
+                mLyrics = title;
                 mLyricsLoaded = true;
                 lyricsEnglish.loadDataWithBaseURL(null, lyrics, "text/html", "utf8", null);
             }

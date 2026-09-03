@@ -23,6 +23,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.webkit.ValueCallback;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -118,15 +120,29 @@ public class LyricsEnglishRecord {
         mLyricsEnglish = StringUtils.trim(mDB.getLyricsEnglish(hymnNo));
         if (StringUtils.isNotEmpty(mLyricsEnglish)) {
             showLyrics(mLyricsEnglish);
+            HymnsApp.showToastMessage("Show English lyrics from DB!");
             if (mLyricsEnglish.length() < 300)
                 Timber.d("Show English lyrics from DB: %s (%s)", hymnNo, mLyricsEnglish);
             return;
         }
 
+
+        // <h1 id="song-title-xs" class="text-center"> Great is Thy faithfulness </h1>
+        // <h1 id="song-title" class="text-center"><a href="/en/hymn/h/18" class="hymn-num-nav-left"><i class="fa fa-chevron-circle-left"></i></a> Great is Thy faithfulness <a href="/en/hymn/h/20" class="hymn-num-nav-right"><i class="fa fa-chevron-circle-right"></i></a></h1>
+        Pattern pattern = Pattern.compile("<h1 id=\"song-title.+?>(.+?)</h1>.+?");
+
         getURLSource(webUrl, data -> {
             if (extraEnglishLyrics(data)) {
+                // Extract the hymn title to check webView loaded correctly.
+                String title = null;
+                Matcher matcher = pattern.matcher(data);
+                if (matcher.find()) {
+                    title = matcher.group(1);
+                }
+
                 mDB.storeLyricsEng(hymnNo, mLyricsEnglish);
-                showLyrics(mLyricsEnglish);
+                showLyrics(mLyricsEnglish, title);
+                HymnsApp.showToastMessage("Show English lyrics in webView!");
             }
             else {
                 Timber.d("No English lyrics found for: %s", webUrl);
@@ -138,13 +154,21 @@ public class LyricsEnglishRecord {
     /**
      * Call the mListener if not null to display the English lyrics.
      *
-     * @param lyrics English lyrics content; may just contains a href link
+     * @param lyrics English lyrics content; may just contain a href link
+     * @param title if not null, to check with webPage content after loaded.
      */
-    private void showLyrics(String lyrics) {
+    private void showLyrics(String lyrics, String title) {
         if (mListener != null) {
             lyrics = (lyrics != null) ? toHtml(lyrics) : null;
-            mListener.showLyricsEnglish(lyrics);
+            mListener.showLyricsEnglish(lyrics, title);
         }
+        else {
+            HymnsApp.showToastMessage("English lyrics mListener is null!");
+        }
+    }
+
+    private void showLyrics(String lyrics) {
+        showLyrics(lyrics, null);
     }
 
     /**
@@ -251,17 +275,16 @@ public class LyricsEnglishRecord {
             }
 
             @Override
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                super.onReceivedError(view, errorCode, description, failingUrl);
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
                 cancelTimeoutHandler();
-
-                showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_failed, description) + "</h5>");
+                showLyrics("<h5>" + HymnsApp.getResString(R.string.web_scrap_failed, error.getDescription()) + "</h5>");
             }
         });
     }
 
     private static final int TIMEOUT_DURATION = 5000;
-    private final Handler handler = new Handler();
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable timeoutRunnable;
 
     // Post the timeout check with a delay
@@ -326,14 +349,15 @@ public class LyricsEnglishRecord {
     }
 
     /**
-     * The listener that will be be to show the lyrics.
+     * The listener that will show the lyrics.
      */
     public interface EnglishLyricsListener {
         /**
          * Show the lyrics content.
          *
          * @param lyrics The English lyrics or just link
+         * @param title string to match if no null.
          */
-        void showLyricsEnglish(String lyrics);
+        void showLyricsEnglish(String lyrics, String title);
     }
 }

@@ -88,6 +88,7 @@
     <string name="error_search_empty">请输入内容进行搜索</string>
     <string name="error_file_not_found">（无法取得文件: %1$s）</string>
     <string name="error_english_lyrics_null">对不起！当诗歌 \'%1$d\' 首没有英文歌词</string>
+    <string name="error_invalid_mimetype_download">此应用不支持下载 MIME 类型：\'%s\'</string>
 
     <string name="hymn_info_bb_max">补充本诗歌只有%1$d（%2$d）首</string>
     <string name="hymn_info_bb_range_over">补充本诗歌没有: %1$s~%2$s（%3$s）</string>
@@ -205,7 +206,7 @@
 
     <!-- hymnchtv media player interface gui names -->
     <string name="hymn_media_banzou">伴奏</string>
-    <string name="hymn_media_changshi">唱诗</string>
+    <string name="hymn_media_changshi"><u>唱诗</u></string>
     <string name="hymn_media_jiaochang"><u>教唱</u></string>
     <string name="hymn_media_media"><u>媒体</u></string>
 

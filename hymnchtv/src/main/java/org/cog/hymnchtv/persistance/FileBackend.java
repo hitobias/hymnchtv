@@ -19,7 +19,6 @@ package org.cog.hymnchtv.persistance;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
@@ -165,7 +164,8 @@ public class FileBackend {
                 copy(inputStream, outputStream); // org.apache.commons.io
                 inputStream.close();
                 outputStream.close();
-            } catch (Exception e) { // IOException
+            }
+            catch (Exception e) { // IOException
                 e.printStackTrace();
             }
         }
@@ -276,16 +276,12 @@ public class FileBackend {
      * @return the actual Uri
      */
     public static Uri getUriForFile(Context context, File file) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                String packageId = context.getPackageName();
-                return FileProvider.getUriForFile(context, packageId + FILE_PROVIDER, file);
-            } catch (IllegalArgumentException e) {
-                throw new SecurityException(e);
-            }
+        try {
+            String packageId = context.getPackageName();
+            return FileProvider.getUriForFile(context, packageId + FILE_PROVIDER, file);
         }
-        else {
-            return Uri.fromFile(file);
+        catch (IllegalArgumentException e) {
+            throw new SecurityException(e);
         }
     }
 
@@ -363,7 +359,8 @@ public class FileBackend {
                         .replaceAll("%3A", ":")
                         .replaceAll("\\+", "%20");
                 fileExtension = MimeTypeMap.getFileExtensionFromUrl(uriEncoded);
-            } catch (UnsupportedEncodingException e) {
+            }
+            catch (UnsupportedEncodingException e) {
                 Timber.w("urlEncode exception: %s", e.getMessage());
                 fileExtension = MimeTypeMap.getFileExtensionFromUrl(uri.toString());
             }
@@ -403,7 +400,8 @@ public class FileBackend {
                 String tmp = guessContentTypeFromStream(is);
                 if (tmp != null)
                     mimeType = tmp;
-            } catch (IOException ignore) {
+            }
+            catch (IOException ignore) {
             }
         }
 

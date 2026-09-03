@@ -6,7 +6,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.11.2'
+        classpath 'com.android.tools.build:gradle:8.13.2'
 
         // Required by android-youtube-player
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21'
@@ -30,10 +30,9 @@ project.ext {
     preDexLibs = !project.hasProperty('disablePreDex')
     testCoverage = project.hasProperty('testCoverage')
 
-    minSdk = 21
-    // SDE Eel is not compatible with API-34+; missing dx, dx.jar and aapt2 not compatible
-    compileSdk = 36
-    buildTools = '36.0.0'
+    minSdk = 24
+    compileSdk = 37
+    buildTools = '37.0.0'
 }
 
 tasks.register('clean' , Delete) {

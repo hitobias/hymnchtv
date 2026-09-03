@@ -22,7 +22,6 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.method.LinkMovementMethod;
@@ -46,21 +45,25 @@ import timber.log.Timber;
 public class About extends BaseActivity implements View.OnClickListener, View.OnLongClickListener {
     public static String HYMNCHTV_LINK = "https://cmeng-git.github.io/hymnchtv/";
 
-    private static final String[][] USED_LIBRARIES = new String[][]{
-            new String[]{"Android Support Library", "https://developer.android.com/topic/libraries/support-library/index.html"},
-            new String[]{"android-opencc", "https://github.com/qichuan/android-opencc"},
-            new String[]{"android-youtube-player", "https://github.com/PierfrancescoSoffritti/android-youtube-player"},
-            new String[]{"annotations-java5", "https://mvnrepository.com/artifact/org.jetbrains/annotations"},
-            new String[]{"Apache HttpCore", "https://hc.apache.org/httpcomponents-core-4.4.x/httpcore/dependency-info.html"},
-            new String[]{"ckChangeLog", "https://github.com/cketti/ckChangeLog"},
-            new String[]{"commons-lang", "https://commons.apache.org/proper/commons-lang/"},
-            new String[]{"Media-ExoPlayer", "https://github.com/androidx/media"},
-            new String[]{"glide", "https://github.com/bumptech/glide"},
-            new String[]{"js-evaluator-for-android", "https://github.com/evgenyneu/js-evaluator-for-android"},
-            new String[]{"httpcore", "https://hc.apache.org/httpcomponents-core-ga/"},
-            new String[]{"RichEditor for Android", "https://github.com/wasabeef/richeditor-android"},
-            new String[]{"Timber", "https://github.com/JakeWharton/timber"},
-            new String[]{"uCrop", "https://github.com/Yalantis/uCrop"}
+    private static final String[][] USED_LIBRARIES = new String[][] {
+            new String[] {"Android Support Library", "https://developer.android.com/topic/libraries/support-library/index.html"},
+            new String[] {"android-opencc", "https://github.com/qichuan/android-opencc"},
+            new String[] {"android-youtube-player", "https://github.com/PierfrancescoSoffritti/android-youtube-player"},
+            new String[] {"annotations-java5", "https://mvnrepository.com/artifact/org.jetbrains/annotations"},
+            new String[] {"Apache HttpCore", "https://hc.apache.org/httpcomponents-core-4.4.x/httpcore/dependency-info.html"},
+            new String[] {"ckChangeLog", "https://github.com/cketti/ckChangeLog"},
+            new String[] {"commons-lang", "https://commons.apache.org/proper/commons-lang/"},
+            new String[] {"jsoup", "https://github.com/jhy/jsoup"},
+            new String[] {"Media-ExoPlayer", "https://github.com/androidx/media"},
+            new String[] {"glide", "https://github.com/bumptech/glide"},
+            new String[] {"js-evaluator-for-android", "https://github.com/evgenyneu/js-evaluator-for-android"},
+            new String[] {"httpcore", "https://hc.apache.org/httpcomponents-core-ga/"},
+            new String[] {"okhttp", "https://github.com/lysine-dev/okhttp"},
+            new String[] {"OpenCC", "https://github.com/byvoid/opencc"},
+            new String[] {"pinyin", "https://github.com/duguying/pinyin"},
+            new String[] {"RichEditor for Android", "https://github.com/wasabeef/richeditor-android"},
+            new String[] {"Timber", "https://github.com/JakeWharton/timber"},
+            new String[] {"uCrop", "https://github.com/Yalantis/uCrop"}
     };
 
     /**
@@ -94,12 +97,7 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
 
         TextView copyRight = findViewById(R.id.copyRight);
         copyRight.setMovementMethod(LinkMovementMethod.getInstance());
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            copyRight.setText(Html.fromHtml(getString(R.string.copyright), Html.FROM_HTML_MODE_LEGACY));
-        }
-        else {
-            copyRight.setText(Html.fromHtml(getString(R.string.copyright)));
-        }
+        copyRight.setText(Html.fromHtml(getString(R.string.copyright), Html.FROM_HTML_MODE_LEGACY));
 
         Button btn_HistoryLog = findViewById(R.id.history_log);
         btn_HistoryLog.setOnClickListener(this);
@@ -130,7 +128,8 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
 
             TextView textView = findViewById(R.id.about_appVersion);
             textView.setText(getString(R.string.version, pi.versionName, pi.versionCode));
-        } catch (PackageManager.NameNotFoundException e) {
+        }
+        catch (PackageManager.NameNotFoundException e) {
             Timber.e("Package Info; %s", e.getMessage());
         }
     }
@@ -139,32 +138,32 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
     public void onClick(View view) {
         String LOG_REPORT_EMAIL = "cmeng.gm@gmail.com";
         switch (view.getId()) {
-            case R.id.ok_button:
-                finish();
-                break;
+        case R.id.ok_button:
+            finish();
+            break;
 
-            case R.id.check_new_version:
-                checkUpdate();
-                break;
+        case R.id.check_new_version:
+            checkUpdate();
+            break;
 
-            case R.id.submit_logs:
-                new LogUploadServiceImpl().sendLogs(new String[]{LOG_REPORT_EMAIL},
-                        getString(R.string.send_logs_subject),
-                        getString(R.string.send_logs_title));
-                break;
+        case R.id.submit_logs:
+            new LogUploadServiceImpl().sendLogs(new String[] {LOG_REPORT_EMAIL},
+                    getString(R.string.send_logs_subject),
+                    getString(R.string.send_logs_title));
+            break;
 
-            case R.id.history_log:
-                ChangeLog cl = new ChangeLog(this, DEFAULT_CSS);
-                cl.getFullLogDialog().show();
-                break;
-            case R.id.hymnchtv_help:
-            case R.id.hymnchtv_link:
-                hymnUrlAccess(this, HYMNCHTV_LINK);
-                break;
+        case R.id.history_log:
+            ChangeLog cl = new ChangeLog(this, DEFAULT_CSS);
+            cl.getFullLogDialog().show();
+            break;
+        case R.id.hymnchtv_help:
+        case R.id.hymnchtv_link:
+            hymnUrlAccess(this, HYMNCHTV_LINK);
+            break;
 
-            default:
-                finish();
-                break;
+        default:
+            finish();
+            break;
         }
     }
 

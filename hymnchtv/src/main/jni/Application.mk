@@ -11,7 +11,7 @@ APP_ABI := all
 APP_STL := c++_static
 
 # Enforced the support for Exceptions and RTTI in all generated machine code.
-APP_CPPFLAGS := -fexceptions
+APP_CPPFLAGS := -fexceptions -frtti
 
 # Compile app using 16 KB ELF alignment
 APP_SUPPORT_FLEXIBLE_PAGE_SIZES := true
