@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/appTheme"
         android:title="@string/theme_menu">
@@ -14,13 +14,16 @@
     </item>
     <item
         android:id="@+id/appLanguage"
+        android:title="@string/locale_menu" />
+    <item
+        android:id="@+id/appLocale"
         android:title="@string/locale_menu">
         <menu>
             <item
                 android:id="@+id/localeChinese"
                 android:title="@string/locale_chinese" />
             <item
-                android:id="@+id/localeenglish"
+                android:id="@+id/localeEnglish"
                 android:title="@string/locale_english" />
         </menu>
     </item>
@@ -125,8 +128,8 @@
     </item>
     <item
         android:id="@+id/sn_convert"
-        android:visible="false"
-        android:title="@string/hymn_sn_convert" />
+        android:title="@string/hymn_sn_convert"
+        android:visible="false" />
     <item
         android:id="@+id/media_config"
         android:title="@string/media_config" />

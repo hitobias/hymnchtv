@@ -47,7 +47,7 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
 
     private static final String[][] USED_LIBRARIES = new String[][] {
             new String[] {"Android Support Library", "https://developer.android.com/topic/libraries/support-library/index.html"},
-            new String[] {"android-opencc", "https://github.com/qichuan/android-opencc"},
+            new String[] {"android-opencc", "https://github.com/frankslin/android-opencc"},
             new String[] {"android-youtube-player", "https://github.com/PierfrancescoSoffritti/android-youtube-player"},
             new String[] {"annotations-java5", "https://mvnrepository.com/artifact/org.jetbrains/annotations"},
             new String[] {"Apache HttpCore", "https://hc.apache.org/httpcomponents-core-4.4.x/httpcore/dependency-info.html"},

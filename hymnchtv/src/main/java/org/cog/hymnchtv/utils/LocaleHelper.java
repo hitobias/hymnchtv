@@ -17,11 +17,15 @@
 package org.cog.hymnchtv.utils;
 
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Build;
+import android.os.LocaleList;
 import android.text.TextUtils;
+
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.os.LocaleListCompat;
 
 import java.util.Locale;
 
@@ -31,8 +35,8 @@ import java.util.Locale;
  * @author Eng Chong Meng
  */
 public class LocaleHelper {
-    public static final String LocaleChinese = "zh_CN";
-    public static final String LocaleEnglish = "en";
+    public static final String LocaleChinese = "zh-Hans-CN";
+    public static final String LocaleEnglish = "en-US";
 
     // Default to system locale language; get init from DB by aTalkApp first call
     private static String mLanguage = LocaleChinese;
@@ -80,8 +84,6 @@ public class LocaleHelper {
      * #return The new ContextImpl for use by caller
      */
     public static Context wrap(Context context, String language) {
-        Configuration config = context.getResources().getConfiguration();
-
         Locale locale;
         if (TextUtils.isEmpty(language)) {
             // System default may contain regional preference i.e. 'en-US-#u-fw-sun-mu-celsius'
@@ -90,24 +92,50 @@ public class LocaleHelper {
             // Strip off any regional preferences in the language
             language = locale.toString().split("_#")[0];
             int idx = language.indexOf("_");
-            xmlLocale = (idx == -1) ? locale : new Locale(language.substring(0, idx), language.substring(idx + 1));
+            xmlLocale = (idx == -1) ? locale :
+                    new Locale.Builder()
+                            .setLanguage(language.substring(0, idx))
+                            .setRegion(language.substring(idx + 1))
+                            .build();
         }
         else {
-            int idx = language.indexOf("_");
-            if (idx != -1) {
-                // language is in the form: en_US
-                locale = new Locale(language.substring(0, idx), language.substring(idx + 1));
-            }
-            else {
-                locale = new Locale(language);
-            }
+            locale = Locale.forLanguageTag(language);
             xmlLocale = locale;
         }
 
+        Configuration config = context.getResources().getConfiguration();
         config.setLayoutDirection(locale);
         config.setLocale(locale);
 
         // Timber.d(new Exception(), "set locale: %s: %s", language, context);
         return context.createConfigurationContext(config);
+    }
+
+    /**
+     * Set the application's per-language preference.
+     *
+     * @param languageCode The BCP-47 tag of the language (e.g., "en", "es", "fr")
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public static void setAppLanguage(String languageCode) {
+        mLanguage = languageCode;
+        // Create a locale list containing your selected language
+        LocaleListCompat appLocale = LocaleListCompat.forLanguageTags(languageCode);
+
+        // Apply the locales to the framework
+        // This automatically saves the preference and updates the UI resources
+        AppCompatDelegate.setApplicationLocales(appLocale);
+    }
+
+    /**
+     * Get the currently active app language code.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public static String getAppLanguage() {
+        LocaleListCompat currentLocales = AppCompatDelegate.getApplicationLocales();
+        if (!currentLocales.isEmpty()) {
+            return currentLocales.get(0).getDisplayName();
+        }
+        return mLanguage;
     }
 }

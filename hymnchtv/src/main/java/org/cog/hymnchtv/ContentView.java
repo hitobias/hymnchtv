@@ -57,7 +57,9 @@ import androidx.fragment.app.Fragment;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 import com.zqc.opencc.android.lib.ChineseConverter;
 import com.zqc.opencc.android.lib.ConversionType;
@@ -139,7 +141,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private String mResPrefix;
     private int[] mHymnScoreInfo;
 
-    private String mLyrics = null;
+    private String mLyricsTitle = null;
     private SharedPreferences mSharedPref;
     private SharedPreferences.Editor mEditor;
 
@@ -190,16 +192,16 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                view.evaluateJavascript("document.documentElement.outerHTML", new ValueCallback<String>() {
+                lyricsEnglish.evaluateJavascript("document.documentElement.outerHTML", new ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(String htmlContent) {
                         // htmlContent contains the full HTML of the loaded page
 
-                        if (StringUtils.isNotEmpty(mLyrics)) {
+                        if (StringUtils.isNotEmpty(mLyricsTitle)) {
                             if (htmlContent != null) {
-                                if (htmlContent.contains(mLyrics)) {
+                                if (htmlContent.contains(mLyricsTitle)) {
                                     // Here is your HTML body content
-                                    Timber.d("WebViewContent title matched: %s", mLyrics);
+                                    Timber.d("WebViewContent title matched: %s", mLyricsTitle);
                                 } else {
                                     reinitEnglishLyrics();
                                 }
@@ -482,10 +484,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      */
     private void showLyricsChText(String resFName) {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(getResources().getAssets().open(resFName)));
+            InputStream inputStream = getResources().getAssets().open(resFName);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+
             StringBuilder lyrics = new StringBuilder();
             String line;
-
             while ((line = reader.readLine()) != null) {
                 lyrics.append(line);
                 lyrics.append('\n');
@@ -607,7 +610,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         new Handler(Looper.getMainLooper()).post(() -> {
             if (lyrics != null) {
                 // Timber.d("Show Lyrics English: %s", lyrics.length());
-                mLyrics = title;
+                mLyricsTitle = title;
                 mLyricsLoaded = true;
                 lyricsEnglish.loadDataWithBaseURL(null, lyrics, "text/html", "utf8", null);
             }

@@ -6,6 +6,13 @@
      They are automatically updated with "ant bump-version".
 -->
 <changelog>
+    <release version="2.9.1 (09/09/2026)" versioncode="209010">
+        <change>使用前请检阅 &lt;a href='https://cmeng-git.github.io/hymnchtv/faq.html'&gt;诗歌本新应用程序功能&lt;/a&gt;。</change>
+        <change>将 OpenCC 库版本从 1.2.0 升级到 1.4.2。解决方案请参见 https://github.com/BYVoid/OpenCC/issues/1488</change>
+        <change>迁移到使用 https://github.com/frankslin/android-opencc 中的库；该库与 OpenCC 1.4.2 兼容。</change>
+        <change>错误修复和改进。</change>
+    </release>
+
     <release version="2.9.0 (09/03/2026)" versioncode="209000">
         <change>使用前请检阅 &lt;a href='https://cmeng-git.github.io/hymnchtv/faq.html'&gt;诗歌本新应用程序功能&lt;/a&gt;。</change>
         <change>当选择英文歌词，但未有对应的中文诗歌编号时，应用会在页面滑动时崩溃。</change>

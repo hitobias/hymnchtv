@@ -10,20 +10,18 @@ android {
         applicationId = 'org.cog.hymnchtv'
 
         // End digit - change to force update with same version number
-        versionCode 209000
-        versionName "2.9.0"
+        versionCode 209010
+        versionName "2.9.1"
 
         minSdkVersion rootProject.minSdk
         targetSdkVersion rootProject.compileSdk
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-    externalNativeBuild {
-        ndkBuild {
-            path = 'src/main/jni/Android.mk'
-        }
+
+    androidResources {
+        generateLocaleConfig = true
     }
-    ndkVersion = '28.2.13676358'
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
@@ -40,6 +38,9 @@ android {
             debuggable = true
             minifyEnabled = false
         }
+    }
+    buildFeatures {
+        buildConfig = true
     }
 
     File cfgFile = project.rootProject.file("settings.signing")
@@ -85,6 +86,7 @@ android {
 
 dependencies {
     implementation project(':android-youtube-player:core')
+    implementation project(':lib-opencc-android')
 
     implementation 'androidx.activity:activity-ktx:1.13.0'
     implementation 'androidx.appcompat:appcompat:1.8.0'
@@ -122,16 +124,6 @@ dependencies {
 
     implementation 'org.jetbrains:annotations:26.1.0'
     implementation 'org.jsoup:jsoup:1.23.2'
-}
-
-/*
- * This task downloads lib source for OpenCC per the specified version in the scripts.
- * This task must be executed at least once prior to hymnchtv apk build process.
- */
-tasks.register('initJniLibs', Exec) {
-    group = 'Custom Tasks'
-    workingDir "src/main/jni/"
-    executable './init_libopencc.sh'
 }
 
 /*

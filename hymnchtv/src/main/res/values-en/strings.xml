@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--string name="app_name">Hymnch</string // Fix app label in Chinese-->
+    <string name="app_name">诗歌本</string>
     <string name="app_title_main">Shulamite - Hymns</string>
 
     <string name="about">About</string>
@@ -196,6 +197,12 @@
     <string name="hymn_eng2ch">Eng2Ch</string>
 
     <!-- Hymn title -->
+    <string name="hymn_title_bb">诗歌本－补充本</string>
+    <string name="hymn_title_db">诗歌本－大本诗歌</string>
+    <string name="hymn_title_er">诗歌本－儿童诗歌</string>
+    <string name="hymn_title_xb">诗歌本－新歌颂咏</string>
+    <string name="hymn_title_xg">诗歌本－新诗歌本</string>
+    <string name="hymn_title_yb">诗歌本－青年诗歌</string>
     <!--
     <string name="hymn_title_bb">Hymn - BuChong</string>
     <string name="hymn_title_db">Hymn - DaiBen</string>
@@ -206,13 +213,25 @@
     -->
 
     <!-- hymnchtv media player interface gui names -->
+    <string name="hymn_media_banzou">伴奏</string>
+    <string name="hymn_media_changshi"><u>唱诗</u></string>
+    <string name="hymn_media_jiaochang"><u>教唱</u></string>
+    <string name="hymn_media_media"><u>媒体</u></string>
     <!--
     <string name="hymn_media_banzou">BanZou</string>
     <string name="hymn_media_changshi"><u>ChangShi</u></string>
     <string name="hymn_media_jiaochang"><u>JiaChang</u></string>
     <string name="hymn_media_media"><u>Media</u></string>
     -->
+
     <!-- Hymn info for media controller title -->
+    <string name="hymn_title_mc_bb">补充 %1$d: %2$s</string>
+    <string name="hymn_title_mc_db">大本 %1$d: %2$s</string>
+    <string name="hymn_title_mc_dbs">大本 附%1$d: %2$s</string>
+    <string name="hymn_title_mc_er">儿诗 %1$d: %2$s</string>
+    <string name="hymn_title_mc_xb">新颂 %1$d: %2$s</string>
+    <string name="hymn_title_mc_xg">新诗 %1$d: %2$s</string>
+    <string name="hymn_title_mc_yb">青年 %1$d: %2$s</string>
     <!--
     <string name="hymn_title_mc_bb">BuChong %1$d: %2$s</string>
     <string name="hymn_title_mc_db">DaBen %1$d: %2$s</string>

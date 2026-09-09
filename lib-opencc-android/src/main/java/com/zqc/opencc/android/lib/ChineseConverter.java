@@ -32,9 +32,9 @@ public class ChineseConverter {
 
     /***
      * Clear the dictionary data folder, only call this method when update the dictionary data.
-     * @param context Context
+     * @param context
      */
-    public static void clearDictDataFolder(Context context) {
+    public static void clearDictDataFolder(Context context){
         File dataFolder = new File(context.getFilesDir() + "/openccdata");
         deleteRecursive(dataFolder);
     }

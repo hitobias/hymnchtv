@@ -68,8 +68,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.LocaleManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.IntentCompat;
+import androidx.core.os.LocaleListCompat;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
@@ -702,7 +704,8 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             }
             // Pass in a non-existence HYMN_BB_DUMMY for Chinese hymnNo
             showContent(this, HYMN_BB, HYMN_BB_DUMMY, false, hymnEng);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.w("Content toc not available: %s", e.getMessage());
             HymnsApp.showToastMessage(R.string.in_development);
         }
@@ -758,10 +761,10 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
         /*
-        // if (BuildConfig.DEBUG) {
-        //     menu.findItem(R.id.sn_convert).setVisible(true);
-        // }
-         */
+        if (BuildConfig.DEBUG) {
+             menu.findItem(R.id.sn_convert).setVisible(true);
+        } */
+        initLanguage(menu);
         return true;
     }
 
@@ -775,6 +778,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        initLanguage(menu);
     }
 
     /**
@@ -801,177 +805,183 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         Intent intent;
 
         switch (item.getItemId()) {
-            // === Set app theme ===
-            case R.id.themeDark:
-                setAppTheme(Theme.DARK.toString(), true);
-                return true;
+        // === Set app theme ===
+        case R.id.themeDark:
+            setAppTheme(Theme.DARK.toString(), true);
+            return true;
 
-            case R.id.themeLight:
-                setAppTheme(Theme.LIGHT.toString(), true);
-                return true;
+        case R.id.themeLight:
+            setAppTheme(Theme.LIGHT.toString(), true);
+            return true;
 
-            case R.id.localeChinese:
-                setAppLocale(LocaleHelper.LocaleChinese);
-                return true;
+        case R.id.appLanguage:
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setLanguage();
+            }
+            return true;
 
-            case R.id.localeenglish:
-                setAppLocale(LocaleHelper.LocaleEnglish);
-                return true;
+        case R.id.localeChinese:
+            setAppLocale(LocaleHelper.LocaleChinese);
+            return true;
 
-            // === Set font size ===
-            case R.id.small:
-                mFontSize = FONT_SIZE_DEFAULT - 5;
-                setFontSize(mFontSize, true);
-                return true;
+        case R.id.localeEnglish:
+            setAppLocale(LocaleHelper.LocaleEnglish);
+            return true;
 
-            case R.id.middle:
-                mFontSize = FONT_SIZE_DEFAULT;
-                setFontSize(mFontSize, true);
-                return true;
+        // === Set font size ===
+        case R.id.small:
+            mFontSize = FONT_SIZE_DEFAULT - 5;
+            setFontSize(mFontSize, true);
+            return true;
 
-            case R.id.lager:
-                mFontSize = FONT_SIZE_DEFAULT + 5;
-                setFontSize(mFontSize, true);
-                return true;
+        case R.id.middle:
+            mFontSize = FONT_SIZE_DEFAULT;
+            setFontSize(mFontSize, true);
+            return true;
 
-            case R.id.xlager:
-                mFontSize = FONT_SIZE_DEFAULT + 10;
-                setFontSize(mFontSize, true);
-                return true;
+        case R.id.lager:
+            mFontSize = FONT_SIZE_DEFAULT + 5;
+            setFontSize(mFontSize, true);
+            return true;
 
-            case R.id.inc:
-                mFontSize = mSharedPref.getInt(PREF_TEXT_SIZE, FONT_SIZE_DEFAULT) + 2;
-                setFontSize(mFontSize, true);
-                return true;
+        case R.id.xlager:
+            mFontSize = FONT_SIZE_DEFAULT + 10;
+            setFontSize(mFontSize, true);
+            return true;
 
-            case R.id.dec:
-                mFontSize = mSharedPref.getInt(PREF_TEXT_SIZE, FONT_SIZE_DEFAULT) - 2;
-                setFontSize(mFontSize, true);
-                return true;
+        case R.id.inc:
+            mFontSize = mSharedPref.getInt(PREF_TEXT_SIZE, FONT_SIZE_DEFAULT) + 2;
+            setFontSize(mFontSize, true);
+            return true;
 
-            // === Set font color ===
-            case R.id.red:
-                setFontColor(Color.RED, true);
-                return true;
+        case R.id.dec:
+            mFontSize = mSharedPref.getInt(PREF_TEXT_SIZE, FONT_SIZE_DEFAULT) - 2;
+            setFontSize(mFontSize, true);
+            return true;
 
-            case R.id.blue:
-                setFontColor(Color.BLUE, true);
-                return true;
+        // === Set font color ===
+        case R.id.red:
+            setFontColor(Color.RED, true);
+            return true;
 
-            case R.id.white:
-                setFontColor(Color.WHITE, true);
-                return true;
+        case R.id.blue:
+            setFontColor(Color.BLUE, true);
+            return true;
 
-            case R.id.grey:
-                setFontColor(Color.GRAY, true);
-                return true;
+        case R.id.white:
+            setFontColor(Color.WHITE, true);
+            return true;
 
-            case R.id.cyan:
-                setFontColor(Color.CYAN, true);
-                return true;
+        case R.id.grey:
+            setFontColor(Color.GRAY, true);
+            return true;
 
-            case R.id.yellow:
-                setFontColor(Color.YELLOW, true);
-                return true;
+        case R.id.cyan:
+            setFontColor(Color.CYAN, true);
+            return true;
 
-            case R.id.green:
-                setFontColor(Color.GREEN, true);
-                return true;
+        case R.id.yellow:
+            setFontColor(Color.YELLOW, true);
+            return true;
 
-            case R.id.black:
-                setFontColor(ContextCompat.getColor(this, R.color.grey900), true);
-                return true;
+        case R.id.green:
+            setFontColor(Color.GREEN, true);
+            return true;
 
-            // === Set background color ===
-            case R.id.sbg1:
-                setBgColor(0, R.drawable.bg0);
-                return true;
+        case R.id.black:
+            setFontColor(ContextCompat.getColor(this, R.color.grey900), true);
+            return true;
 
-            case R.id.sbg2:
-                setBgColor(1, R.drawable.bg1);
-                return true;
+        // === Set background color ===
+        case R.id.sbg1:
+            setBgColor(0, R.drawable.bg0);
+            return true;
 
-            case R.id.sbg3:
-                setBgColor(2, R.drawable.bg2);
-                return true;
+        case R.id.sbg2:
+            setBgColor(1, R.drawable.bg1);
+            return true;
 
-            case R.id.sbg4:
-                setBgColor(3, R.drawable.bg3);
-                return true;
+        case R.id.sbg3:
+            setBgColor(2, R.drawable.bg2);
+            return true;
 
-            case R.id.sbg5:
-                setBgColor(4, R.drawable.bg4);
-                return true;
+        case R.id.sbg4:
+            setBgColor(3, R.drawable.bg3);
+            return true;
 
-            case R.id.sbg6:
-                setBgColor(5, R.drawable.bg5);
-                return true;
+        case R.id.sbg5:
+            setBgColor(4, R.drawable.bg4);
+            return true;
 
-            case R.id.sbg7:
-                setBgColor(6, R.drawable.bg20);
-                return true;
+        case R.id.sbg6:
+            setBgColor(5, R.drawable.bg5);
+            return true;
 
-            case R.id.sbg8:
-                setBgColor(7, R.drawable.bg21);
-                return true;
+        case R.id.sbg7:
+            setBgColor(6, R.drawable.bg20);
+            return true;
 
-            case R.id.sbg9:
-                setBgColor(8, R.drawable.bg22);
-                return true;
+        case R.id.sbg8:
+            setBgColor(7, R.drawable.bg21);
+            return true;
 
-            case R.id.sbg10:
-                setBgColor(9, R.drawable.bg23);
-                return true;
+        case R.id.sbg9:
+            setBgColor(8, R.drawable.bg22);
+            return true;
 
-            case R.id.sbg11:
-                setBgColor(10, R.drawable.bg24);
-                return true;
+        case R.id.sbg10:
+            setBgColor(9, R.drawable.bg23);
+            return true;
 
-            case R.id.sbg12:
-                setBgColor(11, R.drawable.bg25);
-                return true;
+        case R.id.sbg11:
+            setBgColor(10, R.drawable.bg24);
+            return true;
 
-            case R.id.sbguser:
-                mStartForResult.launch(new Intent(this, WallPaperUtil.class));
-                return true;
+        case R.id.sbg12:
+            setBgColor(11, R.drawable.bg25);
+            return true;
 
-            case R.id.sn_convert:
-                // HymnIdx2NoConvert.validateIdx2NoConversion(HYMN_ER, HYMN_ER_INDEX_MAX);
-                // HymnNo2IdxConvert.validateNo2IdxConversion(HYMN_DB, HYMN_DB_NO_TMAX);
-                // Hymn2SnConvert.startConvert(); use for old to new file name conversion for 1.1.0 only
-                return true;
+        case R.id.sbguser:
+            mStartForResult.launch(new Intent(this, WallPaperUtil.class));
+            return true;
 
-            case R.id.media_config:
-                intent = new Intent(this, MediaConfig.class);
-                startActivity(intent);
-                return true;
+        case R.id.sn_convert:
+            // HymnIdx2NoConvert.validateIdx2NoConversion(HYMN_ER, HYMN_ER_INDEX_MAX);
+            // HymnNo2IdxConvert.validateNo2IdxConversion(HYMN_DB, HYMN_DB_NO_TMAX);
+            // Hymn2SnConvert.startConvert(); use for old to new file name conversion for 1.1.0 only
+            return true;
 
-            case R.id.permission_request:
-                onInfoButtonClicked();
-                return true;
+        case R.id.media_config:
+            intent = new Intent(this, MediaConfig.class);
+            startActivity(intent);
+            return true;
 
-            case R.id.online_help:
-                About.hymnUrlAccess(this, HYMNCHTV_FAQ);
-                return true;
+        case R.id.permission_request:
+            onInfoButtonClicked();
+            return true;
 
-            case R.id.about:
-                intent = new Intent(this, About.class);
-                startActivity(intent);
-                return true;
+        case R.id.online_help:
+            About.hymnUrlAccess(this, HYMNCHTV_FAQ);
+            return true;
 
-            case R.id.exit:
-                LogUploadServiceImpl.purgeDebugLog();
-                finishAndRemoveTask();
-                System.exit(0);
-                return true;
+        case R.id.about:
+            intent = new Intent(this, About.class);
+            startActivity(intent);
+            return true;
 
-            case R.id.menutoggle:
-            case R.id.alwayshow:
-            case R.id.alwayhide:
-            case R.id.bg:
-            case R.id.fontColor:
-            default:
-                return false;
+        case R.id.exit:
+            LogUploadServiceImpl.purgeDebugLog();
+            finishAndRemoveTask();
+            System.exit(0);
+            return true;
+
+        case R.id.menutoggle:
+        case R.id.alwayshow:
+        case R.id.alwayhide:
+        case R.id.bg:
+        case R.id.fontColor:
+        default:
+            return false;
         }
     }
 
@@ -1057,6 +1067,31 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         mTocSpinnerItem.setTextColor(mFontColor);
     }
 
+    private void initLanguage(Menu menu) {
+        MenuItem pLanguage = menu.findItem(R.id.appLanguage);
+        MenuItem pLocale = menu.findItem(R.id.appLocale);
+        pLanguage.setVisible(false);
+        pLocale.setVisible(true);
+
+//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+//            pLanguage.setVisible(false);
+//            pLocale.setVisible(true);
+//        }
+//        else {
+//            pLanguage.setVisible(true);
+//            pLocale.setVisible(false);
+//        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    private void setLanguage() {
+        Intent mLangIntent = new Intent(Settings.ACTION_APP_LOCALE_SETTINGS,
+                Uri.fromParts("package", getPackageName(), null));
+        mLangIntent.addCategory(Intent.CATEGORY_DEFAULT);
+        mLangIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(mLangIntent);
+    }
+
     // Create the YB hymn cross-reference table for use in History record and PagerSlider
     private void createYbXTable() {
         ybXTable.clear();
@@ -1076,7 +1111,8 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
                     ybXTable.put(hymnNo, hymnTN);
                 }
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Timber.w("Content toc not available: %s", e.getMessage());
         }
     }

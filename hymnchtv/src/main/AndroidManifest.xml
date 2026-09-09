@@ -14,7 +14,9 @@
 
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <!-- Devices running Android 12L (API level 32) or lower  -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <!-- Devices running Android 13 (API level 33) or higher -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
@@ -31,7 +33,9 @@
     <!-- Required to keep CPU alive while downloading files (NOT to keep screen awake) -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Required to write the expansion files on shared storage -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <queries>
         <package android:name="android.content.pm" />
@@ -147,6 +151,15 @@
         <service
             android:name=".service.androidupdate.OnlineUpdateService"
             android:enabled="true" />
+
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
 
         <receiver
             android:name=".mediaconfig.ShareWith$ShareBroadcastReceiver"

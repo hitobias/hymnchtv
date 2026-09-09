@@ -149,8 +149,17 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
      */
     @Override
     protected void attachBaseContext(Context base) {
+        mInstance = base;
+        String language;
         SharedPreferences sharePref = base.getSharedPreferences(PREF_SETTINGS, 0);
-        String language = sharePref.getString(PREF_LOCALE, LocaleHelper.LocaleChinese);
+        language = sharePref.getString(PREF_LOCALE, LocaleHelper.LocaleChinese);
+
+//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+//            SharedPreferences sharePref = base.getSharedPreferences(PREF_SETTINGS, 0);
+//            language = sharePref.getString(PREF_LOCALE, LocaleHelper.LocaleChinese);
+//        } else {
+//            language = LocaleHelper.getAppLanguage();
+//        }
         mInstance = LocaleHelper.setLocale(base, language);
         super.attachBaseContext(mInstance);
     }
