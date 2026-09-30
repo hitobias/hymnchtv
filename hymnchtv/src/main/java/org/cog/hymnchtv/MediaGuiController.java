@@ -357,6 +357,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         isJiaoChangAvailable = isAvailable[1];
         if (STATE_STOP == playerState) {
             hymnInfo.setText(info);
+            mediaHymns.clear();
             mBtnMedia.setTextColor(isAvailable[0] ? Color.BLACK : Color.GRAY);
             mBtnJiaoChang.setTextColor(isAvailable[1] ? Color.BLACK : Color.GRAY);
             mBtnChangShi.setTextColor(isAvailable[2] ? Color.BLACK : Color.GRAY);
@@ -428,22 +429,17 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             if (!isPlaying())
                 mediaHymns.clear();
 
-            switch (checkedId) {
-            case R.id.btn_media:
+            if (checkedId == R.id.btn_media) {
                 mMediaType = MediaType.HYMN_MEDIA;
-                break;
-
-            case R.id.btn_jiaochang:
+            }
+            else if (checkedId == R.id.btn_jiaochang) {
                 mMediaType = MediaType.HYMN_JIAOCHANG;
-                break;
-
-            case R.id.btn_changshi:
+            }
+            else if (checkedId == R.id.btn_changshi) {
                 mMediaType = MediaType.HYMN_CHANGSHI;
-                break;
-
-            case R.id.btn_banzhou:
+            }
+            else if (checkedId == R.id.btn_banzhou) {
                 mMediaType = MediaType.HYMN_BANZOU;
-                break;
             }
 
             if (mEditor != null) {
@@ -479,28 +475,25 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-        case R.id.playback_play:
+        int id = v.getId();
+        if (id == R.id.playback_play) {
             startPlay();
-            break;
-
-        case R.id.btn_hymnSearch:
+        }
+        else if (id == R.id.btn_hymnSearch) {
             mContentHandler.initWebView(ContentHandler.UrlType.hymnYoutubeSearch);
-            break;
-
-        case R.id.btn_jiaochang:
+        }
+        else if (id == R.id.btn_jiaochang) {
             if (!isJiaoChangAvailable) {
                 // mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
                 mContentHandler.showNotionSite();
             }
-            break;
         }
     }
 
     @Override
     public boolean onLongClick(View v) {
-        switch (v.getId()) {
-        case R.id.playback_play:
+        int id = v.getId();
+        if (id == R.id.playback_play) {
             if (playerState == STATE_STOP) {
                 if (mMediaType != MediaType.HYMN_JIAOCHANG) {
                     confirmAutoStream();
@@ -515,20 +508,20 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 stopPlay();
             }
             return true;
-
-        case R.id.btn_hymnSearch:
+        }
+        else if (id == R.id.btn_hymnSearch) {
             mContentHandler.initWebView(ContentHandler.UrlType.hymnGoogleSearch);
             return true;
-
-        case R.id.btn_media:
+        }
+        else if (id == R.id.btn_media) {
             mContentHandler.initWebView(ContentHandler.UrlType.hymnQqSearch);
             return true;
-
-        case R.id.btn_jiaochang:
+        }
+        else if (id == R.id.btn_jiaochang) {
             mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
             return true;
-
-        case R.id.btn_changshi:
+        }
+        else if (id == R.id.btn_changshi) {
             mContentHandler.showBibleToolHymnal();
             return true;
         }

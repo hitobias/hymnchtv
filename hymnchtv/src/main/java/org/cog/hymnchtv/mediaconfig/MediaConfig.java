@@ -87,7 +87,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.util.EncodingUtils;
 import org.cog.hymnchtv.BaseActivity;
 import org.cog.hymnchtv.ContentHandler;
@@ -129,7 +128,7 @@ public class MediaConfig extends BaseActivity
         implements View.OnClickListener, View.OnLongClickListener, AdapterView.OnItemSelectedListener {
     // Online text and video playback help contents
     private static final String HYMNCHTV_FAQ_UDC_RECORD = "https://cmeng-git.github.io/hymnchtv/faq.html#hymnch_0070";
-    private static final ArrayList<String> videoUrls = new ArrayList<String>() {{
+    private static final ArrayList<String> videoUrls = new ArrayList<>() {{
         add("https:/cmeng-git.github.io/hymnchtv/video/mediaconfig_yt_search.mp4");
         add("https:/cmeng-git.github.io/hymnchtv/video/mediaconfig_url_export.mp4");
     }};
@@ -391,82 +390,75 @@ public class MediaConfig extends BaseActivity
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-        case R.id.help_text:
+        int id = v.getId();
+        if (id == R.id.help_text) {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setData(Uri.parse(HYMNCHTV_FAQ_UDC_RECORD));
             startActivity(intent);
-            break;
-
-        case R.id.help_video:
+        }
+        else if (id == R.id.help_video) {
             playVideoHelp();
-            break;
-
-        case R.id.shareMediaUri:
+        }
+        else if (id == R.id.shareMediaUri) {
             shareMediaRecord();
-            break;
 
+        }
         /* Decode the media uri, so it is user readable instead of %xx */
-        case R.id.decodeUri:
+        else if (id == R.id.decodeUri) {
             uriDecode();
-            break;
-
-        case R.id.button_add:
+        }
+        else if (id == R.id.button_add) {
             if (updateMediaRecord()) {
                 Timber.d("Record saved successful: %s", tvMediaUri.getText());
             }
-            break;
 
+        }
         // Manual deletion must be performed by user if the user modifies the link to point to different HymnType
-        case R.id.button_delete:
+        else if (id == R.id.button_delete) {
             deleteMediaRecord();
-            break;
-
-        case R.id.button_play:
+        }
+        else if (id == R.id.button_play) {
             startPlayOrActionView();
-            break;
-
-        case R.id.button_Exit:
+        }
+        else if (id == R.id.button_Exit) {
             checkExitAction(false);
-            break;
 
-        // use Rich Text Editor to modify or view the import file content
-        case R.id.editFile:
+        }
+        else if (id == R.id.editFile) {
+            // use Rich Text Editor to modify or view the import file content
             String filename = ViewUtil.toString(tvImportFile);
             if (filename != null)
                 editFile(filename);
-            break;
-
-        case R.id.button_NQ:
+        }
+        else if (id == R.id.button_NQ) {
             downloadNQRecord(Mode.NOTION_RECORD);
-            break;
 
+        }
         // Import the import file url links to the DB database
-        case R.id.button_import:
+        else if (id == R.id.button_import) {
             Timber.d("import Media Records");
             importMediaRecords(null);
-            break;
 
+        }
         // Generate a text import file for all links start with "http(s)" from database for sharing
-        case R.id.button_export:
+        else if (id == R.id.button_export) {
             createExportLink();
-            break;
 
+        }
         // Show the DB content for all user defined media link
-        case R.id.button_db_records:
+        else if (id == R.id.button_db_records) {
             showMediaRecords(-1);
-            break;
         }
     }
 
     @Override
     public boolean onLongClick(View v) {
-        switch (v.getId()) {
-        case R.id.button_NQ:
+        int id = v.getId();
+        if (id == R.id.button_NQ) {
             downloadNQRecord(Mode.QQ_LINK);
             return true;
-
-        case R.id.button_import:
+        }
+        else if (id == R.id.button_import) {
             Timber.d("import Media Records from: %s", ASSET_URL_IMPORT_FILE);
             importMediaRecords(ASSET_URL_IMPORT_FILE);
             return true;

@@ -22,6 +22,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -30,6 +32,9 @@ import android.view.View.OnKeyListener;
 import android.view.ViewGroup;
 import android.webkit.DownloadListener;
 import android.webkit.ValueCallback;
+import android.webkit.WebBackForwardList;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
@@ -38,9 +43,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Stack;
+import java.net.URLDecoder;
 
 import org.cog.hymnchtv.BaseFragment;
 import org.cog.hymnchtv.BuildConfig;
@@ -60,20 +66,17 @@ import timber.log.Timber;
 @SuppressLint("SetJavaScriptEnabled")
 public class WebViewFragment extends BaseFragment implements OnKeyListener {
     private WebView webView;
-    // private ProgressBar progressbar;
-    private static final Stack<String> urlStack = new Stack<>();
 
     private String webUrl = null;
     private ValueCallback<Uri[]> mUploadMessageArray;
     private ContentHandler mContentHandler;
+    private boolean onErrorUrl = false;
 
     @SuppressLint("JavascriptInterface")
     @Override
     public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         mContentHandler = (ContentHandler) mContext;
-        View contentView = inflater.inflate(R.layout.webview_main, container, false);
-        // progressbar = contentView.findViewById(R.id.progress);
-        // progressbar.setIndeterminate(true);
+        final View contentView = inflater.inflate(R.layout.webview_main, container, false);
 
         webView = contentView.findViewById(R.id.webview);
         // webView.setBackgroundColor(Color.TRANSPARENT);
@@ -82,6 +85,10 @@ public class WebViewFragment extends BaseFragment implements OnKeyListener {
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+
+        // String agent = "Mozilla/5.0 (Linux; Android 7.0; Nexus 4 Build/KRT16H) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/58.0.3029.125 Mobile Safari/537.36";
+        // String defaultUserAgent = webSettings.getUserAgentString();
+        // webSettings.setUserAgentString(defaultUserAgent + agent);
 
         // https://developer.android.com/guide/webapps/webview#BindingJavaScript
         webView.addJavascriptInterface(HymnsApp.getInstance(), "Android");
@@ -95,56 +102,77 @@ public class WebViewFragment extends BaseFragment implements OnKeyListener {
         webView.setWebViewClient(new MyWebViewClient(this) {
             @Override
             public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-
+                // super.onPageFinished(view, url);
+                // Script to help bibletool "下载： Mp3， 歌词， pdf，歌谱" text more visible to user.
                 String targetColor = "transparent"; // "#FF5733";
                 String js = "javascript:(function() { document.body.style.backgroundColor = '" + targetColor + "'; })()";
                 view.evaluateJavascript(js, null);
             }
+
+            // Many sites have Uncaught TypeError: Cannot read properties of null (reading 'classList')", source: https://bibletool.online/js/headroom.min.js
+            // Main use is to resolve Huawei webView problem. But found to also affect others. So not use.
+            // Instead, force load via external browser for Huawei devices.
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+                Timber.d("Received Error: %s: %s \n%s' \n%s", onErrorUrl, errorResponse.getStatusCode(), request.getUrl(), webUrl);
+                if (!onErrorUrl) {
+                    // Do not load, just log the event for future debug.
+                    // About.hymnUrlAccess(mContext, webUrl);
+
+                    // prevent current webView re-triggers on next error.
+                    onErrorUrl = true;
+                }
+            }
         });
+
         webView.setDownloadListener(new DownloadListener() {
             @Override
-            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType,
+                    long contentLength) {
                 // Handle the download request here.
                 mContentHandler.startFileDownload(url, mimeType);
             }
         });
-
-        // init webUrl with urlStack.pop() if non-empty, else load from default in DB
-        if (urlStack.isEmpty()) {
-            webUrl = mContentHandler.getWebUrl();
-            urlStack.push(webUrl);
-        }
-        else {
-            webUrl = urlStack.pop();
-        }
-        if (!TextUtils.isEmpty(webUrl))
-            webView.loadUrl(webUrl);
         return contentView;
+    }
+
+    /**
+     * Hymnchtv reuses the webView fragment. Init webView to download the new web page if it is not the same as webView.getUrl;
+     * Note: must clear the View State entirely with a about:blank loading, and delayed loading the new url;
+     * else last accessed old page is shown instead. webView.clearHistory() is not working 100%, canGoBack needs to handle.
+     */
+    public void initWebView(String url) {
+        try {
+            if (!URLDecoder.decode(webView.getUrl(), "UTF-8").equals(url)) {
+                webUrl = url;
+                webView.loadUrl("about:blank");
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    // stop canGoBack to display about:blank. but not working 100%.
+                    webView.clearHistory();
+                    webView.loadUrl(webUrl);
+                }, 100);
+            }
+        }
+        catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
 
+        webUrl = mContentHandler.getWebUrl();
+        // onResume is called when return from an external browser; Do not reload if onErrorUrl
+        // if (!onErrorUrl && !TextUtils.isEmpty(webUrl)) {
+        if (!TextUtils.isEmpty(webUrl)) {
+            webView.loadUrl(webUrl);
+        }
+
         // setup keyPress listener - must re-enable every time on resume
         webView.setFocusableInTouchMode(true);
         webView.requestFocus();
         webView.setOnKeyListener(this);
-    }
-
-    /**
-     * Hymnchtv reuses the webView fragment. Keep if they are the same.
-     * Init webView to download a new web page if it is not the same as last accessed page
-     */
-    public void initWebView() {
-        String tmp = mContentHandler.getWebUrl();
-        if (webUrl == null || !webUrl.equals(tmp)) {
-            urlStack.clear();
-            webUrl = tmp;
-            urlStack.push(webUrl);
-            webView.loadUrl(webUrl);
-        }
     }
 
     /**
@@ -197,13 +225,19 @@ public class WebViewFragment extends BaseFragment implements OnKeyListener {
      * @param keyCode the entered key keycode
      * @param event the key Event
      *
-     * @return true if process
+     * @return false for parent to handle KEYCODE_BACK action.
      */
     @Override
     public boolean onKey(View v, int keyCode, KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             if (keyCode == KeyEvent.KEYCODE_BACK) {
                 if (webView.canGoBack()) {
+                    // Do not show about:blank page; see initWebView(): due to webView.clearHistory() not working 100%.
+                    WebBackForwardList historyList = webView.copyBackForwardList();
+                    int currentIndex = historyList.getCurrentIndex();
+                    if ("about:blank".equals(historyList.getItemAtIndex(currentIndex - 1).getUrl())) {
+                        return false;
+                    }
                     webView.goBack();
                     return true;
                 }

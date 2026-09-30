@@ -107,42 +107,33 @@ public class LyricsEnglishRecord {
     }
 
     /**
-     * Get the English lyrics from SQL DB if found, else retrieve it online; save to DB available.
-     * mLyricsEnglish may only contain a link for external access. Currently the link is http i.e.
+     * Get the English lyrics from SQL DB if available, else retrieve it online; save to DB available.
+     * mLyricsEnglish may only contain a link for external access. Currently, the link is http i.e.
      * not secure ssl and will be blocked by android if proceed to access its content.
      * Note: ErGe hymnNo is with offset ER_GE_ENG_OFFSET for DB saving/retrieving.
      */
     public void fetchLyrics(int hymnNoEng, boolean isErGe) {
         DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
-        String webUrl = (isErGe ? HYMNAL_LINK_MAIN_ER : HYMNAL_LINK_MAIN) + hymnNoEng;
-        final int hymnNo = hymnNoEng + (isErGe ? ER_GE_ENG_OFFSET : 0);
+        final String webUrl = (isErGe ? HYMNAL_LINK_MAIN_ER : HYMNAL_LINK_MAIN) + hymnNoEng;
+        final int hymnNoE = hymnNoEng + (isErGe ? ER_GE_ENG_OFFSET : 0);
 
-        mLyricsEnglish = StringUtils.trim(mDB.getLyricsEnglish(hymnNo));
+        mLyricsEnglish = StringUtils.trim(mDB.getLyricsEnglish(hymnNoE));
         if (StringUtils.isNotEmpty(mLyricsEnglish)) {
             showLyrics(mLyricsEnglish);
-            HymnsApp.showToastMessage("Show English lyrics from DB!");
-            if (mLyricsEnglish.length() < 300)
-                Timber.d("Show English lyrics from DB: %s (%s)", hymnNo, mLyricsEnglish);
+            // HymnsApp.showToastMessage("Show English lyrics from DB!");
             return;
         }
 
-
         // <h1 id="song-title-xs" class="text-center"> Great is Thy faithfulness </h1>
         // <h1 id="song-title" class="text-center"><a href="/en/hymn/h/18" class="hymn-num-nav-left"><i class="fa fa-chevron-circle-left"></i></a> Great is Thy faithfulness <a href="/en/hymn/h/20" class="hymn-num-nav-right"><i class="fa fa-chevron-circle-right"></i></a></h1>
-        Pattern pattern = Pattern.compile("<h1 id=\"song-title.+?>(.+?)</h1>.+?");
+       //  Pattern pattern = Pattern.compile("<h1 id=\"song-title.+?>(.+?)</h1>.+?");
 
         getURLSource(webUrl, data -> {
             if (extraEnglishLyrics(data)) {
-                // Extract the hymn title to check webView loaded correctly.
-                String title = null;
-                Matcher matcher = pattern.matcher(data);
-                if (matcher.find()) {
-                    title = matcher.group(1);
-                }
-
-                mDB.storeLyricsEng(hymnNo, mLyricsEnglish);
-                showLyrics(mLyricsEnglish, title);
-                HymnsApp.showToastMessage("Show English lyrics in webView!");
+                mDB.storeLyricsEng(hymnNoE, mLyricsEnglish);
+                showLyrics(mLyricsEnglish, true);
+                Timber.d("Show English lyrics in webView: %s", hymnNoE);
+                // HymnsApp.showToastMessage("Show English lyrics in webView!");
             }
             else {
                 Timber.d("No English lyrics found for: %s", webUrl);
@@ -155,12 +146,12 @@ public class LyricsEnglishRecord {
      * Call the mListener if not null to display the English lyrics.
      *
      * @param lyrics English lyrics content; may just contain a href link
-     * @param title if not null, to check with webPage content after loaded.
+     * @param preload about:blank if true.
      */
-    private void showLyrics(String lyrics, String title) {
+    private void showLyrics(String lyrics, boolean preload) {
         if (mListener != null) {
-            lyrics = (lyrics != null) ? toHtml(lyrics) : null;
-            mListener.showLyricsEnglish(lyrics, title);
+            lyrics = (lyrics != null) ? str2Html(lyrics) : null;
+            mListener.showLyricsEnglish(lyrics, preload);
         }
         else {
             HymnsApp.showToastMessage("English lyrics mListener is null!");
@@ -168,7 +159,7 @@ public class LyricsEnglishRecord {
     }
 
     private void showLyrics(String lyrics) {
-        showLyrics(lyrics, null);
+        showLyrics(lyrics, false);
     }
 
     /**
@@ -221,7 +212,7 @@ public class LyricsEnglishRecord {
         Pattern pattern = Pattern.compile("<div class=\"row main-content\">(.+?</div></div></article>).+?");
 
         Timber.d("Starting web scrapping: %s", urlToLoad);
-        HymnsApp.showToastMessage("Starting web scrapping: " + urlToLoad);
+        // HymnsApp.showToastMessage("Starting web scrapping: " + urlToLoad);
         WebView webView = initWebView(mContext);
         webView.loadUrl(urlToLoad); // preload url and wait for 0.1 sec before checking onPageFinished().
 
@@ -321,7 +312,7 @@ public class LyricsEnglishRecord {
      *
      * @return the html formatted string
      */
-    public static String toHtml(String content) {
+    public static String str2Html(String content) {
         StringBuilder html = new StringBuilder()
                 .append("<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"/>")
                 .append("<html><head>\n<style type=\"text/css\">\n")
@@ -356,8 +347,8 @@ public class LyricsEnglishRecord {
          * Show the lyrics content.
          *
          * @param lyrics The English lyrics or just link
-         * @param title string to match if no null.
+         * @param preload about:blank if true.
          */
-        void showLyricsEnglish(String lyrics, String title);
+        void showLyricsEnglish(String lyrics, boolean preload);
     }
 }

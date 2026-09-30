@@ -95,14 +95,12 @@ public class WallPaperUtil extends BaseActivity implements View.OnClickListener 
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.btnOk:
-                updateWallPaperPref();
-                break;
-
-            case R.id.btnCancel:
-                checkUnsavedChanges();
-                break;
+        int id = v.getId();
+        if (id == R.id.btnOk) {
+            updateWallPaperPref();
+        }
+        else if (id == R.id.btnCancel) {
+            checkUnsavedChanges();
         }
     }
 

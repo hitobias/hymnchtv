@@ -344,17 +344,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             startActivity(intent);
         });
 
-        // replace special hymns character; unable to enter from a standard keyboard.
-        btn_search.setOnLongClickListener(v -> {
-            String sValue = tv_Search.getText().toString();
-            if (!TextUtils.isEmpty(sValue)) {
-                sValue = ChineseConverter.convert(sValue, ConversionType.T2S, this);
-                sValue = sValue.replace("他", "祂");
-                tv_Search.setText(sValue);
-            }
-            return true;
-        });
-
         btn_update.setOnClickListener(v -> {
             new Thread() {
                 @Override
@@ -804,185 +793,181 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     public boolean onOptionsItemSelected(MenuItem item) {
         Intent intent;
 
-        switch (item.getItemId()) {
         // === Set app theme ===
-        case R.id.themeDark:
+        int itemId = item.getItemId();
+        if (itemId == R.id.themeDark) {
             setAppTheme(Theme.DARK.toString(), true);
             return true;
-
-        case R.id.themeLight:
+        }
+        else if (itemId == R.id.themeLight) {
             setAppTheme(Theme.LIGHT.toString(), true);
             return true;
-
-        case R.id.appLanguage:
+        }
+        else if (itemId == R.id.appLanguage) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 setLanguage();
             }
             return true;
-
-        case R.id.localeChinese:
+        }
+        else if (itemId == R.id.localeChinese) {
             setAppLocale(LocaleHelper.LocaleChinese);
             return true;
-
-        case R.id.localeEnglish:
+        }
+        else if (itemId == R.id.localeEnglish) {
             setAppLocale(LocaleHelper.LocaleEnglish);
             return true;
 
-        // === Set font size ===
-        case R.id.small:
+            // === Set font size ===
+        }
+        else if (itemId == R.id.small) {
             mFontSize = FONT_SIZE_DEFAULT - 5;
             setFontSize(mFontSize, true);
             return true;
-
-        case R.id.middle:
+        }
+        else if (itemId == R.id.middle) {
             mFontSize = FONT_SIZE_DEFAULT;
             setFontSize(mFontSize, true);
             return true;
-
-        case R.id.lager:
+        }
+        else if (itemId == R.id.lager) {
             mFontSize = FONT_SIZE_DEFAULT + 5;
             setFontSize(mFontSize, true);
             return true;
-
-        case R.id.xlager:
+        }
+        else if (itemId == R.id.xlager) {
             mFontSize = FONT_SIZE_DEFAULT + 10;
             setFontSize(mFontSize, true);
             return true;
-
-        case R.id.inc:
+        }
+        else if (itemId == R.id.inc) {
             mFontSize = mSharedPref.getInt(PREF_TEXT_SIZE, FONT_SIZE_DEFAULT) + 2;
             setFontSize(mFontSize, true);
             return true;
-
-        case R.id.dec:
+        }
+        else if (itemId == R.id.dec) {
             mFontSize = mSharedPref.getInt(PREF_TEXT_SIZE, FONT_SIZE_DEFAULT) - 2;
             setFontSize(mFontSize, true);
             return true;
 
+        }
         // === Set font color ===
-        case R.id.red:
+        else if (itemId == R.id.red) {
             setFontColor(Color.RED, true);
             return true;
-
-        case R.id.blue:
+        }
+        else if (itemId == R.id.blue) {
             setFontColor(Color.BLUE, true);
             return true;
-
-        case R.id.white:
+        }
+        else if (itemId == R.id.white) {
             setFontColor(Color.WHITE, true);
             return true;
-
-        case R.id.grey:
+        }
+        else if (itemId == R.id.grey) {
             setFontColor(Color.GRAY, true);
             return true;
-
-        case R.id.cyan:
+        }
+        else if (itemId == R.id.cyan) {
             setFontColor(Color.CYAN, true);
             return true;
-
-        case R.id.yellow:
+        }
+        else if (itemId == R.id.yellow) {
             setFontColor(Color.YELLOW, true);
             return true;
-
-        case R.id.green:
+        }
+        else if (itemId == R.id.green) {
             setFontColor(Color.GREEN, true);
             return true;
-
-        case R.id.black:
+        }
+        else if (itemId == R.id.black) {
             setFontColor(ContextCompat.getColor(this, R.color.grey900), true);
             return true;
 
+        }
         // === Set background color ===
-        case R.id.sbg1:
+        else if (itemId == R.id.sbg1) {
             setBgColor(0, R.drawable.bg0);
             return true;
-
-        case R.id.sbg2:
+        }
+        else if (itemId == R.id.sbg2) {
             setBgColor(1, R.drawable.bg1);
             return true;
-
-        case R.id.sbg3:
+        }
+        else if (itemId == R.id.sbg3) {
             setBgColor(2, R.drawable.bg2);
             return true;
-
-        case R.id.sbg4:
+        }
+        else if (itemId == R.id.sbg4) {
             setBgColor(3, R.drawable.bg3);
             return true;
-
-        case R.id.sbg5:
+        }
+        else if (itemId == R.id.sbg5) {
             setBgColor(4, R.drawable.bg4);
             return true;
-
-        case R.id.sbg6:
+        }
+        else if (itemId == R.id.sbg6) {
             setBgColor(5, R.drawable.bg5);
             return true;
-
-        case R.id.sbg7:
+        }
+        else if (itemId == R.id.sbg7) {
             setBgColor(6, R.drawable.bg20);
             return true;
-
-        case R.id.sbg8:
+        }
+        else if (itemId == R.id.sbg8) {
             setBgColor(7, R.drawable.bg21);
             return true;
-
-        case R.id.sbg9:
+        }
+        else if (itemId == R.id.sbg9) {
             setBgColor(8, R.drawable.bg22);
             return true;
-
-        case R.id.sbg10:
+        }
+        else if (itemId == R.id.sbg10) {
             setBgColor(9, R.drawable.bg23);
             return true;
-
-        case R.id.sbg11:
+        }
+        else if (itemId == R.id.sbg11) {
             setBgColor(10, R.drawable.bg24);
             return true;
-
-        case R.id.sbg12:
+        }
+        else if (itemId == R.id.sbg12) {
             setBgColor(11, R.drawable.bg25);
             return true;
-
-        case R.id.sbguser:
+        }
+        else if (itemId == R.id.sbguser) {
             mStartForResult.launch(new Intent(this, WallPaperUtil.class));
             return true;
-
-        case R.id.sn_convert:
+        }
+        else if (itemId == R.id.sn_convert) {
             // HymnIdx2NoConvert.validateIdx2NoConversion(HYMN_ER, HYMN_ER_INDEX_MAX);
             // HymnNo2IdxConvert.validateNo2IdxConversion(HYMN_DB, HYMN_DB_NO_TMAX);
             // Hymn2SnConvert.startConvert(); use for old to new file name conversion for 1.1.0 only
             return true;
-
-        case R.id.media_config:
+        }
+        else if (itemId == R.id.media_config) {
             intent = new Intent(this, MediaConfig.class);
             startActivity(intent);
             return true;
-
-        case R.id.permission_request:
+        }
+        else if (itemId == R.id.permission_request) {
             onInfoButtonClicked();
             return true;
-
-        case R.id.online_help:
+        }
+        else if (itemId == R.id.online_help) {
             About.hymnUrlAccess(this, HYMNCHTV_FAQ);
             return true;
-
-        case R.id.about:
+        }
+        else if (itemId == R.id.about) {
             intent = new Intent(this, About.class);
             startActivity(intent);
             return true;
-
-        case R.id.exit:
+        }
+        else if (itemId == R.id.exit) {
             LogUploadServiceImpl.purgeDebugLog();
             finishAndRemoveTask();
             System.exit(0);
             return true;
-
-        case R.id.menutoggle:
-        case R.id.alwayshow:
-        case R.id.alwayhide:
-        case R.id.bg:
-        case R.id.fontColor:
-        default:
-            return false;
         }
+        return false;
     }
 
     /**

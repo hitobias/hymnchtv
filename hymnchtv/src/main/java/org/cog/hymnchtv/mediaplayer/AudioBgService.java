@@ -37,6 +37,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -130,15 +131,10 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
     //private double mAlpha =  0.9 Coefficient of IIR smoothing filter for RMS.
     static final private double EMA_FILTER = 0.4;
 
-    /**
-     * Unique job ID for this service.
-     */
-    static final int JOB_ID = 1000;
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
-        switch (intent.getAction()) {
+        switch (Objects.requireNonNull(intent.getAction())) {
         case ACTION_PLAYER_INIT:
             fileUri = intent.getData();
             playerInit(fileUri);
@@ -171,10 +167,9 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
             break;
 
         case ACTION_PLAYBACK_LOOP:
-            mLoopCount = 1;
             try {
                 String loopValue = intent.getType();
-                mLoopCount = Integer.parseInt(loopValue);
+                mLoopCount = TextUtils.isEmpty(loopValue) ? 1 : Integer.parseInt(loopValue);
             }
             catch (NumberFormatException e) {
                 Timber.w("loopCount must be integer in string!");

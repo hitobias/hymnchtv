@@ -179,17 +179,15 @@ public class RichTextEditor extends BaseActivity
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.saveButton:
-                if (hasChanges) {
-                    saveFile();
-                }
-                finish();
-                break;
-
-            case R.id.endButton:
-                checkUnsavedChanges();
-                break;
+        int id = v.getId();
+        if (id == R.id.saveButton) {
+            if (hasChanges) {
+                saveFile();
+            }
+            finish();
+        }
+        else if (id == R.id.endButton) {
+            checkUnsavedChanges();
         }
     }
 

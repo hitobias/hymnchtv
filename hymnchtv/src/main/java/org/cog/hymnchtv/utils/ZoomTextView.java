@@ -22,7 +22,7 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class ZoomTextView extends AppCompatTextView {
-    // Limit the scale factors when when double taps to change the values
+    // Limit the scale factors when double taps to change the values
     private static final float MIN_SCALE_FACTOR = 1.0f;
     public static final float MAX_SCALE_FACTOR = 5.0f;
 

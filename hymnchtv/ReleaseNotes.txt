@@ -1,5 +1,29 @@
 Project hymnchtv Release Notes
 =========================================================================
+Version:        2.9.2 (209020)
+Release Date:   09/30/2026
+Author:         cmeng
+- Must clear MediaGuiController#mediaHymns i.e. previous selected hymns url, to make sure that user newly selected url is feteched for display.
+- Fix android WebView internal problems: recycled webView for new hymns url content may not be rendered for display, or webView.clearHistory() is not working 100% causing it to goback to about:blank.
+  i.e. Playback of newly user selected hymns url displays an old last shown webpage, or about:blank is shown.
+  a. Fixed by clearing the view state with about:blank pre-loading, and delayed loading the actual url by 100ms.
+  b. WebViewFragment#initWebView will proceed to reload if  webView.getUrl() is not the requested url.
+- Deployed the above and similar fix for Enlish lyrics fetch and display; remove all earlier fixes implemented in v2.9.0.
+- Has problem loading Notion page via WebViw on Huawei device; use device default browser instead.
+  The default must set to Chrome or Firefox, Huawei own Browser is not working.
+- Hymn content sarch for "他" will now auto include "祂"; manual conversion of "他" to "祂" is no longer required.
+- Upgrade android gradle build-tools to 9.3.2; change all case R.id.xxx to if-else to resolve "Constant expression required" error.
+
+Observation:
+- WebView and Huawei default browser: (Cause: The script is running before the HTML loads). Occur frequency is high.
+  [INFO:CONSOLE(1)] "Uncaught TypeError: Cannot read properties of null (reading 'style')", source: https://breakopen.notion.site/unsupported-browser.html
+- "Access to fetch at 'https://http-inputs-notion.splunkcloud.com/services/collector/raw'
+ from origin 'https://breakopen.notion.site' has been blocked by CORS policy:
+ Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+ If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.",
+ source: https://breakopen.notion.site/unsupported-browser.html (0)
+
+=========================================================================
 Version:        2.9.1 (209010)
 Release Date:   09/09/2026
 Author:         cmeng

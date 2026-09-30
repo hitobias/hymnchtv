@@ -81,7 +81,7 @@ public class AndroidUtils {
     }
 
     public static String UrlEncode(String url) throws UnsupportedEncodingException {
-        // Need to encode chinese link for safe access; revert all "%3A" and "%2F" to ":" and "/" etc
+        // Need to encode Chinese link for safe access; revert all "%3A" and "%2F" to ":" and "/" etc
         String encDnLnk = URLEncoder.encode(url, "UTF-8")
                 .replace("%23", "#")
                 .replace("%26", "&")

@@ -137,33 +137,27 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
     @Override
     public void onClick(View view) {
         String LOG_REPORT_EMAIL = "cmeng.gm@gmail.com";
-        switch (view.getId()) {
-        case R.id.ok_button:
+        int id = view.getId();
+        if (id == R.id.ok_button) {
             finish();
-            break;
-
-        case R.id.check_new_version:
+        }
+        else if (id == R.id.check_new_version) {
             checkUpdate();
-            break;
-
-        case R.id.submit_logs:
+        }
+        else if (id == R.id.submit_logs) {
             new LogUploadServiceImpl().sendLogs(new String[] {LOG_REPORT_EMAIL},
                     getString(R.string.send_logs_subject),
                     getString(R.string.send_logs_title));
-            break;
-
-        case R.id.history_log:
+        }
+        else if (id == R.id.history_log) {
             ChangeLog cl = new ChangeLog(this, DEFAULT_CSS);
             cl.getFullLogDialog().show();
-            break;
-        case R.id.hymnchtv_help:
-        case R.id.hymnchtv_link:
+        }
+        else if (id == R.id.hymnchtv_help || id == R.id.hymnchtv_link) {
             hymnUrlAccess(this, HYMNCHTV_LINK);
-            break;
-
-        default:
+        }
+        else {
             finish();
-            break;
         }
     }
 

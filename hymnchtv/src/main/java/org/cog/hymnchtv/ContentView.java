@@ -42,10 +42,8 @@ import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.ImageView;
 
@@ -64,7 +62,6 @@ import java.nio.charset.StandardCharsets;
 import com.zqc.opencc.android.lib.ChineseConverter;
 import com.zqc.opencc.android.lib.ConversionType;
 
-import org.apache.commons.lang3.StringUtils;
 import org.cog.hymnchtv.glide.MyGlideApp;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.utils.ChineseS2TSelection;
@@ -141,7 +138,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private String mResPrefix;
     private int[] mHymnScoreInfo;
 
-    private String mLyricsTitle = null;
     private SharedPreferences mSharedPref;
     private SharedPreferences.Editor mEditor;
 
@@ -184,37 +180,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
         lyricsEnglish.setBackgroundColor(Color.TRANSPARENT);
 
-        lyricsEnglish.getSettings().setJavaScriptEnabled(true);
-
-        // Setup to reinitEnglishLyrics if the webpage does not show the url loaded English Lyrics content.
-        lyricsEnglish.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-
-                lyricsEnglish.evaluateJavascript("document.documentElement.outerHTML", new ValueCallback<String>() {
-                    @Override
-                    public void onReceiveValue(String htmlContent) {
-                        // htmlContent contains the full HTML of the loaded page
-
-                        if (StringUtils.isNotEmpty(mLyricsTitle)) {
-                            if (htmlContent != null) {
-                                if (htmlContent.contains(mLyricsTitle)) {
-                                    // Here is your HTML body content
-                                    Timber.d("WebViewContent title matched: %s", mLyricsTitle);
-                                } else {
-                                    reinitEnglishLyrics();
-                                }
-                            }
-                            else {
-                                reinitEnglishLyrics();
-                            }
-                        }
-                    }
-                });
-            }
-        });
-
         lyricsScaleP = mSharedPref.getFloat(PREF_LYRICS_SCALE_P, 1.0f);
         lyricsScaleL = mSharedPref.getFloat(PREF_LYRICS_SCALE_L, 1.0f);
         lyricsScaleEP = mSharedPref.getFloat(PREF_LYRICS_ENGLISH_SCALE_P, 1.0f);
@@ -253,6 +218,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         mHymnNoEng = mContentHandler.getHymnNoEng();
         btn_english.setVisibility((mHymnNoEng != null) ? View.VISIBLE : View.GONE);
         if (mContentHandler.mAutoEnglish) {
+            // autoload Enligh lyrics for first entry only.
+            mContentHandler.mAutoEnglish = false;
             hasEnglishLyrics = true;
             toggleLyricsView();
         }
@@ -279,8 +246,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-        case R.id.button_ts:
+        int id = v.getId();
+        if (id == R.id.button_ts) {
             if (!hasEnglishLyrics) {
                 isSimplify = !isSimplify;
                 mEditor.putBoolean(PREF_SIMPLIFY, isSimplify);
@@ -290,23 +257,21 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
                 hasEnglishLyrics = false;
             }
             toggleLyricsView();
-            break;
-
-        case R.id.button_english:
+        }
+        else if (id == R.id.button_english) {
             hasEnglishLyrics = !hasEnglishLyrics;
             toggleLyricsView();
-            break;
         }
     }
 
     @Override
     public boolean onLongClick(View v) {
-        switch (v.getId()) {
-        case R.id.button_ts:
+        int id = v.getId();
+        if (id == R.id.button_ts) {
             mStartForResult.launch(new Intent(mContentHandler, ChineseS2TSelection.class));
             return true;
-
-        case R.id.button_english:
+        }
+        else if (id == R.id.button_english) {
             if (View.VISIBLE == lyricsEnglish.getVisibility()) {
                 mContentHandler.initWebView(ContentHandler.UrlType.englishLyrics);
             }
@@ -590,8 +555,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             lyricsEnglish.setVisibility(View.VISIBLE);
             Timber.d("Lyrics English #%s loaded: %s", mHymnNoEng, mLyricsLoaded);
             if (!mLyricsLoaded) {
-                showLyricsEnglish(LyricsEnglishRecord
-                        .toHtml("<h3>" + getResources().getString(R.string.download_wait) + "</h3>"), null);
+                showLyricsEnglish(LyricsEnglishRecord.str2Html("<h3>" + getResources().getString(R.string.download_wait) + "</h3>"), false);
             }
             mLyricsEnglishRecord.fetchLyrics(mHymnNoEng, isErGe);
         }
@@ -606,13 +570,20 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     }
 
     @Override
-    public void showLyricsEnglish(final String lyrics, String title) {
+    public void showLyricsEnglish(final String lyrics, boolean preload) {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (lyrics != null) {
-                // Timber.d("Show Lyrics English: %s", lyrics.length());
-                mLyricsTitle = title;
                 mLyricsLoaded = true;
-                lyricsEnglish.loadDataWithBaseURL(null, lyrics, "text/html", "utf8", null);
+                if (preload) {
+                    lyricsEnglish.loadUrl("about:blank");
+                }
+
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    // stop canGoBack to display about:blank. not working 100%.
+                    lyricsEnglish.clearHistory();
+                    // Timber.d("Show Lyrics English: %s", lyrics.length());
+                    lyricsEnglish.loadDataWithBaseURL(null, lyrics, "text/html", "utf8", null);
+                }, 100);
             }
             else {
                 lyricsEnglish.loadUrl(LyricsEnglishRecord.HYMNAL_LINK_MAIN + mHymnNoEng);

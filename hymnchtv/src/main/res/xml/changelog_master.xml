@@ -6,8 +6,22 @@
      They are automatically updated with "ant bump-version".
 -->
 <changelog>
-    <release version="2.9.1 (09/09/2026)" versioncode="209010">
+    <release version="2.9.2 (09/30/2026)" versioncode="209020">
         <change>使用前请检阅 &lt;a href='https://cmeng-git.github.io/hymnchtv/faq.html'&gt;诗歌本新应用程序功能&lt;/a&gt;。</change>
+        <change>必须清除 `MediaGuiController#mediaHymns`（即之前选定的诗歌 URL），以确保获取并显示用户新选定的 URL。</change>
+        <change>修复 Android WebView 的内部问题： 在加载新诗歌 URL 内容时可能无法正常渲染显示，或者 `webView.clearHistory()` 未能完全生效导致页面回退至 `about:blank`。
+            &lt;br />即：播放用户新选定的诗歌 URL 时，显示的却是上一次浏览的网页，或者是 `about:blank` 页面。
+            &lt;br />a. 解决方法：通过预加载 `about:blank` 来清除视图状态，并将实际 URL 的加载延迟 100 毫秒执行。
+            &lt;br />b. 在 `WebViewFragment#initWebView` 中，若 `webView.getUrl()` 与请求的 URL 不符，则触发重新加载。</change>
+        <change>将上述及类似修复方案应用于英文歌词的获取与显示功能；移除了 v2.9.0 版本中实施的所有旧有修复措施。</change>
+        <change>华为设备上通过 WebView 加载 Notion 页面存在问题；改为调用设备默认浏览器进行加载。
+            &lt;br />默认浏览器必须设置为 Chrome 或 Firefox，华为自带浏览器无法正常工作。</change>
+        <change>在诗歌内容中搜索“他”时，系统现在会自动包含“祂”；无需再手动将“他”转换为“祂”。</change>
+        <change>将 Android Gradle 构建工具（build-tools）升级至 9.3.2；将所有的 `case R.id.xxx` 语句改为 `if-else` 结构，以解决“Constant expression required”（需要常量表达式）的错误。</change>
+        <change>错误修复和改进。</change>
+    </release>
+
+    <release version="2.9.1 (09/09/2026)" versioncode="209010">
         <change>将 OpenCC 库版本从 1.2.0 升级到 1.4.2。解决方案请参见 https://github.com/BYVoid/OpenCC/issues/1488</change>
         <change>迁移到使用 https://github.com/frankslin/android-opencc 中的库；该库与 OpenCC 1.4.2 兼容。</change>
         <change>错误修复和改进。</change>

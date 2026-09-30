@@ -65,14 +65,12 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.btnOk:
-                updateS2TSelection(mHasChanges);
-                break;
-
-            case R.id.btnCancel:
-                checkUnsavedChanges();
-                break;
+        int id = v.getId();
+        if (id == R.id.btnOk) {
+            updateS2TSelection(mHasChanges);
+        }
+        else if (id == R.id.btnCancel) {
+            checkUnsavedChanges();
         }
     }
 
@@ -107,22 +105,17 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         mHasChanges = true;
 
         if (null != rb) {
-            switch (checkedId) {
-                case R.id.radioButtonS2T:
-                    mConversionType = ConversionType.S2T;
-                    break;
-
-                case R.id.radioButtonS2HK:
-                    mConversionType = ConversionType.S2HK;
-                    break;
-
-                case R.id.radioButtonS2TW:
-                    mConversionType = ConversionType.S2TW;
-                    break;
-
-                case R.id.radioButtonS2TWP:
-                    mConversionType = ConversionType.S2TWP;
-                    break;
+            if (checkedId == R.id.radioButtonS2T) {
+                mConversionType = ConversionType.S2T;
+            }
+            else if (checkedId == R.id.radioButtonS2HK) {
+                mConversionType = ConversionType.S2HK;
+            }
+            else if (checkedId == R.id.radioButtonS2TW) {
+                mConversionType = ConversionType.S2TW;
+            }
+            else if (checkedId == R.id.radioButtonS2TWP) {
+                mConversionType = ConversionType.S2TWP;
             }
         }
     }

@@ -52,6 +52,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.http.util.EncodingUtils;
 import org.apache.http.util.TextUtils;
@@ -309,15 +311,17 @@ public class ContentSearch extends BaseActivity {
                 return null;
             }
         } catch (IOException e) {
-            Timber.w("Content search error: %s", e.getMessage());
+            Timber.w("File does not exist or read error: %s", e.getMessage());
             return null;
         }
 
         String result = EncodingUtils.getString(buffer, "utf-8");
         result = result.substring(4);
 
-        int matchIdx = result.indexOf(sString);
-        if (matchIdx != -1) {
+        Pattern pattern = Pattern.compile(sString.replace("他", "[祂|他]"));
+        Matcher matcher = pattern.matcher(result);
+        if (matcher.find()) {
+            int matchIdx = matcher.start();
             // find the start of the line for display
             matchIdx = result.lastIndexOf("\n", matchIdx) + 1;
 

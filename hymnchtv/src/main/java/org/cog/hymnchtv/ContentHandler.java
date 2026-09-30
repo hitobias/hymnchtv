@@ -60,6 +60,7 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -169,6 +170,7 @@ public class ContentHandler extends BaseActivity {
     public final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
     private MediaContentHandler mMediaContentHandler;
 
+    private boolean onUserLeaveHint = false;
     private boolean isShowPlayerUi;
 
     // True if either YouTube or exoPlayer is playing
@@ -242,7 +244,7 @@ public class ContentHandler extends BaseActivity {
         isMediaPlayerUi = false;
 
         // Attach the File Transfer GUI; Use single instance created in HymnApp;
-        // do not create/add new, otherwise GUI display is no working properly
+        // do not create/add new, otherwise GUI display is not working properly
         mMediaDownloadHandler = HymnsApp.mMediaDownloadHandler;
         getSupportFragmentManager().beginTransaction().replace(R.id.filexferGui, mMediaDownloadHandler).commit();
 
@@ -306,7 +308,20 @@ public class ContentHandler extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        onUserLeaveHint = false;
         showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait);
+    }
+
+    /**
+     * When user exit via Home button; stop media player if any.
+     * It is also triggered when external browser is launched.
+     */
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        onUserLeaveHint = true;
+        // The user pressed the Home button or Overview button to leave the app
+        backPressedCallback.handleOnBackPressed();
     }
 
     // Clear auto streaming on exit
@@ -367,7 +382,6 @@ public class ContentHandler extends BaseActivity {
             // For video player
             else if (isMediaPlayerUi) {
                 if (mMediaContentHandler.isPlayerVisible()) {
-
                     mMediaContentHandler.releasePlayer();
                     // Must do this only after mMediaContentHandler.releasePlayer()
                     mMediaGuiController.initPlaybackSpeed();
@@ -389,6 +403,11 @@ public class ContentHandler extends BaseActivity {
             else if (mMediaGuiController.isPlaying()) {
                 mMediaGuiController.stopPlay();
                 mAutoStream = false;
+                Timber.e("mMediaGuiController.stopPlay()");
+            }
+            // Leave Home press handerling to android system.
+            else if (onUserLeaveHint) {
+                onUserLeaveHint = false;
             }
             else {
                 backToHome();
@@ -396,59 +415,47 @@ public class ContentHandler extends BaseActivity {
         }
     };
 
-    /**
-     * When user exit via Home button; stop media player if any.
-     */
-    @Override
-    protected void onUserLeaveHint() {
-        super.onUserLeaveHint();
-        // The user pressed the Home button or Overview button to leave the app
-        backPressedCallback.handleOnBackPressed();
-    }
-
     // Do this only in PagerView Fragment, otherwise contextMenu is duplicated (display twice)
     // public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
     // {
     //     super.onCreateContextMenu(menu, v, menuInfo);
     //     getMenuInflater().inflate(R.menu.content_menu, menu);
     // }
-
     public boolean onContextItemSelected(MenuItem item) {
         SharedPreferences.Editor editor = sPreference.edit();
         ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
 
-        switch (item.getItemId()) {
-        case R.id.alwayshow:
+        int itemId = item.getItemId();
+        if (itemId == R.id.alwayshow) {
             isShowPlayerUi = true;
             editor.putBoolean(PREF_MENU_SHOW, true);
             editor.apply();
             showPlayerUi(true);
             return true;
-
-        case R.id.alwayhide:
+        }
+        else if (itemId == R.id.alwayhide) {
             isShowPlayerUi = false;
             editor.putBoolean(PREF_MENU_SHOW, false);
             editor.apply();
             showPlayerUi(false);
             return true;
-
-        case R.id.menutoggle:
+        }
+        else if (itemId == R.id.menutoggle) {
             isShowPlayerUi = !(isShowPlayerUi && mMediaGuiController.isShown());
             showPlayerUi(isShowPlayerUi);
             return true;
-
-        case R.id.scoreColorChange:
+        }
+        else if (itemId == R.id.scoreColorChange) {
             if (contentView != null)
                 contentView.toggleScoreColor();
             return true;
-
-        case R.id.lyrcsTextSizeInc:
-        case R.id.lyrcsTextSizeDec:
+        }
+        else if (itemId == R.id.lyrcsTextSizeInc || itemId == R.id.lyrcsTextSizeDec) {
             if (contentView != null)
                 contentView.setLyricsTextSize(item.getItemId() == R.id.lyrcsTextSizeInc);
             return true;
-
-        case R.id.media_config:
+        }
+        else if (itemId == R.id.media_config) {
             MediaType mediaType = mMediaGuiController.getMediaType();
             String dir = mHymnType + MediaConfig.mediaDir.get(mediaType);
 
@@ -471,35 +478,32 @@ public class ContentHandler extends BaseActivity {
             intent.putExtras(bundle);
             startActivity(intent);
             return true;
-
-        case R.id.lyrcsEnglish:
+        }
+        else if (itemId == R.id.lyrcsEnglish) {
             if (mHymnNoEng == null) {
                 HymnsApp.showToastMessage(R.string.error_english_lyrics_null, mHymnNo);
                 return true;
             }
             initWebView(UrlType.englishLyrics);
             return true;
-
-        case R.id.lyrcsEnglishDelete:
+        }
+        else if (itemId == R.id.lyrcsEnglishDelete) {
             mDB.deleteLyricsEng(mHymnNoEng);
             return true;
-
-        case R.id.lyrcsShare:
+        }
+        else if (itemId == R.id.lyrcsShare) {
             lyricsShare();
             return true;
-
-        case R.id.help:
-            // About.hymnUrlAccess(this, HYMNCHTV_FAQ_PLAYBACK);
+        }
+        else if (itemId == R.id.help) {
             initWebView(UrlType.onlineHelp);
             return true;
-
-        case R.id.home:
+        }
+        else if (itemId == R.id.home) {
             backToHome();
             return true;
-
-        default:
-            return false;
         }
+        return false;
     }
 
     private void backToHome() {
@@ -1382,6 +1386,13 @@ public class ContentHandler extends BaseActivity {
             return;
         }
 
+        // Proceed to use android default browser if it is not englishLyrics access
+
+        if (UrlType.hymnNotionSearch == type && Build.MANUFACTURER.contains("HUAWEI")) {
+            About.hymnUrlAccess(this, mWebUrl);
+            return;
+        }
+
         // 20260829: Change to use this implementation; Backkey will return to parent,
         FragmentManager fragmentManager = getSupportFragmentManager();
         WebViewFragment mWebFragment = (WebViewFragment) fragmentManager.findFragmentById(R.id.webView);
@@ -1389,7 +1400,7 @@ public class ContentHandler extends BaseActivity {
             mWebFragment = new WebViewFragment();
         }
         else {
-            mWebFragment.initWebView();
+            mWebFragment.initWebView(mWebUrl);
         }
 
         fragmentManager.beginTransaction()

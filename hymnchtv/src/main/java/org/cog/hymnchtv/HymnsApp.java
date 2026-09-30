@@ -139,6 +139,7 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
             screenWidth = Math.abs(mBounds.width());
             screenHeight = Math.abs(mBounds.height());
         }
+
         // Purge all the previously old downloaded apk
         UpdateServiceImpl.getInstance().removeOldDownloads();
         EdgeToEdgeDisable();
