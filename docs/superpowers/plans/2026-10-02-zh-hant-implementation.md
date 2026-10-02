@@ -15,7 +15,7 @@
    如果想讓每個 task 由子代理執行、主對話只負責協調，改用 `superpowers:subagent-driven-development`，並指定子代理也使用 Sonnet。
 
 **執行規則：**
-- **照順序執行**：Task 0 → 1 → 2 → 4 → 6 → 6B → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15。Task 3 和 Task 5 已經刪除。
+- **照順序執行**：Task 0 → 1 → 2 → 4 → 6 → 6B → 6C → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15。Task 3 和 Task 5 已經刪除。
 - **Task 9 和 Task 10 一起 commit**：Task 9 刪除 `LocaleHelper` 之後，要到 Task 10 才能再次編譯成功。
 - **計畫和程式碼對不上就停下來**：例如行號偏移後找不到計畫裡引用的原始程式碼，就停下來回報，不要自己改計畫的意圖。
 - **整合型 task 要更小心**：Task 9～12 會跨多個檔案。每完成一個 task，都要跑 `./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug`。
@@ -1153,6 +1153,423 @@
 
 ---
 
+### Task 6C：App 內移除 OpenCC（使用者決策，2026-10-02）
+
+**目的：** 繁體歌詞已經預先產生，App 裡只剩下「搜尋時把繁體查詢轉成簡體」還在用 OpenCC。這一步改用產生工具一起輸出的「繁→簡對照表」，然後把整個 OpenCC 從 App 移除：
+- **APK 變小**：少約 11.4 MB，包括四個 ABI 的 `libChineseConverter.so` 和 `openccdata`。
+- **建置變簡單**：不再需要 NDK、CMake 和 OpenCC submodule。
+- **效能**：spec 的 B-1 整項消失。
+
+OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
+
+**設計：**
+- **對照表 `assets/lyrics_t2s_map.txt`**：由產生工具建立。
+  - 做法：把每一行簡體原文和它的繁體產物（TW 和 HK 都算）逐字對齊，只取長度相同的行。
+  - 收錄條件：繁體字 `b` 只要在某處對應到不同的簡體字 `a`，就成為對照表的一個 key。它的值是所有曾經對應到的簡體字的集合；如果 `b` 也曾經以原字出現（例如「乾坤」的「乾」），集合裡就包含 `b` 自己。
+  - 格式：每行 `繁<TAB>候選簡體字串（排序過）`，例如 `乾\t乾干`。依 key 的 code point 排序；只收單一 code point。
+  - 這個檔案也列入 manifest，由同步測試保護。
+- **搜尋**：`SearchPattern.build(query, t2s)` 逐一處理查詢的每個 code point：
+  - 「他」：維持 `[祂他]`。
+  - 在對照表裡的字：轉成 `(?:候選1|候選2…)`，每個候選都經過 `Pattern.quote`。
+  - 其他字：用 `Pattern.quote`。
+
+  這樣混用簡繁的查詢也找得到，而且不會漏掉「乾坤」這種原字。
+- **不再有執行時轉換**：Task 12 (j) 裡「繁體檔不存在就即時轉換」的後備路徑改成「顯示簡體並記錄 `Timber.w`」。同步測試已經保證每個繁體檔都存在。
+
+**Files:**
+- Modify: `tools/gen_lyrics_hant.py`（新增對照表輸出，並列入 manifest）
+- Modify: `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsHantAssetsTest.kt`（manifest 的路徑規則接受對照表）
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/search/T2sMap.kt`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/search/T2sMapTest.kt`
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/search/SearchPattern.kt`、`hymnchtv/src/test/java/org/cog/hymnchtv/search/SearchPatternTest.kt`
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/HantVariant.kt`（移除 `conversion` 屬性）、`LyricsLanguagePolicyTest.kt`
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java:89, 336-337`
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/ContentView.java`（只移除 OpenCC 相關的 import 和呼叫，見 Step 7）
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/utils/ChineseS2TSelection.java`（只把 `ConversionType` 換成字串常數，見 Step 7）
+- Modify: `settings.gradle`、`hymnchtv/build.gradle`
+- Delete: `lib-opencc-android/`（整個模組，包含 submodule）、`.gitmodules`
+
+- [ ] **Step 1：產生工具輸出對照表**
+
+  在 `tools/gen_lyrics_hant.py` 中：
+
+  (a) 在 `MANIFEST = ...` 下面新增一行常數：
+
+  ```python
+  T2S_MAP = ASSETS / "lyrics_t2s_map.txt"
+  ```
+
+  (b) 在 `clean_stale` 之後新增函式：
+
+  ```python
+  def build_t2s_map(texts, converted):
+      """Traditional char -> every Simplified char it came from (itself included when it also stays unchanged)."""
+      mapping, identity = {}, set()
+      for variant_out in converted.values():
+          for src, out in zip(texts, variant_out):
+              for s_line, t_line in zip(src.splitlines(), out.splitlines()):
+                  if len(s_line) != len(t_line):
+                      continue  # phrase conversion changed the length; no reliable alignment
+                  for a, b in zip(s_line, t_line):
+                      if a == b:
+                          identity.add(b)
+                      else:
+                          mapping.setdefault(b, set()).add(a)
+      lines = []
+      for b in sorted(mapping):
+          candidates = mapping[b] | ({b} if b in identity else set())
+          lines.append(f"{b}\t{''.join(sorted(candidates))}")
+      T2S_MAP.write_text("\n".join(lines) + "\n", encoding="utf-8")
+  ```
+
+  (c) 在 `main()` 裡 `clean_stale(expected_dirs, expected_files)` 這一行的下一行，加上：
+
+  ```python
+      build_t2s_map(texts, converted)
+  ```
+
+  (d) 在 `main()` 裡，把
+
+  ```python
+      outputs = sources + [ASSETS / f for f in sorted(expected_files)]
+  ```
+
+  改成：
+
+  ```python
+      outputs = sources + [ASSETS / f for f in sorted(expected_files)] + [T2S_MAP]
+  ```
+
+- [ ] **Step 2：同步測試接受對照表**
+
+  在 `LyricsHantAssetsTest.kt` 中：
+
+  (a) `PATH` 的 regex 改成：
+
+  ```kotlin
+          val PATH = Regex("lyrics_t2s_map\\.txt|lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
+  ```
+
+  (b) `manifestMatchesSourcesAndOutputs` 裡 `.toMap()` 的結果要加上對照表。把
+
+  ```kotlin
+          }.flatMap { dir -> txtNames(dir).map { "${dir.name}/$it" to sha1(File(dir, it)) } }.toMap()
+  ```
+
+  改成：
+
+  ```kotlin
+          }.flatMap { dir -> txtNames(dir).map { "${dir.name}/$it" to sha1(File(dir, it)) } }.toMap() +
+              ("lyrics_t2s_map.txt" to sha1(File(assets, "lyrics_t2s_map.txt")))
+  ```
+
+  執行 `python3 tools/gen_lyrics_hant.py`，然後檢查：
+
+  ```bash
+  wc -l hymnchtv/src/main/assets/lyrics_t2s_map.txt
+  grep -P '^乾\t' hymnchtv/src/main/assets/lyrics_t2s_map.txt
+  ./gradlew :hymnchtv:testDebugUnitTest --console=plain
+  ```
+
+  Expected: 對照表有幾百到兩千多行；「乾」那一行的候選包含「干」和「乾」；測試全部通過。
+
+- [ ] **Step 3：`T2sMap`（TDD）**
+
+  先寫測試 `hymnchtv/src/test/java/org/cog/hymnchtv/search/T2sMapTest.kt`：
+
+  ```kotlin
+  package org.cog.hymnchtv.search
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+  import java.io.File
+
+  class T2sMapTest {
+      @Test
+      fun parsesLinesAndSkipsMalformed() {
+          val map = T2sMap.parse(listOf("頌\t颂", "乾\t乾干", "", "bad", "x\t", "ab\tc"))
+          assertThat(map.candidates("頌")).isEqualTo("颂")
+          assertThat(map.candidates("乾")).isEqualTo("乾干")
+          assertThat(map.candidates("神")).isNull()
+          assertThat(map.size).isEqualTo(2)
+      }
+
+      @Test
+      fun realAssetMapsCommonTraditionalChars() {
+          val assets = File(checkNotNull(System.getProperty("hymnchtv.assetsDir")))
+          val map = T2sMap.parse(File(assets, "lyrics_t2s_map.txt").readLines())
+          assertThat(map.candidates("讚")).contains("赞")
+          assertThat(map.candidates("劃")).contains("划")
+          assertThat(map.candidates("裡")).contains("里")
+      }
+  }
+  ```
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.search.T2sMapTest'`
+  Expected: 編譯失敗，訊息為 `Unresolved reference 'T2sMap'`。
+
+  實作 `hymnchtv/src/main/java/org/cog/hymnchtv/search/T2sMap.kt`：
+
+  ```kotlin
+  package org.cog.hymnchtv.search
+
+  /**
+   * Traditional -> Simplified candidates generated by tools/gen_lyrics_hant.py (assets/lyrics_t2s_map.txt).
+   * Keys are single code points; a value lists every Simplified form seen for that key.
+   */
+  class T2sMap private constructor(private val map: Map<String, String>) {
+      val size: Int get() = map.size
+
+      /** @return the Simplified candidates for one code point string, or null if it needs no conversion. */
+      fun candidates(codePoint: String): String? = map[codePoint]
+
+      companion object {
+          const val ASSET_PATH = "lyrics_t2s_map.txt"
+
+          @JvmField
+          val EMPTY = T2sMap(emptyMap())
+
+          /** Lenient: malformed lines are skipped so a bad entry can never break search. */
+          @JvmStatic
+          fun parse(lines: Iterable<String>): T2sMap = T2sMap(
+              lines.mapNotNull { line ->
+                  val cols = line.split('\t')
+                  val key = cols.getOrNull(0).orEmpty()
+                  val value = cols.getOrNull(1).orEmpty()
+                  if (cols.size == 2 && key.codePointCount(0, key.length) == 1 && value.isNotEmpty()) key to value else null
+              }.toMap()
+          )
+      }
+  }
+  ```
+
+  Run 同一個測試。
+  Expected: 2 個測試全部通過。
+
+- [ ] **Step 4：`SearchPattern` 支援對照表（TDD）**
+
+  先在 `SearchPatternTest.kt` 新增測試：
+
+  ```kotlin
+      private val t2s = T2sMap.parse(listOf("頌\t颂", "讚\t赞", "乾\t乾干", "祂\t祂"))
+
+      private fun findsT2s(query: String, text: String) = SearchPattern.build(query, t2s)!!.matcher(text).find()
+
+      @Test
+      fun traditionalQueryMatchesSimplifiedText() {
+          assertThat(findsT2s("頌讚", "颂赞三一神")).isTrue()
+      }
+
+      @Test
+      fun mixedScriptQuery() {
+          assertThat(findsT2s("颂讚", "颂赞三一神")).isTrue()
+      }
+
+      @Test
+      fun ambiguousCharMatchesEveryCandidate() {
+          assertThat(findsT2s("乾", "干净")).isTrue()
+          assertThat(findsT2s("乾", "乾坤")).isTrue()
+      }
+
+      @Test
+      fun heRuleStillAppliesWithMap() {
+          assertThat(findsT2s("他", "祂")).isTrue()
+      }
+
+      @Test
+      fun metaCharactersStillLiteralWithMap() {
+          assertThat(findsT2s("(頌", "(颂")).isTrue()
+      }
+  ```
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.search.SearchPatternTest'`
+  Expected: 編譯失敗，因為 `build` 還不接受第二個參數。
+
+  把 `SearchPattern.kt` 的 `build` 換成以下版本。單一參數的舊呼叫仍然可以用，因為第二個參數有預設值：
+
+  ```kotlin
+      /**
+       * @param t2s Traditional->Simplified candidates; each mapped code point matches any of its candidates
+       * @return null when the query is blank; never throws PatternSyntaxException.
+       */
+      @JvmStatic
+      @JvmOverloads
+      fun build(query: String?, t2s: T2sMap = T2sMap.EMPTY): Pattern? {
+          val q = query?.trim().orEmpty()
+          if (q.isEmpty()) return null
+          val regex = StringBuilder()
+          var i = 0
+          while (i < q.length) {
+              val cp = q.codePointAt(i)
+              val ch = String(Character.toChars(cp))
+              i += Character.charCount(cp)
+              val candidates = t2s.candidates(ch)
+              when {
+                  ch == HE -> regex.append(HE_OR_HIM)
+                  candidates != null -> regex.append(alternatives(candidates))
+                  else -> regex.append(Pattern.quote(ch))
+              }
+          }
+          return Pattern.compile(regex.toString())
+      }
+
+      private fun alternatives(candidates: String): String {
+          val parts = mutableListOf<String>()
+          var i = 0
+          while (i < candidates.length) {
+              val cp = candidates.codePointAt(i)
+              parts += Pattern.quote(String(Character.toChars(cp)))
+              i += Character.charCount(cp)
+          }
+          return parts.joinToString("|", prefix = "(?:", postfix = ")")
+      }
+  ```
+
+  每個 code point 各自 quote，所以仍然沒有「先 quote 整串再替換」的問題，原本 Task 6 的測試要全部繼續通過。
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.search.*'`
+  Expected: 全部通過，包括 Task 6 原有的 9 個測試。
+
+- [ ] **Step 5：`HantVariant` 移除 OpenCC 依賴**
+
+  `HantVariant.kt` 改成：
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  /** Regional Traditional Chinese lyrics variant with pre-generated assets in lyrics_<type>_text<dirSuffix>/ (plan A.1.9). */
+  enum class HantVariant(
+      val dirSuffix: String,
+      /** Value stored in PREF_CONVERSION_TYPE. */
+      val prefValue: String,
+  ) {
+      TW("_hant_tw", "S2TW"),
+      HK("_hant_hk", "S2HK"),
+  }
+  ```
+
+  在 `LyricsLanguagePolicyTest.kt` 的 `hantVariantMetadata` 中，刪除兩行 `.conversion` 的 assertion，以及 `ConversionType` 的 import，保留 `prefValue` 和 `dirSuffix` 的 assertion。
+
+- [ ] **Step 6：`MainActivity` 不再轉換查詢字串**
+
+  在 `MainActivity.java` 中刪除：
+  - 第 336-337 行：
+
+    ```java
+                sValue = ChineseConverter.convert(sValue, ConversionType.T2S, this);
+                tv_Search.setText(sValue);
+    ```
+
+  - 第 89-90 行的 `import com.zqc.opencc.android.lib.ChineseConverter;` 和 `import com.zqc.opencc.android.lib.ConversionType;`。
+
+  查詢字串原樣傳給 `ContentSearch`，由 Task 13 的 `SearchPattern.build(query, t2s)` 處理簡繁。
+
+- [ ] **Step 7：移除其他 OpenCC 使用處**
+
+  這一步刻意只做「能編譯、行為不變」的最小修改；這兩個檔案的完整改寫在 Task 11 和 Task 12。
+
+  (a) `ContentView.java`：
+  - 刪除 `import com.zqc.opencc.android.lib.ChineseConverter;` 和 `import com.zqc.opencc.android.lib.ConversionType;`。
+  - 刪除欄位 `private ConversionType mConversionType = ConversionType.S2T;`（第 113 行）。
+  - 刪除第 189 行和第 603 行對 `mConversionType` 的賦值。
+  - 第 462 行原本是：
+
+    ```java
+                lyricsTraditional.setText(ChineseConverter.convert(lyrics.toString(), mConversionType, mContentHandler));
+    ```
+
+    暫時改成讀台灣版的預先產生檔案：
+
+    ```java
+                String hantPath = LyricsAssets.hantPath(resFName, HantVariant.TW);
+                lyricsTraditional.setText(hantPath == null ? lyrics : readHantAsset(hantPath, lyrics));
+    ```
+
+    並在 `showLyricsChText` 之後新增：
+
+    ```java
+        /** Temporary until Task 12 (j): pre-generated TW lyrics, falling back to the Simplified text. */
+        private CharSequence readHantAsset(String path, CharSequence fallback) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(getResources().getAssets().open(path), StandardCharsets.UTF_8))) {
+                StringBuilder text = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    text.append(line).append('\n');
+                }
+                return text;
+            }
+            catch (IOException e) {
+                Timber.w("Missing pre-generated lyrics %s", path);
+                return fallback;
+            }
+        }
+    ```
+
+    最後新增 import：`org.cog.hymnchtv.lyrics.HantVariant` 和 `org.cog.hymnchtv.lyrics.LyricsAssets`。
+
+  (b) `ChineseS2TSelection.java`：
+  - 把 `private ConversionType mConversionType;` 改成 `private String mConversionType;`。
+  - 第 53 行的 `ConversionType.S2T.toString()` 改成 `"S2T"`。
+  - 第 109-118 行的 `ConversionType.S2T`、`S2HK`、`S2TW`、`S2TWP` 分別改成字串 `"S2T"`、`"S2HK"`、`"S2TW"`、`"S2TWP"`。
+  - 第 129 行的 `mConversionType.toString()` 改成 `mConversionType`。
+  - 刪除 `ConversionType` 的 import 和第 54 行的註解。
+
+  (c) 確認沒有遺漏：
+
+  ```bash
+  grep -rn 'opencc\|ChineseConverter\|ConversionType' hymnchtv/src || echo none
+  ```
+
+  Expected: `none`。只有 `About.java` 列出 OpenCC 的那一行可以保留，因為繁體資料仍然是用 OpenCC 產生的，保留致謝是合理的。
+
+- [ ] **Step 8：移除模組與 submodule**
+
+  ```bash
+  git rm -r --quiet lib-opencc-android
+  git rm --quiet .gitmodules
+  rm -rf .git/modules/lib-opencc-android
+  git config --remove-section submodule.lib-opencc-android/src/main/jni/OpenCC 2>/dev/null || true
+  ```
+
+  `settings.gradle` 刪除 `include ':lib-opencc-android'`。
+
+  `hymnchtv/build.gradle` 刪除 `implementation project(':lib-opencc-android')`。
+
+  檢查：
+
+  ```bash
+  grep -rn 'lib-opencc-android' --include=*.gradle . || echo none
+  ```
+
+  Expected: `none`。
+
+- [ ] **Step 9：Build、測試、量 APK**
+
+  ```bash
+  ./gradlew clean :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug --console=plain
+  ls -l hymnchtv/build/outputs/apk/debug/*.apk
+  unzip -l hymnchtv/build/outputs/apk/debug/*.apk | grep -ciE 'ChineseConverter|openccdata'
+  ```
+
+  Expected:
+  - 結果為 `BUILD SUCCESSFUL`，全部測試通過。
+  - APK 比 Task 6B 之後的 123,592,833 bytes 小約 11 MB。
+  - 最後一個指令印出 `0`。
+
+  注意：`hymnchtv/build.gradle` 的 Test inputs 也要把 `lyrics_t2s_map.txt` 納入。在 `fileTree('src/main/assets') { include ... }` 的 include 清單裡加上 `'lyrics_t2s_map.txt'`。
+
+- [ ] **Step 10：Commit**
+
+  ```bash
+  git add -A tools hymnchtv settings.gradle
+  git commit -m "refactor: drop OpenCC from the app; search uses generated T2S map"
+  ```
+
+  另外要確認 `git status --short` 是乾淨的，而且刪除 `lib-opencc-android/` 和 `.gitmodules` 的變更都已經包含在這個 commit 裡。
+
+---
+
 ### Task 7：資源目錄調整（預設改為英文）
 
 **Files:**
@@ -1800,7 +2217,7 @@
 
 - [ ] **Step 3：修改 `ChineseS2TSelection.java`**
 
-  (a) 欄位 `private ConversionType mConversionType;` 換成：
+  (a) 欄位 `private String mConversionType;`（Task 6C 改成 String）換成：
 
   ```java
       private HantVariant mVariant;
@@ -1811,8 +2228,7 @@
 
   ```java
           mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
-          String cType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, ConversionType.S2T.toString());
-          // mConversionType = Enum.valueOf(ConversionType.class, cType);
+          String cType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, "S2T");
           checkRadioButton(cType);
 
           // Only enable OnCheckedChangeListener only after checkRadioButton()
@@ -1895,7 +2311,7 @@
   (e) `updateS2TSelection` 中原本的：
 
   ```java
-              editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.toString());
+              editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType);
   ```
 
   換成：
@@ -1906,7 +2322,7 @@
   ```
 
   (f) import 調整：
-  - 刪除 `import com.zqc.opencc.android.lib.ConversionType;`。
+  - `ConversionType` 的 import 已在 Task 6C 刪除。
   - 新增：
 
     ```java
@@ -2040,14 +2456,13 @@
 
   (b) 刪除第 105 行的常數 `PREF_SIMPLIFY`。全新項目，不需要保留舊的 key；預設語言改由 `LyricsLanguagePolicy.PREF_LYRICS_DEFAULT` 記錄。
 
-  (c) **刪除**第 188-189 行：
+  (c) **刪除**這一行（`mConversionType` 的欄位和賦值已在 Task 6C 刪除）：
 
   ```java
           isSimplify = mSharedPref.getBoolean(PREF_SIMPLIFY, true);
-          mConversionType = ConversionType.valueOf(mSharedPref.getString(PREF_CONVERSION_TYPE, ConversionType.S2T.toString()));
   ```
 
-  同時刪除第 113 行的欄位 `private ConversionType mConversionType = ConversionType.S2T;`。之後每次載入歌詞時才讀取 variant，見 (j)。
+  每次載入歌詞時才讀取 variant，見 (j)。
 
   (d) 在 `onResume()` 裡，`registerForContextMenu(lyricsView);` 之後加上：
 
@@ -2083,7 +2498,6 @@
 
   ```java
                   if (!isSimplify && hasChanges) {
-                      mConversionType = ConversionType.valueOf(mSharedPref.getString(PREF_CONVERSION_TYPE, ConversionType.S2T.toString()));
                       toggleLyricsView();
                   }
   ```
@@ -2128,10 +2542,9 @@
     ```
 
     已經 import 過的就不要重複加。
-  - 刪除 `import com.zqc.opencc.android.lib.ConversionType;`。
-  - 保留 `ChineseConverter` 的 import，因為 (j) 的後備路徑還會用到它。
+  - OpenCC 的 import 已在 Task 6C 刪除，不要加回來。
 
-  (j) **改讀預先產生的繁體歌詞**（spec A.1.9）。`showLyricsChText` 裡原本整個 `try { ... } catch (IOException e) { ... }` 區塊（第 450-465 行，也就是從 `try {` 到 `Timber.w("Error reading file: %s", resFName);` 的右大括號）換成：
+  (j) **改讀預先產生的繁體歌詞**（spec A.1.9）。`showLyricsChText` 裡整個 `try { ... } catch (IOException e) { ... }` 區塊（從 `try {` 到 `Timber.w("Error reading file: %s", resFName);` 的右大括號，裡面包含 Task 6C 暫時加上的 `readHantAsset` 呼叫）換成下面的程式碼，並刪除 Task 6C 加的 `readHantAsset` 方法：
 
   ```java
           String lyrics = readAsset(resFName);
@@ -2148,7 +2561,7 @@
   在 `showLyricsChText` 之後新增：
 
   ```java
-      /** Pre-generated Traditional lyrics (plan A.1.9); runtime OpenCC only if the asset is unexpectedly missing. */
+      /** Pre-generated Traditional lyrics (plan A.1.9); the sync test guarantees they exist, Simplified is a last resort. */
       private String loadTraditional(String resFName, String simplified) {
           HantVariant variant = LyricsLanguagePolicy.parseVariant(mSharedPref.getString(PREF_CONVERSION_TYPE, null), uiLocale());
           String hantPath = LyricsAssets.hantPath(resFName, variant);
@@ -2156,8 +2569,8 @@
           if (text != null) {
               return text;
           }
-          Timber.w("Missing pre-generated lyrics %s; converting at runtime", hantPath);
-          return ChineseConverter.convert(simplified, variant.getConversion(), mContentHandler);
+          Timber.w("Missing pre-generated lyrics %s; showing Simplified", hantPath);
+          return simplified;
       }
 
       /** @return the asset text with '\n' line ends, or null if it cannot be read. */
@@ -2195,7 +2608,7 @@
   3. 返回主頁再重新開啟，歌詞應該回到繁體。
   4. 停在歌詞頁不動，超過系統的螢幕逾時時間，螢幕不能熄滅。
   5. 回到主頁後，螢幕要恢復正常的逾時行為。
-  6. 用 `adb logcat | grep -i "converting at runtime"` 觀察，連續翻 20 頁，不能出現任何一行。這代表全部讀的是預先產生的檔案。
+  6. 用 `adb logcat | grep -i "Missing pre-generated lyrics"` 觀察，連續翻 20 頁，不能出現任何一行。這代表全部讀的是預先產生的檔案。
   7. 在「歌詞語言」把轉換標準改成「香港」後回到歌詞頁：頁面會重建，顯示香港字形（例如「裏」）。
 
 - [ ] **Step 8：Commit**
@@ -2228,7 +2641,7 @@
 
   ```java
           String searchString = getIntent().getExtras().getString(ATTR_SEARCH);
-          Pattern searchPattern = SearchPattern.build(searchString);
+          Pattern searchPattern = SearchPattern.build(searchString, loadT2sMap());
           if (searchPattern == null) {
               HymnsApp.showToastMessage(R.string.error_search_empty);
               finish();
@@ -2257,7 +2670,28 @@
 
   然後刪除第 321 行 `Pattern pattern = Pattern.compile(sString.replace("他", "[祂|他]"));`。
 
-  新增 import `import org.cog.hymnchtv.search.SearchPattern;`。如果 `TextUtils` 不再被使用，就刪掉它的 import。
+  在 `getMatchResult` 之後新增：
+
+  ```java
+      /** Traditional->Simplified candidates generated with the lyrics (Task 6C); empty map if the asset is missing. */
+      private T2sMap loadT2sMap() {
+          try (BufferedReader reader = new BufferedReader(
+                  new InputStreamReader(getAssets().open(T2sMap.ASSET_PATH), StandardCharsets.UTF_8))) {
+              List<String> lines = new ArrayList<>();
+              String line;
+              while ((line = reader.readLine()) != null) {
+                  lines.add(line);
+              }
+              return T2sMap.parse(lines);
+          }
+          catch (IOException e) {
+              Timber.w(e, "T2S map missing; searching without Traditional conversion");
+              return T2sMap.EMPTY;
+          }
+      }
+  ```
+
+  新增 import：`org.cog.hymnchtv.search.SearchPattern`、`org.cog.hymnchtv.search.T2sMap`，以及 `java.io.BufferedReader`、`java.io.InputStreamReader`、`java.nio.charset.StandardCharsets`（已經有的就不要重複加）。如果 `TextUtils` 不再被使用，就刪掉它的 import。
 
 - [ ] **Step 3：處理 `UpdateServiceImpl.java:156`**
 
@@ -2291,7 +2725,7 @@
   分別搜尋以下內容：
   - `(`、`[`、`*`：都不能當機，正常顯示「沒有結果」或結果清單。
   - 「跟随他」：要能找到含「祂」的歌詞。
-  - 繁體「恩典」：要能找到結果，因為查詢字串會先轉成簡體。
+  - 繁體「恩典」、「頌讚」：要能找到結果，因為搜尋會用 Task 6C 產生的繁簡對照表比對。
 
 - [ ] **Step 7：Commit**
 
