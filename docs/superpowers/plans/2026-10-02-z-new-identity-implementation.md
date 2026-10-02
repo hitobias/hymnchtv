@@ -3182,7 +3182,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   <?xml version="1.0" encoding="utf-8"?>
   <!-- In-app help (sub-project Z): plain text only, no links. -->
   <resources>
-      <string name="help_text">Finding a hymn\n• Enter a hymn number and tap the hymnal button to show lyrics and score.\n• Or browse by category, stroke count, pinyin or the English–Chinese index.\n• Content search: type words and tap Search; long-press Search to turn 他 into 祂.\n\nLyrics page\n• Long-press the page to open the menu.\n• Swipe left or right for the previous or next hymn.\n• Turn the phone sideways for larger lyrics and score; the player hides automatically.\n\nPlaying media\n• Tap Play to start, tap again to pause, and again to resume.\n• Long-press Play to restart from the beginning.\n\nMedia configuration\n• Add your own audio or video links for each hymn, and export or import them to share with other devices.\n• Media files you download yourself go under Download/hymnal/.\n\nUpdates\n• About → Update checks for a new version. After it downloads, tap the notification to install.</string>
+      <string name="help_text">Finding a hymn\n• Enter a hymn number and tap the hymnal button to show lyrics and score.\n• Or browse by category, stroke count, pinyin or the English–Chinese index.\n• Content search: type words and tap Search; searching for 他 also finds 祂 automatically.\n\nLyrics page\n• Long-press the page to open the menu.\n• Swipe left or right for the previous or next hymn.\n• Turn the phone sideways for larger lyrics and score; the player hides automatically.\n\nPlaying media\n• Tap Play to start, tap again to pause, and again to resume.\n• Long-press Play while playing to stop; long-press while stopped to choose whether to play continuously.\n\nMedia configuration\n• Add your own audio or video links for each hymn, and export or import them to share with other devices.\n• Media files you download yourself go under Download/hymnal/.\n\nUpdates\n• About → Update checks for a new version. After it downloads, tap the notification to install.</string>
   </resources>
   ```
 
@@ -3191,7 +3191,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   ```xml
   <?xml version="1.0" encoding="utf-8"?>
   <resources>
-      <string name="help_text">查找诗歌\n• 输入诗歌编号后按诗歌本按钮，即可显示歌词与乐谱。\n• 也可以从诗歌类别、笔画索引、拼音索引或英中对照查找。\n• 内容搜索：输入字词后按“内容搜索”；长按可把“他”转成“祂”。\n\n歌词页\n• 长按页面开启选单。\n• 左右滑动切换上一首或下一首。\n• 手机横放时，歌词与乐谱放大，播放器自动隐藏。\n\n媒体播放\n• 按播放键开始，再按一次暂停，再按一次从暂停处继续。\n• 长按播放键从头播放。\n\n媒体配置\n• 可为每首诗歌加入自定义的影音链接，并导出或导入，与其他设备分享。\n• 自行下载的媒体文件放在 Download/hymnal/ 底下。\n\n更新\n• “关于”→“更新”可检查新版本；下载完成后点通知即可安装。</string>
+      <string name="help_text">查找诗歌\n• 输入诗歌编号后按诗歌本按钮，即可显示歌词与乐谱。\n• 也可以从诗歌类别、笔画索引、拼音索引或英中对照查找。\n• 内容搜索：输入字词后按“内容搜索”；搜索“他”时也会一并找到“祂”。\n\n歌词页\n• 长按页面打开菜单。\n• 左右滑动切换上一首或下一首。\n• 手机横放时，歌词与乐谱放大，播放器自动隐藏。\n\n媒体播放\n• 按播放键开始，再按一次暂停，再按一次从暂停处继续。\n• 播放中长按播放键可停止；停止时长按，可选择是否连续自动播放。\n\n媒体配置\n• 可为每首诗歌加入自定义的音视频链接，并导出或导入，与其他设备分享。\n• 自行下载的媒体文件放在 Download/hymnal/ 底下。\n\n更新\n• “关于”→“更新”可检查新版本；下载完成后点通知即可安装。</string>
   </resources>
   ```
 
@@ -3200,7 +3200,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   ```xml
   <?xml version="1.0" encoding="utf-8"?>
   <resources>
-      <string name="help_text">查找詩歌\n• 輸入詩歌編號後按詩歌本按鈕，即可顯示歌詞與樂譜。\n• 也可以從詩歌類別、筆畫索引、拼音索引或英中對照查找。\n• 內容搜尋：輸入字詞後按「內容搜尋」；長按可把「他」轉成「祂」。\n\n歌詞頁\n• 長按頁面開啟選單。\n• 左右滑動切換上一首或下一首。\n• 手機橫放時，歌詞與樂譜放大，播放器自動隱藏。\n\n媒體播放\n• 按播放鍵開始，再按一次暫停，再按一次從暫停處繼續。\n• 長按播放鍵從頭播放。\n\n媒體配置\n• 可為每首詩歌加入自訂的影音連結，並匯出或匯入，與其他裝置分享。\n• 自行下載的媒體檔放在 Download/hymnal/ 底下。\n\n更新\n• 「關於」→「更新」可檢查新版本；下載完成後點選通知即可安裝。</string>
+      <string name="help_text">查找詩歌\n• 輸入詩歌編號後按詩歌本按鈕，即可顯示歌詞與樂譜。\n• 也可以從詩歌類別、筆畫索引、拼音索引或英中對照查找。\n• 內容搜尋：輸入字詞後按「內容搜尋」；搜尋「他」時也會一併找到「祂」。\n\n歌詞頁\n• 長按頁面開啟選單。\n• 左右滑動切換上一首或下一首。\n• 手機橫放時，歌詞與樂譜放大，播放器自動隱藏。\n\n媒體播放\n• 按播放鍵開始，再按一次暫停，再按一次從暫停處繼續。\n• 播放中長按播放鍵可停止；停止時長按，可選擇是否連續自動播放。\n\n媒體配置\n• 可為每首詩歌加入自訂的影音連結，並匯出或匯入，與其他裝置分享。\n• 自行下載的媒體檔放在 Download/hymnal/ 底下。\n\n更新\n• 「關於」→「更新」可檢查新版本；下載完成後點選通知即可安裝。</string>
   </resources>
   ```
 

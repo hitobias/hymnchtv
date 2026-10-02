@@ -58,8 +58,9 @@ public class FileBackend {
      */
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
 
-    // android-Q accessible path to apk is: /storage/emulated/0/Android/data/org.cog.hymnchtv/files
-    public static String FP_HYMNCHTV = "/hymnchtv";
+    // Public store Download/hymnal (sub-project Z): separate from the original hymnchtv app, whose files this app
+    // could not overwrite under scoped storage.
+    public static String FP_HYMNCHTV = "/hymnal";
 
     public static String MEDIA_CAMERA = "Media/Camera";
     public static String MEDIA_VOICE_SEND = "Media/Voice_Send";
@@ -222,7 +223,7 @@ public class FileBackend {
     }
 
     /**
-     * Default hymnchtv downloadable directory i.e. Download/hymnchtv;
+     * Default hymnchtv downloadable directory i.e. Download/hymnal;
      * create subFolder if none found and createNew is true
      *
      * @param subFolder subFolder to be created under hymnchtv downloadable directory, null if root

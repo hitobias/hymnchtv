@@ -37,12 +37,8 @@ public class AssetFile
     {
         mPath = path;
         if (assetManager == null) {
-            try {
-                Context ctx = context.createPackageContext("org.cog.hymnchtv", 0);
-                assetManager = ctx.getAssets();
-            } catch (Exception e) {
-                Timber.w("Create AssetManager Exception: %s", e.getMessage());
-            }
+            // Own assets: never look the package up by a hard-coded name (applicationId != code package).
+            assetManager = context.getApplicationContext().getAssets();
         }
     }
 

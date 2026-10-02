@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- About / licenses (sub-project Z). Own file to avoid merge conflicts in strings.xml. -->
+<resources>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_description">Lyrics, scores and media player for the hymns. Lyrics and score contents are copyrighted by Taiwan Gospel Book Room; please do not use them for commercial purposes.</string>
+    <string name="about_licenses_title">Open-source licenses</string>
+    <string name="about_licenses_empty">The license list is not available in this build.</string>
+    <string name="about_license_text_missing">(Full license text not bundled)</string>
+</resources>
