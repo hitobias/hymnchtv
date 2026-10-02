@@ -139,7 +139,6 @@ class MediaConfigMainThreadDbTest {
 
     @Test
     fun deleteConfirmedWhileADbRequestIsPendingShowsAnInProgressNotice() {
-        backend.storeMediaRecord(MediaRecord(MainActivity.HYMN_DB, hymnNo, false, MediaType.HYMN_MEDIA, link, null))
         ActivityScenario.launch(MediaConfig::class.java).use { scenario ->
             scenario.fillEntry(link)
             val gate = IoGate.close()
@@ -151,10 +150,11 @@ class MediaConfigMainThreadDbTest {
                 assertThat(awaitUntil {
                     HymnsApp.getLastToastMessage() == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.in_progress)
                 }).isTrue()
-                assertThat(stored()).isNotNull() // nothing was deleted
             } finally {
                 gate.release()
             }
+            // the add went through (no overwrite dialog: there was no record) and the busy delete tap did not touch it
+            assertThat(awaitUntil { stored()?.mediaUri == link }).isTrue()
         }
     }
 }
