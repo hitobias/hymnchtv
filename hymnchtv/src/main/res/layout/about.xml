@@ -73,6 +73,18 @@
                     android:text="@string/copyright" />
 
                 <TextView
+                    android:id="@+id/font_credit"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/about_font_credit"
+                    android:textColor="?android:attr/colorAccent"
+                    android:textSize="14sp" />
+
+                <TextView
                     android:id="@+id/hymnchtv_help"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
