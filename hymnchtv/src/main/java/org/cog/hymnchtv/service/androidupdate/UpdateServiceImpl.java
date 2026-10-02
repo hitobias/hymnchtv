@@ -82,6 +82,9 @@ public class UpdateServiceImpl {
      */
     private final Object storeLock = new Object();
 
+    /** Guards {@code downloadReceiver}; separate from the instance monitor for the same reason as {@code storeLock}. */
+    private final Object receiverLock = new Object();
+
     private GitHubReleaseClient releaseClient = null;
     private volatile Offer latestOffer = null;
     private volatile String currentVersion = null;
@@ -249,20 +252,24 @@ public class UpdateServiceImpl {
         rememberDownloadId(HymnsApp.getDownloadManager().enqueue(request));
     }
 
-    private synchronized void registerDownloadReceiver(ReleaseInfo release, String sha256) {
-        unregisterDownloadReceiver();
-        downloadReceiver = new DownloadReceiver(release, sha256);
-        // DownloadManager broadcasts from another process, so the receiver must be exported. A forged broadcast
-        // can only carry an id; onReceive ignores any id that is not our latest enqueued download. Spoofing our
-        // own id at best starts verification early, which fails closed: denial of service only, never an install.
-        ContextCompat.registerReceiver(HymnsApp.getGlobalContext(), downloadReceiver,
-                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_EXPORTED);
+    private void registerDownloadReceiver(ReleaseInfo release, String sha256) {
+        synchronized (receiverLock) {
+            unregisterDownloadReceiver();
+            downloadReceiver = new DownloadReceiver(release, sha256);
+            // DownloadManager broadcasts from another process, so the receiver must be exported. A forged broadcast
+            // can only carry an id; onReceive ignores any id that is not our latest enqueued download. Spoofing our
+            // own id at best starts verification early, which fails closed: denial of service only, never an install.
+            ContextCompat.registerReceiver(HymnsApp.getGlobalContext(), downloadReceiver,
+                    new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_EXPORTED);
+        }
     }
 
-    private synchronized void unregisterDownloadReceiver() {
-        if (downloadReceiver != null) {
-            HymnsApp.getGlobalContext().unregisterReceiver(downloadReceiver);
-            downloadReceiver = null;
+    private void unregisterDownloadReceiver() {
+        synchronized (receiverLock) {
+            if (downloadReceiver != null) {
+                HymnsApp.getGlobalContext().unregisterReceiver(downloadReceiver);
+                downloadReceiver = null;
+            }
         }
     }
 
