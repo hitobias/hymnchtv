@@ -18,4 +18,10 @@
     <string name="c_cat_backup">Backup</string>
     <string name="c_check_update">Check for updates</string>
     <string name="c_myhymns_placeholder">My hymns will be available in a later update.</string>
+    <string name="c_lyrics_score_color">Tint</string>
+    <string name="c_lyrics_font_dec">A-</string>
+    <string name="c_lyrics_font_inc">A+</string>
+    <string name="c_lyrics_share">Share</string>
+    <string name="c_lyrics_media">Media</string>
+    <string name="c_lyrics_more">More</string>
 </resources>

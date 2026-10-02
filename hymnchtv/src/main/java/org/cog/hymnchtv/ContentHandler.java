@@ -67,7 +67,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -274,7 +273,6 @@ public class ContentHandler extends BaseActivity {
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         // getWindow().setFlags(FLAG_FULLSCREEN, FLAG_FULLSCREEN); // will hide android notification bar
         setContentView(R.layout.content_main);
-        registerForContextMenu(findViewById(R.id.linear));
 
         // Reading settings (plan A2): background first, so pages created below read the matching palette
         sPreference = getSharedPreferences(PREF_SETTINGS, 0);
@@ -533,16 +531,15 @@ public class ContentHandler extends BaseActivity {
         }
     };
 
-    // Do this only in PagerView Fragment, otherwise contextMenu is duplicated (display twice)
-    // public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
-    // {
-    //     super.onCreateContextMenu(menu, v, menuInfo);
-    //     getMenuInflater().inflate(R.menu.content_menu, menu);
-    // }
-    public boolean onContextItemSelected(MenuItem item) {
+    /**
+     * The lyrics top-bar buttons and its overflow menu (plan C-4; the long-press context menu is gone).
+     *
+     * @param itemId a top-bar action id (ids_lyrics.xml) or an item of menu_lyrics_more
+     * @return true if the action was handled
+     */
+    public boolean onLyricsAction(int itemId) {
         ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
 
-        int itemId = item.getItemId();
         if (itemId == R.id.readingSettings) {
             openReadingSettings();
             return true;
@@ -559,7 +556,7 @@ public class ContentHandler extends BaseActivity {
         }
         else if (itemId == R.id.lyrcsTextSizeInc || itemId == R.id.lyrcsTextSizeDec) {
             if (contentView != null)
-                contentView.setLyricsTextSize(item.getItemId() == R.id.lyrcsTextSizeInc);
+                contentView.setLyricsTextSize(itemId == R.id.lyrcsTextSizeInc);
             return true;
         }
         else if (itemId == R.id.media_config) {

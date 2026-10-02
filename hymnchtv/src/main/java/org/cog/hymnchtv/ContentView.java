@@ -36,7 +36,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
-import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,6 +43,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -196,6 +196,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         btn_english.setOnClickListener(this);
         btn_english.setOnLongClickListener(this);
 
+        for (int id : new int[]{R.id.btn_score_color, R.id.btn_font_dec, R.id.btn_font_inc, R.id.btn_share,
+                R.id.btn_lyrics_media, R.id.btn_next, R.id.btn_more}) {
+            mConvertView.findViewById(id).setOnClickListener(this);
+        }
+
         btn_mode = mConvertView.findViewById(R.id.button_mode);
         btn_mode.setOnClickListener(this);
         btn_mode.setOnLongClickListener(this);
@@ -242,7 +247,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     @Override
     public void onResume() {
         super.onResume();
-        registerForContextMenu(lyricsView);
         mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
         Timber.w("Content View on Resume");
 
@@ -259,29 +263,42 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         applyDisplayMode(autoEnglish || !hasEnglishLyrics);
     }
 
-    @Override
-    public void onPause() {
-        unregisterForContextMenu(lyricsView);
-        super.onPause();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onCreateContextMenu(@NotNull ContextMenu menu, @NotNull View v, ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        mContentHandler.getMenuInflater().inflate(R.menu.menu_content, menu);
-
-        // Hide "英文歌词" if no associated English lyrics
-        menu.findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);
-        menu.findItem(R.id.lyrcsEnglishDelete).setVisible(mHymnNoEng != null && hasEnglishLyrics);
+    /** The "more" button of the top bar: the entries that have no button of their own. */
+    private void showMoreMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        popup.inflate(R.menu.menu_lyrics_more);
+        // Hide the English entries if there are no associated English lyrics
+        popup.getMenu().findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);
+        popup.getMenu().findItem(R.id.lyrcsEnglishDelete).setVisible(mHymnNoEng != null && hasEnglishLyrics);
+        popup.setOnMenuItemClickListener(item -> mContentHandler.onLyricsAction(item.getItemId()));
+        popup.show();
     }
 
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        if (id == R.id.button_ts) {
+        if (id == R.id.btn_score_color) {
+            mContentHandler.onLyricsAction(R.id.scoreColorChange);
+        }
+        else if (id == R.id.btn_font_inc) {
+            mContentHandler.onLyricsAction(R.id.lyrcsTextSizeInc);
+        }
+        else if (id == R.id.btn_font_dec) {
+            mContentHandler.onLyricsAction(R.id.lyrcsTextSizeDec);
+        }
+        else if (id == R.id.btn_share) {
+            mContentHandler.onLyricsAction(R.id.lyrcsShare);
+        }
+        else if (id == R.id.btn_lyrics_media) {
+            mContentHandler.onLyricsAction(R.id.media_config);
+        }
+        else if (id == R.id.btn_next) {
+            mContentHandler.scrollNextHymn();
+        }
+        else if (id == R.id.btn_more) {
+            showMoreMenu(v);
+        }
+        else if (id == R.id.button_ts) {
             if (!hasEnglishLyrics) {
                 // Session-only toggle; the persisted default is set in the reading settings
                 mContentHandler.lyricsViewOverride = !isShowTraditional();

@@ -1,139 +1,267 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:ignore="ContentDescription">
 
+    <!-- Replaces the old long-press context menu (plan C-4); stays put while the lyrics scroll -->
     <LinearLayout
-        android:id="@+id/lyricsView"
+        android:id="@+id/lyrics_top_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp">
 
-        <!-- Up to 5 score pages; hidden as a whole in "lyrics only" (plan A2) -->
+        <HorizontalScrollView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_score_color"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="48dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:text="@string/c_lyrics_score_color"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_font_dec"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="48dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:text="@string/c_lyrics_font_dec"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_font_inc"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="48dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:text="@string/c_lyrics_font_inc"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_share"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="48dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:text="@string/c_lyrics_share"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_lyrics_media"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="48dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:text="@string/c_lyrics_media"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <Button
+            android:id="@+id/btn_next"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:maxLines="1"
+            android:minWidth="0dp"
+            android:minHeight="48dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:text="@string/c_next_hymn"
+            android:textSize="12sp" />
+
+        <ImageButton
+            android:id="@+id/btn_more"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="@string/c_lyrics_more"
+            android:src="@drawable/ic_lyrics_more" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
         <LinearLayout
-            android:id="@+id/scoreContainer"
+            android:id="@+id/lyricsView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/contentView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:adjustViewBounds="true"
-                android:scaleType="fitStart" />
-
-            <ImageView
-                android:id="@+id/contentView_a"
+            <!-- Up to 5 score pages; hidden as a whole in "lyrics only" (plan A2) -->
+            <LinearLayout
+                android:id="@+id/scoreContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:adjustViewBounds="true"
-                android:scaleType="fitStart" />
+                android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/contentView_b"
+                <ImageView
+                    android:id="@+id/contentView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart" />
+
+                <ImageView
+                    android:id="@+id/contentView_a"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart" />
+
+                <ImageView
+                    android:id="@+id/contentView_b"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart" />
+
+                <ImageView
+                    android:id="@+id/contentView_c"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart" />
+
+                <ImageView
+                    android:id="@+id/contentView_d"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart" />
+            </LinearLayout>
+
+            <!-- Buttons grow with their text (two lines on 320dp screens) but never below the 48dp touch target -->
+            <LinearLayout
+                android:id="@+id/lyricsButtonBar"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="3dp">
+
+                <Button
+                    android:id="@+id/button_ts"
+                    style="@style/ButtonTop"
+                    android:layout_height="match_parent"
+                    android:minHeight="48dp"
+                    android:layout_weight="1"
+                    android:text="@string/lyrics_chinese_traditional"
+                    android:textSize="22sp" />
+
+                <Button
+                    android:id="@+id/button_english"
+                    style="@style/ButtonTop"
+                    android:layout_height="match_parent"
+                    android:minHeight="48dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:text="@string/lyrics_chinese_english"
+                    android:textSize="22sp" />
+
+                <Button
+                    android:id="@+id/button_mode"
+                    style="@style/ButtonTop"
+                    android:layout_height="match_parent"
+                    android:minHeight="48dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:text="@string/display_mode_both"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <!-- Key and time signature from the lyrics header (LyricsMeta); hidden when the file has none -->
+            <TextView
+                android:id="@+id/meter_key"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:adjustViewBounds="true"
-                android:scaleType="fitStart" />
+                android:paddingStart="16dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="16dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
 
-            <ImageView
-                android:id="@+id/contentView_c"
+            <org.cog.hymnchtv.utils.ZoomTextView
+                android:id="@+id/lyrics_simplified"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:adjustViewBounds="true"
-                android:scaleType="fitStart" />
+                android:lineSpacingMultiplier="1.2"
+                android:paddingStart="16dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="24dp"
+                android:textIsSelectable="true"
+                android:textSize="20sp" />
 
-            <ImageView
-                android:id="@+id/contentView_d"
+            <org.cog.hymnchtv.utils.ZoomTextView
+                android:id="@+id/lyrics_traditional"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:adjustViewBounds="true"
-                android:scaleType="fitStart" />
+                android:lineSpacingMultiplier="1.2"
+                android:paddingStart="16dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="24dp"
+                android:textIsSelectable="true"
+                android:textSize="20sp" />
+
+            <WebView
+                android:id="@+id/lyrics_english"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                tools:ignore="WebViewLayout" />
         </LinearLayout>
-
-        <!-- Buttons grow with their text (two lines on 320dp screens) but never below the 48dp touch target -->
-        <LinearLayout
-            android:id="@+id/lyricsButtonBar"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="3dp">
-
-            <Button
-                android:id="@+id/button_ts"
-                style="@style/ButtonTop"
-                android:layout_height="match_parent"
-                android:minHeight="48dp"
-                android:layout_weight="1"
-                android:text="@string/lyrics_chinese_traditional"
-                android:textSize="22sp" />
-
-            <Button
-                android:id="@+id/button_english"
-                style="@style/ButtonTop"
-                android:layout_height="match_parent"
-                android:minHeight="48dp"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
-                android:text="@string/lyrics_chinese_english"
-                android:textSize="22sp" />
-
-            <Button
-                android:id="@+id/button_mode"
-                style="@style/ButtonTop"
-                android:layout_height="match_parent"
-                android:minHeight="48dp"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
-                android:text="@string/display_mode_both"
-                android:textSize="18sp" />
-        </LinearLayout>
-
-        <!-- Key and time signature from the lyrics header (LyricsMeta); hidden when the file has none -->
-        <TextView
-            android:id="@+id/meter_key"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="16dp"
-            android:paddingTop="6dp"
-            android:paddingEnd="16dp"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-        <org.cog.hymnchtv.utils.ZoomTextView
-            android:id="@+id/lyrics_simplified"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:lineSpacingMultiplier="1.2"
-            android:paddingStart="16dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="24dp"
-            android:textIsSelectable="true"
-            android:textSize="20sp" />
-
-        <org.cog.hymnchtv.utils.ZoomTextView
-            android:id="@+id/lyrics_traditional"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:lineSpacingMultiplier="1.2"
-            android:paddingStart="16dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="24dp"
-            android:textIsSelectable="true"
-            android:textSize="20sp" />
-
-        <WebView
-            android:id="@+id/lyrics_english"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            tools:ignore="WebViewLayout" />
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</LinearLayout>

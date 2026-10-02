@@ -18,4 +18,10 @@
     <string name="c_cat_backup">備份</string>
     <string name="c_check_update">檢查更新</string>
     <string name="c_myhymns_placeholder">我的詩歌將在後續更新中提供。</string>
+    <string name="c_lyrics_score_color">譜色</string>
+    <string name="c_lyrics_font_dec">A-</string>
+    <string name="c_lyrics_font_inc">A+</string>
+    <string name="c_lyrics_share">分享</string>
+    <string name="c_lyrics_media">媒體</string>
+    <string name="c_lyrics_more">更多</string>
 </resources>
