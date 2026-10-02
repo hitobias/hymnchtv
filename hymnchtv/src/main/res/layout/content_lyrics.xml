@@ -93,11 +93,27 @@
                 android:textSize="18sp" />
         </LinearLayout>
 
+        <!-- Key and time signature from the lyrics header (LyricsMeta); hidden when the file has none -->
+        <TextView
+            android:id="@+id/meter_key"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="16dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <org.cog.hymnchtv.utils.ZoomTextView
             android:id="@+id/lyrics_simplified"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="10dp"
+            android:lineSpacingMultiplier="1.2"
+            android:paddingStart="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp"
             android:textIsSelectable="true"
             android:textSize="20sp" />
 
@@ -105,7 +121,11 @@
             android:id="@+id/lyrics_traditional"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="10dp"
+            android:lineSpacingMultiplier="1.2"
+            android:paddingStart="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp"
             android:textIsSelectable="true"
             android:textSize="20sp" />
 
