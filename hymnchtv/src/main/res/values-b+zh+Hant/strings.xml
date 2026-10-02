@@ -325,7 +325,7 @@
     <string name="permission_notifications_request">通知權限請求</string>
     <string name="permission_notifications_required">在您授予權限請求之前，來自詩歌本的通知將被停用</string>
 
-    <string name="permission_storage_required">詩歌本需要儲存權限才能操作。</string>
+    <string name="permission_storage_required">詩歌本需要儲存權限纔能操作。</string>
     <string name="permission_storage_request">儲存許可請求</string>
 
     <string name="permission_app_rational">%1$s 被拒絕。詩歌本可能會出錯，直到您在 [App info | Permissions] 授予權限</string>

@@ -14,7 +14,7 @@ permission_request	權限請求
 permission_settings	安卓權限設定
 permission_notifications_request	通知權限請求
 permission_notifications_required	在您授予權限請求之前，來自詩歌本的通知將被停用
-permission_storage_required	詩歌本需要儲存權限才能操作。
+permission_storage_required	詩歌本需要儲存權限纔能操作。
 permission_app_rational	%1$s 被拒絕。詩歌本可能會出錯，直到您在 [App info | Permissions] 授予權限
 download_timeout_timer	下載無回應逾時倒數: %1$02d秒
 web_scrap_timeout	網站內容抓取逾時錯誤：%1$s
