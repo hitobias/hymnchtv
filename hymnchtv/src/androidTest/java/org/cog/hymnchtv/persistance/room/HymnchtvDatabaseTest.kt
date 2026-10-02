@@ -35,9 +35,12 @@ class HymnchtvDatabaseTest {
         db.openHelper.writableDatabase.query(sql).use { it.moveToFirst(); it.getString(0) }
 
     @Test
-    fun schemaV1CreatesTheThreeTables() {
+    fun schemaV1CreatesAllEightTables() {
         val db = HymnchtvDatabase.inMemory(ctx).also { opened += it }
-        assertThat(tableNames(db)).containsAtLeast("media_record", "hymn_history", "english_lyrics")
+        assertThat(tableNames(db)).containsAtLeast(
+            "media_record", "hymn_history", "english_lyrics",
+            "favorite", "sing_log", "note", "playlist", "playlist_item",
+        )
         assertThat(db.openHelper.readableDatabase.version).isEqualTo(1)
     }
 

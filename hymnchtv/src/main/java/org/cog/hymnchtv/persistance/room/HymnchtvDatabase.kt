@@ -4,6 +4,18 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import org.cog.hymnchtv.notebook.data.NotebookConverters
+import org.cog.hymnchtv.notebook.data.dao.FavoriteDao
+import org.cog.hymnchtv.notebook.data.dao.NoteDao
+import org.cog.hymnchtv.notebook.data.dao.PlaylistDao
+import org.cog.hymnchtv.notebook.data.dao.PlaylistItemDao
+import org.cog.hymnchtv.notebook.data.dao.SingLogDao
+import org.cog.hymnchtv.notebook.data.entity.FavoriteEntity
+import org.cog.hymnchtv.notebook.data.entity.NoteEntity
+import org.cog.hymnchtv.notebook.data.entity.PlaylistEntity
+import org.cog.hymnchtv.notebook.data.entity.PlaylistItemEntity
+import org.cog.hymnchtv.notebook.data.entity.SingLogEntity
 import org.cog.hymnchtv.BuildConfig
 import org.cog.hymnchtv.persistance.room.dao.EnglishLyricsDao
 import org.cog.hymnchtv.persistance.room.dao.HymnHistoryDao
@@ -21,14 +33,24 @@ import org.cog.hymnchtv.persistance.room.entity.MediaRecordEntity
  * outside [getInstance]: two instances on one file break the single-writer assumption.
  */
 @Database(
-    entities = [MediaRecordEntity::class, HymnHistoryEntity::class, EnglishLyricsEntity::class],
+    entities = [
+        MediaRecordEntity::class, HymnHistoryEntity::class, EnglishLyricsEntity::class,
+        FavoriteEntity::class, SingLogEntity::class, NoteEntity::class,
+        PlaylistEntity::class, PlaylistItemEntity::class,
+    ],
     version = 1,
     exportSchema = true,
 )
+@TypeConverters(NotebookConverters::class)
 abstract class HymnchtvDatabase : RoomDatabase() {
     abstract fun mediaRecordDao(): MediaRecordDao
     abstract fun hymnHistoryDao(): HymnHistoryDao
     abstract fun englishLyricsDao(): EnglishLyricsDao
+    abstract fun favoriteDao(): FavoriteDao
+    abstract fun singLogDao(): SingLogDao
+    abstract fun noteDao(): NoteDao
+    abstract fun playlistDao(): PlaylistDao
+    abstract fun playlistItemDao(): PlaylistItemDao
 
     companion object {
         const val FILE_NAME = "hymnchtv.db"
