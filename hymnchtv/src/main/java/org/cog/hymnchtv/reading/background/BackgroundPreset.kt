@@ -57,8 +57,14 @@ enum class BackgroundPreset(
     val baseColor: Int get() = stops.first()
     val isDark: Boolean get() = category == NIGHT
 
-    /** Every colour a reader can see behind text: each stop, plain and under each overlay at full strength. */
-    fun swatches(): List<Int> = stops + stops.flatMap { s -> overlays.map { Wcag.blend(s, it.color, it.maxAlpha) } }
+    /**
+     * Every colour a reader can see behind text: for each stop, every combination of overlays (each layer absent or at
+     * its strongest alpha, painted in order). A gradient between two stops lies between them; the rasterised check in
+     * androidTest covers the pixels in between.
+     */
+    fun swatches(): List<Int> = stops.flatMap { stop ->
+        overlays.fold(listOf(stop)) { acc, o -> acc + acc.map { Wcag.blend(it, o.color, o.maxAlpha) } }
+    }.distinct()
 
     companion object {
         @JvmStatic

@@ -78,6 +78,22 @@ object BackgroundPolicy {
         }
     }
 
+    /**
+     * What [UiTokens.from] needs for [choice]. A photo is dimmed by at least [PhotoBackground.DIM_MIN] percent but can be
+     * any grey, so its swatches are the greys from black to white (undimmed white included, dim never raises contrast).
+     */
+    @JvmStatic
+    fun tokenInput(choice: BackgroundChoice): TokenInput = when (choice) {
+        BackgroundChoice.Photo -> PHOTO_PALETTE.let {
+            TokenInput(it.textColor, it.accentColor, it.paperColor, isDark = true, isPhoto = true, swatches = PHOTO_SWATCHES)
+        }
+        is BackgroundChoice.Preset -> choice.preset.let {
+            TokenInput(it.textColor, it.accentColor, it.baseColor, it.isDark, isPhoto = false, swatches = it.swatches())
+        }
+    }
+
+    private val PHOTO_SWATCHES: List<Int> = ((0..255 step 15) + 255).distinct().map { (0xFF shl 24) or (it * 0x010101) }
+
     @JvmStatic
     fun prefValue(choice: BackgroundChoice): String = when (choice) {
         BackgroundChoice.Photo -> PHOTO
