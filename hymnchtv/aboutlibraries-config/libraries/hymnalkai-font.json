@@ -2,7 +2,7 @@
   "uniqueId": "org.cog.hymnal:hymnalkai-font",
   "artifactVersion": "1.0",
   "name": "HymnalKai lyrics font (derived from LXGW WenKai / 霞鶩文楷 / Klee One)",
-  "description": "The lyrics fonts HymnalKai SC and HymnalKai TC are character subsets of LXGW WenKai and LXGW WenKai TC v1.522 (https://github.com/lxgw/LxgwWenKai), renamed as required by the SIL Open Font License 1.1.",
+  "description": "The lyrics fonts HymnalKai SC and HymnalKai TC are character subsets of LXGW WenKai and LXGW WenKai TC v1.522 (https://github.com/lxgw/LxgwWenKai), renamed as required by the SIL Open Font License 1.1. Copyright 2021-2026 LXGW (https://github.com/lxgw/LxgwWenKai); Copyright 2020 The Klee Project Authors (https://github.com/fontworks-fonts/Klee); Copyright 2022-2026 The LXGW WenKai Project Authors (https://github.com/lxgw/LxgwWenkaiTC).",
   "developers": [],
   "licenses": ["OFL-1.1"]
 }
