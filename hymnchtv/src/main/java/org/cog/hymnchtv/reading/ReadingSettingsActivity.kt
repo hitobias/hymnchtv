@@ -23,7 +23,8 @@ class ReadingSettingsActivity : BaseActivity() {
         setTitle(R.string.reading_settings)
         changed = savedInstanceState?.getBoolean(STATE_CHANGED) ?: false
         prefs = getSharedPreferences(MainActivity.PREF_SETTINGS, MODE_PRIVATE)
-        // Registered before the fragment exists so its one-off self-heal also counts as a change
+        // Heal first, then listen: only writes the user causes (the fragment's changes, the picker's choice) mark "changed"
+        ReadingSettingsFragment.healConversionType(prefs, resources.configuration.locales[0])
         prefs.registerOnSharedPreferenceChangeListener(listener)
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()

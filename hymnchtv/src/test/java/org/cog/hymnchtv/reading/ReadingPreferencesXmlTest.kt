@@ -1,6 +1,7 @@
 package org.cog.hymnchtv.reading
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.cog.hymnchtv.lyrics.HantVariant
 import org.cog.hymnchtv.lyrics.LyricsLang
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy
@@ -51,23 +52,23 @@ class ReadingPreferencesXmlTest {
     }
 
     @Test
-    fun defaultsMatchTheCode() {
-        val p = prefs()
-        fun attr(key: String, name: String) = p.getValue(key).getAttribute(name)
-        fun default(key: String) = attr(key, "app:defaultValue")
-        assertThat(default(ReadingPrefKeys.DISPLAY_MODE)).isEqualTo(DisplayMode.fromPref(null).name)
-        assertThat(default(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT)).isEqualTo(LyricsLang.fromPref(null).name)
-        assertThat(default("ConversionType")).isEqualTo(HantVariant.TW.prefValue)
-        assertThat(default(ReadingPrefKeys.LYRICS_FONT_SIZE)).isEqualTo(LyricsFontSize.fromPref(null).name)
-        assertThat(default(ReadingPrefKeys.LYRICS_FONT)).isEqualTo(LyricsFont.fromPref(null).name)
-        listOf(ReadingPrefKeys.PAGE_ANIMATION, ReadingPrefKeys.MENU_SHOW, ReadingPrefKeys.KEEP_SCREEN_ON).forEach {
-            assertThat(default(it)).isEqualTo("true")
+    fun openingTheScreenWritesNothing() {
+        // androidx.preference persists a preference's defaultValue the first time the screen opens, which would freeze
+        // defaults that ReadingPrefs computes (e.g. PageAnimation off on low-RAM phones). So: no defaultValue anywhere,
+        // and every preference is non-persistent; the fragment writes only when the user changes a value.
+        prefs().forEach { (key, element) ->
+            assertWithMessage("$key defaultValue").that(element.hasAttribute("app:defaultValue")).isFalse()
+            assertWithMessage("$key persistent").that(element.getAttribute("app:persistent")).isEqualTo("false")
         }
-        assertThat(default(PhotoBackground.PREF_DIM)).isEqualTo(PhotoBackground.DIM_DEFAULT.toString())
-        assertThat(attr(PhotoBackground.PREF_DIM, "app:min")).isEqualTo(PhotoBackground.DIM_MIN.toString())
-        assertThat(attr(PhotoBackground.PREF_DIM, "android:max")).isEqualTo(PhotoBackground.DIM_MAX.toString())
-        assertThat(default(PhotoBackground.PREF_BLUR)).isEqualTo(PhotoBackground.BLUR_DEFAULT.toString())
-        assertThat(attr(PhotoBackground.PREF_BLUR, "android:max")).isEqualTo(PhotoBackground.BLUR_MAX.toString())
+    }
+
+    @Test
+    fun seekBarRangesMatchTheCode() {
+        val p = prefs()
+        assertThat(p.getValue(PhotoBackground.PREF_DIM).getAttribute("app:min")).isEqualTo(PhotoBackground.DIM_MIN.toString())
+        assertThat(p.getValue(PhotoBackground.PREF_DIM).getAttribute("android:max")).isEqualTo(PhotoBackground.DIM_MAX.toString())
+        assertThat(p.getValue(PhotoBackground.PREF_BLUR).getAttribute("app:min")).isEqualTo("0")
+        assertThat(p.getValue(PhotoBackground.PREF_BLUR).getAttribute("android:max")).isEqualTo(PhotoBackground.BLUR_MAX.toString())
     }
 
     @Test
