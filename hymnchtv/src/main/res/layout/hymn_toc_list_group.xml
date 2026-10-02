@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:descendantFocusability="blocksDescendants">
@@ -20,7 +21,7 @@
         android:layout_height="40dp"
         android:gravity="center_vertical"
         android:layout_marginStart="30dp"
-        android:text="得救的证实与快乐"
+        tools:text="得救的证实与快乐"
         android:textStyle="bold" />
 
     <LinearLayout
