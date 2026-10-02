@@ -68,10 +68,12 @@ import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentManager;
 import androidx.viewpager2.widget.ViewPager2;
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback;
@@ -226,7 +228,17 @@ public class ContentHandler extends BaseActivity {
 
     private LinearLayout mWebView;
 
+    /** Per-session lyrics script chosen with button_ts; null = use the default from LyricsLanguagePolicy. */
+    public Boolean lyricsViewOverride = null;
+
+    private static final String STATE_PAGE = "state_page"; // fallback; ViewPager2 also restores its own item
+    private static final String STATE_LYRICS_OVERRIDE = "state_lyrics_override"; // -1 none, 0 simplified, 1 traditional
+
     public void onCreate(Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            int saved = savedInstanceState.getInt(STATE_LYRICS_OVERRIDE, -1);
+            lyricsViewOverride = (saved == -1) ? null : (saved == 1);
+        }
         super.onCreate(savedInstanceState);
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         // getWindow().setFlags(FLAG_FULLSCREEN, FLAG_FULLSCREEN); // will hide android notification bar
@@ -270,6 +282,13 @@ public class ContentHandler extends BaseActivity {
             }
         }
 
+        // One-shot launch actions must not repeat after recreation (e.g. after changing lyrics settings)
+        if (savedInstanceState != null) {
+            mAutoJC = false;
+            mAutoPlay = false;
+            mAutoEnglish = false;
+        }
+
         switch (mHymnType) {
         // Convert the user input hymn number i.e: hymn #1 => #0 i.e.index number
         case HYMN_ER:
@@ -296,7 +315,9 @@ public class ContentHandler extends BaseActivity {
 
         // Set the viewPager to the user selected hymn number, no transform animation; this also fixed incorrect page being displayed
         // see https://issuetracker.google.com/issues/177051960
-        if (hymnIdx != -1)
+        if (savedInstanceState != null && savedInstanceState.containsKey(STATE_PAGE))
+            mPager.setCurrentItem(savedInstanceState.getInt(STATE_PAGE), false);
+        else if (hymnIdx != -1)
             mPager.setCurrentItem(hymnIdx, false);
         else
             mPager.setCurrentItem(mHymnNo, false);
@@ -310,6 +331,21 @@ public class ContentHandler extends BaseActivity {
         super.onResume();
         onUserLeaveHint = false;
         showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait);
+        // Keep the screen on while lyrics/score are shown (plan A.1.7); window-level so pager changes never drop it
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
+
+    @Override
+    protected void onPause() {
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        super.onPause();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(STATE_PAGE, mPager.getCurrentItem());
+        outState.putInt(STATE_LYRICS_OVERRIDE, lyricsViewOverride == null ? -1 : (lyricsViewOverride ? 1 : 0));
     }
 
     /**
@@ -1211,7 +1247,7 @@ public class ContentHandler extends BaseActivity {
         Resources res = getResources();
 
         if (mHymnNo == HYMN_BB_DUMMY) {
-            return String.format(Locale.CHINA, "英文 #%d: 这首英文诗歌没有匹配的中文歌词", mHymnNoEng);
+            return getString(R.string.hymn_no_chinese_lyrics, mHymnNoEng);
         }
 
         switch (mHymnType) {
