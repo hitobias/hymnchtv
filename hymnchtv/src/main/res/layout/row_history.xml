@@ -14,6 +14,14 @@
         android:layout_weight="1"
         android:singleLine="true" />
 
+    <TextView
+        android:id="@+id/tv_item_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="14sp" />
+
     <ImageButton
         android:id="@+id/b_delete_in_list"
         android:layout_width="48dp"
