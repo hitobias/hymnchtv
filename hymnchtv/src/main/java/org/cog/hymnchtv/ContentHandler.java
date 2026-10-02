@@ -439,6 +439,12 @@ public class ContentHandler extends BaseActivity {
         mChromeHost.onInteraction();
     }
 
+    /** TalkBack on/off for the toolbars; public so ContentHandler tests can drive it without a screen reader. */
+    @VisibleForTesting
+    public void setChromeAlwaysVisible(boolean always) {
+        mChromeHost.setAlwaysVisible(always);
+    }
+
     /** True while the Aa sheet or the overflow menu is open: the toolbars stay. */
     public void setChromeHeld(boolean held) {
         mChromeHost.setHeld(held);

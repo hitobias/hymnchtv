@@ -82,6 +82,9 @@ class LyricsChromeHost(
     /** A toolbar button was used: restart the idle timer. */
     fun onInteraction() = controller.onInteraction()
 
+    /** What TalkBack turning on does; public so a test can drive it without the screen reader. */
+    fun setAlwaysVisible(value: Boolean) = controller.setAlwaysVisible(value)
+
     /** True while the Aa sheet or the overflow menu is open. */
     fun setHeld(held: Boolean) = controller.setHeld(held)
 

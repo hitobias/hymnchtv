@@ -59,7 +59,11 @@ class LyricsTopBarTest {
             putInt(MainActivity.ATTR_HYMN_NUMBER, number)
         }
         return ActivityScenario.launch<ContentHandler>(Intent(ctx, ContentHandler::class.java).putExtras(extras))
-            .also { it.waitForPage() }
+            .also {
+                it.waitForPage()
+                // The toolbars fade after 3 s; these tests are about what the buttons do, not about the fade
+                it.onActivity { activity -> activity.setChromeHeld(true) }
+            }
     }
 
     private fun <T> ActivityScenario<ContentHandler>.read(block: (ContentHandler) -> T): T {
@@ -83,7 +87,8 @@ class LyricsTopBarTest {
     @Test
     fun topBarButtonsAreShown() {
         launch().use {
-            listOf(R.id.btn_score_color, R.id.btn_font_dec, R.id.btn_font_inc, R.id.btn_next, R.id.btn_more).forEach { id ->
+            // Five buttons at any width (visual redesign 6): share, media, Aa, next, more
+            listOf(R.id.btn_share, R.id.btn_lyrics_media, R.id.btn_aa, R.id.btn_next, R.id.btn_more).forEach { id ->
                 onView(withId(id)).check(matches(isDisplayed()))
             }
         }
@@ -93,7 +98,7 @@ class LyricsTopBarTest {
     fun overflowListsTheEntriesWithoutAButton() {
         launch().use {
             onView(withId(R.id.btn_more)).perform(click())
-            listOf(R.string.reading_settings, R.string.menu_media_ui_toggle, R.string.help, R.string.home).forEach { s ->
+            listOf(R.string.c_lyrics_score_color, R.string.reading_settings, R.string.menu_media_ui_toggle, R.string.help, R.string.home).forEach { s ->
                 onView(withText(s)).inRoot(isPlatformPopup()).check(matches(isDisplayed()))
             }
         }
@@ -115,21 +120,26 @@ class LyricsTopBarTest {
     }
 
     @Test
-    fun fontButtonsAndScoreColorChangeTheirSettings() {
-        launch().use { scenario ->
+    fun scoreColorIsChangedFromTheOverflowMenu() {
+        launch().use {
             val prefs = ctx.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
             val scoreBefore = prefs.getInt(ContentView.PREF_SCORE_COLOR, 0)
-            onView(withId(R.id.btn_score_color)).perform(click())
+            onView(withId(R.id.btn_more)).perform(click())
+            onView(withText(R.string.c_lyrics_score_color)).inRoot(isPlatformPopup()).perform(click())
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
             assertThat(prefs.getInt(ContentView.PREF_SCORE_COLOR, 0)).isNotEqualTo(scoreBefore)
+            prefs.edit().remove(ContentView.PREF_SCORE_COLOR).commit()
+        }
+    }
 
-            val key = if (scenario.read { it.resources.configuration.orientation } == 2) ContentView.PREF_LYRICS_SCALE_L
-            else ContentView.PREF_LYRICS_SCALE_P
-            val sizeBefore = prefs.getFloat(key, -1f)
-            onView(withId(R.id.btn_font_inc)).perform(click())
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-            assertThat(prefs.getFloat(key, -1f)).isNotEqualTo(sizeBefore)
-            prefs.edit().remove(ContentView.PREF_SCORE_COLOR).remove(key).commit()
+    @Test
+    fun fontSizeButtonsAreGone() {
+        launch().use { scenario ->
+            val ids = listOf("btn_font_dec", "btn_font_inc", "btn_score_color")
+            ids.forEach { name ->
+                assertThat(ctx.resources.getIdentifier(name, "id", ctx.packageName)).isEqualTo(0)
+            }
+            assertThat(scenario.read { page(it) }).isNotNull()
         }
     }
 
