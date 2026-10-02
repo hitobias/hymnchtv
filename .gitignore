@@ -79,3 +79,6 @@ lint/tmp/
 # A2: font sources (40 MB, downloaded) and the fontTools venv
 /tools/fonts-src/
 /.venv-tools/
+
+# Python bytecode from tools/
+__pycache__/
