@@ -24,7 +24,7 @@
 **開工前（協調者）：**
 1. 確認 spec §7 的待確認項目（品牌色、DayNight、搜尋入口、字級、exit、長按替代搜尋）已由使用者定案；寫進本檔 rev 3。
 2. 本檔 rev 2 再送 Codex 審查，處理完所有 P1 才開始 Task 0。
-3. 前置：A2、B、D-1a 已合併（D-1 UI 的 G0）。本計畫的 `HymnTitleSource`（C-8）若 D-1 先合併，改用其 `notebook/ui/titles/` 版本（見 Task H2）。
+3. 前置：A2、B、D-1a 已合併（D-1 UI 的 G0）。（rev 4 更正：C 與 D-1 **各自擁有自己的 `HymnTitleSource`**〔不同 package、不同簽名，不共用，見 Task H2〕；D-1 UI 延後到 1.1.0 之後，C 的任何 Task 都**不得** import `notebook.ui`／`notebook.data`／`notebook.repo`／`notebook.record`。）
 
 **執行規則：**
 - 每條 lane 只改自己「檔案範圍」的檔案；要改範圍外的檔案就停下來回報。
@@ -1335,7 +1335,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 11：D-1 的「＋歌單」槽位與 `UiFlags`（1.1.0 維持 false）**
 
-  `btn_add_playlist` 的可見度只由 `PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)` 決定；`MainHost.tabIds(UiFlags.NOTEBOOK_UI_ENABLED)` 不變。**H3 不放任何 no-op 按鈕**。`UiFlags.kt` 的 KDoc 補一句：「打開時機＝D-1 UI 完成時（Task I2 Step 4）；1.1.0 維持 false」。
+  `btn_add_playlist` 的可見度只由 `PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)` 決定；`MainHost.tabIds(UiFlags.NOTEBOOK_UI_ENABLED)` 不變。**H3 不放任何 no-op 按鈕**。`UiFlags.kt` 的 KDoc 補一句：「打開時機＝D-1 UI 完成時（D-1 UI 計畫 Task I2 Step 4）；1.1.0 維持 false」，並把現有 KDoc 的「D-1, 1.1」改為「D-1 UI 完成後的後續版本」（旗標值不動）。
 
 - [ ] **Step 12：更新因改版而失效的舊測試（逐一列出）**
 
@@ -1524,7 +1524,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 - [ ] **Step 5：測試（instrumented）與效能**
 
   - `SearchFragmentTest`（`FragmentHost` 或經 `MainActivity` 點 `tv_search`）：①輸入「祂的計劃」→ 列表出現、第一筆是大本 1，`tv_search_status` 顯示「找到 N 首」；②點結果開歌詞頁且是該本該號（青年附 276 的結果開 `HYMN_YB` 276）；③`scope_current`／`scope_all` 切換：BB 範圍只出 BB；英文來源進入時沒有 `scope_current`；④搜「的」→ 列表 200 筆且狀態是 `c_search_status_more`；⑤空查詢顯示提示；⑥旋轉後結果仍在；⑦返回鍵關閉搜尋頁回首頁；⑧搜尋進行中離開頁面不崩潰（`onDestroyView` 取消）。
-  - `SearchPerfTest`（`api24b` 與 `api34b` 都跑）：`scope=All`、查一個不存在的字串，**硬斷言**整體時間 ≤ 10 秒（`api24b`）／≤ 5 秒（`api34b`），並 `Log` 實測值貼進 PR；超過時**先最佳化**（例如改用 `AssetManager.openFd`／並行讀檔、避免 `readText` 整檔配置）再重測，**不得放寬門檻**；同時 `Debug.getNativeHeapAllocatedSize`／`Runtime` 記憶體不應隨結果數線性暴增（結果只存 `SearchResult`，不存全文）。
+  - `SearchPerfTest`（`api24b` 與 `api34b` 都跑）：`scope=All`、查一個不存在的字串，**自動化測試**跑 3 次取中位數，只斷言 ≤ 30 秒（擋災難性退化，避免模擬器負載造成 flaky）；**協調者在 G4 以中位數驗收硬門檻**：`api24b` ≤ 10 秒、`api34b` ≤ 5 秒，並把實測值貼進 PR；超過時**先最佳化**（例如改用 `AssetManager.openFd`／並行讀檔、避免 `readText` 整檔配置）再重測，**不得放寬硬門檻**；記憶體判定：搜尋前後各 `System.gc()` 後，`Runtime.totalMemory()-freeMemory()` 的增量 ≤ 16MB（結果只存 `SearchResult`，不存全文），超過即失敗。
 
 - [ ] **Step 6：驗收與 Commit**
 
@@ -1664,7 +1664,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 4：`ContentHandler`／`MediaGuiController` 改吃 `HymnRef`（CRLF 檔只做替換，不整檔重排）**
 
-  `getPlayHymn(HymnRef ref, MediaType type, boolean download)`、`getHymnUri(HymnRef)`、`hymnInfoOf(HymnRef)`、`hymnMediaStateOf(HymnRef)`；舊無參版本改為薄包裝（呼叫 viewing 版），H5d 再移除；`mDir/mFileName` 欄位換成區域變數＋`DownloadTarget`（暫存在 `mPendingDownload`，由 `startFileDownload` 使用）；青年分支用 `YbRefs`。`MediaGuiController` 暫時仍取 viewing。
+  **唯一簽名** `getPlayHymn(HymnRef ref, MediaType type, boolean download, int generation)`（H5a 呼叫端先傳 `-1`；H5c 起傳 session 的 generation。generation 的流向：`getPlayHymn` → `getHymnUri(ref, generation)` → `DownloadTarget(dir, fileName, generation)` → `MediaDownloadHandler.initHttpFileDownload(link, dir, fileName, generation)`；H5c 只依此契約接線，不再改簽名）、`getHymnUri(HymnRef ref, int generation)`、`hymnInfoOf(HymnRef)`、`hymnMediaStateOf(HymnRef)`；舊無參版本改為薄包裝（呼叫 viewing 版），H5d 再移除；`mDir/mFileName` 欄位換成區域變數＋`DownloadTarget`（暫存在 `mPendingDownload`，由 `startFileDownload` 使用）；青年分支用 `YbRefs`。`MediaGuiController` 暫時仍取 viewing。
 
 - [ ] **Step 5：驗證與 Commit**
 
