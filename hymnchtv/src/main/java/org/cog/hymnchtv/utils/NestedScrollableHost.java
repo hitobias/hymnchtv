@@ -15,6 +15,8 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.viewpager2.widget.ViewPager2;
 
+import org.cog.hymnchtv.ui.lyrics.SingleTapDetector;
+
 /**
  * Wraps a vertically scrolling child (the lyrics ScrollView) that lives inside a horizontal {@link ViewPager2}.
  * <p>
@@ -30,6 +32,9 @@ import androidx.viewpager2.widget.ViewPager2;
  * <li>otherwise (small or ambiguous travel, e.g. a thumb drifting sideways first): keep waiting.</li>
  * </ul>
  * Multi-touch (pinch) never hands the gesture to the pager.
+ * <p>
+ * The same events also feed a {@link SingleTapDetector} (same touch slop, the long-press timeout as time limit), so a
+ * clean single tap in the middle of the page can toggle the toolbars while no scroll or page swipe ever does.
  */
 public class NestedScrollableHost extends FrameLayout {
     /** A drag counts as vertical when |dy| exceeds |dx| by this factor (0.5: anything steeper than about 27 degrees from horizontal). */
@@ -45,6 +50,9 @@ public class NestedScrollableHost extends FrameLayout {
     private float initialX;
     private float initialY;
     private boolean decided;
+    private final SingleTapDetector tapDetector;
+    private long downTime;
+    private Runnable centreTapListener;
 
     public NestedScrollableHost(@NonNull Context context) {
         this(context, null);
@@ -52,7 +60,14 @@ public class NestedScrollableHost extends FrameLayout {
 
     public NestedScrollableHost(@NonNull Context context, AttributeSet attrs) {
         super(context, attrs);
-        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        ViewConfiguration configuration = ViewConfiguration.get(context);
+        touchSlop = configuration.getScaledTouchSlop();
+        tapDetector = new SingleTapDetector(touchSlop, ViewConfiguration.getLongPressTimeout(), SingleTapDetector.CENTRE_FRACTION);
+    }
+
+    /** Called on a clean single tap in the middle 60 % x 60 % of this view; null removes it. */
+    public void setOnCenterTapListener(Runnable listener) {
+        centreTapListener = listener;
     }
 
     @Override
@@ -62,6 +77,7 @@ public class NestedScrollableHost extends FrameLayout {
     }
 
     private void handleInterceptTouchEvent(MotionEvent e) {
+        trackTap(e);
         ViewParent parent = getParent();
         if (parent == null) {
             return;
@@ -87,6 +103,32 @@ public class NestedScrollableHost extends FrameLayout {
                 }
                 break;
 
+            default:
+                break;
+        }
+    }
+
+    private void trackTap(MotionEvent e) {
+        switch (e.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                downTime = e.getEventTime();
+                tapDetector.down(e.getX(), e.getY(), 0);
+                break;
+            case MotionEvent.ACTION_POINTER_DOWN:
+                tapDetector.pointerDown();
+                break;
+            case MotionEvent.ACTION_MOVE:
+                tapDetector.move(e.getX(), e.getY());
+                break;
+            case MotionEvent.ACTION_UP:
+                if (tapDetector.up(e.getX(), e.getY(), e.getEventTime() - downTime, getWidth(), getHeight())
+                        && centreTapListener != null) {
+                    centreTapListener.run();
+                }
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                tapDetector.cancel();
+                break;
             default:
                 break;
         }

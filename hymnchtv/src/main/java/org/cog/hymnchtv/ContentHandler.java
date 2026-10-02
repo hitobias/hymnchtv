@@ -120,6 +120,8 @@ import org.cog.hymnchtv.reading.background.BackgroundPolicy;
 import org.cog.hymnchtv.reading.background.BackgroundPrefs;
 import org.cog.hymnchtv.reading.background.BackgroundSlot;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
+import org.cog.hymnchtv.ui.lyrics.ChromePage;
+import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
 import org.cog.hymnchtv.utils.DepthPageTransformer;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
 import org.cog.hymnchtv.utils.HymnNo2IdxConvert;
@@ -255,6 +257,10 @@ public class ContentHandler extends BaseActivity {
     private static final String STATE_PAGE = "state_page"; // fallback; ViewPager2 also restores its own item
     private static final String STATE_LYRICS_OVERRIDE = "state_lyrics_override"; // -1 none, 0 simplified, 1 traditional
     private static final String STATE_DISPLAY_OVERRIDE = "state_display_override"; // DisplayMode name; absent = none
+    private static final String STATE_CHROME_VISIBLE = "state_chrome_visible"; // lyrics toolbars shown or faded away
+
+    /** Show/hide state of the lyrics toolbars shared by all pager pages (plan 6c). */
+    private LyricsChromeHost mChromeHost;
 
     /** Per-session display mode chosen with button_mode; null = the default from the reading settings (plan A2). */
     public DisplayMode displayModeOverride = null;
@@ -283,6 +289,9 @@ public class ContentHandler extends BaseActivity {
 
         // Reading settings (plan A2): background first, so pages created below read the matching palette
         sPreference = getSharedPreferences(PREF_SETTINGS, 0);
+        mChromeHost = new LyricsChromeHost(this, sPreference, new org.cog.hymnchtv.ui.lyrics.HandlerChromeTimer());
+        mChromeHost.start(savedInstanceState != null && savedInstanceState.containsKey(STATE_CHROME_VISIBLE)
+                ? savedInstanceState.getBoolean(STATE_CHROME_VISIBLE) : null);
         mLyricsPalette = BackgroundPrefs.applyTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
         LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
         if (ReadingPrefs.lyricsFont(sPreference) == LyricsFont.KAI) {
@@ -396,9 +405,40 @@ public class ContentHandler extends BaseActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        mChromeHost.stop();
+        super.onDestroy();
+    }
+
+    /** A lyrics page follows the toolbar show/hide state from now on (plan 6c). */
+    public void registerChromePage(ChromePage page) {
+        mChromeHost.register(page);
+    }
+
+    public void unregisterChromePage(ChromePage page) {
+        mChromeHost.unregister(page);
+    }
+
+    /** Single tap in the middle of a lyrics page. */
+    public void onLyricsCenterTap() {
+        mChromeHost.toggle();
+    }
+
+    /** A toolbar button was used: the 4 s idle timer restarts. */
+    public void onChromeInteraction() {
+        mChromeHost.onInteraction();
+    }
+
+    /** True while the Aa sheet or the overflow menu is open: the toolbars stay. */
+    public void setChromeHeld(boolean held) {
+        mChromeHost.setHeld(held);
+    }
+
+    @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(STATE_PAGE, mPager.getCurrentItem());
+        outState.putBoolean(STATE_CHROME_VISIBLE, mChromeHost.isVisible());
         outState.putInt(STATE_LYRICS_OVERRIDE, lyricsViewOverride == null ? -1 : (lyricsViewOverride ? 1 : 0));
         if (displayModeOverride != null) {
             outState.putString(STATE_DISPLAY_OVERRIDE, displayModeOverride.name());
