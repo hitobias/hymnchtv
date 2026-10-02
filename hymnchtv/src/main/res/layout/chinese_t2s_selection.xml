@@ -11,6 +11,40 @@
         android:layout_marginBottom="5dp"
         android:textStyle="bold"
         android:textSize="20sp"
+        android:text="@string/lyrics_default_title" />
+
+    <RadioGroup
+        android:id="@+id/radioGroupLyricsDefault"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="20dp">
+
+        <RadioButton
+            android:id="@+id/radioLyricsFollowUi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/lyrics_follow_ui" />
+
+        <RadioButton
+            android:id="@+id/radioLyricsSimplified"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/lyrics_simplified" />
+
+        <RadioButton
+            android:id="@+id/radioLyricsTraditional"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/lyrics_traditional" />
+    </RadioGroup>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:textStyle="bold"
+        android:textSize="20sp"
         android:text="@string/STD" />
 
     <RadioGroup
@@ -18,13 +52,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp">
-
-        <RadioButton
-            android:id="@+id/radioButtonS2T"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="@string/S2T" />
 
         <RadioButton
             android:id="@+id/radioButtonS2HK"
@@ -37,12 +64,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/S2TW" />
-
-        <RadioButton
-            android:id="@+id/radioButtonS2TWP"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/S2TWP" />
     </RadioGroup>
 
     <LinearLayout

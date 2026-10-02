@@ -313,9 +313,7 @@
     -->
     <string name="STD">字词转换标准表</string>
     <string name="S2HK">简体到香港繁体</string>
-    <string name="S2T">简体到繁体</string>
     <string name="S2TW">简体到台湾正体</string>
-    <string name="S2TWP">简体到台湾正体，并转换为台湾常用词汇</string>
 
     <!--  ChangeLog parameters -->
     <string name="changelog_full_title">应用程序变更历史</string>

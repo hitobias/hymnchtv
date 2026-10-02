@@ -339,9 +339,7 @@
     -->
     <string name="STD">Word conversion standard table</string>
     <string name="S2HK">Simplified to HongKong Traditional</string>
-    <string name="S2T">Simplified to Traditional</string>
     <string name="S2TW">Simplified to Taiwan Traditional</string>
-    <string name="S2TWP">Simplified to Taiwanese traditional, and converted to Taiwanese common vocabulary</string>
 
     <!--  ChangeLog parameters -->
     <string name="changelog_full_title">Change History</string>
