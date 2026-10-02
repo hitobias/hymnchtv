@@ -13,6 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.cog.hymnchtv.ContentSearch
 import org.cog.hymnchtv.HymnsApp
 import org.cog.hymnchtv.MainActivity
@@ -22,7 +23,6 @@ import org.cog.hymnchtv.hymnhistory.HistoryRecord
 import org.cog.hymnchtv.persistance.DatabaseBackend
 import org.cog.hymnchtv.ui.titles.AssetHymnTitles
 import org.cog.hymnchtv.ui.titles.HymnTitleSource
-import org.cog.hymnchtv.utils.DialogActivity
 import org.cog.hymnchtv.utils.HymnNoValidate
 import timber.log.Timber
 import java.io.IOException
@@ -324,18 +324,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 
     private fun confirmDeleteHistory(record: HistoryRecord) {
-        DialogActivity.showConfirmDialog(
-            requireActivity(), R.string.delete, R.string.delete_history, R.string.delete,
-            object : DialogActivity.DialogListener {
-                override fun onConfirmClicked(dialog: DialogActivity): Boolean {
-                    deleteHistory(record)
-                    return true
-                }
-
-                override fun onDialogCancelled(dialog: DialogActivity) = Unit
-            },
-            record.toString(),
-        )
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete)
+            .setMessage(getString(R.string.delete_history, record.toString()))
+            .setPositiveButton(R.string.delete) { _, _ -> deleteHistory(record) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private companion object {

@@ -14,6 +14,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.hymnhistory.HistoryRecord
+import org.cog.hymnchtv.persistance.DatabaseBackend
 import org.cog.hymnchtv.ui.FragmentHost
 import org.cog.hymnchtv.ui.titles.HymnTitleSource
 import org.junit.After
@@ -84,6 +86,20 @@ class HomeFragmentTest {
             onView(withId(R.id.bs_bb)).check { v, _ -> assertThat(v.isSelected).isTrue() }
             onView(withId(R.id.bs_db)).check { v, _ -> assertThat(v.isSelected).isFalse() }
         }
+    }
+
+    @Test
+    fun historyRowsOpenAndTheTrailingButtonDeletes() = withHome {
+        val db = DatabaseBackend.getInstance(ctx)
+        db.historyRecords.forEach { db.deleteHymnHistory(it) }
+        db.storeHymnHistory(HistoryRecord(MainActivity.HYMN_DB, 1, false))
+
+        onView(withId(R.id.tv_entry)).perform(click())
+        onView(withId(R.id.historyListView)).check(matches(isDisplayed()))
+        FragmentHost.eventually { onView(withId(R.id.b_delete_in_list)).check(matches(isDisplayed())) }
+
+        onView(withId(R.id.b_delete_in_list)).perform(click())
+        FragmentHost.eventually { assertThat(db.historyRecords).isEmpty() }
     }
 
     @Test
