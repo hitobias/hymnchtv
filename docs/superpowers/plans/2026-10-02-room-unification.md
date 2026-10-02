@@ -23,6 +23,7 @@
 - rev 4（2026-10-02）：三項事實變動。①**關卡**：A、A2 已合併進 `origin/master`，唯一剩下的關卡是 B 合併（Task 0／§2.9／§三 同步更新）。②**基底**：`refactor/room-unification` 從 `origin/master`（B 合併後）開，不是 `feat/zh-hant`（Task 0 明寫）。③**D-1a 已部分實作**（`feat/notebook-data`，worktree `hymnchtv-d1a`，Task 0–7 完成，Task 8–13 暫停，基底 efca5c22）並使用獨立的 `NotebookDatabase`：推翻 rev 3「本計畫在 D-1a 實作之前完成、只需修訂 D-1a 計畫」的前提。新時序：B 合併 → 本計畫（`HymnchtvDatabase` v1 只含 3 張舊資料表）→ 合併 → D-1a 分支 rebase 到 master 並**遷移程式碼**（5 個 entity／DAO／converter 併入 `HymnchtvDatabase`、刪除 `NotebookDatabase` 與其 schema、去 TRUNCATE、schema 重生仍為 v1）。Task 1 讓 `HymnchtvDatabase` 提供與 `NotebookDatabase` 同形的工廠（`build(context, fileName = FILE_NAME)`／`inMemory(context)`），遷移才能機械化。Task 6 拆成 (a)～(d)，並重寫 §2.9、§2.1 的 D-1a 列、風險。
 - rev 5（2026-10-02）：依 Codex 第四輪 3 P1 + 4 P2 + 1 P3 修正，並更新事實（**B 已合併進 `origin/master`，892167bf**，關卡已滿足，基底 = `origin/master`）。①**P1-1 建置設定**：Task 1 新增 Step 0（根 `build.gradle` 加 KSP classpath、`hymnchtv/build.gradle` 加 KSP plugin、Room runtime／ktx／compiler、`ksp { room.schemaLocation }`），照 D-1a commit `9d468ecf` 的做法；Task 6(a) rebase 時 D-1a 重複的建置 hunk 收斂到 master 設定，只保留 D-1a 專屬依賴。②**P1-2 schema**：決定最終 schema **維持 version 1**（未發佈、無使用者），本計畫合併後到 D-1a 合併前的三表中間組建**僅限開發、絕不發佈**；Task 6(a) 加「`adb uninstall`／`pm clear`」步驟與 dev-notes，Task 6(d) 加發版關卡檢查（1.json 含 8 個 entity、只有一個 schema 版本）；不把 `hymnchtv.db` 加進啟動刪檔清單；不選 v2 migration 的理由寫入 §2.5。③**P1-3 D-1 UI 計畫**：Task 6(c) 改為完整搜尋取代工作，列出行號。④**P2-1 單一 instance**：`HymnchtvDatabase.getInstance(context)`（process-wide），`DatabaseBackend.getInstance` 與 D-1a `Notebook.get()` 共用（§2.4a）。⑤**P2-2 備份範圍**：決定接受統一 DB 全量 Auto Backup（§2.5），更新 D-1a Task 11／13 修訂項，風險加備份配額。⑥**P2-3**：Task 5 改成檢查無殘留原生 SQLite 初始化碼。⑦**P2-4**：Task 6(b) 改為涵蓋 D-1a Task 10–13 的完整重寫工作（有搜尋清單）；Task 0–7 歷史片段加註記、不重寫。⑧**P3**：Javadoc 措辭改為「應在 `AppExecutors.io` 執行；§2.4 列出的過渡呼叫點例外，1.0 前移除」。
 - rev 6（2026-10-02）：依 Codex 第五輪 1 P1 修正（rev 4 的 P1/P2/P3 全數確認已解決）。`DatabaseBackend` 的 API 盤點漏了 B 新增的 `inTransaction`／`runInTransaction`／`storeMediaRecordOrThrow`／`createForTest`，以及測試用的 `close()`、`readableDatabase`／`writableDatabase`／`databaseName`。§2.6 改為明列保留與消失的 API（facade 方法數更正為 12），Task 2 加 Step 2b，Task 5 Step 3 列出要改寫的 6 個既有 instrumented test 與補測。**產品／設計決定（保守）**：`close()` 與 `createForTest` 為測試用保留；原生 `SQLiteDatabase` 存取一律移除。
+- rev 7（2026-10-02）：依 Codex 第六輪 2 P1 + 2 P2 修正（rev 5 的 P1 已確認解決）。①§2.3 以現有 `storeHymnHistory` 為規格寫出完整 prune 演算法（pivot = 第 `excess+10` 筆、嚴格 `<` 刪除、先清除後插入）與 199／200／201／重複鍵／並列測試表，移除「B 已改為」敘述；②WAL 改為 production `build()` 明確設定，並以 `PRAGMA journal_mode` 驗證；③普通 `storeMediaRecord()` 捕捉例外回傳 `-1L`，`OrThrow` 版不捕捉（Task 2 Step 2a）；④schema 路徑統一為 `org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json`。
 
 ---
 
@@ -88,7 +89,26 @@
 
 ### 2.3 歷史清除與寫入必須同一交易
 
-`storeHymnHistory`（B 已改為「先計數，超過上限才刪」）在 Room 裏必須是**單一 `@Transaction`**：count → 若超上限，依 `HistoryPrune` 算出要刪到哪一筆 → delete → insert。否則並行的兩次寫入會互刪。`HistoryPrune` 的純函式保留；補測**邊界**與 **timeStamp 相同的並列**情況。
+**規格 = `origin/master` 現有 `DatabaseBackend.storeHymnHistory` 的行為**（B Lane A 的 `HistoryPrune` 不採用，§2.8；`origin/master` 上沒有它）。`HistoryPrune.kt` 為本計畫自建的純函式，演算法如下：
+
+1. `N` = 目前 `hymn_history` 筆數（尚未插入新紀錄）；`LIMIT = HistoryRecord.NUMBER_OF_RECORDS_IN_HISTORY` = 200；`excess = N - LIMIT`。
+2. `excess <= 0`：不清除。
+3. `excess > 0`：依 `timeStamp ASC` 排序，取**第 `excess + 10` 筆（1 起算）**的 `timeStamp` 為 `pivot`，刪除所有 `timeStamp < pivot` 的資料列（嚴格小於；與 pivot 同 timeStamp 的列**保留**）。保留約 `LIMIT - 10 + 1 = 191` 筆（timeStamp 皆相異時）。
+4. 清除之後才插入新紀錄（`@Insert(REPLACE)`；主鍵 (hymnType, hymnNo, isFu) 相同 → 覆蓋舊列，筆數不增加）。
+5. 1～4 在 Room 裡是**單一 `@Transaction`**，否則並行的兩次寫入會互刪。純函式 `HistoryPrune.pivotIndex(count, limit)`（回傳 `excess + 10` 或「不清除」）與 DAO 的 `@Query` 分工。
+
+JVM／instrumented 測試表（皆以相異 timeStamp 為預設，另測並列）：
+
+| 情境 | 起始筆數 | 動作 | 預期結果筆數 | 預期保留／刪除 |
+|---|---|---|---|---|
+| 199 | 199 | 插入新鍵 | 200 | 不清除 |
+| 200 | 200 | 插入新鍵 | 201 | 不清除（`excess = 0`） |
+| 201 | 201 | 插入新鍵 | 192 | `excess = 1`，pivot = 第 11 筆；刪除最舊 10 筆；保留第 11 筆起 191 筆 ＋ 新列 |
+| 重複主鍵 | 200 | 插入既有鍵 | 200 | REPLACE 覆蓋，不增加 |
+| 重複主鍵且超限 | 201 | 插入既有鍵 | 191 | 先清除 10 筆、再覆蓋（191 筆含被覆蓋者） |
+| 相同 timeStamp 並列 | 201，第 10、11、12 筆 timeStamp 相同 | 插入新鍵 | 刪除 `< pivot` 者；與 pivot 同值的列全保留 | 並列於 pivot 者不被刪 |
+
+`HistoryPrune` 的純函式另有 JVM 單元測試覆蓋 `count` = 0、199、200、201、1000。
 
 ### 2.4 主執行緒（**本計畫的關鍵取捨**）
 
@@ -119,7 +139,7 @@ Room 預設禁止主執行緒查詢。§1 的表列出 7 個主執行緒呼叫�
 
 ### 2.5 日誌模式、檔名與**安裝政策**（Codex P1-6、P1-7）
 
-- **日誌模式：用 Room 預設的 WAL。** 撤銷 D-1a 的 `JournalMode.TRUNCATE` 決定（該決定已實作在 `NotebookDatabase.build`，遷移時隨該型別一併移除，見 §2.9）。理由：WAL 是 B 的效能目標；Android Auto Backup 會**先停止 app 再複製整個 files 目錄**，`-wal`／`-shm` 一併被備份，一致性由「停止 app + Room 關閉時 checkpoint」保證。D-1a 的 backup rules 與 `BackupRulesTest` **要跟著改**（涵蓋統一檔＋`-wal`／`-shm`）。
+- **日誌模式：明確設定 WAL**（rev 7，Codex P1）：Room 未指定時是 `JournalMode.AUTOMATIC`，低 RAM 裝置可能不用 WAL，所以 production `build()` **明確** `setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)`（檔案型測試 DB 走同一個 `build`，同樣 WAL；`inMemory` 不適用）。Task 5 以 `PRAGMA journal_mode` 在 `api24nb`／`api34nb` 驗證實際為 `wal`。撤銷 D-1a 的 `JournalMode.TRUNCATE` 決定（該決定已實作在 `NotebookDatabase.build`，遷移時隨該型別一併移除，見 §2.9）。理由：WAL 是 B 的效能目標；Android Auto Backup 會**先停止 app 再複製整個 files 目錄**，`-wal`／`-shm` 一併被備份，一致性由「停止 app + Room 關閉時 checkpoint」保證。D-1a 的 backup rules 與 `BackupRulesTest` **要跟著改**（涵蓋統一檔＋`-wal`／`-shm`）。
 - **檔名**：統一為一個檔（暫定 `hymnchtv.db`，常數 `HymnchtvDatabase.FILE_NAME`；前綴由 Z 決定）。D-1a 的 backup rules 與 `BackupRulesTest` 日後引用此常數，不再引用 `NotebookDatabase.FILE_NAME`（`notebook.db`）。
 - **備份範圍決定（rev 5，Codex P2-2）**：**接受 Auto Backup 備份整個統一 DB**。Auto Backup 的 `database` domain 只能以檔案／目錄為粒度，無法只選某幾張 Room 表，所以備份內容同時包含媒體連結、歷史、英文歌詞與筆記本五張表，不再是 D-1a 原先「只備份 notebook」的範圍。理由：這些都是使用者資料／設定，**不含任何憑證或機密**，換機還原後保留它們是期望的行為。後果（要寫進 D-1a 計畫）：
   - Task 11 隱私說明：備份包含媒體連結、歷史與英文歌詞（不只筆記本）；
@@ -187,7 +207,7 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 | `notebook/repo/room/Room{Favorite,Note,Playlist,SingLog}Repository.kt` | 建構子參數 `db: NotebookDatabase` → `db: HymnchtvDatabase` |
 | 7 個 androidTest：`notebook/data/NotebookDaoTest.kt`；`notebook/repo/Room{Note,Playlist,SingLog,Favorite}RepositoryTest.kt`、`RoomSingLogConcurrencyTest.kt`、`RoomSingLogRepositoryContractTest.kt` | 改用 `HymnchtvDatabase.inMemory(context)`；並行測試用 `HymnchtvDatabase.build(context, 測試檔名)`（檔案型、WAL） |
 | `JournalMode.TRUNCATE` | 移除（WAL，§2.5） |
-| `hymnchtv/schemas/org.cog.hymnchtv.notebook.data.NotebookDatabase/1.json` | **刪除**；重新產生 `schemas/org.cog.hymnchtv.room.HymnchtvDatabase/1.json`（實際套件路徑以 Task 1 為準），**仍為 version 1**（未發佈、無遷移，符合 §2.5 安裝政策） |
+| `hymnchtv/schemas/org.cog.hymnchtv.notebook.data.NotebookDatabase/1.json` | **刪除**；重新產生 `schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json`（實際套件路徑以 Task 1 為準），**仍為 version 1**（未發佈、無遷移，符合 §2.5 安裝政策） |
 
 遷移後驗收：`:hymnchtv:testDebugUnitTest`、`:hymnchtv:assembleDebug` 與 `api34nb`／`api24nb` 的 instrumented test 全部通過。
 
@@ -231,7 +251,7 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 - [ ] **Step 1**：三個 entity，**複合主鍵**見 §2.1，`mediaUri`／`mediaFilePath` 為 nullable。
 - [ ] **Step 2**：`HistoryPrune` 純函式（給定目前筆數、上限，算出要刪到哪一筆），＋ JVM 單元測試（含邊界與 timeStamp 相同的並列）。
 - [ ] **Step 3**：三個 DAO。寫入用 `@Insert(onConflict = REPLACE): Long`；查詢見 §2.2；排序見 §2.7。`storeHymnHistory` 的 count→prune→insert 包 `@Transaction`（§2.3）。
-- [ ] **Step 4**：`HymnchtvDatabase`，`@Database(version = 1, exportSchema = true)`，WAL（預設），提供三個 DAO。**工廠形狀與 D-1a 的 `NotebookDatabase` 相同**（讓 D-1a 遷移機械化）：`const val FILE_NAME`、`@JvmStatic @JvmOverloads fun build(context, fileName: String = FILE_NAME)`、`@JvmStatic fun inMemory(context)`；不設 `JournalMode.TRUNCATE`。`allowMainThreadQueries()`（§2.4）設在 `build`，`inMemory` 不設。另加 **process-wide `getInstance(context)`**（§2.4a：double-checked／synchronized、`applicationContext`），`DatabaseBackend` 與日後的 `Notebook.get()` 都用它；補單例測試（同一物件、多執行緒）。
+- [ ] **Step 4**：`HymnchtvDatabase`，`@Database(version = 1, exportSchema = true)`，WAL（預設），提供三個 DAO。**工廠形狀與 D-1a 的 `NotebookDatabase` 相同**（讓 D-1a 遷移機械化）：`const val FILE_NAME`、`@JvmStatic @JvmOverloads fun build(context, fileName: String = FILE_NAME)`、`@JvmStatic fun inMemory(context)`；不設 `JournalMode.TRUNCATE`，**明確 `setJournalMode(WRITE_AHEAD_LOGGING)`（§2.5）**。`allowMainThreadQueries()`（§2.4）設在 `build`，`inMemory` 不設。另加 **process-wide `getInstance(context)`**（§2.4a：double-checked／synchronized、`applicationContext`），`DatabaseBackend` 與日後的 `Notebook.get()` 都用它；補單例測試（同一物件、多執行緒）。
 
 ### Task 2：`DatabaseBackend` 改寫成 facade
 
@@ -241,6 +261,7 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 
 - [ ] **Step 1**：不再 extends `SQLiteOpenHelper`；`getInstance(Context)` 回傳持有 `HymnchtvDatabase.getInstance(context)`（§2.4a 單例）的實例，不自行 `build`。
 - [ ] **Step 2**：§1 表的 12 個方法逐一改寫成呼叫 DAO，**簽名與回傳型別不變**，保留 `getMediaRecord` 的就地更新行為；每個方法 Javadoc 標「應在 `AppExecutors.io` 執行；§2.4 列出的過渡呼叫點例外，1.0 前移除」（§2.4）。
+- [ ] **Step 2a（rev 7）失敗模式**：普通 `storeMediaRecord()` **捕捉**資料庫寫入例外（`SQLiteException` 等），`Timber.e` 記錄後回傳 `-1L`（維持原生 `insert()` 的語意）；`storeMediaRecordOrThrow()` **不捕捉**、以 `SQLException` 往外拋。補兩者的失敗模式測試與交易內 rollback 測試。
 - [ ] **Step 2b（rev 6）**：依 §2.6 實作 `inTransaction`／`runInTransaction`（Room 交易）、`storeMediaRecordOrThrow`（失敗拋 `SQLException`）、`createForTest(Context, String)`（非單例檔案型）、測試用 `close()`；呼叫端（`MediaConfig`／`NotionRecord`／`QQRecord`）不改。
 - [ ] **Step 3**：刪 5 個 migration 與其 helper；無 `onUpgrade`。
 - [ ] **Step 4**：`storeHymnHistory` 用 Room 交易版（§2.3），沿用 `HistoryPrune`。
@@ -262,7 +283,7 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 
 ### Task 5：instrumented 驗證
 
-- [ ] **Step 1**：為本計畫的 DAO／facade 撰寫 instrumented test（不從 Lane A 移植——Lane A 未合併）。涵蓋 WAL 已開、schema v1 建表。另以 grep 檢查**沒有遺留原生 SQLite 初始化碼**（`execSQL("PRAGMA`、`SQLiteOpenHelper`、`getWritableDatabase`）。
+- [ ] **Step 1**：為本計畫的 DAO／facade 撰寫 instrumented test（不從 Lane A 移植——Lane A 未合併）。涵蓋 `PRAGMA journal_mode` 實際為 `wal`（`api24nb`／`api34nb` 皆驗證）、schema v1 建表。另以 grep 檢查**沒有遺留原生 SQLite 初始化碼**（`execSQL("PRAGMA`、`SQLiteOpenHelper`、`getWritableDatabase`）。
 - [ ] **Step 2**：新增等價測試：每個 facade 方法對 fixture 的輸入／輸出與舊行為一致；補 REPLACE 覆蓋、nullable 欄位、排序 tie-breaker、交易邊界。
 - [ ] **Step 3**：再 grep 一次 `getWritableDatabase`／`getReadableDatabase`／`getDatabaseName`／`close()` 的使用者（§2.6）。**改寫既有 instrumented test**：`DatabaseBackendTransactionTest`、`ImportPerfTest`、`NotionStoreTest`、`QQStoreTest`、`UrlImportJobTest`、`UrlImportTest`（皆用 `createForTest`）——保留 `createForTest`／`close()`／`runInTransaction`／`storeMediaRecordOrThrow`，凡存取原生 `SQLiteDatabase`（`readableDatabase`／`writableDatabase`／`databaseName`）之處改用 facade 查詢驗證；補測：交易內 `storeMediaRecordOrThrow` 失敗 → 整批 rollback、巢狀交易、例外原樣拋出。
 - [ ] **Step 4**：`api34nb`／`api24nb` 跑全部 instrumented test。
@@ -297,7 +318,7 @@ Task 0–7（已實作）的歷史片段**不重寫**，只在各 Task 標題下
 
 **(c) D-1 UI 計畫更新：完整搜尋取代**（`docs/superpowers/plans/2026-10-02-d1-notebook-ui-implementation.md`）
 
-- [ ] **Step 10**：整份計畫 `grep -nE "NotebookDatabase|notebook\.db|schemas/|RoomTransactionRunner|RoomNotebookQueriesContractTest|graph\.database"`，**全部**改為 `HymnchtvDatabase`（資料庫型別、import、檔名、schema 路徑 `…room.HymnchtvDatabase/1.json`）。2026-10-02 已知位置（以 grep 為準）：
+- [ ] **Step 10**：整份計畫 `grep -nE "NotebookDatabase|notebook\.db|schemas/|RoomTransactionRunner|RoomNotebookQueriesContractTest|graph\.database"`，**全部**改為 `HymnchtvDatabase`（資料庫型別、import、檔名、schema 路徑 `…persistance.room.HymnchtvDatabase/1.json`）。2026-10-02 已知位置（以 grep 為準）：
   - 第 28、104 行：敘述「在 `NotebookDatabase.kt` 加一行」「成為第六個 DAO」→ 改在 `HymnchtvDatabase`；schema 仍不變。
   - 第 287、288 行：關卡 G0／G1 的 `schemas/.../1.json`、`RoomNotebookQueriesContractTest`。
   - 第 337 行：檔案清單 `RoomTransactionRunner.kt`；第 344 行：修改清單 `notebook/data/NotebookDatabase.kt`（Task 1，一行）→ `HymnchtvDatabase.kt`；第 348 行：Instrumented 測試清單。
@@ -312,7 +333,7 @@ Task 0–7（已實作）的歷史片段**不重寫**，只在各 Task 標題下
 **(d) 審查、PR、交接**
 
 - [ ] **Step 12**：code-reviewer ＋ Codex 審查本計畫的 diff（Task 0–5）與 D-1a 遷移 diff。
-- [ ] **Step 13**：**發版關卡檢查**（rev 5，Codex P1-2）：匯出的 `hymnchtv/schemas/org.cog.hymnchtv.room.HymnchtvDatabase/1.json` 必須包含**全部 8 個 entity**（3 舊＋5 筆記本），且 `hymnchtv/schemas/` 下**只有一個 schema 版本**（`1.json`，無 `2.json`、無 `NotebookDatabase/` 目錄）。不符不得發佈 1.0。
+- [ ] **Step 13**：**發版關卡檢查**（rev 5，Codex P1-2）：匯出的 `hymnchtv/schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json` 必須包含**全部 8 個 entity**（3 舊＋5 筆記本），且 `hymnchtv/schemas/` 下**只有一個 schema 版本**（`1.json`，無 `2.json`、無 `NotebookDatabase/` 目錄）。不符不得發佈 1.0。
 - [ ] **Step 14**：開 PR；PR 描述含 §2.4 的**主執行緒移除清單**與里程碑（1.0 發版前清空）。
 - [ ] **Step 15**：更新記憶與交接文件（D-1a 分支狀態、dev-notes 的 `adb uninstall`／`hymnchtv.db` 說明、下一步 Task 8–13）。
 
