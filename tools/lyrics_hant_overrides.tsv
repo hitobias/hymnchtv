@@ -1,0 +1,8 @@
+# Manual corrections applied after OpenCC (plan A.1.9). One rule = one file, exact expected hit count.
+# Format: variant<TAB>source-path<TAB>from<TAB>to<TAB>count
+#   variant     tw | hk | *        (* = both variants)
+#   source-path Simplified source relative to assets, e.g. lyrics_db_text/db12.txt
+#   from / to   Traditional text as produced by OpenCC / corrected text
+#   count       exact number (>= 1) of occurrences of "from" in that file (per variant); mismatch = error
+# Example (do not uncomment unless verified):
+# *	lyrics_db_text/db12.txt	皇後	皇后	1
