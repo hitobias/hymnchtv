@@ -14,6 +14,7 @@ import androidx.preference.SeekBarPreference
 import org.cog.hymnchtv.About
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.about.HelpActivity
 import org.cog.hymnchtv.locale.AppLanguage
 import org.cog.hymnchtv.locale.LocaleStore
 import org.cog.hymnchtv.mediaconfig.MediaConfig
@@ -96,7 +97,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         // The update check does network IO
         onClick("check_update") { thread(name = "check-update") { UpdateServiceImpl.getInstance().checkForUpdates() } }
         onClick("permission_request") { openAppPermissionSettings() }
-        onClick("online_help") { About.hymnUrlAccess(requireContext(), MainActivity.HYMNCHTV_FAQ) }
+        onClick("online_help") { startActivity(Intent(requireContext(), HelpActivity::class.java)) }
         onClick("about") { startActivity(Intent(requireContext(), About::class.java)) }
     }
 
