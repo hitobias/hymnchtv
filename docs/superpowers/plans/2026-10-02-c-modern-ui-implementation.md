@@ -565,7 +565,7 @@ interface HymnTitleSource {
 1. 讀 `lyrics_*_text/<type><no>.txt` 第 2 行（標題），去掉類別前綴（最後一個「－」之後）。
 2. 讀第 3 行，若含「（」則把「（…）」補進標題（如「（英1）」）。
 3. **YB 對照**：`HYMN_YB` 用 `MainActivity.ybXTable` 對應到實際檔案（同 `MyPagerAdapter.getHymnFragment`）。
-若 D-1 已先合併（`notebook/ui/titles/` 存在），改用其類別並刪本檔。
+**C 與 D-1 各自擁有各自的 `HymnTitleSource`**：C 的 `ui/titles/HymnTitleSource`（同步 `lookup`）與 D-1 的 `notebook/ui/domain/HymnTitleSource`（`suspend titlesFor`）是**不同 package、不同簽名**，**不共用、不衝突、不互相刪除**。若 D-1 已先合併，仍建 C 自己的（本 task 不變）。
 
 > 已知限制（P2）：標題目前從簡體檔 `lyrics_*_text/*.txt` 讀出，即時詩名顯示簡體；繁中標題屬後續可選（可套 `HantVariant`，同 `ContentView.loadTraditional`），本版不做。
 
@@ -948,7 +948,7 @@ git commit -m "feat(c): lyrics top bar replaces context menu"
 
 - [ ] **Step 1: 筆記本列槽位放 `content_main.xml`（單一宿主，rev 2 #9）**
 
-`content_main.xml` 在 `ViewPager2` 與 `mediaPlayer` 之間（或標題列）加 `@id/notebookBar`（`FrameLayout`，`visibility=gone`）。**不放 `content_lyrics.xml`**（那是每頁 `ContentView`，會產生多個列）。C 只提供空容器；D-1 的 `HymnNotebookBarFragment` 於其整合 task 放進來。
+`content_main.xml` 在 `ViewPager2` 與 `mediaPlayer` 之間（或標題列）加 `@id/notebookBar`（`FrameLayout`）。**不放 `content_lyrics.xml`**（那是每頁 `ContentView`，會產生多個列）。C 只提供空容器（`visibility="gone"`）；D-1 的 `HymnNotebookBarFragment` 於其整合 task（I1）放進來並把容器設為 `visible`。
 
 - [ ] **Step 2: 「下一首」按鈕（C-6）**
 

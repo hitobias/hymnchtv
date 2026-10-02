@@ -4573,6 +4573,8 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   }
   ```
 
+  > **rev 3 覆寫（C-4 已確認 DayNight，codex rev 4 #3）**：上列 `forApp(theme)` 的 Light/Dark 兩套主題**作廢**。改為單一 DayNight：`Theme.Hymnchtv.Notebook` 的 parent 接 C 的 `AppTheme`，`NotebookThemes.forApp` 回傳單一 `@StyleRes`（不再依 `ThemeHelper.Theme` 分叉）。`NotebookThemesTest` 改斷言回傳單一主題；`NotebookActivity` 不再覆寫 `setTheme`。
+
 - [ ] **Step 3：執行測試**，Expected: `BackupMessagesTest` 3、`BackupRunnerTest` 4、`NotebookPrefsDataStoreTest` 2、`NotebookThemesTest` 1 全部通過。
 
 - [ ] **Step 4：Commit**
@@ -8053,7 +8055,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
   並把 `viewPager` 的 `android:layout_above="@+id/mediaPlayer"` 改為 `android:layout_above="@+id/notebookBar"`。
 
-  （pre-C 模式；C 模式若 C 已加 `@id/notebookBar`，則不重複加，只在此 commit 確認 id 存在。）
+  （pre-C 模式；C 模式若 C 已加 `@id/notebookBar`，則不重複加，只在此 commit 確認 id 存在，**並把容器 `visibility` 從 `gone` 改為 `visible`**——C 的 Task L3 預設是 `gone`，codex rev 4 #2。）
 
 - [ ] **Step 2：`ContentHandler` 實作 `NotebookBarHost` 並加 `showHymn`／`onPlaybackCompleted`**
 
@@ -8118,14 +8120,25 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   fun nextInPlaylist(): PlaylistItemEntity? = vm.nextInPlaylist()
   ```
 
-- [ ] **Step 4a：C-6 的「下一首」接線**
+- [ ] **Step 4a：C-6 的「下一首」接線（owner = `ContentView`，呼叫 `ContentHandler` 的單一方法）**
 
-  C 的 `content_lyrics.xml` 頂列 `@id/btn_next`（C 預設 `scrollNextHymn()`）改接筆記本列：
+  `@id/btn_next` 在 `content_lyrics.xml`（`ContentView` 的 layout），所以 **owner 是 `ContentView`**（codex rev 4 #4）。`ContentHandler` 加一個**原子取得下一首並翻頁**的公開方法：
 
-  - C 模式：`ContentView`/`ContentHandler` 的 `btn_next` click 改為 `if (mNotebookBar.nextInPlaylist() != null) { ... } else scrollNextHymn()`——有歌單走歌單，沒歌單走同本翻頁。
+  ```java
+  /** C-6: 有歌單走歌單下一首；沒歌單走同本 scrollNextHymn()。 */
+  public void nextInPlaylistOrNextHymn() {
+      if (mNotebookBar != null) {
+          org.cog.hymnchtv.notebook.data.entity.PlaylistItemEntity next = mNotebookBar.nextInPlaylist();
+          if (next != null) { showHymn(next.getHymn()); return; }
+      }
+      scrollNextHymn();
+  }
+  ```
+
+  `ContentView` 的 `btn_next` click 呼叫 `mContentHandler.nextInPlaylistOrNextHymn()`（取代 C 預設的直接 `scrollNextHymn()`）。`showHymn(HymnKey)`（NotebookBarHost 實作）負責同本 `setCurrentItem`／不同本 relaunch（U8）。
+
+  - C 模式：改 C 的 `ContentView.java` + `content_lyrics.xml`（`btn_next` click）。
   - pre-C 模式：D-1 在 `content_lyrics.xml` 加 `@id/btn_next`，同上。
-
-  `nextInPlaylist()` 回傳非 null 時，由 `NotebookBarHost.showHymn(next.hymn)` 翻到下一首（同本 `setCurrentItem`，不同本 relaunch，U8）。
 
 - [ ] **Step 5：編譯 + Commit**
 
