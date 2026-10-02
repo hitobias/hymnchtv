@@ -61,4 +61,24 @@ class HomeLayoutTest {
             }
         }
     }
+
+    @Test fun sourceButtonsAndContentsButtonShowTheirWholeName() {
+        PickerTestSupport.launch { scenario ->
+            scenario.onActivity { a ->
+                val ids = listOf(
+                    R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english, R.id.btn_toc,
+                )
+                ids.forEach { id ->
+                    val b = a.findViewById<android.widget.TextView>(id)
+                    val layout = b.layout
+                    assertWithMessage("layout of ${b.text}").that(layout).isNotNull()
+                    for (line in 0 until layout.lineCount) {
+                        assertWithMessage("'${b.text}' is cut off on line $line").that(layout.getEllipsisCount(line)).isEqualTo(0)
+                    }
+                    assertWithMessage("'${b.text}' needs more width than it has")
+                        .that(layout.getLineWidth(0).toInt()).isAtMost(b.width - b.paddingLeft - b.paddingRight)
+                }
+            }
+        }
+    }
 }

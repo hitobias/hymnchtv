@@ -53,8 +53,8 @@
                     android:insetBottom="0dp"
                     android:maxLines="2"
                     android:minHeight="@dimen/c_key_height"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
                     android:text="@string/c_src_db"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -69,8 +69,8 @@
                     android:insetBottom="0dp"
                     android:maxLines="2"
                     android:minHeight="@dimen/c_key_height"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
                     android:text="@string/c_src_bb"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -85,8 +85,8 @@
                     android:insetBottom="0dp"
                     android:maxLines="2"
                     android:minHeight="@dimen/c_key_height"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
                     android:text="@string/c_src_xb"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -101,8 +101,8 @@
                     android:insetBottom="0dp"
                     android:maxLines="2"
                     android:minHeight="@dimen/c_key_height"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
                     android:text="@string/c_src_xg"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -118,7 +118,7 @@
                 android:id="@+id/src_group_2"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="3"
+                android:layout_weight="4"
                 app:selectionRequired="false"
                 app:singleSelection="true">
 
@@ -133,8 +133,8 @@
                     android:insetBottom="0dp"
                     android:maxLines="2"
                     android:minHeight="@dimen/c_key_height"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
                     android:text="@string/c_src_yb"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -149,8 +149,8 @@
                     android:insetBottom="0dp"
                     android:maxLines="2"
                     android:minHeight="@dimen/c_key_height"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
                     android:text="@string/c_src_er"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -165,8 +165,8 @@
                     android:insetBottom="0dp"
                     android:maxLines="2"
                     android:minHeight="@dimen/c_key_height"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
                     android:text="@string/c_src_en"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -178,18 +178,15 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:layout_weight="1"
+                android:layout_weight="2"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:maxLines="1"
                 android:minHeight="@dimen/c_key_height"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
                 android:text="@string/c_toc_open"
-                android:textSize="18sp"
-                app:icon="@drawable/ic_chevron_right"
-                app:iconGravity="textEnd"
-                app:iconPadding="0dp" />
+                android:textSize="16sp" />
         </LinearLayout>
         <LinearLayout
             android:id="@+id/previewArea"

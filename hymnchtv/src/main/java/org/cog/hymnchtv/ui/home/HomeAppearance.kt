@@ -78,7 +78,7 @@ class HomeAppearance(private val context: Context, private val views: HymnPicker
 
     private companion object {
         const val SMALL_KEY_DELTA = 10
-        const val SOURCE_MIN_SP = 16f
-        const val SOURCE_MAX_SP = 22f
+        const val SOURCE_MIN_SP = 14f
+        const val SOURCE_MAX_SP = 18f
     }
 }
