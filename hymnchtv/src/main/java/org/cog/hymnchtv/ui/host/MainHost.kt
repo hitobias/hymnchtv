@@ -9,6 +9,7 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.ui.home.HistoryFragment
 import org.cog.hymnchtv.ui.home.HomeFragment
 import org.cog.hymnchtv.ui.myhymns.MyHymnsFragment
+import org.cog.hymnchtv.ui.search.SearchFragment
 import org.cog.hymnchtv.ui.settings.SettingsFragment
 import org.cog.hymnchtv.ui.toc.TocFragment
 
@@ -91,6 +92,9 @@ class MainHost(private val activity: AppCompatActivity) {
 
     fun openHistory() = showOverlay(HistoryFragment(), TAG_HISTORY)
 
+    /** [book] is the book to search in first; null searches all books. */
+    fun openSearch(book: String?) = showOverlay(SearchFragment.newInstance(book), TAG_SEARCH)
+
     /** Shows [fragment] full-screen over the tabs; the back key closes it. */
     fun showOverlay(fragment: Fragment, tag: String) {
         fm.beginTransaction().setReorderingAllowed(true)
@@ -131,6 +135,7 @@ class MainHost(private val activity: AppCompatActivity) {
         }
 
         private const val TAG_HISTORY = "history"
+        private const val TAG_SEARCH = "search"
 
         const val EXTRA_TAB = "c_selected_tab"
     }

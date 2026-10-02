@@ -232,8 +232,9 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
 
     @Override
     public void openSearch(String book) {
-        // H4 replaces this with the search page
-        Timber.w("Search page is not available yet (book=%s)", book);
+        if (mainHost != null) {
+            mainHost.openSearch(book);
+        }
     }
 
     @Override
