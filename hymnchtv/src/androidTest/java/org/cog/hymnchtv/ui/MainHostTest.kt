@@ -103,17 +103,20 @@ class MainHostTest {
     }
 
     @Test
-    fun backClosesTheHistoryPageBeforeFinishing() = launch { scenario ->
+    fun backClosesTheHistoryPageBeforeFinishing() {
+        // the recent row is read when the home tab resumes, so the record must exist before the launch
         val db = DatabaseBackend.getInstance(ctx)
         db.historyRecords.forEach { db.deleteHymnHistory(it) }
         db.storeHymnHistory(HistoryRecord(MainActivity.HYMN_DB, 1, false))
-        FragmentHost.eventually { onView(withId(R.id.btn_recent_more)).check(matches(withEffectiveVisibility(androidx.test.espresso.matcher.ViewMatchers.Visibility.VISIBLE))) }
-        onView(withId(R.id.btn_recent_more)).perform(scrollTo(), click())
-        onView(withId(R.id.history_list)).check(matches(isDisplayed()))
-        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        onView(withId(R.id.history_list)).check(doesNotExist())
-        onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
-        scenario.onActivity { assertThat(it.isFinishing).isFalse() }
+        launch { scenario ->
+            FragmentHost.eventually { onView(withId(R.id.btn_recent_more)).check(matches(withEffectiveVisibility(androidx.test.espresso.matcher.ViewMatchers.Visibility.VISIBLE))) }
+            onView(withId(R.id.btn_recent_more)).perform(scrollTo(), click())
+            onView(withId(R.id.history_list)).check(matches(isDisplayed()))
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            onView(withId(R.id.history_list)).check(doesNotExist())
+            onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
+            scenario.onActivity { assertThat(it.isFinishing).isFalse() }
+        }
     }
 
     @Test
