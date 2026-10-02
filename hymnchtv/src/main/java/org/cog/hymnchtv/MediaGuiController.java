@@ -30,7 +30,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -63,7 +62,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.google.android.material.color.MaterialColors;
+import org.cog.hymnchtv.reading.background.UiTokens;
+import org.cog.hymnchtv.ui.lyrics.PlayerCardStyle;
 
 import org.cog.hymnchtv.mediaplayer.AudioBgService;
 import org.cog.hymnchtv.utils.DialogActivity;
@@ -134,6 +134,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     private EditText edLoopCount;
 
     private RadioGroup mHymnTypesGroup;
+    private UiTokens mTokens;
+    private boolean[] mSourceAvailable = {true, true, true, true};
     private RadioButton mBtnMedia;
     private RadioButton mBtnJiaoChang;
     private RadioButton mBtnChangShi;
@@ -248,6 +250,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         mBtnChangShi = convertView.findViewById(R.id.btn_changshi);
 
         mBtnBanZhou = convertView.findViewById(R.id.btn_banzhou);
+        applyTokens(mContentHandler.getLyricsTokens());
         return convertView;
     }
 
@@ -365,11 +368,18 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             hymnInfo.setText(info);
             mediaHymns.clear();
             // Available: the theme's text colour (readable in day and night mode); else gray
-            int on = MaterialColors.getColor(mBtnMedia, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
-            mBtnMedia.setTextColor(isAvailable[0] ? on : Color.GRAY);
-            mBtnJiaoChang.setTextColor(isAvailable[1] ? on : Color.GRAY);
-            mBtnChangShi.setTextColor(isAvailable[2] ? on : Color.GRAY);
-            mBtnBanZhou.setTextColor(isAvailable[3] ? on : Color.GRAY);
+            mSourceAvailable = isAvailable.clone();
+            if (mTokens != null) {
+                PlayerCardStyle.styleSources(playerUi, mTokens, mSourceAvailable);
+            }
+        }
+    }
+
+    /** Colours of the player card from the lyrics background's tokens (single call site: ContentHandler.applyReadingTheme). */
+    public void applyTokens(UiTokens tokens) {
+        mTokens = tokens;
+        if (playerUi != null) {
+            PlayerCardStyle.apply(playerUi, tokens, mSourceAvailable);
         }
     }
 
@@ -706,6 +716,9 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         String speed = mpSpeedValues[position];
         setPlaybackSpeed(speed);
+        if (mTokens != null) {
+            PlayerCardStyle.styleSpeedItem(view, mTokens);
+        }
 
         if (mEditor != null) {
             mEditor.putString(PREF_PLAYBACK_SPEED, speed);

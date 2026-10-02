@@ -78,6 +78,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.viewpager2.widget.ViewPager2;
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback;
@@ -119,7 +120,11 @@ import org.cog.hymnchtv.reading.ReadingSettingsActivity;
 import org.cog.hymnchtv.reading.background.BackgroundPolicy;
 import org.cog.hymnchtv.reading.background.BackgroundPrefs;
 import org.cog.hymnchtv.reading.background.BackgroundSlot;
+import org.cog.hymnchtv.reading.BackgroundPickerActivity;
+import org.cog.hymnchtv.reading.background.BackgroundChoice;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
+import org.cog.hymnchtv.reading.background.UiTokens;
+import org.cog.hymnchtv.ui.lyrics.ReadingPanelSheet;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
 import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
 import org.cog.hymnchtv.utils.DepthPageTransformer;
@@ -268,6 +273,12 @@ public class ContentHandler extends BaseActivity {
     /** Colours matching the lyrics background actually shown; read by every ContentView page. */
     private ReadingPalette mLyricsPalette;
 
+    /** Surface/text/accent tokens derived from the same background (visual redesign spec section 4). */
+    private UiTokens mLyricsTokens;
+
+    private final ActivityResultLauncher<Intent> mBackgroundPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> applyReadingTheme());
+
     private final ActivityResultLauncher<Intent> mReadingSettingsLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
                 Intent data = result.getData();
@@ -292,8 +303,7 @@ public class ContentHandler extends BaseActivity {
         mChromeHost = new LyricsChromeHost(this, sPreference, new org.cog.hymnchtv.ui.lyrics.HandlerChromeTimer());
         mChromeHost.start(savedInstanceState != null && savedInstanceState.containsKey(STATE_CHROME_VISIBLE)
                 ? savedInstanceState.getBoolean(STATE_CHROME_VISIBLE) : null);
-        mLyricsPalette = BackgroundPrefs.applyTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
-        LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
+        applyReadingTheme();
         if (ReadingPrefs.lyricsFont(sPreference) == LyricsFont.KAI) {
             // Only the script the first page will show; the other one loads when first needed
             LyricsTypefaces.preload(this, LyricsLanguagePolicy.resolveShowTraditional(
@@ -483,6 +493,72 @@ public class ContentHandler extends BaseActivity {
                     BackgroundPrefs.resolve(getSharedPreferences(PREF_SETTINGS, 0), BackgroundSlot.LYRICS));
         }
         return mLyricsPalette;
+    }
+
+    /** UI tokens for the lyrics background on screen; same fallback rule as {@link #getLyricsPalette()}. */
+    public UiTokens getLyricsTokens() {
+        if (mLyricsTokens == null) {
+            mLyricsTokens = UiTokens.Companion.from(BackgroundPolicy.tokenInput(
+                    BackgroundPrefs.resolve(getSharedPreferences(PREF_SETTINGS, 0), BackgroundSlot.LYRICS)));
+        }
+        return mLyricsTokens;
+    }
+
+    /**
+     * The single propagation point of the lyrics theme (visual redesign 6): apply the LYRICS background, derive the
+     * palette and tokens once, and hand them to every page that has a view and to the player card. Called from
+     * onCreate (also after a recreation), when the Aa panel or the background picker changes the theme.
+     */
+    public void applyReadingTheme() {
+        BackgroundChoice choice = BackgroundPrefs.applyChoiceTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
+        mLyricsPalette = BackgroundPolicy.palette(choice);
+        mLyricsTokens = UiTokens.Companion.from(BackgroundPolicy.tokenInput(choice));
+        LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
+        for (ContentView page : livePages()) {
+            page.applyTheme(mLyricsPalette, mLyricsTokens);
+        }
+        if (mMediaGuiController != null) {
+            mMediaGuiController.applyTokens(mLyricsTokens);
+        }
+    }
+
+    /**
+     * Size, typeface or display mode changed in the Aa panel: apply to the pages that have a view now; a page without
+     * one (not created yet, or destroyed) reads the stored values in onCreateView.
+     *
+     * @param modeChanged true when the display mode changed: the session override is dropped so the new default shows
+     */
+    public void applyReadingPrefsToPages(boolean modeChanged) {
+        if (modeChanged) {
+            displayModeOverride = null;
+        }
+        for (ContentView page : livePages()) {
+            page.applyReadingPrefs();
+        }
+    }
+
+    /** The lyrics pages whose view exists (FragmentManager order); destroyed or not yet created ones are skipped. */
+    private List<ContentView> livePages() {
+        List<ContentView> pages = new ArrayList<>();
+        for (Fragment fragment : getSupportFragmentManager().getFragments()) {
+            if (fragment instanceof ContentView && fragment.isAdded() && fragment.getView() != null) {
+                pages.add((ContentView) fragment);
+            }
+        }
+        return pages;
+    }
+
+    /** The "Aa" button: quick reading-style panel. */
+    public void showReadingPanel() {
+        if (getSupportFragmentManager().findFragmentByTag(ReadingPanelSheet.TAG) == null && !isFinishing()
+                && !getSupportFragmentManager().isStateSaved()) {
+            new ReadingPanelSheet().show(getSupportFragmentManager(), ReadingPanelSheet.TAG);
+        }
+    }
+
+    /** "More..." of the Aa panel: the full background picker for the lyrics slot. */
+    public void openBackgroundPicker() {
+        mBackgroundPickerLauncher.launch(BackgroundPickerActivity.intent(this, BackgroundSlot.LYRICS));
     }
 
     /** Opens the reading settings; on return with changes all pages are rebuilt (see onReadingSettingsReturned). */

@@ -10,9 +10,9 @@
     android:padding="5dp">
 
     <RelativeLayout
+        android:id="@+id/player_card"
         android:layout_width="match_parent"
         android:layout_height="90dp"
-        android:background="@drawable/bg_player_card"
         android:paddingStart="5dp"
         android:paddingEnd="5dp">
 
