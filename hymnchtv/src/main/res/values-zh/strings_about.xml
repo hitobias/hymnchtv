@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_description">诗歌的歌词、乐谱浏览与播放。歌词与乐谱内容版权属台湾福音书房，请勿用于商业用途。</string>
+    <string name="about_licenses_title">开源授权</string>
+    <string name="about_licenses_empty">此版本无法显示授权清单。</string>
+    <string name="about_license_text_missing">（未附授权全文）</string>
+</resources>
