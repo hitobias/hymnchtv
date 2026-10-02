@@ -148,7 +148,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     public static final String PREF_TEXT_COLOR = "TextColor";
     public static final String PREF_TEXT_SIZE = "TextSize";
     public static final String PREF_THEME = "Theme";
-    public static final String PREF_LOCALE = "Locale";
+    public static final String PREF_LOCALE = LocaleStore.PREF_LOCALE;
 
     public static final String PREF_MEDIA_HYMN = "MediaHymn";
     private static final String mTocECFile = "lyrics_toc/toc_all_eng2ch.txt";

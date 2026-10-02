@@ -3,3 +3,5 @@ tools/lyrics_hant_overrides.tsv text eol=lf
 hymnchtv/src/main/assets/lyrics_*_text*/** -text
 hymnchtv/src/main/assets/lyrics_hant_manifest.txt text eol=lf
 hymnchtv/src/main/assets/lyrics_t2s_map.txt text eol=lf
+tools/gen_zh_hant.sh text eol=lf
+tools/zh_hant_ui_overrides.tsv text eol=lf
