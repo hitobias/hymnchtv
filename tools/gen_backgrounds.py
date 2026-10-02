@@ -218,6 +218,14 @@ def motif(name, gravity, width, height, **insets):
 
 
 LAYERS = {
+    "paper_white": [color("#ffffff")],
+    "parchment_beige": [color("#f5ecd7")],
+    "eye_green": [color("#cfe8cf")],
+    "pale_blue": [color("#e3edf6")],
+    "pale_pink": [color("#f7e8ea")],
+    "soft_grey": [color("#ececec")],
+    "dim_grey": [color("#2b2b2d")],
+    "true_black": [color("#000000")],
     "xuan": [color("#f8f6f0"), tile("bgx_tex_xuan")],
     "linen": [color("#ecebe6"), tile("bgx_tile_linen")],
     "parchment": [gradient("#f6ead0", "#e3cd9e", center="#f6ead0", center_y=0.5, radial=True), tile("bgx_tex_parchment")],
@@ -250,7 +258,9 @@ def clean():
     for folder in (DRAWABLE, NODPI, XXHDPI):
         folder.mkdir(parents=True, exist_ok=True)
         for f in list(folder.glob("bg_*.xml")) + list(folder.glob("bgx_*")):
-            f.unlink()
+            # Hand-written bg_*.xml (card and chip shapes) carry no header and must survive
+            if f.suffix != ".xml" or HEADER in f.read_text(encoding="utf-8"):
+                f.unlink()
 
 
 def main():
