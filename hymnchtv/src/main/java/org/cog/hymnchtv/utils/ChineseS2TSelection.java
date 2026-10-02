@@ -63,6 +63,11 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
             mSharedPref.edit().putString(ContentView.PREF_CONVERSION_TYPE, mVariant.getPrefValue()).apply();
         }
         checkVariantButton(mVariant);
+        if (!LyricsLanguagePolicy.HK_VARIANT_ENABLED) {
+            // Only one Traditional variant is offered, so the whole chooser is hidden
+            findViewById(R.id.variantTitle).setVisibility(View.GONE);
+            findViewById(R.id.radioGroupVar).setVisibility(View.GONE);
+        }
 
         mLyricsLang = LyricsLang.fromPref(mSharedPref.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null));
         mInitialVariant = mVariant;

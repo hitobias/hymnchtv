@@ -42,24 +42,24 @@ class LyricsLanguagePolicyTest {
     }
 
     @Test
-    fun defaultVariant() {
-        assertThat(LyricsLanguagePolicy.defaultVariant(hantHk)).isEqualTo(HantVariant.HK)
-        assertThat(LyricsLanguagePolicy.defaultVariant(Locale.forLanguageTag("zh-MO"))).isEqualTo(HantVariant.HK)
-        listOf(hantTw, hans, en).forEach {
+    fun hongKongVariantIsHiddenSoEveryoneGetsTaiwan() {
+        assertThat(LyricsLanguagePolicy.HK_VARIANT_ENABLED).isFalse()
+        listOf(hantHk, Locale.forLanguageTag("zh-MO"), hantTw, hans, en).forEach {
             assertThat(LyricsLanguagePolicy.defaultVariant(it)).isEqualTo(HantVariant.TW)
         }
     }
 
     @Test
     fun parseVariantReadsStoredValues() {
-        assertThat(LyricsLanguagePolicy.parseVariant("S2HK", hans)).isEqualTo(HantVariant.HK)
+        // A stored S2HK falls back to TW while the Hong Kong variant is hidden
+        assertThat(LyricsLanguagePolicy.parseVariant("S2HK", hans)).isEqualTo(HantVariant.TW)
         assertThat(LyricsLanguagePolicy.parseVariant("S2TW", hantHk)).isEqualTo(HantVariant.TW)
     }
 
     @Test
     fun parseVariantFallsBackToLocaleDefaultWithoutThrowing() {
         listOf(null, "", "S2T", "S2TWP", "T2S", "s2tw", "bogus").forEach {
-            assertThat(LyricsLanguagePolicy.parseVariant(it, hantHk)).isEqualTo(HantVariant.HK)
+            assertThat(LyricsLanguagePolicy.parseVariant(it, hantHk)).isEqualTo(HantVariant.TW)
             assertThat(LyricsLanguagePolicy.parseVariant(it, hantTw)).isEqualTo(HantVariant.TW)
         }
     }

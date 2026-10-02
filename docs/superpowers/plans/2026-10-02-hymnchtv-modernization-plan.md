@@ -165,6 +165,7 @@ object LyricsLanguagePolicy {
 
 - 新增 pref `LyricsDefaultLang`。
 - `PREF_CONVERSION_TYPE` 沿用原本的 key，但只會存 `S2TW` 或 `S2HK`。
+- **香港字形暫時隱藏（使用者決策，2026-10-02）**：設定畫面不顯示「繁中字形」區塊，所有繁中使用者都用台灣字形，包括香港和澳門地區。香港版歌詞檔保留，`LyricsLanguagePolicy.HK_VARIANT_ENABLED` 改成 `true` 就能重新開放。
 - **轉換標準從 4 個精簡成 2 個（使用者決策，2026-10-02）**：
   - 只保留「台灣」（S2TW，只轉字形）和「香港」（S2HK）。
   - 移除「標準繁體」（S2T）和「台灣詞彙」（S2TWP），因為 S2TWP 會改動詩歌用詞。

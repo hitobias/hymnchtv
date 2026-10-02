@@ -6,6 +6,9 @@ import java.util.Locale
 object LyricsLanguagePolicy {
     const val PREF_LYRICS_DEFAULT = "LyricsDefaultLang"
 
+    /** Hong Kong glyphs are hidden for now (user decision 2026-10-02); assets stay so this can be re-enabled. */
+    const val HK_VARIANT_ENABLED = false
+
     private val HK_REGIONS = setOf("HK", "MO")
 
     @JvmStatic
@@ -17,7 +20,7 @@ object LyricsLanguagePolicy {
 
     @JvmStatic
     fun defaultVariant(uiLocale: Locale): HantVariant =
-        if (LocaleRules.isChinese(uiLocale) && uiLocale.country in HK_REGIONS) HantVariant.HK else HantVariant.TW
+        if (HK_VARIANT_ENABLED && LocaleRules.isChinese(uiLocale) && uiLocale.country in HK_REGIONS) HantVariant.HK else HantVariant.TW
 
     /** True only for values written by this version ("S2TW"/"S2HK"). */
     @JvmStatic
@@ -26,5 +29,6 @@ object LyricsLanguagePolicy {
     /** Never throws; a missing or invalid value follows the UI region. */
     @JvmStatic
     fun parseVariant(value: String?, uiLocale: Locale): HantVariant =
-        HantVariant.entries.firstOrNull { it.prefValue == value } ?: defaultVariant(uiLocale)
+        HantVariant.entries.firstOrNull { it.prefValue == value && (HK_VARIANT_ENABLED || it != HantVariant.HK) }
+            ?: defaultVariant(uiLocale)
 }
