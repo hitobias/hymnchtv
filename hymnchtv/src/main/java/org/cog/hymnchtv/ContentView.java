@@ -55,13 +55,15 @@ import androidx.fragment.app.Fragment;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 import org.cog.hymnchtv.glide.MyGlideApp;
 import org.cog.hymnchtv.lyrics.HantVariant;
 import org.cog.hymnchtv.lyrics.LyricsAssets;
+import org.cog.hymnchtv.lyrics.LyricsLang;
+import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.utils.ChineseS2TSelection;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
@@ -101,7 +103,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public static final String EXTR_KEY_HAS_CHANGES = "hasChanges";
     public final static String PREF_SCORE_COLOR = "ScoreColor";
     public static final String PREF_CONVERSION_TYPE = "ConversionType";
-    public static final String PREF_SIMPLIFY = "LyricsSimplify";
     public static final String PREF_LYRICS_SCALE_P = "LyricsScaleP";
     public static final String PREF_LYRICS_SCALE_L = "LyricsScaleL";
     public static final String PREF_LYRICS_ENGLISH_SCALE_P = "LyricsScaleEP";
@@ -119,7 +120,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
     private ImageView mContentView = null;
     private Integer mHymnNoEng = null;
-    private boolean isSimplify;
     private boolean isErGe;
     private boolean mLyricsLoaded = false;
     private boolean hasEnglishLyrics = false;
@@ -183,8 +183,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsScaleEP = mSharedPref.getFloat(PREF_LYRICS_ENGLISH_SCALE_P, 1.0f);
         lyricsScaleEL = mSharedPref.getFloat(PREF_LYRICS_ENGLISH_SCALE_L, 1.0f);
 
-        isSimplify = mSharedPref.getBoolean(PREF_SIMPLIFY, true);
-
         mScoreColor = mSharedPref.getInt(PREF_SCORE_COLOR, 0);
         mMatrix = (mScoreColor == 0) ? null : getColorMatrix(mColorRange[mScoreColor]);
 
@@ -209,6 +207,10 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public void onResume() {
         super.onResume();
         registerForContextMenu(lyricsView);
+        // ViewPager2 only resumes the visible page: re-apply a button_ts toggle made on another page
+        if (!hasEnglishLyrics) {
+            toggleLyricsView();
+        }
         Timber.w("Content View on Resume");
 
         // get the corresponding English lyrics# or null if none
@@ -246,9 +248,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         int id = v.getId();
         if (id == R.id.button_ts) {
             if (!hasEnglishLyrics) {
-                isSimplify = !isSimplify;
-                mEditor.putBoolean(PREF_SIMPLIFY, isSimplify);
-                mEditor.apply();
+                // Session-only toggle; the persisted default is set in ChineseS2TSelection
+                mContentHandler.lyricsViewOverride = !isShowTraditional();
             }
             else {
                 hasEnglishLyrics = false;
@@ -445,22 +446,10 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      * @param resFName Lyrics text resource fileName
      */
     private void showLyricsChText(String resFName) {
-        try {
-            InputStream inputStream = getResources().getAssets().open(resFName);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-
-            StringBuilder lyrics = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                lyrics.append(line);
-                lyrics.append('\n');
-            }
+        String lyrics = readAsset(resFName);
+        if (lyrics != null) {
             lyricsSimplify.setText(lyrics);
-            String hantPath = LyricsAssets.hantPath(resFName, HantVariant.TW);
-            lyricsTraditional.setText(hantPath == null ? lyrics : readHantAsset(hantPath, lyrics));
-        }
-        catch (IOException e) {
-            Timber.w("Error reading file: %s", resFName);
+            lyricsTraditional.setText(loadTraditional(resFName, lyrics));
         }
 
         // Auto launch or hint user to view lyrics text via online JiaoChang if available; er,length > 47
@@ -469,8 +458,20 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         }
     }
 
-    /** Temporary until Task 12 (j): pre-generated TW lyrics, falling back to the Simplified text. */
-    private CharSequence readHantAsset(String path, CharSequence fallback) {
+    /** Pre-generated Traditional lyrics (plan A.1.9); the sync test guarantees they exist, Simplified is a last resort. */
+    private String loadTraditional(String resFName, String simplified) {
+        HantVariant variant = LyricsLanguagePolicy.parseVariant(mSharedPref.getString(PREF_CONVERSION_TYPE, null), uiLocale());
+        String hantPath = LyricsAssets.hantPath(resFName, variant);
+        String text = (hantPath == null) ? null : readAsset(hantPath);
+        if (text != null) {
+            return text;
+        }
+        Timber.w("Missing pre-generated lyrics %s; showing Simplified", hantPath);
+        return simplified;
+    }
+
+    /** @return the asset text with '\n' line ends, or null if it cannot be read. */
+    private String readAsset(String path) {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(getResources().getAssets().open(path), StandardCharsets.UTF_8))) {
             StringBuilder text = new StringBuilder();
@@ -478,11 +479,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             while ((line = reader.readLine()) != null) {
                 text.append(line).append('\n');
             }
-            return text;
+            return text.toString();
         }
         catch (IOException e) {
-            Timber.w("Missing pre-generated lyrics %s", path);
-            return fallback;
+            Timber.w("Error reading file: %s", path);
+            return null;
         }
     }
 
@@ -575,13 +576,26 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             mLyricsEnglishRecord.fetchLyrics(mHymnNoEng, isErGe);
         }
         else {
-            if (isSimplify) {
+            if (!isShowTraditional()) {
                 lyricsSimplify.setVisibility(View.VISIBLE);
             }
             else {
                 lyricsTraditional.setVisibility(View.VISIBLE);
             }
         }
+    }
+
+    private boolean isShowTraditional() {
+        Boolean override = mContentHandler.lyricsViewOverride;
+        if (override != null) {
+            return override;
+        }
+        LyricsLang pref = LyricsLang.fromPref(mSharedPref.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null));
+        return LyricsLanguagePolicy.resolveShowTraditional(pref, uiLocale());
+    }
+
+    private Locale uiLocale() {
+        return mContentHandler.getResources().getConfiguration().getLocales().get(0);
     }
 
     @Override
@@ -614,8 +628,10 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             Intent intent = result.getData();
             if (intent != null) {
                 boolean hasChanges = intent.getBooleanExtra(EXTR_KEY_HAS_CHANGES, false);
-                if (!isSimplify && hasChanges) {
-                    toggleLyricsView();
+                if (hasChanges) {
+                    // New default and/or conversion standard: drop the session toggle and rebuild all pages
+                    mContentHandler.lyricsViewOverride = null;
+                    mContentHandler.recreate();
                 }
             }
         }
