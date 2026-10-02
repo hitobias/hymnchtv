@@ -137,7 +137,7 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class MediaConfig extends BaseActivity
-        implements View.OnClickListener, View.OnLongClickListener, AdapterView.OnItemSelectedListener {
+        implements View.OnClickListener, AdapterView.OnItemSelectedListener {
     private static final ArrayList<String> videoUrls = new ArrayList<>(); // tutorial videos removed (sub-project Z)
 
     public static final String HYMN_NO = "hymnNo";
@@ -418,13 +418,11 @@ public class MediaConfig extends BaseActivity
 
         btnNQ = findViewById(R.id.button_NQ);
         btnNQ.setOnClickListener(this);
-        btnNQ.setOnLongClickListener(this);
 
         findViewById(R.id.editFile).setOnClickListener(this);
         findViewById(R.id.button_db_records).setOnClickListener(this);
 
         findViewById(R.id.button_import).setOnClickListener(this);
-        findViewById(R.id.button_import).setOnLongClickListener(this);
         // Lifecycle-aware: removed automatically when this screen is destroyed; the import itself is process-owned.
         View btnImport = findViewById(R.id.button_import);
         urlImportRunning.observe(this, running -> btnImport.setEnabled(!Boolean.TRUE.equals(running)));
@@ -506,21 +504,6 @@ public class MediaConfig extends BaseActivity
         else if (id == R.id.button_db_records) {
             showMediaRecords(-1);
         }
-    }
-
-    @Override
-    public boolean onLongClick(View v) {
-        int id = v.getId();
-        if (id == R.id.button_NQ) {
-            downloadNQRecord(Mode.QQ_LINK);
-            return true;
-        }
-        else if (id == R.id.button_import) {
-            Timber.d("import Media Records from: %s", ASSET_URL_IMPORT_FILE);
-            importMediaRecords(ASSET_URL_IMPORT_FILE);
-            return true;
-        }
-        return false;
     }
 
     /**

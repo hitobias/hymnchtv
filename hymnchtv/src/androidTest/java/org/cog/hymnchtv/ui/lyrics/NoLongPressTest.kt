@@ -16,6 +16,7 @@ import org.cog.hymnchtv.ContentHandler
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.TestPermissions
+import org.cog.hymnchtv.mediaconfig.MediaConfig
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -74,6 +75,19 @@ class NoLongPressTest {
             var longClickable = true
             scenario.onActivity { longClickable = it.findViewById<View>(R.id.history_log).isLongClickable }
             assertThat(longClickable).isFalse()
+        }
+    }
+
+    @Test
+    fun mediaConfigNotionAndImportButtonsAreNotLongClickable() {
+        ActivityScenario.launch(MediaConfig::class.java).use { scenario ->
+            var longClickable: List<String> = listOf("not checked")
+            scenario.onActivity { activity ->
+                longClickable = intArrayOf(R.id.button_NQ, R.id.button_import)
+                    .filter { activity.findViewById<View>(it).isLongClickable }
+                    .map { activity.resources.getResourceEntryName(it) }
+            }
+            assertThat(longClickable).isEmpty()
         }
     }
 }

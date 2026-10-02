@@ -9,7 +9,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
-import org.cog.hymnchtv.HymnToc
+import org.cog.hymnchtv.ui.toc.TocConstants
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.concurrent.AppExecutors
@@ -20,7 +20,7 @@ import org.cog.hymnchtv.ui.home.HomePrefs
 /** TOC tab: pick a hymn book and a kind of index, browse the tree, tap a hymn to open its lyrics. */
 class TocFragment : Fragment(R.layout.fragment_toc) {
     private var hymnType: String = MainActivity.HYMN_DB
-    private var tocPage: String = HymnToc.TOC_CATEGORY
+    private var tocPage: String = TocConstants.TOC_CATEGORY
 
     private var views: Views? = null
     private var loadRequest = 0
@@ -129,7 +129,7 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
         val key = Triple(hymnType, tocPage, variant)
 
         // The English cross-reference does not exist for these books (the numbers are the same in both languages)
-        if (tocPage == HymnToc.TOC_ENGLISH && (hymnType == MainActivity.HYMN_ER || hymnType == MainActivity.HYMN_XB)) {
+        if (tocPage == TocConstants.TOC_ENGLISH && (hymnType == MainActivity.HYMN_ER || hymnType == MainActivity.HYMN_XB)) {
             show(v, emptyMap(), R.string.en2ch_hymn_same)
             return
         }
@@ -182,10 +182,10 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
 
         /** Tab label -> the index kind TocBuilder understands (the 目录 tab of the old spinner listed nothing). */
         private val PAGES = listOf(
-            R.string.hymn_category to HymnToc.TOC_CATEGORY,
-            R.string.hymn_stroke to HymnToc.TOC_STROKE,
-            R.string.hymn_pinyin to HymnToc.TOC_PINYIN,
-            R.string.hymn_eng2ch to HymnToc.TOC_ENGLISH,
+            R.string.hymn_category to TocConstants.TOC_CATEGORY,
+            R.string.hymn_stroke to TocConstants.TOC_STROKE,
+            R.string.hymn_pinyin to TocConstants.TOC_PINYIN,
+            R.string.hymn_eng2ch to TocConstants.TOC_ENGLISH,
         )
     }
 }

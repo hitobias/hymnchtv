@@ -1,7 +1,7 @@
 package org.cog.hymnchtv.ui.toc
 
 import com.google.common.truth.Truth.assertThat
-import org.cog.hymnchtv.HymnToc
+import org.cog.hymnchtv.ui.toc.TocConstants
 import org.cog.hymnchtv.MainActivity.HYMN_BB
 import org.cog.hymnchtv.MainActivity.HYMN_DB
 import org.cog.hymnchtv.MainActivity.HYMN_YB
@@ -20,8 +20,8 @@ class TocBuilderHantTest {
 
     @Test
     fun categoryNamesAreTraditional() {
-        val simplified = build(HYMN_DB, HymnToc.TOC_CATEGORY, null)
-        val hant = build(HYMN_DB, HymnToc.TOC_CATEGORY, HantVariant.TW)
+        val simplified = build(HYMN_DB, TocConstants.TOC_CATEGORY, null)
+        val hant = build(HYMN_DB, TocConstants.TOC_CATEGORY, HantVariant.TW)
         assertThat(simplified.keys).contains("颂三一神")
         assertThat(hant.keys).contains("頌三一神")
         assertThat(hant.keys).contains("聖靈豐滿")
@@ -31,8 +31,8 @@ class TocBuilderHantTest {
 
     @Test
     fun categoryItemsAreTraditionalWithTheSameNumbersAndCounts() {
-        val simplified = build(HYMN_DB, HymnToc.TOC_CATEGORY, null).values.toList()
-        val hant = build(HYMN_DB, HymnToc.TOC_CATEGORY, HantVariant.TW).values.toList()
+        val simplified = build(HYMN_DB, TocConstants.TOC_CATEGORY, null).values.toList()
+        val hant = build(HYMN_DB, TocConstants.TOC_CATEGORY, HantVariant.TW).values.toList()
         assertThat(hant.map { it.size }).isEqualTo(simplified.map { it.size })
         assertThat(hant.first().first()).isEqualTo("0001: 祂的計劃（英1）")
         assertThat(simplified.first().first()).isEqualTo("0001: 祂的计划（英1）")
@@ -43,8 +43,8 @@ class TocBuilderHantTest {
 
     @Test
     fun pinyinGroupsAndOrderAreUnchangedOnlyTheCharactersConvert() {
-        val simplified = build(HYMN_DB, HymnToc.TOC_PINYIN, null)
-        val hant = build(HYMN_DB, HymnToc.TOC_PINYIN, HantVariant.TW)
+        val simplified = build(HYMN_DB, TocConstants.TOC_PINYIN, null)
+        val hant = build(HYMN_DB, TocConstants.TOC_PINYIN, HantVariant.TW)
         // letters A..Z; the "（first characters）" suffix is shown in Traditional
         assertThat(hant.keys.map { it.takeWhile { c -> c != '（' } }).containsExactlyElementsIn(simplified.keys.map { it.takeWhile { c -> c != '（' } }).inOrder()
         // same hymn numbers in the same order inside every group: sorting never depends on the shown script
@@ -58,8 +58,8 @@ class TocBuilderHantTest {
 
     @Test
     fun strokeHeadingsAreTraditionalAndKeepTheSimplifiedGrouping() {
-        val simplified = build(HYMN_DB, HymnToc.TOC_STROKE, null)
-        val hant = build(HYMN_DB, HymnToc.TOC_STROKE, HantVariant.TW)
+        val simplified = build(HYMN_DB, TocConstants.TOC_STROKE, null)
+        val hant = build(HYMN_DB, TocConstants.TOC_STROKE, HantVariant.TW)
         assertThat(simplified.keys.first()).startsWith("一画")
         assertThat(hant.keys.first()).startsWith("一畫")
         assertThat(hant.keys.size).isEqualTo(simplified.keys.size)
@@ -70,28 +70,28 @@ class TocBuilderHantTest {
 
     @Test
     fun ybListIsTraditional() {
-        val hant = build(HYMN_YB, HymnToc.TOC_CATEGORY, HantVariant.TW)
+        val hant = build(HYMN_YB, TocConstants.TOC_CATEGORY, HantVariant.TW)
         assertThat(hant.keys).containsExactly("青年詩歌")
         assertThat(hant.getValue("青年詩歌").first()).isEqualTo("0001: 神就是愛 (bb876)")
     }
 
     @Test
     fun englishCrossReferenceItemsAreTraditional() {
-        val hant = build(HYMN_BB, HymnToc.TOC_ENGLISH, HantVariant.TW)
+        val hant = build(HYMN_BB, TocConstants.TOC_ENGLISH, HantVariant.TW)
         assertThat(hant).isNotEmpty()
         assertThat(hant.values.flatten().none { it.contains("诗") }).isTrue()
     }
 
     @Test
     fun withoutAVariantNothingChanges() {
-        assertThat(build(HYMN_DB, HymnToc.TOC_CATEGORY, null))
-            .isEqualTo(TocBuilder.build(::reader, HYMN_DB, HymnToc.TOC_CATEGORY, TEST_BB_LIMIT, TEST_ER_LIMIT))
+        assertThat(build(HYMN_DB, TocConstants.TOC_CATEGORY, null))
+            .isEqualTo(TocBuilder.build(::reader, HYMN_DB, TocConstants.TOC_CATEGORY, TEST_BB_LIMIT, TEST_ER_LIMIT))
     }
 
     @Test
     fun missingTraditionalAssetsFallBackToSimplified() {
         val onlySimplified = { path: String -> if ("_hant_" in path) null else reader(path) }
-        val toc = TocBuilder.build(onlySimplified, HYMN_DB, HymnToc.TOC_CATEGORY, TEST_BB_LIMIT, TEST_ER_LIMIT, HantVariant.TW)
+        val toc = TocBuilder.build(onlySimplified, HYMN_DB, TocConstants.TOC_CATEGORY, TEST_BB_LIMIT, TEST_ER_LIMIT, HantVariant.TW)
         assertThat(toc.keys).contains("颂三一神")
     }
 

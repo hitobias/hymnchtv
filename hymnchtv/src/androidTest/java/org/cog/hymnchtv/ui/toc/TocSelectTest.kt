@@ -10,7 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
 import com.google.common.truth.Truth.assertThat
-import org.cog.hymnchtv.HymnToc
+import org.cog.hymnchtv.ui.toc.TocConstants
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.ui.FragmentHost
 import org.cog.hymnchtv.ui.picker.PickerTestSupport
@@ -63,7 +63,7 @@ class TocSelectTest {
     @Test fun selectRejectsUnknownBooksAndPages() = PickerTestSupport.launch { scenario ->
         scenario.onActivity { a ->
             val toc = TocFragment()
-            runCatching { toc.select("hymn_zz", HymnToc.TOC_CATEGORY) }.also { assertThat(it.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java) }
+            runCatching { toc.select("hymn_zz", TocConstants.TOC_CATEGORY) }.also { assertThat(it.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java) }
             runCatching { toc.select("hymn_db", "bogus") }.also { assertThat(it.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java) }
             assertThat(a).isNotNull()
         }

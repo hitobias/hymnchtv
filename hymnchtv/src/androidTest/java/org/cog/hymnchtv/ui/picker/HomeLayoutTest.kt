@@ -30,10 +30,11 @@ class HomeLayoutTest {
         PickerTestSupport.launch { scenario ->
             scenario.onActivity { a ->
                 val dm = a.resources.displayMetrics
-                val heightDp = dm.heightPixels / dm.density
+                // The height the home page really gets (screen minus status bar, toolbar and bottom navigation), not the raw screen height
+                val heightDp = a.findViewById<View>(R.id.fragment_container).height / dm.density
                 val portrait = a.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
                 val fontScale = a.resources.configuration.fontScale
-                assumeTrue("needs a 720dp tall portrait screen at normal font size", portrait && heightDp >= 720 && fontScale <= 1.0f)
+                assumeTrue("needs a portrait home page at least 580dp tall (a 720dp screen) at normal font size", portrait && heightDp >= 580 && fontScale <= 1.0f)
                 for (id in listOf(R.id.tv_search, R.id.bs_db, R.id.tv_entry, R.id.n1, R.id.n11, R.id.btn_open)) {
                     val v = a.findViewById<View>(id)
                     val r = Rect()

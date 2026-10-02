@@ -2,8 +2,8 @@ package org.cog.hymnchtv.ui.toc
 
 /**
  * The category names of each hymn book and the hymn number at which each category starts (the last entry is one past the
- * end). Moved out of the HymnToc activity so the TOC can be built without loading an Activity class; HymnToc and
- * ContentHandler still read them through their old public fields.
+ * end). Moved out of the HymnToc activity so the TOC can be built without loading an Activity class;
+ * TocConstants re-exports them for Java callers.
  */
 object TocData {
     /* 大本诗歌 db toc category */

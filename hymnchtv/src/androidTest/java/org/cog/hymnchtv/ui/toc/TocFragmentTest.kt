@@ -14,7 +14,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.chip.Chip
 import com.google.common.truth.Truth.assertThat
-import org.cog.hymnchtv.HymnToc
+import org.cog.hymnchtv.ui.toc.TocConstants
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.ui.FragmentHost
@@ -100,8 +100,8 @@ class TocFragmentTest {
         // The unit tests pass the Bb/Er skip limits explicitly; check they are what the app really uses
         assertThat(HymnNoValidate.rangeBbLimit).isEqualTo(intArrayOf(38, 151, 259, 350, 471, 544, 630, 763, 881, 931, 1006))
         assertThat(HymnNoValidate.rangeErLimit).isEqualTo(intArrayOf(18, 125, 213, 324, 446, 525, 622, 720, 837, 921, 1040, 1119, 1233))
-        val toc = TocBuilder.build(ctx, MainActivity.HYMN_BB, HymnToc.TOC_CATEGORY)
-        assertThat(toc.keys).containsExactlyElementsIn(HymnToc.hymnCategoryBb.toList()).inOrder()
+        val toc = TocBuilder.build(ctx, MainActivity.HYMN_BB, TocConstants.TOC_CATEGORY)
+        assertThat(toc.keys).containsExactlyElementsIn(TocConstants.hymnCategoryBb.toList()).inOrder()
         assertThat(toc.values.sumOf { it.size }).isGreaterThan(400)
     }
 }
