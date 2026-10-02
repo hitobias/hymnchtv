@@ -153,7 +153,7 @@ public class UpdateServiceImpl {
                         String.valueOf(latestVersionCode), fileNameApk, currentVersion, String.valueOf(currentVersionCode));
                 String btnText = context.getString(R.string.download);
 
-                String historyText = "&#9210; 无更新";
+                String historyText = "&#9210; " + context.getString(R.string.update_none);
                 if (isValidateLink(changeLog)) {
                     try {
                         InputStream inputStream = mHttpConnection.getInputStream();
