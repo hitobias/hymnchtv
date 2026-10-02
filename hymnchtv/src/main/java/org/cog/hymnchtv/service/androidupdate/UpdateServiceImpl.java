@@ -355,14 +355,14 @@ public class UpdateServiceImpl {
         }
     }
 
-    private SharedPreferences getStore() {
+    private synchronized SharedPreferences getStore() {
         if (store == null) {
             store = HymnsApp.getGlobalContext().getSharedPreferences("store", Context.MODE_PRIVATE);
         }
         return store;
     }
 
-    private void rememberDownloadId(long id) {
+    private synchronized void rememberDownloadId(long id) {
         SharedPreferences store = getStore();
         store.edit().putString(ENTRY_NAME, store.getString(ENTRY_NAME, "") + id + ",").apply();
     }
@@ -388,7 +388,7 @@ public class UpdateServiceImpl {
      * Removes old update downloads (DownloadManager deletes their files) and staged apks that are already
      * installed. Called at app start-up.
      */
-    public void removeOldDownloads() {
+    public synchronized void removeOldDownloads() {
         DownloadManager downloadManager = HymnsApp.getDownloadManager();
         for (long id : getOldDownloads()) {
             downloadManager.remove(id);

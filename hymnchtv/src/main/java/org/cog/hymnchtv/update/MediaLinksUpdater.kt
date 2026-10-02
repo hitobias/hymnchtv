@@ -2,6 +2,7 @@ package org.cog.hymnchtv.update
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.database.SQLException
 import androidx.annotation.WorkerThread
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.mediaconfig.MediaConfig
@@ -26,6 +27,10 @@ object MediaLinksUpdater {
             Timber.i("Imported bundled media links v%s (was %s)", MediaLinksPolicy.BUNDLED_VERSION, installed)
         } catch (e: IOException) {
             Timber.w(e, "Bundled media links import failed")
+        } catch (e: SQLException) {
+            // The batch import throws instead of logging per record (B-9a); it already rolled back. The stored
+            // version stays unchanged, so the import is retried on the next start.
+            Timber.e(e, "Bundled media links import failed")
         }
     }
 
