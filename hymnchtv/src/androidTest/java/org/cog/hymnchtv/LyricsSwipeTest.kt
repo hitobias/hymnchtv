@@ -99,7 +99,8 @@ class LyricsSwipeTest {
 
     private fun ActivityScenario<ContentHandler>.awaitPage() {
         val end = SystemClock.uptimeMillis() + 15_000
-        while (scrollCentre() == null) {
+        // Idle pager: while a page turn is still settling, the resumed fragment may be the outgoing one, off screen
+        while (scrollCentre() == null || read { it.findViewById<ViewPager2>(R.id.viewPager).scrollState } != ViewPager2.SCROLL_STATE_IDLE) {
             check(SystemClock.uptimeMillis() < end) { "timed out waiting for the page" }
             instrumentation.waitForIdleSync()
             SystemClock.sleep(100)
