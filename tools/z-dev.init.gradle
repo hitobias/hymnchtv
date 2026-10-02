@@ -1,9 +1,0 @@
-// Sub-project Z, lanes only (deleted in Task 12): adds the real org.json for JVM unit tests without touching the
-// shared hymnchtv/build.gradle. Usage: ./gradlew -I tools/z-dev.init.gradle :hymnchtv:testDebugUnitTest
-allprojects {
-    pluginManager.withPlugin('com.android.application') {
-        dependencies {
-            testImplementation 'org.json:json:20250517'
-        }
-    }
-}

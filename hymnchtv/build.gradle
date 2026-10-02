@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'com.mikepenz.aboutlibraries.plugin.android'
 
 android {
     compileSdk = rootProject.compileSdk
@@ -6,11 +7,12 @@ android {
 
     defaultConfig {
         namespace = 'org.cog.hymnchtv'
-        applicationId = 'org.cog.hymnchtv'
+        // New identity (sub-project Z): the code package stays org.cog.hymnchtv; only the installed app id changes.
+        applicationId = 'com.ziontkec.hymnal'
 
-        // End digit - change to force update with same version number
-        versionCode 209020
-        versionName "2.9.2"
+        // versionCode = X*100000 + Y*1000 + Z*10 + n; the end digit n forces an update with the same version number
+        versionCode 100000
+        versionName "1.0.0"
 
         minSdkVersion rootProject.minSdk
         targetSdkVersion rootProject.compileSdk
@@ -147,6 +149,8 @@ dependencies {
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'com.google.truth:truth:1.4.5'
+    // Real org.json for JVM unit tests (android.jar only ships stubs); the app uses the platform copy.
+    testImplementation 'org.json:json:20250517'
 
     androidTestImplementation 'androidx.test:runner:1.7.0'
     androidTestImplementation 'androidx.test:core:1.7.0'
@@ -154,46 +158,10 @@ dependencies {
     androidTestImplementation 'com.google.truth:truth:1.4.5'
 }
 
-/*
- * Generate the version.properties file with the actual build versionName and versionCode.
- * The version.properties is retrieved during app update check to asses if there is a new update
- */
-tasks.register('updateVersionFile', Copy) {
-    group = 'Custom Tasks'
-    def description = '<!-- Generate version.properties file -->'
-
-    // Media url record import version; the value must be increased if there is an update to url_import file,
-    // even for new apk release. To allow existing installed hymnchtv version app to update url import,
-    // increase this value and git check in both the version.properties and new url_import file.
-    def urlImport = 105
-    def versionName = android.defaultConfig.versionName
-    def versionCode = android.defaultConfig.versionCode
-    def date = new Date()
-    // ******************************************
-    println "*** " + description
-    println "# Date: " + date
-    println "# last_version = " + versionName
-    println "# last_version_code = " + versionCode
-    println "# url_import = " + urlImport
-
-    outputs.upToDateWhen {
-        false
-    }
-    from('./version.properties') {
-        // Substitute property tokens in files
-        expand(DATE: date, BUILD_VERSION: versionName, BUILD_VERSION_CODE: versionCode, URL_IMPORT: urlImport)
-    }
-    into 'release'
-}
-
 // Uncomment below lines if you want to show all deprecated warnings
 tasks.withType(JavaCompile).configureEach {
     // options.compilerArgs << '-Xlint:unchecked'
     options.deprecation = true
-}
-
-tasks.named("build") {
-    dependsOn "updateVersionFile"
 }
 
 // LyricsHantAssetsTest reads these files directly; declare them so Gradle re-runs unit tests when they change.
@@ -218,3 +186,63 @@ tasks.withType(Test).configureEach {
     inputs.files(rootProject.file('tools/font_subset_manifest.txt'))
         .withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('readingGeneratorInputs')
 }
+
+// IdentityGuardTest scans shipped sources, assets, Gradle files and the README (sub-project Z).
+tasks.withType(Test).configureEach {
+    inputs.files(fileTree('src/main/java'), fileTree('src/main/res'), fileTree('src/main/assets'),
+            file('src/main/AndroidManifest.xml'), fileTree('aboutlibraries-config'), file('build.gradle'),
+            rootProject.file('build.gradle'), rootProject.file('README.md'))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName('identityGuardSources')
+}
+
+// Open-source license notices for the About page (sub-project Z), generated at build time into R.raw.aboutlibraries.
+// Property-style access avoids Groovy's built-in collect() on the configuration closures.
+aboutLibraries.collect.configPath.set(file('aboutlibraries-config'))
+aboutLibraries.collect.fetchRemoteLicense.set(false)
+aboutLibraries.export.excludeFields.addAll('developers', 'funding', 'organization', 'scm', 'website')
+
+// Hard license gate (sub-project Z): the plugin's strict mode plus verifyLicenseNotices, both driven by
+// aboutlibraries-config/license-allowlist.txt. assembleRelease fails on any library with no license, an
+// unapproved license, or a license without full text. Only the user adds allowlist entries (Task 12 Step 11).
+def licenseAllowlist = file('aboutlibraries-config/license-allowlist.txt')
+def licenseRules = licenseAllowlist.readLines()*.trim().findAll { it && !it.startsWith('#') }
+def allowedEverywhere = licenseRules.findAll { it.startsWith('license ') }.collect { it.substring('license '.length()).trim() }
+aboutLibraries.license.strictMode.set(com.mikepenz.aboutlibraries.plugin.StrictMode.FAIL)
+aboutLibraries.license.allowedLicenses.addAll(allowedEverywhere)
+licenseRules.findAll { it.startsWith('library ') }.each { rule ->
+    def (ignored, libraryId, licenseKey) = rule.split(/\s+/, 3) as List
+    aboutLibraries.license.allowedLicensesMap.put(licenseKey, (aboutLibraries.license.allowedLicensesMap.getting(licenseKey).getOrElse([]) + [libraryId]))
+}
+
+tasks.register('verifyLicenseNotices') {
+    group = 'verification'
+    description = 'Fails unless every bundled library has an approved license with full text (sub-project Z).'
+    dependsOn 'prepareLibraryDefinitionsRelease'
+    def generated = layout.buildDirectory.file('generated/aboutLibraries/release/res/raw/aboutlibraries.json')
+    inputs.file(licenseAllowlist)
+    inputs.file(generated)
+    doLast {
+        def data = new groovy.json.JsonSlurper().parse(generated.get().asFile)
+        def problems = []
+        data.libraries.each { lib ->
+            def keys = lib.licenses ?: []
+            if (keys.isEmpty()) {
+                problems << "${lib.uniqueId}: no license"
+            }
+            keys.each { key ->
+                boolean approved = allowedEverywhere.contains(key) || licenseRules.contains("library ${lib.uniqueId} ${key}".toString())
+                if (!approved) {
+                    problems << "${lib.uniqueId}: license '${key}' is not in aboutlibraries-config/license-allowlist.txt"
+                }
+                if (!data.licenses[key]?.content) {
+                    problems << "${lib.uniqueId}: no full text for license '${key}' (add aboutlibraries-config/licenses/<file>.json)"
+                }
+            }
+        }
+        if (!problems.isEmpty()) {
+            throw new GradleException("License gate failed:\n  " + problems.unique().join("\n  "))
+        }
+    }
+}
+tasks.matching { it.name == 'assembleRelease' }.configureEach { dependsOn 'verifyLicenseNotices' }
