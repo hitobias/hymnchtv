@@ -28,4 +28,14 @@ object PhotoBackground {
         while (srcWidth / (size * 2) >= reqWidth && srcHeight / (size * 2) >= reqHeight) size *= 2
         return size
     }
+
+    /** [sampleSize], raised until the decoded long side is at most twice the screen's long side. */
+    @JvmStatic
+    fun boundedSampleSize(srcWidth: Int, srcHeight: Int, screenWidth: Int, screenHeight: Int): Int {
+        var size = sampleSize(srcWidth, srcHeight, screenWidth, screenHeight)
+        if (srcWidth <= 0 || srcHeight <= 0 || screenWidth <= 0 || screenHeight <= 0) return size
+        val limit = 2 * maxOf(screenWidth, screenHeight)
+        while (maxOf(srcWidth, srcHeight) / size > limit) size *= 2
+        return size
+    }
 }

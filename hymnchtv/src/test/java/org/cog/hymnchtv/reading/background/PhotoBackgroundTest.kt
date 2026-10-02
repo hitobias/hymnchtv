@@ -30,4 +30,14 @@ class PhotoBackgroundTest {
         assertThat(PhotoBackground.sampleSize(0, 100, 10, 10)).isEqualTo(1)
         assertThat(PhotoBackground.sampleSize(100, 100, 0, 10)).isEqualTo(1)
     }
+
+    @Test
+    fun boundedSampleSizeCapsTheLongSideAtTwiceTheScreen() {
+        // landscape photo on a portrait screen: the both-sides rule alone would keep 8000 px
+        assertThat(PhotoBackground.sampleSize(8000, 4500, 1080, 2400)).isEqualTo(1)
+        assertThat(PhotoBackground.boundedSampleSize(8000, 4500, 1080, 2400)).isEqualTo(2)
+        assertThat(PhotoBackground.boundedSampleSize(4000, 2250, 1080, 2400)).isEqualTo(1)
+        assertThat(PhotoBackground.boundedSampleSize(4320, 9600, 1080, 2400)).isEqualTo(4)
+        assertThat(PhotoBackground.boundedSampleSize(0, 100, 10, 10)).isEqualTo(1)
+    }
 }

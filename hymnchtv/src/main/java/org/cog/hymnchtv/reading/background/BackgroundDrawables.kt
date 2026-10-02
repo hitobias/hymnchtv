@@ -161,26 +161,41 @@ class RaysDrawable : Drawable() {
 class StarsDrawable(private val density: Float) : Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var alphaScale = 1f
+    private var glows: List<Glow> = emptyList()
 
-    override fun draw(canvas: Canvas) {
+    private class Glow(val cx: Float, val cy: Float, val radius: Float, val paint: Paint)
+
+    override fun onBoundsChange(bounds: Rect) = rebuild()
+
+    /** Gradients are built here, not in draw(), so drawing allocates nothing. */
+    private fun rebuild() {
         val b = bounds
-        for (star in STARS) {
+        glows = STARS.map { star ->
             val cx = b.left + b.width() * star.x
             val cy = b.top + b.height() * star.y
             val radius = star.radiusDp * density * 1.5f
             val alpha = (255 * star.relativeAlpha * MAX_ALPHA * alphaScale).toInt()
-            paint.shader = RadialGradient(cx, cy, radius, Color.argb(alpha, 255, 255, 255), Color.TRANSPARENT, Shader.TileMode.CLAMP)
-            canvas.drawCircle(cx, cy, radius, paint)
+            val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                colorFilter = paint.colorFilter
+                shader = RadialGradient(cx, cy, radius, Color.argb(alpha, 255, 255, 255), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            }
+            Glow(cx, cy, radius, glowPaint)
         }
+    }
+
+    override fun draw(canvas: Canvas) {
+        for (g in glows) canvas.drawCircle(g.cx, g.cy, g.radius, g.paint)
     }
 
     override fun setAlpha(alpha: Int) {
         alphaScale = alpha / 255f
+        rebuild()
         invalidateSelf()
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
         paint.colorFilter = colorFilter
+        rebuild()
         invalidateSelf()
     }
 

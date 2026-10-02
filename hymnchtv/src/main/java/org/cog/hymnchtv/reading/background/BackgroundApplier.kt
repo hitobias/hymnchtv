@@ -49,9 +49,15 @@ object BackgroundApplier {
         BitmapFactory.decodeFile(file.path, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         val options = BitmapFactory.Options().apply {
-            inSampleSize = PhotoBackground.sampleSize(bounds.outWidth, bounds.outHeight, reqWidth, reqHeight)
+            inSampleSize = PhotoBackground.boundedSampleSize(bounds.outWidth, bounds.outHeight, reqWidth, reqHeight)
+            inPreferredConfig = Bitmap.Config.RGB_565
         }
-        return BitmapFactory.decodeFile(file.path, options)
+        return try {
+            BitmapFactory.decodeFile(file.path, options)
+        } catch (e: OutOfMemoryError) {
+            Timber.w(e, "Background photo too large to decode: %s", file)
+            null
+        }
     }
 
     private fun showPreset(target: ImageView, preset: BackgroundPreset) {
