@@ -17,7 +17,6 @@ import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.android.material.chip.ChipGroup
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.hymn.HymnRef
@@ -57,9 +56,9 @@ class HistoryFragmentTest {
         PickerTestSupport.launch { scenario ->
             FragmentHost.eventually {
                 scenario.onActivity { a ->
-                    val chips = a.findViewById<ChipGroup>(R.id.recent_chips)
+                    val chips = a.findViewById<android.widget.LinearLayout>(R.id.recent_chips)
                     assertThat(chips.childCount).isEqualTo(8)
-                    assertThat((chips.getChildAt(0) as TextView).text.toString()).isEqualTo(chipLabel(12))
+                    assertThat(chips.getChildAt(0).findViewById<TextView>(R.id.tv_recent_label_item).text.toString()).isEqualTo(chipLabel(12))
                 }
             }
         }
@@ -114,6 +113,59 @@ class HistoryFragmentTest {
             onView(withText(chipLabel(1))).perform(scrollTo(), longClick())
             onView(allOf(withText(R.string.delete), isAssignableFrom(Button::class.java))).inRoot(isDialog()).perform(click())
             FragmentHost.eventually { assertThat(DatabaseBackend.getInstance(ctx).historyRecords).isEmpty() }
+        }
+    }
+
+    private fun at(daysAgo: Int, hour: Int, minute: Int): Long = java.util.Calendar.getInstance().apply {
+        add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        set(java.util.Calendar.HOUR_OF_DAY, hour); set(java.util.Calendar.MINUTE, minute); set(java.util.Calendar.SECOND, 0)
+    }.timeInMillis
+
+    private fun dated(no: Int, whenMillis: Long) = HistoryRecord(HymnTypes.DB, no, false, "標題$no", whenMillis)
+
+    @Test fun chipsShowTimeYesterdayWeekdayAndDate() {
+        val now = System.currentTimeMillis()
+        // records are stored with their own times; the list is newest first
+        val today = java.util.Calendar.getInstance().apply { timeInMillis = now; set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 1) }.timeInMillis
+        PickerTestSupport.resetHistory(dated(1, today), dated(2, at(1, 12, 0)), dated(3, at(3, 12, 0)), dated(4, at(30, 12, 0)))
+        PickerTestSupport.launch { scenario ->
+            FragmentHost.eventually {
+                scenario.onActivity { a ->
+                    val chips = a.findViewById<android.widget.LinearLayout>(R.id.recent_chips)
+                    fun whenOf(no: Int): String {
+                        val label = chipLabel(no)
+                        val item = (0 until chips.childCount).map { chips.getChildAt(it) }
+                            .first { it.findViewById<TextView>(R.id.tv_recent_label_item).text == label }
+                        return item.findViewById<TextView>(R.id.tv_recent_when).text.toString()
+                    }
+                    assertThat(whenOf(1)).isEqualTo(org.cog.hymnchtv.ui.home.HistoryTimeText.clock(a, today))
+                    assertThat(whenOf(2)).isEqualTo(a.getString(R.string.c_date_yesterday))
+                    assertThat(whenOf(3)).isEqualTo(android.text.format.DateUtils.formatDateTime(a, at(3, 12, 0), android.text.format.DateUtils.FORMAT_SHOW_WEEKDAY or android.text.format.DateUtils.FORMAT_ABBREV_WEEKDAY))
+                    assertThat(whenOf(4)).isNotEmpty()
+                    assertThat(whenOf(4)).doesNotContain(":")
+                    val first = chips.getChildAt(0)
+                    assertThat(first.contentDescription.toString()).contains(HymnLabels.headline(a, HymnRef(HymnTypes.DB, 1)).substringBefore(' '))
+                }
+            }
+        }
+    }
+
+    @Test fun historyPageGroupsByDayWithHeadingsAndShowsTimes() {
+        val todayTime = at(0, 0, 1)
+        PickerTestSupport.resetHistory(dated(1, maxOf(todayTime, System.currentTimeMillis() - 1000)), dated(2, at(1, 12, 0)), dated(3, at(1, 9, 5)))
+        PickerTestSupport.launch { scenario ->
+            openHistoryPage()
+            FragmentHost.eventually {
+                scenario.onActivity { a ->
+                    val items = (a.findViewById<RecyclerView>(R.id.history_list).adapter as HistoryAdapter).currentList
+                    val headers = items.filterIsInstance<HistoryItem.Header>().map { it.text }
+                    assertThat(headers).containsExactly(a.getString(R.string.c_date_today), a.getString(R.string.c_date_yesterday)).inOrder()
+                    val rows = items.filterIsInstance<HistoryItem.Row>()
+                    assertThat(rows.map { it.record.hymnNo }).containsExactly(1, 2, 3).inOrder()
+                    assertThat(rows[1].time).isEqualTo(HistoryTimeText.clock(a, at(1, 12, 0)))
+                }
+            }
+            onView(withText(org.cog.hymnchtv.R.string.c_date_yesterday)).check(matches(isDisplayed()))
         }
     }
 }

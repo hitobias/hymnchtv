@@ -49,14 +49,31 @@ class HomeLayoutTest {
         PickerTestSupport.resetHistory(HistoryRecord(HymnTypes.DB, 1, false, "標題", 1L))
         PickerTestSupport.launch { scenario ->
             FragmentHost.eventually {
-                scenario.onActivity { a -> assertThat(a.findViewById<com.google.android.material.chip.ChipGroup>(R.id.recent_chips).childCount).isEqualTo(1) }
+                scenario.onActivity { a -> assertThat(a.findViewById<android.widget.LinearLayout>(R.id.recent_chips).childCount).isEqualTo(1) }
             }
             scenario.onActivity { a ->
                 val min = 48 * a.resources.displayMetrics.density - 1
-                val chips = a.findViewById<com.google.android.material.chip.ChipGroup>(R.id.recent_chips)
+                val chips = a.findViewById<android.widget.LinearLayout>(R.id.recent_chips)
                 val views: List<View> = fixedIds.map { a.findViewById<View>(it) } + listOf(chips.getChildAt(0), a.findViewById<View>(R.id.btn_recent_more))
                 views.forEach { v ->
                     assertWithMessage("${v.javaClass.simpleName} ${v.id}").that(v.height.toFloat()).isAtLeast(min)
+                }
+            }
+        }
+    }
+
+    @Test fun recentItemsShowTheirWholeNameAndTime() {
+        PickerTestSupport.resetHistory(HistoryRecord(HymnTypes.DB, 123, false, "標題", System.currentTimeMillis()))
+        PickerTestSupport.launch { scenario ->
+            FragmentHost.eventually {
+                scenario.onActivity { a -> assertThat(a.findViewById<android.widget.LinearLayout>(R.id.recent_chips).childCount).isEqualTo(1) }
+            }
+            scenario.onActivity { a ->
+                val item = a.findViewById<android.widget.LinearLayout>(R.id.recent_chips).getChildAt(0)
+                for (id in listOf(R.id.tv_recent_label_item, R.id.tv_recent_when)) {
+                    val t = item.findViewById<android.widget.TextView>(id)
+                    assertWithMessage("recent text ${t.text}").that(t.layout.getEllipsisCount(0)).isEqualTo(0)
+                    assertThat(t.text.toString()).isNotEmpty()
                 }
             }
         }

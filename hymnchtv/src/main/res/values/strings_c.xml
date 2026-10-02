@@ -72,4 +72,7 @@
     <string name="c_search_status_none">No match</string>
     <string name="c_search_status_more">Too many results; narrow the scope or use a longer keyword</string>
     <string name="c_search_clear_desc">Clear</string>
+    <string name="c_date_today">Today</string>
+    <string name="c_date_yesterday">Yesterday</string>
+    <string name="c_when_desc">%1$s, %2$s</string>
 </resources>

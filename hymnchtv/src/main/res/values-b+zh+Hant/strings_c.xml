@@ -72,4 +72,7 @@
     <string name="c_search_status_none">找不到匹配</string>
     <string name="c_search_status_more">結果太多，請選一本或輸入更多字</string>
     <string name="c_search_clear_desc">清除</string>
+    <string name="c_date_today">今天</string>
+    <string name="c_date_yesterday">昨天</string>
+    <string name="c_when_desc">%1$s，%2$s</string>
 </resources>

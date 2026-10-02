@@ -41,7 +41,7 @@ class HymnPickerViews(val root: View) {
 
     val recentArea: View = root.findViewById(R.id.recentArea)
     val recentLabel: TextView = root.findViewById(R.id.tv_recent_label)
-    val recentChips: ChipGroup = root.findViewById(R.id.recent_chips)
+    val recentChips: android.widget.LinearLayout = root.findViewById(R.id.recent_chips)
     val recentMore: MaterialButton = root.findViewById(R.id.btn_recent_more)
 
     /** The source buttons by source; [group1] holds the first four, [group2] the rest. */
@@ -61,6 +61,18 @@ class HymnPickerViews(val root: View) {
     /** The text colour the home appearance chose, or null (jump panel: the theme's). Chips created later take it too. */
     var textColor: Int? = null
 
+    /** Gives a recent-hymn item the picker's colours (its small time line is dimmer than the label). */
+    fun styleRecent(item: View) {
+        val color = textColor ?: return
+        item.background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = RECENT_RADIUS_DP * item.resources.displayMetrics.density
+            setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(color, CHIP_FILL_ALPHA))
+            setStroke(item.resources.displayMetrics.density.toInt().coerceAtLeast(1), androidx.core.graphics.ColorUtils.setAlphaComponent(color, CHIP_STROKE_ALPHA))
+        }
+        item.findViewById<TextView>(R.id.tv_recent_label_item).setTextColor(color)
+        item.findViewById<TextView>(R.id.tv_recent_when).setTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(color, WHEN_ALPHA))
+    }
+
     /** Gives a chip the picker's colours instead of the theme's surface colours. */
     fun styleChip(chip: com.google.android.material.chip.Chip) {
         val color = textColor ?: return
@@ -71,6 +83,8 @@ class HymnPickerViews(val root: View) {
 
     private companion object {
         const val CHIP_FILL_ALPHA = 0x1F
+        const val RECENT_RADIUS_DP = 12f
+        const val WHEN_ALPHA = 0xCC
         const val CHIP_STROKE_ALPHA = 0x66
         val DIGIT_IDS = listOf(
             R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5, R.id.n6, R.id.n7, R.id.n8, R.id.n9,

@@ -35,8 +35,12 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
 
             override fun onSwiped(holder: RecyclerView.ViewHolder, direction: Int) {
                 val position = holder.bindingAdapterPosition
-                if (position != RecyclerView.NO_POSITION) delete(adapter.recordAt(position))
+                val record = if (position != RecyclerView.NO_POSITION) adapter.recordAt(position) else null
+                if (record != null) delete(record)
             }
+
+            override fun getSwipeDirs(rv: RecyclerView, holder: RecyclerView.ViewHolder): Int =
+                if (holder is HistoryAdapter.RowHolder) super.getSwipeDirs(rv, holder) else 0
         }
         ItemTouchHelper(swipe).attachToRecyclerView(recycler)
     }
@@ -57,8 +61,12 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
         HistoryActions.load(requireContext()) { records -> if (list != null) show(records) }
     }
 
+    /** The records on screen (without day headings), newest first. */
+    private var shown: List<HistoryRecord> = emptyList()
+
     private fun show(records: List<HistoryRecord>) {
-        adapter.submitList(records)
+        shown = records
+        adapter.submitList(HistoryAdapter.group(requireContext(), records, System.currentTimeMillis()))
         empty?.visibility = if (records.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -72,7 +80,7 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
         HistoryActions.delete(requireContext(), record) { deleted ->
             if (list == null) return@delete
             // The row was already gone (or the delete failed): reload so the list tells the truth
-            if (deleted) show(adapter.currentList.filterNot { it === record }) else reload()
+            if (deleted) show(shown.filterNot { it === record }) else reload()
         }
     }
 
