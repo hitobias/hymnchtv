@@ -136,12 +136,7 @@ import timber.log.Timber;
  */
 public class MediaConfig extends BaseActivity
         implements View.OnClickListener, View.OnLongClickListener, AdapterView.OnItemSelectedListener {
-    // Online text and video playback help contents
-    private static final String HYMNCHTV_FAQ_UDC_RECORD = "https://cmeng-git.github.io/hymnchtv/faq.html#hymnch_0070";
-    private static final ArrayList<String> videoUrls = new ArrayList<>() {{
-        add("https:/cmeng-git.github.io/hymnchtv/video/mediaconfig_yt_search.mp4");
-        add("https:/cmeng-git.github.io/hymnchtv/video/mediaconfig_url_export.mp4");
-    }};
+    private static final ArrayList<String> videoUrls = new ArrayList<>(); // tutorial videos removed (sub-project Z)
 
     public static final String HYMN_NO = "hymnNo";
     public static final String HYMN_FU = "isFu"; // set to 1 if fu else 0
@@ -448,9 +443,7 @@ public class MediaConfig extends BaseActivity
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.help_text) {
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setData(Uri.parse(HYMNCHTV_FAQ_UDC_RECORD));
-            startActivity(intent);
+            startActivity(new Intent(this, org.cog.hymnchtv.about.HelpActivity.class));
         }
         else if (id == R.id.help_video) {
             playVideoHelp();

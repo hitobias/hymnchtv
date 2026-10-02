@@ -135,7 +135,6 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class ContentHandler extends BaseActivity {
-    public static String HYMNCHTV_FAQ_PLAYBACK = "https://cmeng-git.github.io/hymnchtv/faq.html#hymnch_0050";
     public static final String btAddr = "https://bibletool.online";
     public static final String btMp3Link = "https://bibletool.online/hymnal/playnew.php?file=hymns/%s/%s#%s";
 
@@ -221,7 +220,6 @@ public class ContentHandler extends BaseActivity {
     private String lyricsPhrase;
 
     public enum UrlType {
-        onlineHelp,
         englishLyrics,
         hymnGoogleSearch,
         hymnYoutubeSearch,
@@ -604,7 +602,7 @@ public class ContentHandler extends BaseActivity {
             return true;
         }
         else if (itemId == R.id.help) {
-            initWebView(UrlType.onlineHelp);
+            startActivity(new Intent(this, org.cog.hymnchtv.about.HelpActivity.class));
             return true;
         }
         else if (itemId == R.id.home) {
@@ -1453,9 +1451,6 @@ public class ContentHandler extends BaseActivity {
      */
     public void initWebView(UrlType type, String... url) {
         switch (type) {
-        case onlineHelp:
-            mWebUrl = HYMNCHTV_FAQ_PLAYBACK;
-            break;
         case englishLyrics:
             String HymnalLink = "https://www.hymnal.net/en/hymn/h/";
             mWebUrl = (mHymnNoEng == null) ? null : HymnalLink + mHymnNoEng;

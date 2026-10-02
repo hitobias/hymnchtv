@@ -332,8 +332,13 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
      */
 
     public static int getFileResId(String resName, String defType) {
-        String packageName = mInstance.getPackageName();
-        return mInstance.getResources().getIdentifier(resName, defType, packageName);
+        Resources res = mInstance.getResources();
+        int resId = res.getIdentifier(resName, defType, mInstance.getPackageName());
+        if (resId == 0) {
+            // applicationId (com.ziontkec.hymnal) differs from the namespace that may own the resource table.
+            resId = res.getIdentifier(resName, defType, R.class.getPackage().getName());
+        }
+        return resId;
     }
 
     public static Uri getRawUri(String filename) {

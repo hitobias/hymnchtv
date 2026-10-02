@@ -124,7 +124,6 @@ import timber.log.Timber;
  */
 public class MainActivity extends BaseActivity implements AdapterView.OnItemSelectedListener, LifecycleEventObserver,
         ActivityCompat.OnRequestPermissionsResultCallback {
-    public static String HYMNCHTV_FAQ = "https://cmeng-git.github.io/hymnchtv/faq.html";
     private final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
 
     public static final String ATTR_HYMN_TYPE = "hymn_type";
@@ -929,7 +928,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             return true;
         }
         else if (itemId == R.id.online_help) {
-            About.hymnUrlAccess(this, HYMNCHTV_FAQ);
+            startActivity(new Intent(this, org.cog.hymnchtv.about.HelpActivity.class));
             return true;
         }
         else if (itemId == R.id.about) {

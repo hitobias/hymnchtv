@@ -1,21 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">诗歌</string>
-    <string name="app_title_main">书拉密女-诗歌本</string>
+    <string name="app_title_main">诗歌</string>
 
     <string name="about">关于</string>
     <string name="add">加添</string>
     <string name="overwrite">覆盖</string>
     <string name="add_to_db">已经添加并保存到数据库！</string>
     <string name="add_to_db_failed">媒体记录保存失败！</string>
-    <string name="app_libraries">诗歌本程序使用以下第三方库： %1$s</string>
     <!-- Message to display while video is buffering -->
     <string name="buffering">正在缓冲&#8230;</string>
     <string name="cancel">取消</string>
     <string name="close">关闭</string>
-    <string name="copyright">Copyright@2020, Eng Chong Meng
-        &lt;br/>&lt;a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0&lt;/a>
-        &lt;br/>All rights reserved.</string>
     <string name="db_export">数据库导出</string>
     <string name="db_import"><u>数据库导入</u></string>
     <string name="db_import_file">数据库导入文件</string>
@@ -36,7 +32,7 @@
     <string name="en2ch_hymn_same">中英文诗歌编号是一样的！</string>
     <string name="exit">退出</string>
     <string name="file_saved">文件保存成功完成！</string>
-    <string name="help_online">网上帮助</string>
+    <string name="help_online">使用说明</string>
     <string name="hymn_no">诗歌编号</string>
     <string name="hymn_sn_convert">诗歌数字转换测试</string>
     <string name="hymn_type">诗歌类别</string>
@@ -74,7 +70,6 @@
     <string name="playback_rate">视频播放速率：%1$sx</string>
     <string name="to_be_added">待加</string>
     <string name="unsaved_changes">您尚未保存更改。保存或取消并退出。</string>
-    <string name="version">程式版本: %1$s-%2$d</string>
     <string name="show_history_log"><u>历史记录</u></string>
 
     <string name="error">错误</string>
@@ -113,16 +108,12 @@
     <string name="apk_install_failed">应用程序安装时发生错误：(%1$s) %2$s</string>
     <string name="apk_install_completed">应用程序安装成功！</string>
     <string name="app_install_ready">已下载应用程序包 (%1$s)，并准备进行安装。</string>
-    <string name="app_version_invalid">下载的文件包含不匹配的版本代码：实际 = %1$s (%2$s)</string>
-    <string name="app_new_available">在线新版本: %1$s-%2$s</string>
     <string name="app_reinstall">重新安装</string>
     <string name="app_update">升级</string>
     <string name="app_upgrade">点击更新程序</string>
     <string name="app_update_check">更新</string>
     <string name="app_update_install">应用程序更新</string>
     <string name="app_update_none">没有应用程序新版本</string>
-    <string name="app_version_current">您当前安装版本;\n编号和代码：%1$s-%2$s 是最新的。\n在线可用版本：%3$s-%4$s。</string>
-    <string name="app_version_new_available">可下载新%1$s;\n编号和代码：%2$s-%3$s。\n当前安装的版本：%4$s-%5$s。</string>
     <string name="app_uninstall">您的版本 v1.2.0 需要先卸载再更新。\n然后从下载目录手动安装:\n%1$s</string>
 
     <string name="download">下载</string>
@@ -166,8 +157,8 @@
 
     <!-- Logs -->
     <string name="send_logs">提報错误</string>
-    <string name="send_logs_subject">诗歌本错误报告</string>
-    <string name="send_logs_title">通过电子邮件报告诗歌本错误</string>
+    <string name="send_logs_subject">诗歌 App 错误报告</string>
+    <string name="send_logs_title">分享错误报告</string>
     <string name="send_logs_info">您提供的以下信息可以帮助开发人员解决问题：
         \n\n1.在问题发生之前您做的最后一件事是什么？
         \n\n\n2.您看到的问题是什么，如果有的话，还包括显示屏的快照？
@@ -311,22 +302,5 @@
 
     <string name="permission_app_rational">%1$s 被拒絕。诗歌本可能會出錯，直到您在 [App info | Permissions] 授予權限</string>
 
-    <string name="content_about">关于本诗歌软体:
-        &lt;br/>应用程序中使用的所有媒体内容：歌词和歌曲文本等，版权归台湾福音书房所有。
-        &lt;br/>首先谢谢网络上的弟兄破碎提供诗歌的源材料。此诗歌本应用程序，原版由&lt;a href="http://shulami02.net/bbs">书拉密女小站&lt;/a>个人开发;
-        &lt;br/>&lt;br/>近日由新作者，全程序重写改进，并添加新功能。如果有发现出错或建议，请到
-        &lt;a href="https://github.com/cmeng-git/hymnchtv/issues">此网址&lt;/a>提出意见。
-        &lt;br/>&lt;br/>新增诗歌资源材料来自网络:
-        &lt;br/>http://www.lshymn.net/
-        &lt;br/>https://www.hymnal.net/
-        &lt;br/>&lt;br/>万事互相效力为要叫爱祂的人得益处！正如神白白的恩典，所以请不要用做商业用途。
-        &lt;br/>技术有限希望对弟兄姐妹有用！</string>
 
-    <string name="content_help">歌词显示屏幕说明:
-        &lt;br/>\u25AA 长按屏幕启动诗歌主菜单。
-        &lt;br/>\u25AA 播放按钮点一下，开始播放媒体档。
-        &lt;br/>\u25AA 再次点播放按钮，播放就会暂停。
-        &lt;br/>\u25AA 再次点播放按钮，从暂停位置继续播放。
-        &lt;br/>\u25AA 长按播放按钮后，可再次从头开始播放。
-        &lt;br/>\u25AA 将手机置于横向模式以显示更大字幕。</string>
 </resources>

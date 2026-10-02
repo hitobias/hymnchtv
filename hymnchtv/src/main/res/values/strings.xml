@@ -1,21 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Hymnal</string>
-    <string name="app_title_main">Shulamite - Hymns</string>
+    <string name="app_title_main">Hymnal</string>
 
     <string name="about">About</string>
     <string name="add">Add</string>
     <string name="overwrite">Overwrite</string>
     <string name="add_to_db">Has been added and saved to the database!</string>
     <string name="add_to_db_failed">Failed to save media record!</string>
-    <string name="app_libraries">Hymnch uses the following third-party libraries: %1$s</string>
     <!-- Message to display while video is buffering -->
     <string name="buffering">Buffering&#8230;</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
-    <string name="copyright">Copyright@2020, Eng Chong Meng
-        &lt;br/>&lt;a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0&lt;/a>
-        &lt;br/>All rights reserved.</string>
     <string name="db_export">DB Expt</string>
     <string name="db_import"><u>DB Impt</u></string>
     <string name="db_import_file">DB import file</string>
@@ -36,7 +32,7 @@
     <string name="en2ch_hymn_same">The Chinese and English hymn numbers are the same!</string>
     <string name="exit">Exit</string>
     <string name="file_saved">The file was saved successfully!</string>
-    <string name="help_online">Online Help</string>
+    <string name="help_online">Help</string>
     <string name="hymn_no">Hymn No:</string>
     <string name="hymn_sn_convert">Hymn digital conversion test</string>
     <string name="hymn_type">Hymn Category:</string>
@@ -74,7 +70,6 @@
     <string name="playback_rate">Video playback rate: %1$sx</string>
     <string name="to_be_added">To be added</string>
     <string name="unsaved_changes">You have unsaved changes. Save or cancel and exit.</string>
-    <string name="version">App version: %1$s-%2$d</string>
     <string name="show_history_log"><u>History</u></string>
 
     <string name="error">Error</string>
@@ -113,16 +108,12 @@
     <string name="apk_install_failed">An error occurred during app installation: (%1$s) %2$s</string>
     <string name="apk_install_completed">The app was installed successfully!</string>
     <string name="app_install_ready">The app package (%1$s) has been downloaded and is ready to be installed.</string>
-    <string name="app_version_invalid">Downloaded file contains mismatched version code: Actual = %1$s (%2$s)</string>
-    <string name="app_new_available">Online new app version: %1$s-%2$s</string>
     <string name="app_reinstall">Reinstall</string>
     <string name="app_update">upgrade</string>
     <string name="app_upgrade">Update App</string>
     <string name="app_update_check">Update</string>
     <string name="app_update_install">App update</string>
     <string name="app_update_none">No new version of the application</string>
-    <string name="app_version_current">Current installed version:\n%1$s-%2$s are up to date.\nVersion available online: %3$s-%4$s.</string>
-    <string name="app_version_new_available">New version %1$s available;\nVersion-Code:%2$s-%3$s.\nInstalled version: %4$s-%5$s.</string>
     <string name="app_uninstall">App version v1.2.0 needs to be uninstalled first.\nThen manually install from the download directory:\n%1$s</string>
 
     <string name="download">Download</string>
@@ -166,8 +157,8 @@
 
     <!-- Logs -->
     <string name="send_logs">Bug Rpt</string>
-    <string name="send_logs_subject">Hymncv bug report</string>
-    <string name="send_logs_title">Report Hymnch Errors by Email</string>
+    <string name="send_logs_subject">Hymnal bug report</string>
+    <string name="send_logs_title">Share error report</string>
     <string name="send_logs_info">The following information you provide can help developers solve the problem:
         \n\n1. What was the last thing you did before the problem occurred?
         \n\n\n2. What problems do you see, if any, and a snapshot of the display?
@@ -337,22 +328,5 @@
 
     <string name="permission_app_rational">%1$s was denied. App may be inoperative until you grant permission in [App info | Permissions]</string>
 
-    <string name="content_about">About Hymns Software:
-        &lt;br/>All media contents used in this application: lyrics and score text etc., are copyrighted by Taiwan Gospel Book Room.
-        &lt;br/>Sincere thanks to the brothers and sisters on providing the online source material and hymns lyrics. The original hymnch was developed by &lt;a href="http://shulami02.net/bbs">Shulamite Site&lt;/a>;
-        &lt;br/>&lt;br/>New developer: the whole app has been rewritten and improved, with new functions added. If you find any error or suggestion, please go to
-        &lt;a href="https://github.com/cmeng-git/hymnch/issues">Hymns URL&lt;/a> Suggestions.
-        &lt;br/>&lt;br/>New app resources come from Internet:
-        &lt;br/>http://www.lshymn.net/
-        &lt;br/>https://www.hymnal.net/
-        &lt;br/>&lt;br/>All things work together for the good of those who love Him! Just like God free grace, so please don\'t use it for commercial purposes.
-        &lt;br/>I hope it will be useful for brothers\' and sisters\' sharing!</string>
 
-    <string name="content_help">Lyrics UI instructions:
-       &lt;br/>\u25AA Long press in Lyrics UI to access the menu.
-       &lt;br/>\u25AA Click the play button to start playing the media file.
-       &lt;br/>\u25AA Click the play button again to pause playback.
-       &lt;br/>\u25AA Click the play button again to resume playing from the pause position.
-       &lt;br/>\u25AA Long press the play button, you can restart playing back the media.
-       &lt;br/>\u25AA Put the phone in landscape mode for larger lyrics.</string>
 </resources>
