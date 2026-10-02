@@ -103,7 +103,6 @@
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:theme="@style/AppTheme.NoActionBar" />
 
-        <activity android:name=".ContentSearch" />
 
         <activity
             android:name=".mediaconfig.MediaConfig"

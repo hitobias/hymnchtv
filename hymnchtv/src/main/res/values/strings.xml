@@ -77,7 +77,6 @@
     <string name="error_invalid">Input error: Input TOC or hymnNo</string>
     <string name="error_media_url_invalid">The provided media URL is incorrect: %1$s</string>
     <string name="error_playback">Unable to decode link or playback: %1$s</string>
-    <string name="error_search_empty">Please enter string to search</string>
     <string name="error_file_not_found"> (Unable to get file: %1$s)</string>
     <string name="error_english_lyrics_null">Sorry! Hymn \'%1$d\' has no English lyrics</string>
     <string name="error_invalid_mimetype_download">App does not support download mimeType: \'%s\'</string>
@@ -149,11 +148,7 @@
     <string name="share_lyrics">Share lyrics&#8230;</string>
     <string name="share_file_missing">Reminder: You are sharing a URL with no actual media content: %1$s!</string>
 
-    <string name="hint_hymn_content_search">Auto TW&#x27A1;CN Hymns Search</string>
-    <string name="hint_hymn_history">&#11014; Hymns Log</string>
     <string name="hint_hymn_lyrics_online">Lyrics is empty. Please use online \'教唱\' content</string>
-    <string name="hint_hymn_number_enter">Enter HymnNo&#11015;</string>
-    <string name="hint_hymn_ui">Enter category or HymnNo, then click\nDaBen, BuChong, XinShi, XinGe, ErGe or English</string>
 
     <!-- Logs -->
     <string name="send_logs">Bug Rpt</string>
@@ -168,12 +163,10 @@
     <string name="hymn_bb">Bu Chong</string>
     <string name="hymn_db">Da Ben</string>
     <string name="hymn_content">Content</string>
-    <string name="hymn_english">English</string>
     <string name="hymn_er">Er Ge</string>
     <string name="hymn_fu">FuGe</string>
     <string name="hymn_lyrics">Lyrics</string>
     <string name="hymn_score">Score</string>
-    <string name="hymn_search">Search</string>
     <string name="hymn_xb">Xin Song</string>
     <string name="hymn_xg">Xin Shi</string>
     <string name="hymn_yb"><u>Qing Nian</u></string>
@@ -233,14 +226,6 @@
 
     <!-- hymn search gui strings -->
     <string name="hymn_match">Total %1$d matching records</string>
-    <string name="hymn_match_auto_create">%1$s/%2$s: Total of %3$d hymns were matched</string>
-    <string name="hymn_match_er">ErGe: No %1$d:\n%2$s</string>
-    <string name="hymn_match_xb">XinSong: No %1$d:\n%2$s</string>
-    <string name="hymn_match_xg">XinShi: No %1$d:\n%2$s</string>
-    <string name="hymn_match_yb">QingNian: No %1$d:\n%2$s</string>
-    <string name="hymn_match_bb">BuChong: No %1$d:\n%2$s</string>
-    <string name="hymn_match_db">DaBen: No %1$d:\n%2$s</string>
-    <string name="hymn_match_db_sp">DaBen: Fu %1$d:\n%2$s</string>
     <string name="hymn_match_none">No match found</string>
 
     <string name="menu_media_ui_toggle">Toggle on/off Playback UI</string>

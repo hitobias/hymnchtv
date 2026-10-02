@@ -77,7 +77,6 @@
     <string name="error_invalid">输入错误: 未按目录或输入(附)号码</string>
     <string name="error_media_url_invalid">提供的媒体网址不正确: %1$s</string>
     <string name="error_playback">无法解码视频链接或进行播放: %1$s</string>
-    <string name="error_search_empty">请输入内容进行搜索</string>
     <string name="error_file_not_found">（无法取得文件: %1$s）</string>
     <string name="error_english_lyrics_null">对不起！当诗歌 \'%1$d\' 首没有英文歌词</string>
     <string name="error_invalid_mimetype_download">此应用不支持下载 MIME 类型：\'%s\'</string>
@@ -149,11 +148,7 @@
     <string name="share_lyrics">分享歌词&#8230;</string>
     <string name="share_file_missing">提醒：您正在共享一个没有实际媒体内容的网址：%1$s！</string>
 
-    <string name="hint_hymn_content_search">自动繁体&#x27A1;简体歌词搜索</string>
-    <string name="hint_hymn_history">&#11014;最近选择诗歌编号</string>
     <string name="hint_hymn_lyrics_online">歌词文本为空。请在线查看\'教唱\'诗歌词文本。</string>
-    <string name="hint_hymn_number_enter">输入诗歌编号&#11015;</string>
-    <string name="hint_hymn_ui">按目录选项，或输入(附)编号\n后按大本、补充、新诗、新颂、儿诗或英文</string>
 
     <!-- Logs -->
     <string name="send_logs">提報错误</string>
@@ -168,12 +163,10 @@
     <string name="hymn_bb">补充</string>
     <string name="hymn_db">大本</string>
     <string name="hymn_content">内容</string>
-    <string name="hymn_english">英文</string>
     <string name="hymn_er">儿诗</string>
     <string name="hymn_fu">附歌</string>
     <string name="hymn_lyrics">歌词</string>
     <string name="hymn_score">歌谱</string>
-    <string name="hymn_search">内容搜索</string>
     <string name="hymn_xb">新颂</string>
     <string name="hymn_xg">新诗</string>
     <string name="hymn_yb"><u>青年</u></string>
@@ -210,14 +203,6 @@
 
     <!-- hymn search gui strings -->
     <string name="hymn_match">共有匹配 %1$d 首诗歌</string>
-    <string name="hymn_match_auto_create">%1$s/%2$s：共有匹配 %3$d 首诗歌</string>
-    <string name="hymn_match_er">儿童诗歌: 第 %1$d 首：\n%2$s</string>
-    <string name="hymn_match_xb">新歌颂咏: 第 %1$d 首：\n%2$s</string>
-    <string name="hymn_match_xg">新诗歌本: 第 %1$d 首：\n%2$s</string>
-    <string name="hymn_match_yb">青年诗歌: 第 %1$d 首：\n%2$s</string>
-    <string name="hymn_match_bb">補充本诗歌: 第 %1$d 首：\n%2$s</string>
-    <string name="hymn_match_db">大本诗歌: 第 %1$d 首：\n%2$s</string>
-    <string name="hymn_match_db_sp">大本诗歌: 附歌第 %1$d 首：\n%2$s</string>
     <string name="hymn_match_none">找不到匹配</string>
 
     <string name="menu_media_ui_toggle">显示/隐藏播放条</string>
