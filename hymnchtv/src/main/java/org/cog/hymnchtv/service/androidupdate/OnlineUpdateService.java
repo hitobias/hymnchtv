@@ -45,7 +45,6 @@ public class OnlineUpdateService extends IntentService {
     public static final String ACTION_AUTO_UPDATE_START = "org.cog.hymnchtv.ACTION_AUTO_UPDATE_START";
     public static final String ACTION_AUTO_UPDATE_STOP = "org.cog.hymnchtv.ACTION_AUTO_UPDATE_STOP";
 
-    private static final String ACTION_UPDATE_AVAILABLE = "org.cog.hymnchtv.ACTION_UPDATE_AVAILABLE";
     private static final String ONLINE_UPDATE_SERVICE = "OnlineUpdateService";
     private static final String UPDATE_AVAIL_TAG = "hymnal_update_available";
 
@@ -76,9 +75,6 @@ public class OnlineUpdateService extends IntentService {
                 switch (action) {
                     case ACTION_AUTO_UPDATE_APP:
                         checkAppUpdate();
-                        break;
-                    case ACTION_UPDATE_AVAILABLE:
-                        UpdateServiceImpl.getInstance().checkForUpdates();
                         break;
                     case ACTION_AUTO_UPDATE_START:
                         // First run, or an upgrade with a newer bundled list: import media links on this worker thread.
