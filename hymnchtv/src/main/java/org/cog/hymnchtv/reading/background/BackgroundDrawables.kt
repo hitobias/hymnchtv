@@ -39,6 +39,14 @@ object BackgroundDrawables {
     @DrawableRes
     @JvmStatic
     fun drawableRes(preset: BackgroundPreset): Int = when (preset) {
+        BackgroundPreset.PAPER_WHITE -> R.drawable.bg_paper_white
+        BackgroundPreset.PARCHMENT_BEIGE -> R.drawable.bg_parchment_beige
+        BackgroundPreset.EYE_GREEN -> R.drawable.bg_eye_green
+        BackgroundPreset.PALE_BLUE -> R.drawable.bg_pale_blue
+        BackgroundPreset.PALE_PINK -> R.drawable.bg_pale_pink
+        BackgroundPreset.SOFT_GREY -> R.drawable.bg_soft_grey
+        BackgroundPreset.DIM_GREY -> R.drawable.bg_dim_grey
+        BackgroundPreset.TRUE_BLACK -> R.drawable.bg_true_black
         BackgroundPreset.XUAN -> R.drawable.bg_xuan
         BackgroundPreset.LINEN -> R.drawable.bg_linen
         BackgroundPreset.PARCHMENT -> R.drawable.bg_parchment
@@ -64,6 +72,14 @@ object BackgroundDrawables {
     @StringRes
     @JvmStatic
     fun nameRes(preset: BackgroundPreset): Int = when (preset) {
+        BackgroundPreset.PAPER_WHITE -> R.string.bg_name_paper_white
+        BackgroundPreset.PARCHMENT_BEIGE -> R.string.bg_name_parchment_beige
+        BackgroundPreset.EYE_GREEN -> R.string.bg_name_eye_green
+        BackgroundPreset.PALE_BLUE -> R.string.bg_name_pale_blue
+        BackgroundPreset.PALE_PINK -> R.string.bg_name_pale_pink
+        BackgroundPreset.SOFT_GREY -> R.string.bg_name_soft_grey
+        BackgroundPreset.DIM_GREY -> R.string.bg_name_dim_grey
+        BackgroundPreset.TRUE_BLACK -> R.string.bg_name_true_black
         BackgroundPreset.XUAN -> R.string.bg_name_xuan
         BackgroundPreset.LINEN -> R.string.bg_name_linen
         BackgroundPreset.PARCHMENT -> R.string.bg_name_parchment
