@@ -125,7 +125,7 @@ public class UpdateServiceImpl {
 
     private static UpdateServiceImpl mInstance = null;
 
-    public static UpdateServiceImpl getInstance() {
+    public static synchronized UpdateServiceImpl getInstance() {
         if (mInstance == null) {
             mInstance = new UpdateServiceImpl();
         }
