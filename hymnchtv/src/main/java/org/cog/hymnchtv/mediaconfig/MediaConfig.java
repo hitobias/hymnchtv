@@ -95,6 +95,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.cog.hymnchtv.concurrent.AppExecutors;
@@ -1066,9 +1067,9 @@ public class MediaConfig extends BaseActivity
         }
     }
 
-    /** Same as {@link #hasMediaRecord(DatabaseBackend, MediaRecord)}, with local files looked up in localMedia. */
-    private static boolean hasMediaRecord(DatabaseBackend db, LocalMediaIndex localMedia, MediaRecord mediaRecord) {
-        return db.getMediaRecord(mediaRecord, false)
+    /** Same as {@link #hasMediaRecord(DatabaseBackend, MediaRecord)}, answered from the prefetched database keys and localMedia. */
+    private static boolean isKnown(Set<String> databaseKeys, LocalMediaIndex localMedia, MediaRecord mediaRecord) {
+        return databaseKeys.contains(DatabaseBackend.mediaKey(mediaRecord))
                 || localMedia.has(mediaRecord.getHymnType() + mediaDir.get(mediaRecord.getMediaType()), mediaRecord.getHymnNo());
     }
 
@@ -1184,6 +1185,8 @@ public class MediaConfig extends BaseActivity
         int imported = 0;
         int total = 0;
         LocalMediaIndex localMedia = newLocalMediaIndex();
+        // One read of the existing keys instead of one lookup per line; records stored by this import are added.
+        Set<String> knownKeys = isOverWrite ? null : db.getMediaRecordKeys();
         for (String line : lines) {
             MediaRecord mediaRecord = parseImportLine(line);
             if (mediaRecord == null)
@@ -1192,8 +1195,11 @@ public class MediaConfig extends BaseActivity
             boolean isFu = mediaRecord.isFu();
             int hymnNo = isFu ? (mediaRecord.getHymnNo() - HYMN_DB_NO_MAX) : mediaRecord.getHymnNo();
             int nui = HymnNoValidate.validateHymnNo(mediaRecord.getHymnType(), hymnNo, isFu);
-            if ((nui != -1) && (isOverWrite || !hasMediaRecord(db, localMedia, mediaRecord))) {
+            if ((nui != -1) && (isOverWrite || !isKnown(knownKeys, localMedia, mediaRecord))) {
                 db.storeMediaRecordOrThrow(mediaRecord); // SQL errors propagate: the whole import rolls back
+                if (knownKeys != null) {
+                    knownKeys.add(DatabaseBackend.mediaKey(mediaRecord));
+                }
                 imported++;
             }
             total++;

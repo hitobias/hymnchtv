@@ -67,6 +67,18 @@ class UrlImportTest {
         assertThat(uriOf(1, MediaType.HYMN_MEDIA)).isEqualTo("https://new")
     }
 
+    /** The existing-key lookup is prefetched once, so a repeated line of the same file must still see the first one. */
+    @Test
+    fun repeatedLineInOneFileKeepsTheFirstUnlessOverwrite() {
+        val content = "hymn_db,1,0,HYMN_MEDIA,https://first,null\nhymn_db,1,0,HYMN_MEDIA,https://second,null"
+
+        assertThat(MediaConfig.importUrlRecords(db, content, false)).isEqualTo(ImportResult(1, 2))
+        assertThat(uriOf(1, MediaType.HYMN_MEDIA)).isEqualTo("https://first")
+
+        assertThat(MediaConfig.importUrlRecords(db, content, true)).isEqualTo(ImportResult(2, 2))
+        assertThat(uriOf(1, MediaType.HYMN_MEDIA)).isEqualTo("https://second")
+    }
+
     /** A database error part-way through rolls back every earlier write of the same import. */
     @Test
     fun databaseErrorRollsBackTheWholeImport() {
