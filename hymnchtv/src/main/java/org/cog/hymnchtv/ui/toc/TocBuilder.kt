@@ -1,7 +1,7 @@
 package org.cog.hymnchtv.ui.toc
 
 import android.content.Context
-import org.cog.hymnchtv.HymnToc
+import org.cog.hymnchtv.ui.toc.TocConstants
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.lyrics.HantVariant
 import org.cog.hymnchtv.lyrics.LyricsAssets
@@ -80,7 +80,7 @@ object TocBuilder {
 
     /**
      * @param hymnType one of the MainActivity.HYMN_* book types; an unknown one gives an empty map
-     * @param tocPage one of HymnToc.TOC_CATEGORY / TOC_STROKE / TOC_PINYIN / TOC_ENGLISH; any other (e.g. TOC_TITLE) gives an empty map
+     * @param tocPage one of TocConstants.TOC_CATEGORY / TOC_STROKE / TOC_PINYIN / TOC_ENGLISH; any other (e.g. TOC_TITLE) gives an empty map
      */
     fun build(
         reader: (String) -> String?,
@@ -93,11 +93,11 @@ object TocBuilder {
         val book = books[hymnType] ?: return LinkedHashMap()
         val shown = ShownText(reader, variant)
         return when (tocPage) {
-            HymnToc.TOC_CATEGORY ->
+            TocConstants.TOC_CATEGORY ->
                 if (hymnType == MainActivity.HYMN_YB) ybCategories(book, reader, shown) else categories(book, reader, shown, Limits(bbLimit, erLimit))
-            HymnToc.TOC_STROKE -> indexed(reader, shown, "${TOC_DIR}toc_${book.code}$STROKE_FILE")
-            HymnToc.TOC_PINYIN -> indexed(reader, shown, "${TOC_DIR}toc_${book.code}$PINYIN_FILE")
-            HymnToc.TOC_ENGLISH -> if (book.hasEnglishToc) indexed(reader, shown, "${TOC_DIR}toc_${book.code}$ENGLISH_FILE") else LinkedHashMap()
+            TocConstants.TOC_STROKE -> indexed(reader, shown, "${TOC_DIR}toc_${book.code}$STROKE_FILE")
+            TocConstants.TOC_PINYIN -> indexed(reader, shown, "${TOC_DIR}toc_${book.code}$PINYIN_FILE")
+            TocConstants.TOC_ENGLISH -> if (book.hasEnglishToc) indexed(reader, shown, "${TOC_DIR}toc_${book.code}$ENGLISH_FILE") else LinkedHashMap()
             else -> LinkedHashMap()
         }
     }

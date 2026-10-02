@@ -17,9 +17,9 @@
 package org.cog.hymnchtv.utils;
 
 import static org.cog.hymnchtv.ContentView.LYRICS_TOC;
-import static org.cog.hymnchtv.HymnToc.TOC_BB;
-import static org.cog.hymnchtv.HymnToc.TOC_DB;
-import static org.cog.hymnchtv.HymnToc.TOC_XG;
+import static org.cog.hymnchtv.ui.toc.TocConstants.TOC_BB;
+import static org.cog.hymnchtv.ui.toc.TocConstants.TOC_DB;
+import static org.cog.hymnchtv.ui.toc.TocConstants.TOC_XG;
 import static org.cog.hymnchtv.MainActivity.HYMN_BB;
 import static org.cog.hymnchtv.MainActivity.HYMN_DB;
 import static org.cog.hymnchtv.MainActivity.HYMN_ER;

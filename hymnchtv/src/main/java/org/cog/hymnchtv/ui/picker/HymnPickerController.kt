@@ -8,7 +8,7 @@ import android.view.View
 import androidx.core.view.ViewCompat
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
-import org.cog.hymnchtv.HymnToc
+import org.cog.hymnchtv.ui.toc.TocConstants
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.concurrent.AppExecutors
 import org.cog.hymnchtv.hymn.EnglishXRef
@@ -127,7 +127,7 @@ class HymnPickerController(
         views.searchField.setOnClickListener { host.openSearch(vm.state.source.book) }
         views.toc.setOnClickListener {
             val source = vm.state.source
-            host.openToc(source.book ?: HymnTypes.DB, if (source == HymnSource.ENGLISH) HymnToc.TOC_ENGLISH else HymnToc.TOC_CATEGORY)
+            host.openToc(source.book ?: HymnTypes.DB, if (source == HymnSource.ENGLISH) TocConstants.TOC_ENGLISH else TocConstants.TOC_CATEGORY)
         }
         views.addPlaylist.setOnClickListener { host.onAddToPlaylist(target()) }
         views.setNext.setOnClickListener { target()?.let(host::onSetNext) }
