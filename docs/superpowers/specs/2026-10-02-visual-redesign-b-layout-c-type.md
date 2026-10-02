@@ -1,6 +1,6 @@
 # 首頁與歌詞頁視覺重設計（B 版面＋C 字形）
 
-> 狀態：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
+> 狀態：rev 6（2026-10-03）。rev 5 Codex：P1×2、P2×1 已併入（鍵盤下限統一 48dp、停用狀態改用 token 不再整體 alpha、rasterize 測試改為逐像素合成後驗證）。前次：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
 > 範圍：C 子項目 1.1（H3 首頁已實作於 `feat/c-home-search`）之上的視覺層修訂；不改互動規則（spec `2026-10-02-home-entry-and-lyrics-jump-design.md` 仍有效）。
 
 ## 1. 使用者回饋（必須解決）
@@ -35,7 +35,7 @@
 
 ## 4. 色彩 token（由 ReadingPalette 推導）
 
-新增純函式 `UiTokens.from(input: TokenInput): UiTokens`（Kotlin，可單元測試）。`TokenInput` 為不可變輸入：`textColor`、`accentColor`、`baseColor`、`isDark`（取實際背景的明暗，**不**取 DayNight——使用者明選的淺色背景在深色模式下仍是淺色）、`swatches: List<Int>`（背景可能出現的代表色。preset：對每個漸層色停點，窮舉該 preset 所有 overlay 的組合（每層取 0 與最大 alpha，n 層共 2ⁿ 種，現有 preset n ≤ 3）依繪製順序合成後的所有結果；照片：`PHOTO_PALETTE` 經既有 dim 後的黑端點與白端點）。另加插樁測試：把每個 preset 的實際 drawable rasterize 成 108×192 bitmap，確認所有像素的相對亮度都落在 swatches 的最亮與最暗之間（含容差 0.01），以證明 swatches 涵蓋實際繪製結果、`isPhoto`。由 `BackgroundPolicy` 新增 `tokenInput(choice)` 產生（`ReadingPalette` 保留現有欄位不動，避免波及 A2）；preset 由新增的 `BackgroundPreset.swatches()` 提供。DayNight 只決定「未設定背景時的預設 preset」。下表中「淺色背景／深色背景」一律指 `input.isDark`。輸出：
+新增純函式 `UiTokens.from(input: TokenInput): UiTokens`（Kotlin，可單元測試）。`TokenInput` 為不可變輸入：`textColor`、`accentColor`、`baseColor`、`isDark`（取實際背景的明暗，**不**取 DayNight——使用者明選的淺色背景在深色模式下仍是淺色）、`swatches: List<Int>`（背景可能出現的代表色。preset：對每個漸層色停點，窮舉該 preset 所有 overlay 的組合（每層取 0 與最大 alpha，n 層共 2ⁿ 種，現有 preset n ≤ 3）依繪製順序合成後的所有結果；照片：`PHOTO_PALETTE` 經既有 dim 後的黑端點與白端點）。另加插樁測試：把每個 preset 的實際 drawable rasterize 成 108×192 bitmap，對**每個像素**先套用與正式 UI 相同的 `surface`／`surfaceTone`／`disabledSurface` 合成，再直接驗證 `onSurface`、`onSurfaceMuted`、`disabledOnSurface`、`accent`、`outline` 的對比門檻（不以背景亮度範圍作為涵蓋證明）、`isPhoto`。由 `BackgroundPolicy` 新增 `tokenInput(choice)` 產生（`ReadingPalette` 保留現有欄位不動，避免波及 A2）；preset 由新增的 `BackgroundPreset.swatches()` 提供。DayNight 只決定「未設定背景時的預設 preset」。下表中「淺色背景／深色背景」一律指 `input.isDark`。輸出：
 
 | token | 用途 | 推導 |
 |---|---|---|
@@ -45,6 +45,8 @@
 | `onSurfaceMuted` | 次要文字（本名小標、日期、⌫） | `onSurface` alpha 0.72；以同一全矩陣檢查，不足 4.5:1 逐步提高到 1.0 |
 | `accent` | 選中詩歌本、開啟鍵底色、歌詞頁選中狀態 | `palette.accentColor`；對 `surface` 不足 3:1 時加深（淺色）或提亮（深色）直到 ≥ 3:1 |
 | `onAccent` | 開啟鍵與選中格上的文字 | 黑或白中對 `accent` 對比較高者，且必須 ≥ 4.5:1；不足時再調整 `accent` 明度直到成立 |
+| `disabledSurface` | 停用按鍵底色 | `surface` 本身（不加 tone），以「平面化」區別可按的 `surfaceTone` |
+| `disabledOnSurface` | 停用按鍵文字與圖示 | `onSurface` 向 `disabledSurface` 混合；停用元件依 WCAG 1.4.3 非作用中元件例外不要求 4.5:1，但本設計仍要求全矩陣 ≥ 3:1 以保可讀；另以 `outline` 虛線外框作為非顏色的停用提示 |
 | `outline` | 按鈕外框（目錄鈕）、照片背景上的卡片邊線 | `onSurface` 起始 alpha 0.24，對每個 swatch 合成後的相鄰表面不足 3:1 時逐步提高 alpha（上限 1.0）；納入 §7 矩陣 |
 
 - 「表面」是半透明卡片疊在背景上；對比計算一律先用 `Wcag.blend()` 把表面合成到**每個** swatch 上，再取最差比值。
@@ -59,7 +61,7 @@
 2. **詩歌本格**：2 列 × 4 格，**兩列都是 4 等欄**（現行 `hymn_picker.xml` 第二列「3 本＋寬 2 格目錄」改為 4 等欄，橫向版同步），間距 6dp，每格高 44dp、圓角 12dp；順序「大本、補充、新歌、新詩／青年、兒童、英文、目錄›」。未選中 `surfaceTone`＋`onSurface`；選中 `accent`＋`onAccent`；「目錄›」用 `surface` 實底＋`accent` 字＋`outline` 邊線（不得透明底：首頁背景可能是照片，透明底無法保證對比），與詩歌本同尺寸對齊、以邊線與字色區隔。`accent` 對 `surface` 的文字對比也納入 §4 全矩陣（≥ 4.5:1）。
    - 中文標籤固定兩字；英文介面用定稿短標籤（取代現行 `English`、`Contents`）：`Hymns`、`Suppl`、`NewSg`、`NewHy`、`Youth`、`Child`、`Eng`、`Index`（目錄鈕另以 › 圖示，不計入文字）；列入 ellipsize 插樁測試。任何寬度下不得出現省略號。
 3. **預覽卡**：`surface`、圓角 16dp、內距 14dp；左側上方本名小標、下方大號碼；右側詩名（楷體粗體，靠右，最多 2 行）。無效號碼時右側顯示狀態訊息（「此本無第 N 首」與「此號亦見於」chip），沿用 H3 的 live region。
-4. **鍵盤**：3 × 4，間距 8dp；每鍵 `surfaceTone`、圓角 14dp，高度 = 剩餘空間平均分配，最小 52dp、最大 72dp（填滿螢幕高度，不留大片空白）；停用鍵 alpha 0.38 且保留 contentDescription 說明原因（H3 已有）。
+4. **鍵盤**：3 × 4，間距 8dp；每鍵 `surfaceTone`、圓角 14dp，高度 = 剩餘空間平均分配，偏好 56dp、硬下限 48dp、最大 72dp（填滿螢幕高度，不留大片空白；空間不足時才降到 48dp）；停用鍵用 `disabledSurface`＋`disabledOnSurface`（見 §4），不對整個 View 設 alpha，並保留 contentDescription 說明原因（H3 已有）。
 5. **開啟鍵**：高 52dp、圓角 14dp、`accent` 底、`onAccent` 字「開啟 ›」；停用時 `surfaceTone` 底＋`onSurfaceMuted` 字。
 6. **最近**：標題列「最近」＋右側「全部記錄 ›」；下方橫向 chip（`surface`、圓角 10dp），兩行：本名號碼（粗）／相對日期（今天時間、昨天、星期、M/d）。
 7. 底部導覽列維持現狀（首頁、目錄、設定），顏色改用 token。
@@ -82,7 +84,7 @@
 | 模式（譜＋詞／只有詞／只有譜） | 譜詞／詞／譜 | 谱词／词／谱 | Both／Text／Score |
 
   （contentDescription 保留完整說明，例如「切換簡體與繁體歌詞」。）
-  - 「只有譜」模式下，簡繁與中英兩鈕保留位置但停用（alpha 0.38，contentDescription 說明「只有譜模式不適用」），三等欄版面不變。
+  - 「只有譜」模式下，簡繁與中英兩鈕保留位置但停用（`disabledSurface`＋`disabledOnSurface`，contentDescription 說明「只有譜模式不適用」），三等欄版面不變。
 - **播放卡**：卡片 `surface`；媒體來源單選（媒體／教唱／唱詩／伴奏）改為分段按鈕樣式：未選 `surfaceTone`＋`onSurface`，選中 `accent`＋`onAccent`；「連播」CheckBox 與速度按鈕用 `onSurface`；SeekBar 進度色 `accent`、軌道 `onSurfaceMuted` alpha 0.3。
 - **首頁**：`HomeFragment` 以 `MAIN` 背景槽位建立自己的 `UiTokens`，經 `applyHomeTheme()` 套到首頁元件（取代 `HomeAppearance` 的硬編碼部分）；與歌詞頁的 `LYRICS` 槽位分開，背景變動時各自依自己的槽位重建，不得共用同一份 token。
 - **歌詞頁單一傳播點**：`ContentHandler` 在套用 `LYRICS` 槽位背景時建立一次 `UiTokens`，明確呼叫 `ContentView`、頂列、下方三鈕與 `MediaGuiController.applyTokens(tokens)`；設定頁返回、Aa 面板改主題、activity 重建都走同一入口 `applyReadingTheme()`。`MediaGuiController` 移除對 Material `colorOnSurface` 與硬編碼 `Color.GRAY` 的依賴。
