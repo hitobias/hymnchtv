@@ -302,5 +302,15 @@
 
     <string name="permission_app_rational">%1$s 被拒絕。詩歌本可能會出錯，直到您在 [App info | Permissions] 授予權限</string>
 
-
+    <!-- Display names (media config spinners, auto-stream prompts) -->
+    <string name="hymn_type_name_db">大本詩歌</string>
+    <string name="hymn_type_name_bb">補充本</string>
+    <string name="hymn_type_name_xb">新歌頌詠</string>
+    <string name="hymn_type_name_xg">新詩歌本</string>
+    <string name="hymn_type_name_yb">青年詩歌</string>
+    <string name="hymn_type_name_er">兒童詩歌</string>
+    <string name="media_type_name_media">媒體</string>
+    <string name="media_type_name_jiaochang">教唱</string>
+    <string name="media_type_name_changshi">唱詩</string>
+    <string name="media_type_name_banzou">伴奏</string>
 </resources>

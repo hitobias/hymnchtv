@@ -249,6 +249,11 @@ public class MediaDownloadHandler extends Fragment {
                     mContentHandler.showBibleToolHymnal();
                 }
             }
+            // ACTION_DOWNLOAD_COMPLETE is broadcast for every DownloadManager job of the app, including the app
+            // update apk. Only touch our own jobs: removing a foreign id deletes the update apk before it is verified.
+            if (!DownloadOwnership.owns(fileDownloads, downloadJobId)) {
+                return;
+            }
             // Remove lastDownloadId from downloadManager record and delete the tmp file
             downloadManager.remove(downloadJobId);
             fileDownloads.remove(downloadJobId);
