@@ -28,4 +28,7 @@ object HomeEntry {
         val no = if (digits.isEmpty()) 0 else digits.toIntOrNull()?.takeIf { it >= 0 } ?: return null
         return prefix + (no + 1)
     }
+
+    /** Whether "next" can do anything: the following entry must be well formed and exist in [hymnType] (Fu is not in every book). */
+    fun canNext(entry: String, hymnType: String): Boolean = next(entry)?.let { hymnNo(it, hymnType) } != null
 }

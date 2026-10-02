@@ -258,8 +258,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     // ---- live title ----
 
+    /** Disabled (and so announced as such) when "next" would do nothing, e.g. a Fu number in a book without Fu. */
+    private fun updateNextEnabled(v: HomeViews) {
+        v.next.isEnabled = HomeEntry.canNext(v.entry.text.toString(), vm.hymnType)
+    }
+
     private fun refreshPreview() {
         val v = views ?: return
+        updateNextEnabled(v)
         val request = ++previewRequest
         val type = vm.hymnType
         val hymnNo = HomeEntry.hymnNo(vm.number, type)

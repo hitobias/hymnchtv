@@ -75,21 +75,6 @@ public class ThemeHelper {
         mTheme = theme;
     }
 
-    public static int getAppThemeResourceId() {
-        return getAppThemeResourceId(mTheme);
-    }
-
-    /**
-     * Get the app specific theme to init android theme for use
-     *
-     * @param theme the current theme
-     *
-     * @return app android theme for use
-     */
-    private static int getAppThemeResourceId(Theme theme) {
-        return (theme == Theme.LIGHT) ? R.style.AppTheme_Light : R.style.AppTheme_Dark;
-    }
-
     /**
      * Return true if the current app mTheme is per the specifies theme
      *

@@ -56,4 +56,17 @@ class HomeEntryTest {
     fun nextOfGarbageIsNull() {
         assertThat(HomeEntry.next("1x")).isNull()
     }
+
+    @Test
+    fun canNextIsFalseForFuInBooksWithoutFu() {
+        assertThat(HomeEntry.canNext("附3", HYMN_BB)).isFalse()
+        assertThat(HomeEntry.canNext("附3", HYMN_DB)).isTrue()
+        assertThat(HomeEntry.canNext("附3", HYMN_YB)).isTrue()
+    }
+
+    @Test
+    fun canNextIsTrueForPlainAndEmptyEntries() {
+        assertThat(HomeEntry.canNext("12", HYMN_BB)).isTrue()
+        assertThat(HomeEntry.canNext("", HYMN_BB)).isTrue()
+    }
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:android="http://schemas.android.com/apk/res/android">
+<resources>
 
+    <!-- Dark list rows and radios when the system/app is in night mode (values/theme.xml pins .Light) -->
     <style name="AppTheme" parent="Theme.Material3.DayNight">
         <item name="colorPrimary">@color/color_primary</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -8,22 +9,15 @@
         <item name="colorSecondary">@color/color_accent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="listItemRow">@style/RowList.Light</item>
-        <item name="listItemRadio">@style/RadioListItem.Light</item>
+        <item name="listItemRow">@style/RowList.Dark</item>
+        <item name="listItemRadio">@style/RadioListItem.Dark</item>
     </style>
 
-    <!-- MainActivity (own Toolbar via setSupportActionBar) and ContentHandler (full-screen lyrics) have no window action bar -->
-    <style name="AppTheme.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-    </style>
-
-    <!-- Dialog-style screens (About, DialogActivity); must stay AppCompat-based, BaseActivity no longer forces a theme -->
     <style name="AppTheme.Dialog" parent="Theme.Material3.DayNight.Dialog">
         <item name="colorPrimary">@color/color_primary</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/color_accent</item>
-        <item name="listItemRow">@style/RowList.Light</item>
-        <item name="listItemRadio">@style/RadioListItem.Light</item>
+        <item name="listItemRow">@style/RowList.Dark</item>
+        <item name="listItemRadio">@style/RadioListItem.Dark</item>
     </style>
 </resources>
