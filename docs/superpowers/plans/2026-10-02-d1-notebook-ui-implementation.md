@@ -304,7 +304,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 - **G1**：Lane 0 的 Task 0～2 都已 commit，`testDebugUnitTest` 全綠，`api34nb` 上 `RoomNotebookQueriesContractTest` 全綠。
 - **G2**：M、P、S、T 四條 lane 合併，協調者在 `api34nb` 跑 `org.cog.hymnchtv.notebook.ui.titles` 套件。
 - **G3**：V1、V2、V3 合併；JVM 測試全綠。
-- **G4（相對於 C）**：（rev 5：C 已於 1.0.0 合併進 master，**一律選 C 模式**；下列判斷僅供核對。）協調者先執行下列指令，判斷 C 的狀態，再問使用者選哪個模式：
+- **G4（相對於 C）**：（rev 5：C 已於 1.0.0 合併進 master，**一律選 C 模式**；下列判斷僅供核對。**rev 5 新增硬前置：階段 4 的 I1～I3 必須在 C 的 G5〔1.1.0：H3＋H4＋F2 已合併，含 `HymnPickerController`、`HistoryFragment`、`HymnRef`〕之後開始，並先 `git rebase origin/master`**——I2 依賴這些類別，C 1.0.0 單獨不夠。若 C 的 H5〔1.1 之後，關卡 G6〕已先完成，才可使用 H5 介面；H5 未做時，I1 維持 `btn_next → nextInPlaylistOrNextHymn → scrollNextHymn()`，**不得引用 H5**。階段 0～3 都是新檔案，不受此限。）協調者先執行下列指令，判斷 C 的狀態，再問使用者選哪個模式：
 
   ```bash
   git fetch origin
@@ -8047,7 +8047,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 ## 階段 4 · Lane 0：整合、測試與收尾
 
-> **G4 前置**：先依「依賴 C 的介面」判斷 C 的狀態，選 C 模式（C 已合併）或 pre-C 模式（C 尚未合併、D-1 先發）。I1/I2 在 C 模式改 C 的對應檔案，pre-C 模式改舊版面。**C-10 三接點 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 由 I1 定義**（codex rev 3）。
+> **G4 前置**：（rev 5）C 已合併 → **C 模式**；且必須等 **C 的 G5（1.1.0：H3＋H4＋F2）** 完成並 rebase（I2 要用 `HymnPickerController`／`HistoryFragment`／`HymnRef`）；pre-C 模式作廢。I1/I2 在 C 模式改 C 的對應檔案，pre-C 模式改舊版面。**C-10 三接點 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 由 I1 定義**（codex rev 3）。
 
 ### Task I1：`ContentHandler` 接筆記本列與自動記錄
 

@@ -42,7 +42,7 @@
 **1. 基底、rebase 與「主執行緒資料庫查詢清除」。**
 - 分支從 `origin/master`（1.0.0＝6f73d776 之後的最新）開，例如 `feat/c-1-1-home`（H3＋H4 共用一個分支與一個 PR，因為 H3 結束時搜尋入口先停用、H4 才啟用，**H3 單獨不可發版**）；F2 另開 `feat/c-1-1-reconcile`；H5 另開（1.1 之後）。
 - 另一位代理同時在做 **主執行緒資料庫查詢清除**（Room 統一計畫 §2.4 清單：`MediaConfig`、`ContentHandler`、`MediaContentHandler`、`LyricsEnglishRecord`、`HomeFragment` 的歷史讀寫；並移除 `allowMainThreadQueries()`）。它改的檔案與 H 系列重疊（`HomeFragment.kt`、`ContentHandler.java`、`MediaContentHandler.java`、`MediaConfig.java`）。**關卡 G-DB = 該分支合併進 `master`。**
-  - 可以在 G-DB 之前做的：**只新增純檔案與純 JVM 測試**的步驟（H3 Step 1–7、H4 Step 1–2）。
+  - 可以在 G-DB 之前做的：**不碰上述衝突檔**的步驟——新增純檔案與純 JVM 測試，以及不與 G-DB 重疊的小修改（`HistoryRecord.java`、`strings*.xml`、`AssetHymnTitles.kt`）：H3 Step 1–7、H4 Step 1–2。
   - 必須等 G-DB 合併、`git fetch origin && git rebase origin/master` 之後才能動的：任何會改 `HomeFragment.kt`、`ContentHandler.java`、`MediaContentHandler.java`、`MediaConfig.java`、`LyricsEnglishRecord.java`、`DatabaseBackend.java` 的步驟（H3 Step 9 起、F2、H5 全部）。rebase 衝突一律「保留 G-DB 的資料庫呼叫方式，只重放 H 的 UI 變更」。
 - **新程式碼不得在主執行緒查資料庫**：歷史／媒體記錄的讀寫一律 `AppExecutors.io("…") { … }`，結果以 `AppExecutors.MAIN.post { if (views != null) … }` 回主執行緒（沿用 `HomeFragment.loadHistory()` 的寫法）；不得新增任何依賴 `allowMainThreadQueries()` 的呼叫。測試碼同樣不得在 `scenario.onActivity { … }`（主執行緒）裏呼叫 `DatabaseBackend`；在 instrumentation 執行緒呼叫即可。G-DB 合併後，G4／G5 要用 `./gradlew -PstrictDbThread :hymnchtv:installDebug` 走完 H3／H4 的流程確認不崩潰。
 
@@ -81,8 +81,8 @@
 | 2 | 0 | HOST1 → HOST2 | `MainActivity.java`、`res/layout/activity_main_host.xml`（新）、`res/menu/menu_bottom_nav.xml`（新）、`ui/host/MainHost.kt`（新）、`res/menu/menu_main.xml`（刪除） | **G1**：Phase 1 四 lane 合併 |
 | 3 | L | L1 → L2 → L3 → L4 | `ContentHandler.java`、`ContentView.java`、`res/layout/content_lyrics.xml`、`res/layout/content_main.xml`、`res/layout/media_player_audio_ui.xml`、`res/menu/menu_content.xml`、`ui/lyrics/`（新）、對應測試 | **G2**：HOST 合併 |
 | 4 | 0 | F1（**已完成**，併入 1.0.0） | （歷史列：`menu_content.xml` 已刪、`HymnToc` 已自 manifest 移除，細節見 F2） | G3 |
-| 5 | H | **H3 → H4**（同一分支、同一 PR；H3 Step 1–7 與 H4 Step 1–2 只新增純檔案，可在 G-DB 前先做） | `hymn/`（新，純 Kotlin）、`ui/picker/`（新）、`ui/home/`、`ui/search/`（新）、`search/`（新核心）、`ui/host/MainHost.kt`＋`MainNavigator.kt`、`ui/toc/TocFragment.kt`、`hymnhistory/HistoryRecord.java`、`res/layout/hymn_picker.xml`＋`layout-land/`、`fragment_home.xml`、`activity_main_host.xml`、`fragment_history.xml`、`fragment_search.xml`、`strings_c.xml`×3、`MainActivity.java`（CRLF，只加導覽委派）、`AndroidManifest.xml`（CRLF，H4 移除 `ContentSearch`）、`ContentSearch.java`（刪）、對應測試 | **G-DB**（Step 9 起）與 G3 |
-| 6 | 0 | **F2**（spec 對帳＋已決定事項） | `MediaConfig.java`、`ContentHandler.java`（CRLF，只刪死碼）、`HymnToc.java`（刪外殼）、`ui/toc/TocConstants.kt`（新）、`res/layout/media_config.xml`＋`layout-land/`（CRLF）、`media_player_audio_ui.xml`、`content_lyrics.xml`（CRLF）、`ui/theme/`、`androidTest/` | **G4** |
+| 5 | H | **H3 → H4**（同一分支、同一 PR；H3 Step 1–7 與 H4 Step 1–2 不碰 G-DB 的衝突檔〔新增純檔案＋`HistoryRecord.java`／`strings*.xml`／`AssetHymnTitles.kt` 的不重疊小修改〕，可在 G-DB 前先做） | `hymn/`（新，純 Kotlin）、`ui/picker/`（新）、`ui/home/`、`ui/search/`（新）、`search/`（新核心）、`ui/host/MainHost.kt`＋`MainNavigator.kt`、`ui/toc/TocFragment.kt`、`hymnhistory/HistoryRecord.java`、`res/layout/hymn_picker.xml`＋`layout-land/`、`fragment_home.xml`、`activity_main_host.xml`、`fragment_history.xml`、`fragment_search.xml`、`strings_c.xml`×3、`MainActivity.java`（CRLF，只加導覽委派）、`AndroidManifest.xml`（CRLF，H4 移除 `ContentSearch`）、`ContentSearch.java`（刪）、對應測試 | **G-DB**（Step 9 起）與 G3 |
+| 6 | 0 | **F2**（spec 對帳＋已決定事項） | `MediaConfig.java`、`ContentHandler.java`（CRLF，只刪死碼）、`HymnNoCh2EngXRef.java`（CRLF，只換 import）、`HymnToc.java`（刪外殼）、`ui/toc/TocConstants.kt`（新）、`res/layout/media_config.xml`＋`layout-land/`（CRLF）、`media_player_audio_ui.xml`、`content_lyrics.xml`（CRLF）、`ui/theme/`、`androidTest/` | **G4** |
 | — | — | **1.1.0 發版**：G-DB ＋ D-1a 資料層（PR #11）＋ G4 ＋ G5 全數合併後，產 1.1.0 APK 並全面檢查 | — | G5 |
 | 7（**1.1 之後**） | H5 | **H5a → H5b → H5c → H5d → H5e → H5f → H5g → H5h**（歌詞頁跳轉與回到上一首；設計已定案，實作排在 D-1 UI 之後或之前待定，H5 要整合 D-1 歌單時再排） | `ContentHandler.java`（CRLF）、`MediaContentHandler.java`（CRLF）、`MyPagerAdapter.java`（CRLF）、`mediaplayer/AudioBgService.java`（CRLF）、`MediaGuiController.java`、`MediaDownloadHandler.java`、`ContentView.java`、`content_lyrics.xml`／`content_main.xml`（CRLF）、`media_player_audio_ui.xml`、`nav/`（新，純 Kotlin）、`ui/lyrics/jump/`（新）、對應測試 | **G5**（1.1.0 已發）、**G-DB** 已合併 |
 
@@ -1121,7 +1121,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
   git ls-files --eol hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java   # 預期 w/crlf
   ```
 
-- [ ] **Step 1：`HymnSource`、`HymnRef`（TDD，純 Kotlin）**
+- [ ] **Step 1：`HymnSource`、`HymnNumberRules` 最小 API、`HymnRef`（TDD，純 Kotlin；先建 Step 2 要擴充的基礎，避免 Step 1 無法編譯）**
 
   先寫 `test/.../hymn/HymnRefTest.kt`（會編譯失敗→實作）：
 
@@ -1152,9 +1152,11 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
   }
   ```
 
+  **本 Step 先實作 `HymnNumberRules` 的最小 API**（`fuOffset(book)`、`storedOf(book, number, isFu)`、`isValid`、`storedNumbers(book)`、`displayNumbers(book, isFu)`；Step 2 再補 `canAppendDigit`、`canAppendEnglishDigit`、`alsoValidIn` 與完整測試），`HymnRefTest` 才能編譯與通過。
+
   實作 `hymn/HymnSource.kt`（七來源；`prefValue` 沿用 `LastHymnType` 的值＋新值 `"english"`；`fromPref(null/未知)＝DB`；`supportsFu` 只有 DB、YB）與 `hymn/HymnRef.kt`：`data class HymnRef(val book: String, val storedNo: Int)`，`isFu`/`displayNo` 依 `HymnNumberRules.fuOffset(book)`（DB＝780、YB＝275）推導，`isValid = HymnNumbering.isValid(book, storedNo)`，`fromEntry(book, number, isFu): HymnRef?` 呼叫 `HymnNumberRules.storedOf`。`HymnRef` 是首頁輸入、開啟、歷史**顯示**與重開（H5 的跳轉堆疊）的**唯一**換算點；媒體層（`MediaRecord`、`media_record.isFu`、匯入匯出格式、`MediaConfig` 驗證）**一個字都不改**。
 
-- [ ] **Step 2：`HymnNumberRules`（TDD，純 Kotlin；資料來自 `HymnNumbering`）**
+- [ ] **Step 2：`HymnNumberRules` 完整規則（TDD，純 Kotlin；資料來自 `HymnNumbering`；在 Step 1 的最小 API 上擴充）**
 
   `HymnNumberRulesTest.kt`（節錄，其餘照同模式補齊）：
 
@@ -1210,7 +1212,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
   另寫 `HymnNumberRulesAssetTest.kt`（讀 `hymnchtv.assetsDir`）：對 `db/bb/xb/xg/er`，`storedNumbers(book)` **等於** `lyrics_<p>_text/*.txt` 的號碼集合（逐號有效性與資產一致；青年只斷言 1..277，因其歌詞多半在別本）；另斷言 `YB_NO_MAX（275）== HymnNoValidate.HYMN_YB_NO_MAX`（編譯期常數，JVM 可讀）。**若資產與規則不一致，先回報再決定改規則或資產，不要悄悄調整。**
 
-  實作 `HymnNumberRules`：`fuOffset(book)`（DB→`HymnNumbering.DB_NO_MAX`、YB→275）；`storedOf(book, number, isFu): Int?`（非附：`number in 1..(fuOffset ?: ∞)` 且 `HymnNumbering.isValid`；附：`number>=1` 且 `isValid(book, offset+number)`）；`isValid` ＝ `storedOf != null`；`storedNumbers(book)`（`1..max` 過濾 `HymnNumbering.isValid`，快取）；`displayNumbers(book, isFu)`；`canAppendDigit(book, prefix, isFu, digit)`：`next = prefix + digit`，長度 ≤ 4、不以 0 開頭，且 `displayNumbers(book,isFu)` 中存在以 `next` 為十進位前綴的號碼；`canAppendEnglishDigit(prefix, digit, englishNumbers)` 同規則但資料是英文號集合；`alsoValidIn(number, isFu, except): List<HymnSource>`（依 `HymnSource` 宣告順序、排除 `except` 與英文）。
+  補完 `HymnNumberRules`（Step 1 已有 `fuOffset`、`storedOf`、`isValid`、`storedNumbers`、`displayNumbers`）：`fuOffset(book)`（DB→`HymnNumbering.DB_NO_MAX`、YB→275）；`storedOf(book, number, isFu): Int?`（非附：`number in 1..(fuOffset ?: ∞)` 且 `HymnNumbering.isValid`；附：`number>=1` 且 `isValid(book, offset+number)`）；`isValid` ＝ `storedOf != null`；`storedNumbers(book)`（`1..max` 過濾 `HymnNumbering.isValid`，快取）；`displayNumbers(book, isFu)`；`canAppendDigit(book, prefix, isFu, digit)`：`next = prefix + digit`，長度 ≤ 4、不以 0 開頭，且 `displayNumbers(book,isFu)` 中存在以 `next` 為十進位前綴的號碼；`canAppendEnglishDigit(prefix, digit, englishNumbers)` 同規則但資料是英文號集合；`alsoValidIn(number, isFu, except): List<HymnSource>`（依 `HymnSource` 宣告順序、排除 `except` 與英文）。
 
 - [ ] **Step 3：`EnglishXRef`（TDD，取代 `HomeFragment.kt` 檔尾的 `EnglishCrossRef`）**
 
@@ -1271,7 +1273,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
   寫完立刻跑 `./gradlew :hymnchtv:testDebugUnitTest --tests '*FontSubsetTest' --tests '*TraditionalResourcesTest'`；缺字就**改字**（不重產字型）。`HymnLabelsTest`（instrumented，用 `createConfigurationContext` 切三語系）：大本附 3、青年附 1（`HymnRef(YB,276)`）、補充 45 的 headline／chip／spoken 在三語系都正確，**青年 276 在歷史列顯示「青年 附1」而不是「青年 276」**。
 
-- [ ] **Step 7：Commit（純檔案階段，可在 G-DB 前）**
+- [ ] **Step 7：Commit（不碰 G-DB 衝突檔的階段，可在 G-DB 前；含 `HistoryRecord.java` 與 `strings*.xml` 的小修改）**
 
   ```bash
   ./gradlew :hymnchtv:testDebugUnitTest --console=plain
@@ -1399,7 +1401,11 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 - Test（JVM）：`test/.../search/{HymnSearchTest,SnippetExtractorTest,HymnSearchAssetTest}.kt`、`test/.../ui/titles/AssetHymnTitlesTest.kt`（補 `titleOf`）
 - Test（instrumented）：`androidTest/.../ui/search/{SearchFragmentTest,SearchPerfTest}.kt`
 
-- [ ] **Step 1：核心資料型別與搜尋（TDD，純 Kotlin，可在 G-DB 前做）**
+- [ ] **Step 1：先抽 `AssetHymnTitles.titleOf`（1a），再做核心資料型別與搜尋（1b；TDD，純 Kotlin，可在 G-DB 前做）**
+
+  **1a（前置，否則 1b 無法編譯）**：`ui/titles/AssetHymnTitles.kt`（LF）把 `lookup` 內「第 2 行去類別前綴＋第 3 行『（…）』補註」抽成 `companion fun titleOf(text: String): String?`，`lookup` 改呼叫它（行為不變，`AssetHymnTitlesTest` 原有測試必須維持綠），並補 `titleOf` 的測試；同檔私有的 `prefixOf` 改為 `internal`（Step 2 的 `AssetLyricsSource` 用）。
+
+  **1b**：
 
   先寫 `HymnSearchTest.kt`（用假的 `LyricsSource`，不依賴 assets）：
 
@@ -1475,11 +1481,11 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
   }
   ```
 
-  `SnippetExtractor.find(text, pattern): SnippetHit?`（`SnippetHit(lineIndex, snippet)`）；`toResult` 在 `lyrics.traditional(ref)` 非 null 且行數與簡體相同時，用同一 `lineIndex` 取繁體行組 snippet、用繁體文字取標題，否則用簡體。標題用 `AssetHymnTitles.titleOf(text)`（Step 2 抽出）。
+  `SnippetExtractor.find(text, pattern): SnippetHit?`（`SnippetHit(lineIndex, snippet)`）；`toResult` 在 `lyrics.traditional(ref)` 非 null 且行數與簡體相同時，用同一 `lineIndex` 取繁體行組 snippet、用繁體文字取標題，否則用簡體。標題用 `AssetHymnTitles.titleOf(text)`（Step 1a 已抽出）。
 
 - [ ] **Step 2：`AssetHymnTitles.titleOf`、`AssetLyricsSource`、真實資產測試**
 
-  - `ui/titles/AssetHymnTitles.kt`（LF）：把 `lookup` 內「第 2 行去類別前綴＋第 3 行『（…）』補註」抽成 `companion fun titleOf(text: String): String?`，`lookup` 改呼叫它（行為不變，`AssetHymnTitlesTest` 原有測試必須維持綠），並補 `titleOf` 的測試。同檔的 `PREFIXES` 對外提供 `internal fun prefixOf(book: String)`。
+  - （`AssetHymnTitles.titleOf` 已在 Step 1a 完成。）
   - `search/AssetLyricsSource.kt`：`class AssetLyricsSource(context, traditionalVariant: HantVariant?)`；`simplified(ref)` 讀 `lyrics_<p>_text/<p><no>.txt`（UTF-8，`\r\n`→`\n`；`IOException` → `null` 並 `Timber.v`，不是吞掉：缺檔是正常情況〔青年只有 139 檔、XG 34 等〕）；`traditional(ref)` 在 `traditionalVariant != null` 時讀 `LyricsAssets.hantPath(...)`。工廠 `AssetLyricsSource.forPrefs(context, prefs)` 依 `LyricsLanguagePolicy.resolveShowTraditional(...)` 與 `parseVariant(...)` 決定。
   - `HymnSearchAssetTest.kt`（JVM，以 `hymnchtv.assetsDir` 讀真檔、`T2sMap.parse(assets/lyrics_t2s_map.txt)`）：①簡體「祂的计划」命中大本 1，`snippet` 含關鍵字；②繁體「祂的計劃」同樣命中（T2S）；③搜「的」於 `All`、`limit=200` → `results.size==200 && hasMore`；④`Book(BB)` 的結果 `ref.book` 全為 BB；⑤**hant 目錄與簡體行數逐檔相同**（`LyricsHantAssetsTest` 之外再加行數斷言，保證 snippet 以行號映射成立）；⑥大本附（781–786）可被搜到時 `ref.isFu`。
 
@@ -1535,6 +1541,8 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 **F1 實際狀態（7985e0c0 實測，F2 以此為準）：** `res/menu/menu_content.xml` **已刪除**（`res/menu/` 只剩 `menu_bottom_nav.xml`、`menu_lyrics_more.xml`）；`AndroidManifest.xml` **已沒有** `HymnToc` 的 `<activity>`；但 `HymnToc.java`（CRLF，328 行）仍在，且仍是 `ContentHandler`（靜態 import `category_bb/db/er/xb`、`hymnCategory*`）、`TocBuilder.kt`、`TocFragment.kt`、`AssetHymnTitles.kt`、`HymnNoCh2EngXRef.java`（`TOC_BB/DB/XG`）的常數來源——它的 **Activity 外殼是死碼**（沒有任何 `startActivity`）。
 
+**Files：** Modify `mediaconfig/MediaConfig.java`（LF）、`ContentHandler.java`（**CRLF**）、`utils/HymnNoCh2EngXRef.java`（**CRLF**，把 `import static …HymnToc.TOC_BB/TOC_DB/TOC_XG` 改成 `import static org.cog.hymnchtv.ui.toc.TocConstants.TOC_BB` 等；`TocConstants` 為 Kotlin `object`，`const val`／`@JvmField` 可被 Java 以靜態欄位引用）、`ui/toc/TocBuilder.kt`、`TocFragment.kt`、`ui/titles/AssetHymnTitles.kt`、`res/layout/media_config.xml`＋`layout-land/media_config.xml`（CRLF）、`media_player_audio_ui.xml`（LF）、`content_lyrics.xml`（CRLF）、`ui/theme/EdgeToEdge.kt`；Create `ui/toc/TocConstants.kt`、`androidTest/.../ui/{EllipsisAudit,TruncationAuditTest}.kt`；Delete `HymnToc.java`（CRLF）、`HymnTocExpandableListAdapter.java`、`res/layout/hymn_toc*.xml`。
+
 - [ ] **Step 0：基線與盤點**
 
   ```bash
@@ -1564,7 +1572,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 2：移除 `MediaConfig` 的 `button_NQ`、`button_import` 長按（已決定）**
 
-  `mediaconfig/MediaConfig.java`（LF，1546 行）：刪除 `btnNQ.setOnLongClickListener(this)`、`findViewById(R.id.button_import).setOnLongClickListener(this)`、`onLongClick` 中 `button_NQ`（`downloadNQRecord(Mode.QQ_LINK)`）與 `button_import`（`importMediaRecords(ASSET_URL_IMPORT_FILE)`）兩個分支；`View.OnLongClickListener` 若再無其他使用者就從 `implements` 移除並刪空的 `onLongClick`。逐一確認：`Mode.QQ_LINK`、`ASSET_URL_IMPORT_FILE`（內建 `assets/url_import.txt`）、`downloadNQRecord` 是否因此成為死碼（有其他呼叫者就保留）。**產品確認（見回報）**：移除後「匯入內建連結（`url_import.txt`）」與「QQ 連結模式」失去入口；預設照使用者決定移除、不另加按鈕。更新 `androidTest/.../mediaconfig/*`（`UrlImportTest` 等）中若用長按觸發的測試，改為直接呼叫 `importMediaRecords(...)`（測試入口）——不改行為。
+  `mediaconfig/MediaConfig.java`（LF，1546 行）：刪除 `btnNQ.setOnLongClickListener(this)`、`findViewById(R.id.button_import).setOnLongClickListener(this)`、`onLongClick` 中 `button_NQ`（`downloadNQRecord(Mode.QQ_LINK)`）與 `button_import`（`importMediaRecords(ASSET_URL_IMPORT_FILE)`）兩個分支；`View.OnLongClickListener` 若再無其他使用者就從 `implements` 移除並刪空的 `onLongClick`。逐一確認：`Mode.QQ_LINK`、`ASSET_URL_IMPORT_FILE`（內建 `assets/url_import.txt`）、`downloadNQRecord` 是否因此成為死碼（有其他呼叫者就保留）。**產品確認（見回報）**：移除後「匯入內建連結（`url_import.txt`）」與「QQ 連結模式」失去入口；預設照使用者決定移除、不另加按鈕。既有 `UrlImportTest` 測的是公開的 `importUrlRecords(...)`（資料層），**不需修改**；`importMediaRecords(...)` 是 private，不要為測試暴露它。若 `MediaConfigRecordsListTest` 等有以長按觸發的案例，改為斷言「按鈕沒有 `OnLongClickListener`（`view.hasOnLongClickListeners()==false`）」。
   `media_config.xml`（CRLF）若有為長按寫的提示文字／`contentDescription`，一併移除。
 
 - [ ] **Step 3：清死碼**
