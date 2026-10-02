@@ -916,9 +916,19 @@
   Run 同一個測試。
   Expected: 2 個測試全部通過。
 
-- [ ] **Step 3：寫會失敗的同步測試** `LyricsHantAssetsTest.kt`
+- [ ] **Step 3：讓測試取得 assets 路徑，並寫會失敗的同步測試**
 
-  Gradle 執行單元測試時，工作目錄是模組根目錄 `hymnchtv/`。
+  不依賴測試的工作目錄（rev 5 Codex P2）。在 `hymnchtv/build.gradle` 的 `android { ... }` 區塊內（`lint {` 之前）加入：
+
+  ```groovy
+      testOptions {
+          unitTests.all {
+              it.systemProperty 'hymnchtv.assetsDir', file('src/main/assets').absolutePath
+          }
+      }
+  ```
+
+  新增 `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsHantAssetsTest.kt`：
 
   ```kotlin
   package org.cog.hymnchtv.lyrics
@@ -928,11 +938,15 @@
   import java.io.File
   import java.security.MessageDigest
 
-  /** Fails when Simplified lyrics change without re-running tools/gen_lyrics_hant.py (plan A.1.9). */
+  /**
+   * Fails when lyrics sources, generated Traditional outputs, the overrides table or the generator
+   * change without re-running tools/gen_lyrics_hant.py (plan A.1.9).
+   */
   class LyricsHantAssetsTest {
-      private val assets = File("src/main/assets")
+      private val assets = File(checkNotNull(System.getProperty("hymnchtv.assetsDir")) { "hymnchtv.assetsDir not set" })
+      private val repoRoot = assets.resolve("../../../..").canonicalFile
       private val sourceDirs: List<File> =
-          assets.listFiles { f -> f.isDirectory && Regex("lyrics_[a-z]+_text").matches(f.name) }!!.sortedBy { it.name }
+          assets.listFiles { f -> f.isDirectory && SOURCE_DIR.matches(f.name) }!!.sortedBy { it.name }
 
       private fun txtNames(dir: File): Set<String> =
           dir.listFiles { f -> f.isFile && f.name.endsWith(".txt") }?.map { it.name }?.toSet() ?: emptySet()
@@ -940,44 +954,83 @@
       private fun sha1(file: File): String =
           MessageDigest.getInstance("SHA-1").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
 
+      /** Strict parse: "#input<TAB>name<TAB>sha1" header rows and "path<TAB>sha1" rows, no duplicates. */
+      private fun manifest(): Pair<Map<String, String>, Map<String, String>> {
+          val inputs = mutableMapOf<String, String>()
+          val files = mutableMapOf<String, String>()
+          File(assets, "lyrics_hant_manifest.txt").readLines().filter { it.isNotBlank() && !it.startsWith("# ") }.forEach { line ->
+              val cols = line.split('\t')
+              if (cols[0] == "#input") {
+                  check(cols.size == 3 && SHA1.matches(cols[2])) { "bad manifest input row: $line" }
+                  check(inputs.put(cols[1], cols[2]) == null) { "duplicate input: ${cols[1]}" }
+              } else {
+                  check(cols.size == 2 && PATH.matches(cols[0]) && SHA1.matches(cols[1])) { "bad manifest row: $line" }
+                  check(files.put(cols[0], cols[1]) == null) { "duplicate path: ${cols[0]}" }
+              }
+          }
+          return inputs to files
+      }
+
       @Test
       fun sourceDirectoriesFound() {
           assertThat(sourceDirs.map { it.name }).containsAtLeast("lyrics_db_text", "lyrics_bb_text")
       }
 
       @Test
+      fun outputDirectoriesAreExactlyTheExpectedOnes() {
+          val expected = sourceDirs.flatMap { d -> HantVariant.values().map { d.name + it.dirSuffix } }.toSet()
+          val actual = assets.listFiles { f -> f.isDirectory && f.name.contains("_hant_") }!!.map { it.name }.toSet()
+          assertThat(actual).isEqualTo(expected)
+      }
+
+      @Test
       fun everyVariantMirrorsTheSourceFileSet() {
           for (dir in sourceDirs) {
               for (variant in HantVariant.values()) {
-                  val mirror = File(assets, dir.name + variant.dirSuffix)
-                  assertThat(txtNames(mirror)).isEqualTo(txtNames(dir))
+                  assertThat(txtNames(File(assets, dir.name + variant.dirSuffix))).isEqualTo(txtNames(dir))
               }
           }
       }
 
       @Test
-      fun manifestMatchesCurrentSources() {
-          val manifest = File(assets, "lyrics_hant_manifest.txt").readLines()
-              .filter { it.isNotBlank() }
-              .associate { line -> line.split('\t').let { it[0] to it[1] } }
+      fun manifestMatchesSourcesAndOutputs() {
           val actual = sourceDirs.flatMap { dir ->
-              txtNames(dir).map { name -> "${dir.name}/$name" to sha1(File(dir, name)) }
-          }.toMap()
-          assertThat(manifest).isEqualTo(actual)
+              listOf(dir) + HantVariant.values().map { File(assets, dir.name + it.dirSuffix) }
+          }.flatMap { dir -> txtNames(dir).map { "${dir.name}/$it" to sha1(File(dir, it)) } }.toMap()
+          assertThat(manifest().second).isEqualTo(actual)
+      }
+
+      @Test
+      fun manifestMatchesGeneratorInputs() {
+          val inputs = manifest().first
+          assertThat(inputs["tools/gen_lyrics_hant.py"]).isEqualTo(sha1(File(repoRoot, "tools/gen_lyrics_hant.py")))
+          assertThat(inputs["tools/lyrics_hant_overrides.tsv"]).isEqualTo(sha1(File(repoRoot, "tools/lyrics_hant_overrides.tsv")))
+      }
+
+      private companion object {
+          val SOURCE_DIR = Regex("lyrics_[a-z]+_text")
+          val PATH = Regex("lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
+          val SHA1 = Regex("[0-9a-f]{40}")
       }
   }
   ```
 
   Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsHantAssetsTest'`
-  Expected: `everyVariantMirrorsTheSourceFileSet` 和 `manifestMatchesCurrentSources` 失敗，因為還沒產生任何檔案；`sourceDirectoriesFound` 通過。
+  Expected: 只有 `sourceDirectoriesFound` 通過，其餘 4 個測試失敗，因為還沒產生任何檔案。
 
 - [ ] **Step 4：新增空的校對表** `tools/lyrics_hant_overrides.tsv`
 
+  每一條校對都限定在單一檔案，並寫明預期的替換次數；實際次數不符時，產生工具會直接失敗（rev 5 Codex P1）。
+
   ```
-  # Manual corrections applied after OpenCC (plan A.1.9).
-  # Format: variant<TAB>from<TAB>to   variant = tw | hk | *
-  # "from" is a Traditional fragment as produced by OpenCC; include enough context to be unique.
-  # Example (do not uncomment unless verified):  *	皇後	皇后
+  # Manual corrections applied after OpenCC (plan A.1.9). One rule = one file, exact expected hit count.
+  # Format: variant<TAB>source-path<TAB>from<TAB>to<TAB>count
+  #   variant     tw | hk | *        (* = both variants)
+  #   source-path Simplified source relative to assets, e.g. lyrics_db_text/db12.txt
+  #   from / to   Traditional text as produced by OpenCC / corrected text
+  #   count       exact number of occurrences of "from" in that file (per variant); mismatch = error
+  # Example (do not uncomment unless verified):
+  # *	lyrics_db_text/db12.txt	皇後	皇后	1
   ```
 
 - [ ] **Step 5：新增產生工具** `tools/gen_lyrics_hant.py`
@@ -999,6 +1052,7 @@
 
   ROOT = pathlib.Path(__file__).resolve().parent.parent
   ASSETS = ROOT / "hymnchtv/src/main/assets"
+  GENERATOR = pathlib.Path(__file__).resolve()
   OVERRIDES = ROOT / "tools/lyrics_hant_overrides.tsv"
   MANIFEST = ASSETS / "lyrics_hant_manifest.txt"
   REPORT = ROOT / "docs/superpowers/plans/lyrics-hant-review.csv"
@@ -1007,9 +1061,20 @@
   AMBIGUOUS = set("于里后复发只干历面云台余松谷斗志准范冲尽获系钟制致表卷借恶征党丑")
 
 
+  def sha1(data: bytes) -> str:
+      return hashlib.sha1(data).hexdigest()
+
+
+  def source_dirs():
+      return sorted(d for d in ASSETS.glob("lyrics_*_text") if d.is_dir())
+
+
   def source_files():
-      dirs = sorted(d for d in ASSETS.glob("lyrics_*_text") if d.is_dir())
-      return [f for d in dirs for f in sorted(d.glob("*.txt"))]
+      return [f for d in source_dirs() for f in sorted(d.glob("*.txt"))]
+
+
+  def rel(path):
+      return path.relative_to(ASSETS).as_posix()
 
 
   def read(path):
@@ -1019,6 +1084,8 @@
 
   def opencc_batch(texts, config):
       joined = SPLIT.join(texts)
+      if joined.count(SPLIT) != len(texts) - 1:
+          sys.exit("A lyrics file contains the split marker")
       result = subprocess.run(["opencc", "-c", config], input=joined.encode("utf-8"),
                               capture_output=True, check=True)
       parts = result.stdout.decode("utf-8").split(SPLIT)
@@ -1027,7 +1094,7 @@
       return parts
 
 
-  def load_overrides():
+  def load_overrides(known_sources):
       rules = []
       if not OVERRIDES.exists():
           return rules
@@ -1035,18 +1102,33 @@
           if not line.strip() or line.startswith("#"):
               continue
           cols = line.split("\t")
-          if len(cols) != 3 or cols[0] not in ("tw", "hk", "*") or not cols[1]:
-              sys.exit(f"{OVERRIDES.name}:{n}: expected 'variant<TAB>from<TAB>to'")
-          rules.append((n, cols[0], cols[1], cols[2]))
+          if len(cols) != 5 or cols[0] not in ("tw", "hk", "*") or not cols[2] or not cols[4].isdigit():
+              sys.exit(f"{OVERRIDES.name}:{n}: expected 'variant<TAB>source-path<TAB>from<TAB>to<TAB>count'")
+          if cols[1] not in known_sources:
+              sys.exit(f"{OVERRIDES.name}:{n}: unknown source file {cols[1]}")
+          rules.append((n, cols[0], cols[1], cols[2], cols[3], int(cols[4])))
       return rules
 
 
-  def apply_overrides(text, variant, rules, used):
-      for n, v, frm, to in rules:
-          if v in (variant, "*") and frm in text:
-              text = text.replace(frm, to)
-              used.add(n)
+  def apply_overrides(text, variant, source, rules):
+      for n, v, path, frm, to, count in rules:
+          if path != source or v not in (variant, "*"):
+              continue
+          hits = text.count(frm)
+          if hits != count:
+              sys.exit(f"{OVERRIDES.name}:{n}: expected {count} hit(s) of '{frm}' in {source} [{variant}], found {hits}")
+          text = text.replace(frm, to)
       return text
+
+
+  def clean_stale(expected_dirs, expected_files):
+      for d in ASSETS.glob("lyrics_*_text_hant_*"):
+          if d.is_dir() and d.name not in expected_dirs:
+              shutil.rmtree(d)
+      for d in expected_dirs:
+          for f in (ASSETS / d).iterdir():
+              if rel(f) not in expected_files:
+                  f.unlink()
 
 
   def main():
@@ -1058,29 +1140,27 @@
 
       sources = source_files()
       texts = [read(p) for p in sources]
-      rules = load_overrides()
-      used = set()
+      rules = load_overrides({rel(p) for p in sources})
       converted = {}
+      expected_dirs, expected_files = set(), set()
       for variant, config in VARIANTS.items():
-          out = [apply_overrides(t, variant, rules, used) for t in opencc_batch(texts, config)]
+          out = [apply_overrides(t, variant, rel(src), rules) for src, t in zip(sources, opencc_batch(texts, config))]
           converted[variant] = out
           for src, text in zip(sources, out):
-              dst_dir = src.parent.with_name(f"{src.parent.name}_hant_{variant}")
+              dst_dir = ASSETS / f"{src.parent.name}_hant_{variant}"
               dst_dir.mkdir(exist_ok=True)
               (dst_dir / src.name).write_bytes(text.encode("utf-8"))
-          # remove stale outputs whose source no longer exists
-          for dst_dir in ASSETS.glob(f"lyrics_*_text_hant_{variant}"):
-              src_dir = ASSETS / dst_dir.name[: -len(f"_hant_{variant}")]
-              for f in dst_dir.glob("*.txt"):
-                  if not (src_dir / f.name).exists():
-                      f.unlink()
+              expected_dirs.add(dst_dir.name)
+              expected_files.add(rel(dst_dir / src.name))
+      clean_stale(expected_dirs, expected_files)
 
-      lines = [f"{p.relative_to(ASSETS).as_posix()}\t{hashlib.sha1(p.read_bytes()).hexdigest()}" for p in sources]
-      MANIFEST.write_text("\n".join(sorted(lines)) + "\n", encoding="utf-8")
-
-      unused = [n for n, *_ in rules if n not in used]
-      if unused:
-          print(f"WARNING: override lines never matched (stale?): {unused}", file=sys.stderr)
+      rows = [f"#input\t{rel_path}\t{sha1(path.read_bytes())}"
+              for rel_path, path in (("tools/gen_lyrics_hant.py", GENERATOR), ("tools/lyrics_hant_overrides.tsv", OVERRIDES))]
+      outputs = sources + [ASSETS / f for f in sorted(expected_files)]
+      rows += sorted(f"{rel(p)}\t{sha1(p.read_bytes())}" for p in outputs)
+      version = subprocess.run(["opencc", "--version"], capture_output=True, text=True).stdout.strip().splitlines()
+      header = f"# generated by tools/gen_lyrics_hant.py; opencc: {version[-1] if version else 'unknown'}"
+      MANIFEST.write_text(header + "\n" + "\n".join(rows) + "\n", encoding="utf-8")
 
       if args.report:
           with REPORT.open("w", encoding="utf-8", newline="") as fh:
@@ -1093,14 +1173,20 @@
                   for ln, s in enumerate(s_lines):
                       hits = sorted(AMBIGUOUS.intersection(s))
                       if hits:
-                          writer.writerow([src.relative_to(ASSETS).as_posix(), ln + 1, "".join(hits),
-                                           s, tw_lines[ln], hk_lines[ln]])
+                          writer.writerow([rel(src), ln + 1, "".join(hits), s, tw_lines[ln], hk_lines[ln]])
       print(f"Generated {len(sources)} files x {len(VARIANTS)} variants")
 
 
   if __name__ == "__main__":
       main()
   ```
+
+  manifest 的格式：
+  - 第一行是 `# generated ...`，記錄 OpenCC 的版本，只作為參考。
+  - `#input<TAB>路徑<TAB>sha1`：產生工具和校對表的雜湊。
+  - `路徑<TAB>sha1`：每個簡體來源檔和每個繁體產物檔的雜湊。
+
+  測試解析 manifest 時會略過 `# ` 開頭的說明行（見 Step 3 的 `filter`）。
 
 - [ ] **Step 6：產生檔案並驗證**
 
@@ -1115,20 +1201,23 @@
 - [ ] **Step 7：執行同步測試，確認它通過**
 
   Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsHantAssetsTest'`
-  Expected: 3 個測試全部通過。
+  Expected: 5 個測試全部通過。
 
-- [ ] **Step 8：驗證保護機制有效（不要 commit 這個修改）**
+- [ ] **Step 8：驗證保護機制有效（每做完一項就還原，不要 commit）**
 
-  在 `hymnchtv/src/main/assets/lyrics_db_text/db1.txt` 結尾加一個空白後，重跑 Step 7。
-  Expected: `manifestMatchesCurrentSources` 失敗。
+  1. 在 `lyrics_db_text/db1.txt` 的結尾加一個空白：`manifestMatchesSourcesAndOutputs` 要失敗。
+  2. 直接手改 `lyrics_db_text_hant_tw/db1.txt` 的一個字：`manifestMatchesSourcesAndOutputs` 要失敗。
+  3. 在校對表加一行註解：`manifestMatchesGeneratorInputs` 要失敗。
+  4. 建立一個空目錄 `lyrics_zz_text_hant_tw`：`outputDirectoriesAreExactlyTheExpectedOnes` 要失敗。
+  5. 在校對表加一條規則，故意寫錯次數，例如 `*	lyrics_db_text/db1.txt	神	神	99`，再執行 `tools/gen_lyrics_hant.py`：要以 `expected 99 hit(s)` 錯誤結束。
 
-  確認後用 `git checkout hymnchtv/src/main/assets/lyrics_db_text/db1.txt` 還原。
+  每一項做完都用 `git checkout -- hymnchtv/src/main/assets tools` 還原；第 4 項另外要 `rmdir` 刪掉那個空目錄。
 
 - [ ] **Step 9：Commit**
 
   ```bash
   git add tools/gen_lyrics_hant.py tools/lyrics_hant_overrides.tsv \
-          hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsAssets.kt \
+          hymnchtv/build.gradle hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsAssets.kt \
           hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsAssetsTest.kt \
           hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsHantAssetsTest.kt \
           hymnchtv/src/main/assets/lyrics_*_text_hant_tw hymnchtv/src/main/assets/lyrics_*_text_hant_hk \
@@ -1140,7 +1229,7 @@
 
   把 `docs/superpowers/plans/lyrics-hant-review.csv` 交給使用者或教會同工確認。用 `chars` 欄位排序，方便逐字檢查。
 
-  需要修正的地方寫進 `tools/lyrics_hant_overrides.tsv`，然後重跑：
+  需要修正的地方寫進 `tools/lyrics_hant_overrides.tsv`。每條規則都要填檔案路徑和預期次數，計算方式是在該 variant 的產物檔裡執行 `grep -o 'from' 檔案 | wc -l`。然後重跑：
 
   ```bash
   tools/gen_lyrics_hant.py --report
