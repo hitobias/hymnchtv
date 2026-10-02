@@ -381,6 +381,22 @@ object LyricsLanguagePolicy {
 | B-7 | `handleIntent` 裡呼叫了 `super.onStart()`（bug）；啟動時還有幾項零碎的同步工作 | `MainActivity.java:254, 377`、`HymnsApp.java:144, 256-264` | 刪掉多餘的呼叫；其餘工作延後執行 |
 | B-8 | 樂譜圖片用 ARGB_8888 解碼；沒有開啟 R8；沒有 baseline profile | `MyGlideApp.java:76-85`、`build.gradle:32` | 每一項都需要另行評估（見 B.3） |
 
+
+**使用者在 2026-10-02 決定新增的項目：**
+
+| # | 熱點 | 位置 | 初步修法 |
+|---|---|---|---|
+| B-9a | 大量匯入媒體連結時，每一筆都各自 commit 一次。`url_import.txt` 有 2,696 筆，舊手機的儲存很慢，可能要花上幾十秒 | `MediaConfig.java:1106`、`NotionRecord.java:484`、`QQRecord.java:269` | 整批包在單一 transaction 裡（`beginTransaction`／`setTransactionSuccessful`／`endTransaction`），並在背景執行 |
+| B-9b | 每翻一頁最多查 4 次資料庫（每種媒體類型各查一次），而且在主執行緒上執行 | `ContentHandler.getHymnMediaState`、`DatabaseBackend.getMediaRecord` | 新增 `getMediaRecords(hymnType, hymnNo, isFu)`，一次查出這首詩歌所有媒體類型；和 B-4 一起移到背景執行 |
+| B-9c | 每次呼叫 `getWritableDatabase()` 都執行 `PRAGMA foreign_keys=ON`，但資料庫根本沒有外鍵 | `DatabaseBackend.java:437-443` | 刪掉這個 override |
+| B-9d | 沒有開啟 WAL 模式：寫入時讀取會被卡住，磁碟寫入次數也比較多 | `DatabaseBackend` | 在 `onConfigure` 呼叫 `db.enableWriteAheadLogging()` |
+| B-9e | 每開一首詩歌，都把整張歷史表讀出來，只為了計算有幾筆 | `DatabaseBackend.storeHymnHistory` | 改用 `DatabaseUtils.queryNumEntries`；只有超過上限時才刪除舊資料 |
+| B-10 | ViewPager2 會預先建立大約 9 頁，每一頁都有一個 WebView 和 5 張圖片 | `ContentHandler.java:289-295` | 關閉 RecyclerView 的 item prefetch，並縮小 view cache。改完要量測翻頁是否變慢 |
+| B-11 | 低階裝置模式：用 `ActivityManager.isLowRamDevice()` 或 memoryClass 判斷是否為低階手機 | 新增 `DeviceProfile` | 低階手機自動套用下列設定：關閉翻頁動畫（和 A2 的設定共用同一個開關）、樂譜改用 RGB_565（需先通過 B.3 第 7 項的視覺驗收）、桌布降低解析度 |
+
+- **不做的事**：不把 6 張詩歌本資料表合併成一張，也不為了效能改用 Room。這兩件事對效能都沒有幫助，卻要遷移使用者既有的資料。等子項目 D-1 新增「收藏／歌單」資料表時，再評估要不要用 Room。
+- **既有 bug**：`ContentView.showLyricsScore` 的第 5 頁樂譜沒有呼叫 `findViewById(R.id.contentView_d)`，會覆蓋掉第 4 頁的圖。在 B 或 A2 修正。
+
 ### B.2 已知方向
 
 - 先量測，有了數據才動手修。每一項修正都是一個獨立的 commit，修完重新量測並記錄。
