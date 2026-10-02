@@ -16,6 +16,10 @@
  */
 package org.cog.hymnchtv;
 
+import android.content.Context;
+
+import org.cog.hymnchtv.mediaconfig.MediaConfig;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,9 +52,9 @@ public enum MediaType {
         return map.get(hymnType);
     }
 
-    public static String mediaType2Text(MediaType type) {
-        String[] typeStr = {"媒体", "教唱", "唱诗", "伴奏"};
-        return typeStr[type.getValue()];
+    /** Localized display name of the media type, resolved from the given (locale-aware) context. */
+    public static String mediaType2Text(Context context, MediaType type) {
+        return MediaConfig.mediaTypeEntries(context).get(type.getValue());
     }
 
     public int getValue() {

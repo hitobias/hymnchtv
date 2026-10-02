@@ -56,6 +56,7 @@ import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_MAX;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_TMAX;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -1510,8 +1511,9 @@ public class ContentHandler extends BaseActivity {
         return new MediaRecord(mHymnType, mHymnNo, isFu, MediaType.HYMN_MEDIA);
     }
 
-    public String hymnType2Text() {
-        return HymnTypeMap.get(mHymnType);
+    public String hymnType2Text(Context context) {
+        int idx = MediaConfig.hymnTypeValue.indexOf(mHymnType);
+        return idx < 0 ? mHymnType : MediaConfig.hymnTypeEntries(context).get(idx);
     }
 
     public boolean scrollNextHymn() {

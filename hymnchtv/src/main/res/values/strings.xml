@@ -328,5 +328,15 @@
 
     <string name="permission_app_rational">%1$s was denied. App may be inoperative until you grant permission in [App info | Permissions]</string>
 
-
+    <!-- Display names (media config spinners, auto-stream prompts) -->
+    <string name="hymn_type_name_db">大本诗歌</string>
+    <string name="hymn_type_name_bb">补充本</string>
+    <string name="hymn_type_name_xb">新歌颂咏</string>
+    <string name="hymn_type_name_xg">新诗歌本</string>
+    <string name="hymn_type_name_yb">青年诗歌</string>
+    <string name="hymn_type_name_er">儿童诗歌</string>
+    <string name="media_type_name_media">媒体</string>
+    <string name="media_type_name_jiaochang">教唱</string>
+    <string name="media_type_name_changshi">唱诗</string>
+    <string name="media_type_name_banzou">伴奏</string>
 </resources>

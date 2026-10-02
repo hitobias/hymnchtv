@@ -43,6 +43,7 @@ import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_MAX;
 
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -197,15 +198,15 @@ public class MediaConfig extends BaseActivity
     // DB based media record list view and last selected view
     private ListView mListView;
 
-    public static List<String> hymnTypeEntry = new ArrayList<>();
-
-    static {
-        hymnTypeEntry.add("大本诗歌");
-        hymnTypeEntry.add("补充本");
-        hymnTypeEntry.add("新歌颂咏");
-        hymnTypeEntry.add("新詩歌本");
-        hymnTypeEntry.add("青年诗歌 ");
-        hymnTypeEntry.add("儿童诗歌");
+    /** Spinner labels in the same order as {@link #hymnTypeValue}; resolved per locale at call time. */
+    public static List<String> hymnTypeEntries(Context context) {
+        return List.of(
+                context.getString(R.string.hymn_type_name_db),
+                context.getString(R.string.hymn_type_name_bb),
+                context.getString(R.string.hymn_type_name_xb),
+                context.getString(R.string.hymn_type_name_xg),
+                context.getString(R.string.hymn_type_name_yb),
+                context.getString(R.string.hymn_type_name_er));
     }
 
     public static List<String> hymnTypeValue = new ArrayList<>();
@@ -219,13 +220,13 @@ public class MediaConfig extends BaseActivity
         hymnTypeValue.add(HYMN_ER);
     }
 
-    public static List<String> mediaTypeEntry = new ArrayList<>();
-
-    static {
-        mediaTypeEntry.add("媒体");
-        mediaTypeEntry.add("教唱");
-        mediaTypeEntry.add("唱诗");
-        mediaTypeEntry.add("伴奏");
+    /** Spinner labels in the same order as {@link #mediaTypeValue}; resolved per locale at call time. */
+    public static List<String> mediaTypeEntries(Context context) {
+        return List.of(
+                context.getString(R.string.media_type_name_media),
+                context.getString(R.string.media_type_name_jiaochang),
+                context.getString(R.string.media_type_name_changshi),
+                context.getString(R.string.media_type_name_banzou));
     }
 
     public static List<MediaType> mediaTypeValue = new ArrayList<>();
@@ -307,7 +308,7 @@ public class MediaConfig extends BaseActivity
         setTitle(R.string.media_config);
 
         // Create an ArrayAdapter using the string array and hymnApp default spinner layout
-        ArrayAdapter<?> hymnTypeAdapter = new ArrayAdapter<>(this, R.layout.simple_spinner_item_light, hymnTypeEntry);
+        ArrayAdapter<?> hymnTypeAdapter = new ArrayAdapter<>(this, R.layout.simple_spinner_item_light, hymnTypeEntries(this));
         // Specify the layout to use when the list of choices appears
         hymnTypeAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_radio);
 
@@ -321,7 +322,7 @@ public class MediaConfig extends BaseActivity
         // mHymnTypeSpinnerItem = hymnTypeSpinner.findViewById(R.id.textItem);
 
         // Create an ArrayAdapter using the string array and hymnApp default spinner layout
-        ArrayAdapter<?> mediaTypeAdapter = new ArrayAdapter<>(this, R.layout.simple_spinner_item_light, mediaTypeEntry);
+        ArrayAdapter<?> mediaTypeAdapter = new ArrayAdapter<>(this, R.layout.simple_spinner_item_light, mediaTypeEntries(this));
         // Specify the layout to use when the list of choices appears
         mediaTypeAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_radio);
 

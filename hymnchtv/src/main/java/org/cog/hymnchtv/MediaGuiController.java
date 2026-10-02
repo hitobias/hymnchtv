@@ -500,7 +500,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 }
                 else {
                     HymnsApp.showToastMessage(R.string.auto_stream_unsupported,
-                            mContentHandler.hymnType2Text(), MediaType.mediaType2Text(mMediaType));
+                            mContentHandler.hymnType2Text(requireContext()), MediaType.mediaType2Text(requireContext(), mMediaType));
                 }
             }
             else {
@@ -555,7 +555,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     public void onDialogCancelled(DialogActivity dialog) {
                         mContentHandler.setAutoStream(false);
                     }
-                }, mContentHandler.hymnType2Text(), MediaType.mediaType2Text(mMediaType)
+                }, mContentHandler.hymnType2Text(requireContext()), MediaType.mediaType2Text(requireContext(), mMediaType)
         );
     }
 
