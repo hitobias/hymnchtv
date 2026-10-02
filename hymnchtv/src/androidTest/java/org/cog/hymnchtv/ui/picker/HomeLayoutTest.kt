@@ -21,19 +21,25 @@ class HomeLayoutTest {
 
     @After fun tearDown() = PickerTestSupport.cleanUp()
 
+    /** The 44dp book cells and contents button are sized by the spec (5) and checked separately. */
+    private val bookIds = listOf(R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english, R.id.btn_toc)
+
     private val fixedIds = listOf(
-        R.id.tv_search, R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english, R.id.btn_toc,
+        R.id.tv_search,
         R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5, R.id.n6, R.id.n7, R.id.n8, R.id.n9, R.id.n10, R.id.n11, R.id.btn_open,
     )
 
-    @Test fun everythingFromSearchToOpenIsVisibleWithoutScrolling() {
+    @Test fun theOpenKeyIsOnTheFirstScreenWhenTheContentAreaIs580dp() {
         PickerTestSupport.launch { scenario ->
             scenario.onActivity { a ->
                 val dm = a.resources.displayMetrics
-                val heightDp = dm.heightPixels / dm.density
+                // spec 5: the open key is on the first screen when the content area (below the toolbar, above the nav bar) is 580dp
+                val scroller = generateSequence(a.findViewById<View>(R.id.tv_search).parent) { it.parent }
+                    .filterIsInstance<androidx.core.widget.NestedScrollView>().first()
+                val contentDp = scroller.height / dm.density
                 val portrait = a.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
                 val fontScale = a.resources.configuration.fontScale
-                assumeTrue("needs a 720dp tall portrait screen at normal font size", portrait && heightDp >= 720 && fontScale <= 1.0f)
+                assumeTrue("needs a 580dp tall content area in portrait at normal font size", portrait && contentDp >= 580 && fontScale <= 1.0f)
                 for (id in listOf(R.id.tv_search, R.id.bs_db, R.id.tv_entry, R.id.n1, R.id.n11, R.id.btn_open)) {
                     val v = a.findViewById<View>(id)
                     val r = Rect()
@@ -62,6 +68,21 @@ class HomeLayoutTest {
         }
     }
 
+    @Test fun bookCellsAre44dpHighAndKeysAtLeast48() {
+        PickerTestSupport.launch { scenario ->
+            scenario.onActivity { a ->
+                val d = a.resources.displayMetrics.density
+                bookIds.forEach { id -> assertThat(a.findViewById<View>(id).height).isEqualTo((44 * d).toInt()) }
+                assertThat(a.findViewById<View>(R.id.btn_open).height).isEqualTo((52 * d).toInt())
+                listOf(R.id.n0, R.id.n5, R.id.n11).forEach { id ->
+                    val h = a.findViewById<View>(id).height
+                    assertThat(h).isAtLeast((48 * d).toInt())
+                    assertThat(h).isAtMost((72 * d).toInt() + 1)
+                }
+            }
+        }
+    }
+
     @Test fun recentItemsShowTheirWholeNameAndTime() {
         PickerTestSupport.resetHistory(HistoryRecord(HymnTypes.DB, 123, false, "標題", System.currentTimeMillis()))
         PickerTestSupport.launch { scenario ->
@@ -82,10 +103,7 @@ class HomeLayoutTest {
     @Test fun sourceButtonsAndContentsButtonShowTheirWholeName() {
         PickerTestSupport.launch { scenario ->
             scenario.onActivity { a ->
-                val ids = listOf(
-                    R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english, R.id.btn_toc,
-                )
-                ids.forEach { id ->
+                bookIds.forEach { id ->
                     val b = a.findViewById<android.widget.TextView>(id)
                     val layout = b.layout
                     assertWithMessage("layout of ${b.text}").that(layout).isNotNull()

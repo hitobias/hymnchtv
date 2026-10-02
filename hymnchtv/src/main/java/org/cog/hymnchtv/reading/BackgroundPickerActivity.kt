@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -32,8 +33,9 @@ import org.cog.hymnchtv.reading.background.BackgroundSlot
 import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
 import org.cog.hymnchtv.reading.background.nextPhotoRevision
 import org.cog.hymnchtv.reading.background.ReadingPalette
+import org.cog.hymnchtv.reading.background.UiTokens
 
-/** Grid of the 20 backgrounds plus "your photo" for one slot (plan A2); writes the slot's pref and finishes. */
+/** Grid of the 28 backgrounds plus "your photo" for one slot (plan A2); writes the slot's pref and finishes. */
 class BackgroundPickerActivity : BaseActivity() {
     private lateinit var prefs: SharedPreferences
     private lateinit var slot: BackgroundSlot
@@ -125,11 +127,11 @@ class BackgroundPickerActivity : BaseActivity() {
             val view = convertView ?: layoutInflater.inflate(R.layout.background_picker_item, parent, false)
             val choice = choices[position]
             val palette = bind(position, view.findViewById(R.id.bgImage), choice)
+            val tokens = UiTokens.from(BackgroundPolicy.tokenInput(choice))
+            bindMiniCard(view, tokens, choice is BackgroundChoice.Photo)
             view.findViewById<TextView>(R.id.bgSample).apply {
-                setTextColor(palette.textColor)
+                setTextColor(tokens.onSurface)
                 typeface = sampleFont
-                // Photo cell: the sample sits on the same 85 % panel the lyrics use, so the preview tells the truth
-                background = BackgroundDrawables.backdrop(this@BackgroundPickerActivity, palette)
             }
             view.findViewById<TextView>(R.id.bgName).setText(BackgroundDrawables.nameRes(choice))
             view.findViewById<TextView>(R.id.bgCheck).apply {
@@ -137,6 +139,20 @@ class BackgroundPickerActivity : BaseActivity() {
                 setTextColor(palette.accentColor)
             }
             return view
+        }
+
+        /** The thumbnail's card and three buttons (two tone, one selected) drawn from the cell's own tokens. */
+        private fun bindMiniCard(cell: View, t: UiTokens, isPhoto: Boolean) {
+            val density = resources.displayMetrics.density
+            fun shape(fill: Int, radiusDp: Float, stroke: Boolean = false) = GradientDrawable().apply {
+                setColor(fill)
+                cornerRadius = radiusDp * density
+                if (stroke) setStroke(density.toInt().coerceAtLeast(1), t.outline)
+            }
+            cell.findViewById<View>(R.id.bgMiniCard).background = shape(t.surface, MINI_CARD_RADIUS_DP, stroke = isPhoto)
+            cell.findViewById<View>(R.id.bgMiniButton1).background = shape(t.surfaceTone, MINI_BUTTON_RADIUS_DP)
+            cell.findViewById<View>(R.id.bgMiniButton2).background = shape(t.surfaceTone, MINI_BUTTON_RADIUS_DP)
+            cell.findViewById<View>(R.id.bgMiniButton3).background = shape(t.accent, MINI_BUTTON_RADIUS_DP)
         }
 
         /** Decoded once, off the main thread; the grid refreshes when it arrives. */
@@ -172,6 +188,8 @@ class BackgroundPickerActivity : BaseActivity() {
     companion object {
         private const val EXTRA_SLOT = "slot"
         private const val THUMB_PX = 360
+        private const val MINI_CARD_RADIUS_DP = 8f
+        private const val MINI_BUTTON_RADIUS_DP = 4f
 
         @JvmStatic
         fun intent(context: Context, slot: BackgroundSlot): Intent =

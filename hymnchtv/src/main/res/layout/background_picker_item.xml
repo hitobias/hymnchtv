@@ -16,15 +16,54 @@
             android:importantForAccessibility="no"
             android:scaleType="centerCrop" />
 
-        <TextView
-            android:id="@+id/bgSample"
+        <!-- A shrunken card and button row in this background's own UI tokens (spec 6a) -->
+        <LinearLayout
+            android:id="@+id/bgMiniCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:gravity="center"
-            android:padding="6dp"
-            android:text="@string/bg_picker_sample"
-            android:textSize="16sp" />
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/bgSample"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="@string/bg_picker_sample"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:id="@+id/bgMiniButtons"
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/bgMiniButton1"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+
+                <View
+                    android:id="@+id/bgMiniButton2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1" />
+
+                <View
+                    android:id="@+id/bgMiniButton3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1" />
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/bgCheck"
