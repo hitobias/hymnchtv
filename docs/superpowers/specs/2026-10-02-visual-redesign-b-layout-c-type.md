@@ -1,6 +1,6 @@
 # 首頁與歌詞頁視覺重設計（B 版面＋C 字形）
 
-> 狀態：rev 8（2026-10-03）。rev 7 Codex：P1×1、P2×2、P3×1 已修正（預覽卡高度改以內容量測並重算預算、歌詞層底部 inset、目錄鈕文字 token、照片截圖 fixture）。前次：rev 7（2026-10-03）。rev 6 Codex：P1×2、P2×1、P3×1 已照建議修正（TokenInput 明列 isPhoto、作用中／停用文字門檻分開、accent 對所有相鄰底取最差、閱讀色調整需同步更新表與測試）。前次：rev 6（2026-10-03）。rev 5 Codex：P1×2、P2×1 已併入（鍵盤下限統一 48dp、停用狀態改用 token 不再整體 alpha、rasterize 測試改為逐像素合成後驗證）。前次：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
+> 狀態：rev 9（2026-10-03）。rev 8 Codex：P1×1（頂列 320dp 容納不下 8 鈕）、P2×1 已修正。前次：rev 8（2026-10-03）。rev 7 Codex：P1×1、P2×2、P3×1 已修正（預覽卡高度改以內容量測並重算預算、歌詞層底部 inset、目錄鈕文字 token、照片截圖 fixture）。前次：rev 7（2026-10-03）。rev 6 Codex：P1×2、P2×1、P3×1 已照建議修正（TokenInput 明列 isPhoto、作用中／停用文字門檻分開、accent 對所有相鄰底取最差、閱讀色調整需同步更新表與測試）。前次：rev 6（2026-10-03）。rev 5 Codex：P1×2、P2×1 已併入（鍵盤下限統一 48dp、停用狀態改用 token 不再整體 alpha、rasterize 測試改為逐像素合成後驗證）。前次：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
 > 範圍：C 子項目 1.1（H3 首頁已實作於 `feat/c-home-search`）之上的視覺層修訂；不改互動規則（spec `2026-10-02-home-entry-and-lyrics-jump-design.md` 仍有效）。
 
 ## 1. 使用者回饋（必須解決）
@@ -35,7 +35,7 @@
 
 ## 4. 色彩 token（由 ReadingPalette 推導）
 
-新增純函式 `UiTokens.from(input: TokenInput): UiTokens`（Kotlin，可單元測試）。`TokenInput` 為不可變輸入：`textColor`、`accentColor`、`baseColor`、`isDark`（取實際背景的明暗，**不**取 DayNight——使用者明選的淺色背景在深色模式下仍是淺色）、`swatches: List<Int>`（背景可能出現的代表色。preset：對每個漸層色停點，窮舉該 preset 所有 overlay 的組合（每層取 0 與最大 alpha，n 層共 2ⁿ 種，現有 preset n ≤ 3）依繪製順序合成後的所有結果；照片：`PHOTO_PALETTE` 經既有 dim 後的黑端點與白端點）。另加插樁測試：把每個 preset 的實際 drawable rasterize 成 108×192 bitmap，對**每個像素**先套用與正式 UI 相同的 `surface`／`surfaceTone`／`disabledSurface` 合成，再直接驗證 `onSurface`、`onSurfaceMuted`、`disabledOnSurface`、`accent`、`outline` 的對比門檻（不以背景亮度範圍作為涵蓋證明）、`isPhoto: Boolean`（`BackgroundChoice.Photo` 時為 true，決定 `surface` 走照片分支）。由 `BackgroundPolicy` 新增 `tokenInput(choice)` 產生（`ReadingPalette` 保留現有欄位不動，避免波及 A2）；preset 由新增的 `BackgroundPreset.swatches()` 提供。DayNight 只決定「未設定背景時的預設 preset」。下表中「淺色背景／深色背景」一律指 `input.isDark`。輸出：
+新增純函式 `UiTokens.from(input: TokenInput): UiTokens`（Kotlin，可單元測試）。`TokenInput` 為不可變輸入：`textColor`、`accentColor`、`baseColor`、`isDark`（取實際背景的明暗，**不**取 DayNight——使用者明選的淺色背景在深色模式下仍是淺色）、`swatches: List<Int>`（背景可能出現的代表色。preset：對每個漸層色停點，窮舉該 preset 所有 overlay 的組合（每層取 0 與最大 alpha，n 層共 2ⁿ 種，現有 preset n ≤ 3）依繪製順序合成後的所有結果；照片：`PHOTO_PALETTE` 經既有 dim 後的黑端點與白端點）。另加插樁測試：把每個 preset 的實際 drawable rasterize 成 108×192 bitmap，對**每個像素**先套用與正式 UI 相同的 `surface`／`surfaceTone`／`disabledSurface` 合成，再直接驗證 `onSurface`、`onSurfaceMuted`、`disabledOnSurface`、`onOutlineAction`（對合成後 `surface` ≥ 4.5:1）、`accent`、`outline` 的對比門檻，並驗證 `onAccent` 對 `accent` ≥ 4.5:1（不以背景亮度範圍作為涵蓋證明）、`isPhoto: Boolean`（`BackgroundChoice.Photo` 時為 true，決定 `surface` 走照片分支）。由 `BackgroundPolicy` 新增 `tokenInput(choice)` 產生（`ReadingPalette` 保留現有欄位不動，避免波及 A2）；preset 由新增的 `BackgroundPreset.swatches()` 提供。DayNight 只決定「未設定背景時的預設 preset」。下表中「淺色背景／深色背景」一律指 `input.isDark`。輸出：
 
 | token | 用途 | 推導 |
 |---|---|---|
@@ -75,7 +75,8 @@
 
 ## 6. 歌詞頁按鈕（同一套 token）
 
-- **頂列**：按鈕為 `surfaceTone` 圓角 12dp 色塊、高 40dp（觸控區 ≥ 48dp）、`onSurface` 14sp 500；選中／開啟狀態（例如譜色啟用）用 `accent`＋`onAccent`。頂列整條底板 `surface`，讓按鈕不直接壓在歌詞紙紋上。
+- **頂列內容（定稿）**：任何寬度只放 5 個：分享、媒體、Aa、下一首、⋮（5×48dp＝240dp，320dp 含內距可容納）。A-／A+ 移除（字級改由 Aa 面板滑桿調整）；譜色移入 ⋮ 溢出選單（與閱讀設定、顯示／隱藏播放條、英文歌詞、說明、主頁同列）。不使用水平捲動工具列。TalkBack 焦點順序依畫面左到右。
+- **頂列樣式**：按鈕為 `surfaceTone` 圓角 12dp 色塊、高 40dp（觸控區 ≥ 48dp）、`onSurface` 14sp 500；選中／開啟狀態（例如譜色啟用）用 `accent`＋`onAccent`。頂列整條底板 `surface`，讓按鈕不直接壓在歌詞紙紋上。
 - **下方三鈕**：與頂列同樣式，三等欄，14sp 單行，320dp 不得截斷或換行。標籤定稿（動態者依目前狀態）：
 
 | 按鈕 | 繁中 | 簡中 | 英文 |
@@ -137,7 +138,7 @@
 
 ## 7. 驗收
 
-1. **自動對比測試**（單元，純函式）：矩陣為「每個 `BackgroundPreset`（含新閱讀色）」＋「`PHOTO_PALETTE` 黑白端點」＋「未設定槽位時的淺色／深色預設」；對每個 swatch 合成表面後，`UiTokens` 的每組（作用中文字／表面）≥ 4.5:1、（停用文字／停用表面）≥ 3:1、（選中、外框／相鄰表面）≥ 3:1。
+1. **自動對比測試**（單元，純函式）：矩陣為「每個 `BackgroundPreset`（含新閱讀色）」＋「`PHOTO_PALETTE` 黑白端點」＋「未設定槽位時的淺色／深色預設」；對每個 swatch 合成表面後，`UiTokens` 的每組（作用中文字／表面，含 `onAccent`／`accent`、`onOutlineAction`／`surface`）≥ 4.5:1、（停用文字／停用表面）≥ 3:1、（選中、外框／相鄰表面）≥ 3:1。
 2. **插樁測試**：首頁七本＋目錄格文字未被 ellipsize（檢查 `Layout.getEllipsisCount`）於 320dp 英文與中文；開啟鍵文字色與底色對比 ≥ 4.5:1（讀實際 View 顏色）；換背景後首頁卡片顏色改變。
 3. **截圖**：首頁與歌詞頁 × {320×640、360×720} × {淺色預設背景、深色預設背景、照片背景（固定測試圖片 `hymnchtv/src/androidTest/assets/test_photo_bg.jpg`，以 `PhotoBackgroundImporter` 的測試入口匯入，圖片需含大片亮區與暗區）} × {中文繁、英文}，外加字級 1.3 與橫向各一張；全部存 scratchpad 供協調者檢視。
 4. **Aa 面板插樁測試**：主題、字級、字型、顯示模式四項在面板內改變後，目前頁立即反映（字級在有 pinch scale 的情況下仍生效、顯示模式在有 override 時仍生效），且寫入與閱讀設定頁相同的偏好 key（關閉面板後開設定頁顯示相同值）。
