@@ -1,0 +1,45 @@
+{
+  "url": "https://api.github.com/repos/hitobias/hymnchtv/releases/250000001",
+  "assets_url": "https://api.github.com/repos/hitobias/hymnchtv/releases/250000001/assets",
+  "html_url": "https://github.com/hitobias/hymnchtv/releases/tag/v1.1.0",
+  "id": 250000001,
+  "author": { "login": "hitobias", "type": "User" },
+  "node_id": "RE_kwDOFixture001",
+  "tag_name": "v1.1.0",
+  "target_commitish": "master",
+  "name": "詩歌 Hymnal 1.1.0",
+  "draft": false,
+  "immutable": false,
+  "prerelease": false,
+  "created_at": "2026-10-20T08:00:00Z",
+  "published_at": "2026-10-20T08:05:00Z",
+  "assets": [
+    {
+      "url": "https://api.github.com/repos/hitobias/hymnchtv/releases/assets/600000001",
+      "id": 600000001,
+      "name": "hymnal-1.1.0.apk",
+      "label": null,
+      "uploader": { "login": "hitobias", "type": "User" },
+      "content_type": "application/vnd.android.package-archive",
+      "state": "uploaded",
+      "size": 121034567,
+      "digest": "sha256:3095e51c68bb82552f8aaf30fa5a77a7fe6786c35952b984181f28d923aceccd",
+      "download_count": 0,
+      "browser_download_url": "https://github.com/hitobias/hymnchtv/releases/download/v1.1.0/hymnal-1.1.0.apk"
+    },
+    {
+      "url": "https://api.github.com/repos/hitobias/hymnchtv/releases/assets/600000002",
+      "id": 600000002,
+      "name": "hymnal-1.1.0.apk.sha256",
+      "label": null,
+      "uploader": { "login": "hitobias", "type": "User" },
+      "content_type": "text/plain",
+      "state": "uploaded",
+      "size": 84,
+      "digest": "sha256:0f3c2d1e4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "download_count": 0,
+      "browser_download_url": "https://github.com/hitobias/hymnchtv/releases/download/v1.1.0/hymnal-1.1.0.apk.sha256"
+    }
+  ],
+  "body": "- 介面新增繁體中文\r\n- 歌詞可以設定預設語言\r\n\r\nSHA-256: `3095e51c68bb82552f8aaf30fa5a77a7fe6786c35952b984181f28d923aceccd`"
+}
