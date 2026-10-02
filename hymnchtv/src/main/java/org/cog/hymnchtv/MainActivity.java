@@ -98,7 +98,9 @@ import org.cog.hymnchtv.persistance.PermissionUtils;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
 import org.cog.hymnchtv.utils.DialogActivity;
 import org.cog.hymnchtv.utils.HymnNoValidate;
-import org.cog.hymnchtv.utils.LocaleHelper;
+import org.cog.hymnchtv.locale.AppLanguage;
+import org.cog.hymnchtv.locale.LocaleStore;
+import org.cog.hymnchtv.utils.ChineseS2TSelection;
 import org.cog.hymnchtv.utils.MySwipeListAdapter;
 import org.cog.hymnchtv.utils.ThemeHelper;
 import org.cog.hymnchtv.utils.ThemeHelper.Theme;
@@ -247,6 +249,11 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         mHistoryListView.setVisibility(View.GONE);
 
         initButton();
+        if (savedInstanceState != null) {
+            sNumber = savedInstanceState.getString(STATE_NUMBER, "");
+            isFu = savedInstanceState.getBoolean(STATE_IS_FU, false);
+            mEntry.setText(sNumber);
+        }
         initUserSettings();
         createYbXTable();
 
@@ -401,6 +408,16 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             intent.putExtras(bundle);
             startActivity(intent);
         }
+    }
+
+    private static final String STATE_NUMBER = "state_number";
+    private static final String STATE_IS_FU = "state_is_fu";
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_NUMBER, sNumber);
+        outState.putBoolean(STATE_IS_FU, isFu);
     }
 
     @Override
@@ -798,18 +815,24 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             setAppTheme(Theme.LIGHT.toString(), true);
             return true;
         }
-        else if (itemId == R.id.appLanguage) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                setLanguage();
-            }
+        else if (itemId == R.id.localeSystem) {
+            setAppLocale(AppLanguage.SYSTEM);
             return true;
         }
         else if (itemId == R.id.localeChinese) {
-            setAppLocale(LocaleHelper.LocaleChinese);
+            setAppLocale(AppLanguage.ZH_HANS);
+            return true;
+        }
+        else if (itemId == R.id.localeChineseHant) {
+            setAppLocale(AppLanguage.ZH_HANT);
+            return true;
+        }
+        else if (itemId == R.id.lyricsLanguage) {
+            startActivity(new Intent(this, ChineseS2TSelection.class));
             return true;
         }
         else if (itemId == R.id.localeEnglish) {
-            setAppLocale(LocaleHelper.LocaleEnglish);
+            setAppLocale(AppLanguage.EN);
             return true;
 
             // === Set font size ===
@@ -1047,29 +1070,29 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         mTocSpinnerItem.setTextColor(mFontColor);
     }
 
+    /**
+     * Check the menu item of the current UI language; called on every menu creation so it follows recreation.
+     */
     private void initLanguage(Menu menu) {
-        MenuItem pLanguage = menu.findItem(R.id.appLanguage);
-        MenuItem pLocale = menu.findItem(R.id.appLocale);
-        pLanguage.setVisible(false);
-        pLocale.setVisible(true);
-
-//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-//            pLanguage.setVisible(false);
-//            pLocale.setVisible(true);
-//        }
-//        else {
-//            pLanguage.setVisible(true);
-//            pLocale.setVisible(false);
-//        }
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    private void setLanguage() {
-        Intent mLangIntent = new Intent(Settings.ACTION_APP_LOCALE_SETTINGS,
-                Uri.fromParts("package", getPackageName(), null));
-        mLangIntent.addCategory(Intent.CATEGORY_DEFAULT);
-        mLangIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(mLangIntent);
+        int checkedId;
+        switch (LocaleStore.current(this)) {
+            case ZH_HANS:
+                checkedId = R.id.localeChinese;
+                break;
+            case ZH_HANT:
+                checkedId = R.id.localeChineseHant;
+                break;
+            case EN:
+                checkedId = R.id.localeEnglish;
+                break;
+            default:
+                checkedId = R.id.localeSystem;
+                break;
+        }
+        MenuItem item = menu.findItem(checkedId);
+        if (item != null) {
+            item.setChecked(true);
+        }
     }
 
     // Create the YB hymn cross-reference table for use in History record and PagerSlider
@@ -1225,11 +1248,14 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      *
      * @param language Locale language
      */
-    private void setAppLocale(String language) {
-        mEditor.putString(PREF_LOCALE, language);
-        mEditor.commit();
-
-        doRestart();
+    private void setAppLocale(AppLanguage language) {
+        if (language == LocaleStore.current(this)) {
+            return;
+        }
+        // API 33+: framework applies it and recreates activities; API < 33: restart to re-wrap HymnsApp context
+        if (LocaleStore.set(this, language)) {
+            doRestart();
+        }
     }
 
     // Need to restart whole app to make HymnApp Locale change working

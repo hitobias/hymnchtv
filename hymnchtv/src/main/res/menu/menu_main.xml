@@ -13,20 +13,28 @@
         </menu>
     </item>
     <item
-        android:id="@+id/appLanguage"
-        android:title="@string/locale_menu" />
-    <item
         android:id="@+id/appLocale"
         android:title="@string/locale_menu">
         <menu>
-            <item
-                android:id="@+id/localeChinese"
-                android:title="@string/locale_chinese" />
-            <item
-                android:id="@+id/localeEnglish"
-                android:title="@string/locale_english" />
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/localeSystem"
+                    android:title="@string/locale_system" />
+                <item
+                    android:id="@+id/localeChinese"
+                    android:title="@string/locale_chinese" />
+                <item
+                    android:id="@+id/localeChineseHant"
+                    android:title="@string/locale_chinese_hant" />
+                <item
+                    android:id="@+id/localeEnglish"
+                    android:title="@string/locale_english" />
+            </group>
         </menu>
     </item>
+    <item
+        android:id="@+id/lyricsLanguage"
+        android:title="@string/lyrics_language_menu" />
     <item
         android:id="@+id/bg"
         android:title="@string/wall_paper">

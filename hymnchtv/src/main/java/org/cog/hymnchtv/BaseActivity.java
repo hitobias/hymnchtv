@@ -7,7 +7,7 @@ import android.os.Looper;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import org.cog.hymnchtv.utils.LocaleHelper;
+import org.cog.hymnchtv.locale.LocaleStore;
 import org.cog.hymnchtv.utils.ThemeHelper;
 
 /**
@@ -33,17 +33,10 @@ public class BaseActivity extends AppCompatActivity {
     }
 
     /**
-     * Override AppCompatActivity#attachBaseContext() to support Locale setting.
-     * Language value is initialized in Application class with user selected language.
+     * Override AppCompatActivity#attachBaseContext() to support Locale setting; re-evaluated on every recreation.
      */
     @Override
     protected void attachBaseContext(Context base) {
-        Context context = LocaleHelper.setLocale(base);
-//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-//            context = LocaleHelper.setLocale(base);
-//        } else {
-//            context = LocaleHelper.setLocale(base, LocaleHelper.getAppLanguage());
-//        }
-        super.attachBaseContext(context);
+        super.attachBaseContext(LocaleStore.wrap(base));
     }
 }
