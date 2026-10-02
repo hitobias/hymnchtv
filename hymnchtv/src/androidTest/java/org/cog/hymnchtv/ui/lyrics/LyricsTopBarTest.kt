@@ -147,4 +147,13 @@ class LyricsTopBarTest {
             assertThat(scenario.read { page(it)!!.findViewById<View>(R.id.meter_key).visibility }).isEqualTo(View.GONE)
         }
     }
+
+    @Test
+    fun notebookBarSlotIsAnEmptyHiddenContainer() {
+        launch().use { scenario ->
+            val slot = scenario.read { it.findViewById<android.view.ViewGroup>(R.id.notebookBar) }
+            assertThat(slot.visibility).isEqualTo(View.GONE)
+            assertThat(slot.childCount).isEqualTo(0)
+        }
+    }
 }
