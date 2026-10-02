@@ -21,6 +21,7 @@ import org.cog.hymnchtv.notebook.model.HymnKey
 import org.cog.hymnchtv.notebook.model.HymnTypes
 import org.cog.hymnchtv.notebook.model.Occasion
 import org.cog.hymnchtv.notebook.model.SingSource
+import org.cog.hymnchtv.notebook.settings.NotebookPrefs
 import org.cog.hymnchtv.persistance.room.entity.HymnHistoryEntity
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
@@ -78,6 +79,8 @@ class NotebookE2eTest {
         // A legacy-table row (not part of the notebook JSON backup); only Auto Backup carries it across a restore.
         withContext(Dispatchers.IO) { graph.database.hymnHistoryDao().insert(LEGACY_HISTORY) }
         graph.prefs.setAutoRecordEnabled(false)
+        // apply() writes asynchronously and the instrumentation process may exit first; an empty commit() queues behind it.
+        context.getSharedPreferences(NotebookPrefs.FILE_NAME, Context.MODE_PRIVATE).edit().commit()
         settings().edit().putString(SETTINGS_MARKER_KEY, SETTINGS_MARKER_VALUE).commit()
         verifySeeded(checkPrefs = true)
     }
