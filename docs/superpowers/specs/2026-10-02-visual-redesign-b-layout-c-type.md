@@ -1,6 +1,6 @@
 # 首頁與歌詞頁視覺重設計（B 版面＋C 字形）
 
-> 狀態：rev 9（2026-10-03）。rev 8 Codex：P1×1（頂列 320dp 容納不下 8 鈕）、P2×1 已修正。前次：rev 8（2026-10-03）。rev 7 Codex：P1×1、P2×2、P3×1 已修正（預覽卡高度改以內容量測並重算預算、歌詞層底部 inset、目錄鈕文字 token、照片截圖 fixture）。前次：rev 7（2026-10-03）。rev 6 Codex：P1×2、P2×1、P3×1 已照建議修正（TokenInput 明列 isPhoto、作用中／停用文字門檻分開、accent 對所有相鄰底取最差、閱讀色調整需同步更新表與測試）。前次：rev 6（2026-10-03）。rev 5 Codex：P1×2、P2×1 已併入（鍵盤下限統一 48dp、停用狀態改用 token 不再整體 alpha、rasterize 測試改為逐像素合成後驗證）。前次：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
+> 狀態：**rev 10 定案**（2026-10-03）。Codex 第 9 輪 P1=0；其 P2×2、P3×1 已併入（播放卡位置與歌詞 inset、Aa 主題圓點尺寸與 320dp 捲動、不做項措辭）。前次：rev 9（2026-10-03）。rev 8 Codex：P1×1（頂列 320dp 容納不下 8 鈕）、P2×1 已修正。前次：rev 8（2026-10-03）。rev 7 Codex：P1×1、P2×2、P3×1 已修正（預覽卡高度改以內容量測並重算預算、歌詞層底部 inset、目錄鈕文字 token、照片截圖 fixture）。前次：rev 7（2026-10-03）。rev 6 Codex：P1×2、P2×1、P3×1 已照建議修正（TokenInput 明列 isPhoto、作用中／停用文字門檻分開、accent 對所有相鄰底取最差、閱讀色調整需同步更新表與測試）。前次：rev 6（2026-10-03）。rev 5 Codex：P1×2、P2×1 已併入（鍵盤下限統一 48dp、停用狀態改用 token 不再整體 alpha、rasterize 測試改為逐像素合成後驗證）。前次：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
 > 範圍：C 子項目 1.1（H3 首頁已實作於 `feat/c-home-search`）之上的視覺層修訂；不改互動規則（spec `2026-10-02-home-entry-and-lyrics-jump-design.md` 仍有效）。
 
 ## 1. 使用者回饋（必須解決）
@@ -115,7 +115,7 @@
 ## 6b. 「Aa」快速面板（參考微信讀書）
 
 - 歌詞頁頂列新增「Aa」按鈕，開啟 BottomSheet（不離開歌詞頁），內容由上而下：
-  1. **主題**：一排圓點（閱讀色 8 個在前，其後「更多…」開完整背景選擇器）；點選立即套用到歌詞頁（經 §6 `applyReadingTheme()`），選中圓點有勾與外圈。
+  1. **主題**：一排圓點（視覺直徑 32dp、觸控區 48dp、間距 8dp；寬度不足時該列水平捲動，起始捲到目前選中的圓點；「更多…」為列尾的文字按鈕）（閱讀色 8 個在前，其後「更多…」開完整背景選擇器）；點選立即套用到歌詞頁（經 §6 `applyReadingTheme()`），選中圓點有勾與外圈。
   2. **字級**：滑桿（沿用 A2 `LyricsFontSize` 的級距）。改動時必須呼叫 `ReadingPrefs.resetLyricsScale()`（清除已存的橫直向 pinch scale，否則 enum 改了畫面不變），並立即套用到目前頁；相鄰頁若 view 已建立（以 `viewLifecycleOwner` 判斷）一併套用，未建立者在 `onViewCreated` 讀取最新偏好（字型、模式同理），不得對已銷毀或尚未建立的 View 操作。
   3. **字型**：楷體／系統字（沿用 A2 `LyricsTypefaces`）。新增可在現頁執行的 `ContentView.applyReadingPrefs()`（含非同步字型載入完成後套用），不得只在 `ContentView` 建立時生效。
   4. **顯示模式**：沿用 A2 `DisplayMode`。選擇時清除 session 的 `displayModeOverride` 並刷新目前頁。
@@ -132,7 +132,8 @@
 - **無障礙**：TalkBack（`AccessibilityManager.isTouchExplorationEnabled`）開啟時頂列、下方三鈕、播放卡一律常駐。
 - 淡入淡出 150ms；系統「移除動畫」時直接顯示／隱藏。
 - **版面**：`content_lyrics.xml` 由垂直 `LinearLayout` 改為可疊放的 `FrameLayout`（或 `ConstraintLayout`）：歌詞捲動內容為底層並占滿，頂列與下方三鈕為 overlay；隱藏時歌詞即延伸到原頂列位置；顯示時頂列浮在歌詞上方並使用 `surface` 底板。
-- **歌詞層底部 inset**：下方三鈕顯示時，歌詞 `ScrollView` 的底部 padding ＝ 三鈕 overlay 高度＋系統導覽安全區（`WindowInsets`）＋8dp，讓最後一行可完整捲到按鈕上方；三鈕隱藏時縮回為安全區＋8dp。頂列顯示時同理加頂部 padding（不讓第一行被遮住）。
+- **疊放順序（由下而上）**：歌詞捲動層 → 頂列 overlay → 播放卡 overlay（貼齊底部）→ 下方三鈕 overlay（緊貼在播放卡上方；播放卡未顯示時貼齊底部）。
+- **歌詞層底部 inset**：歌詞 `ScrollView` 的底部 padding ＝（播放卡顯示中的高度，未顯示為 0）＋（下方三鈕顯示中的高度，隱藏為 0）＋系統導覽安全區（`WindowInsets`）＋8dp，任一者顯示／隱藏或高度改變時即時更新，讓最後一行可完整捲到按鈕上方；三鈕隱藏時縮回為安全區＋8dp。頂列顯示時同理加頂部 padding（不讓第一行被遮住）。
 - **控制者**：由 activity 層（`ContentHandler` 內新增的 `ChromeController`）統一計時與顯示狀態，作用於目前 pager 頁的 overlay；各 `ContentView` 不各自計時；換頁時新頁沿用目前顯示狀態。
 - 測試：點中央顯示、4 秒後隱藏（以可注入的時鐘測試）、捲動與翻頁不觸發、播放卡顯示時不被自動隱藏、換頁沿用顯示狀態、TalkBack 常駐、首次提示只出現一次。
 
@@ -146,6 +147,6 @@
 
 ## 8. 不做
 
-- 不改互動流程、不加新功能。
+- 除本規格明列的調整（移除 A-／A+、新增 Aa 面板、譜色移入溢出選單、工具列自動隱藏、閱讀色）外，不改互動流程、不加新功能。
 - 不重產字型子集（除非 §3 的詩名檢查證明必要，需先回報）。
 - 不動 H5 範圍（歌詞頁跳轉）。
