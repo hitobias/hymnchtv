@@ -37,7 +37,7 @@ public class ThemeHelper {
     /** Theme for users who never chose one (user decision 2026-10-02: light). MainActivity uses it as the pref default. */
     public static final Theme DEFAULT_THEME = Theme.LIGHT;
 
-    // Note: mTheme is set from PREF_THEME by MainActivity.onCreate
+    // Note: mTheme is kept in sync with the stored theme by ThemePrefs (HymnsApp.onCreate and every change)
     private static Theme mTheme = DEFAULT_THEME;
 
     /**
@@ -46,7 +46,7 @@ public class ThemeHelper {
      * @param ctx context
      */
     public static void setTheme(Context ctx) {
-        ctx.setTheme(getAppThemeResourceId(mTheme));
+        // DayNight is applied globally via AppCompatDelegate (ThemePrefs, from HymnsApp); signature kept for compatibility.
     }
 
     /**
@@ -57,7 +57,14 @@ public class ThemeHelper {
      */
     public static void setTheme(Context ctx, Theme theme) {
         mTheme = theme;
-        ctx.setTheme(getAppThemeResourceId(theme));
+    }
+
+    /**
+     * Called by ThemePrefs once the DayNight mode is resolved, so isAppTheme() (CSS choice) matches what is on screen.
+     * Also restores the cache after process death (HymnsApp.onCreate), which the old static field did not survive.
+     */
+    public static void syncDark(boolean dark) {
+        mTheme = dark ? Theme.DARK : Theme.LIGHT;
     }
 
     public static Theme getAppTheme() {

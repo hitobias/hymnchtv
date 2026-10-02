@@ -234,14 +234,12 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public void onCreate(Bundle savedInstanceState) {
         mInstance = this;
-        // Must setTheme() before super.onCreate(), otherwise not working
+        // DayNight is applied globally by HymnsApp (ThemePrefs.applyStored)
         mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
         mEditor = mSharedPref.edit();
 
-        String theme = mSharedPref.getString(PREF_THEME, ThemeHelper.DEFAULT_THEME.toString());
-        setAppTheme(theme, false);
-
         super.onCreate(savedInstanceState);
+        org.cog.hymnchtv.ui.theme.EdgeToEdge.INSTANCE.enable(this);
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 
         setContentView(R.layout.main);
@@ -1151,16 +1149,8 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     private void setAppTheme(String sTheme, boolean prefChange) {
         Timber.d("Set App Theme: %s => %s", prefChange, sTheme);
         if (prefChange) {
-            mEditor.putString(PREF_THEME, sTheme);
-            mEditor.apply();
-
-            finish();
-            Intent intent = new Intent(this, MainActivity.class);
-            startActivity(intent);
-        }
-        else {
-            Theme theme = Theme.valueOf(sTheme);
-            ThemeHelper.setTheme(this, theme);
+            org.cog.hymnchtv.ui.theme.ThemePrefs.INSTANCE.apply(this, org.cog.hymnchtv.ui.theme.NightMode.Companion.from(sTheme));
+            recreate();
         }
     }
 

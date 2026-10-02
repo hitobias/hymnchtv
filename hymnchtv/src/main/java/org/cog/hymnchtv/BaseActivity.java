@@ -8,7 +8,6 @@ import android.os.Looper;
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.cog.hymnchtv.locale.LocaleStore;
-import org.cog.hymnchtv.utils.ThemeHelper;
 
 /**
  * BaseActivity implements the support of user set Theme and locale.
@@ -27,8 +26,6 @@ public class BaseActivity extends AppCompatActivity {
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Always call setTheme() method in base class and before super.onCreate()
-        ThemeHelper.setTheme(this);
         super.onCreate(savedInstanceState);
     }
 
