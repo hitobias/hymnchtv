@@ -10,7 +10,8 @@
 
 **Architecture:**
 - 判斷規則都寫成 Kotlin 純函式（`locale/`、`lyrics/`、`search/`），用 JVM 單元測試，採 TDD。
-- 和 Android 打交道的部分集中在兩個薄薄的 Kotlin 類別：`LocaleStore`、`PrefsMigrator`。
+- 和 Android 打交道的部分集中在一個薄薄的 Kotlin 類別：`LocaleStore`。
+- 全新項目，沒有舊使用者，所以不做任何偏好遷移（使用者決策，2026-10-02）。
 - 既有的 Java Activity 只改呼叫點。
 - 預設資源（`values/`）改成英文，簡中搬到 `values-zh/`，繁中放在 `values-b+zh+Hant/`。
 - 語言的唯一真實來源依 API 等級而定：API 33 以上是 framework 的 per-app locale，API 33 以下是 `PREF_LOCALE`。
@@ -20,6 +21,8 @@
 **規格來源:** `docs/superpowers/plans/2026-10-02-hymnchtv-modernization-plan.md` 的「子項目 A」（rev 4）。
 
 **分支:** `feat/zh-hant`（已建立）。
+
+**編號說明:** 原本的 Task 3（LocaleMigration）和 Task 5（LyricsMigration）已刪除，因為這是全新項目，不需要遷移。其餘 task 保留原編號，方便對照先前的審查紀錄。
 
 **Commit 規則:**
 - 使用 conventional commits。
@@ -48,12 +51,10 @@
 |---|---|
 | `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleRules.kt` | 判斷 `Locale` 是否為繁中、簡中 |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/locale/AppLanguage.kt` | 介面語言的 enum，以及和 pref 值、framework tag、`Locale` 之間的互相轉換 |
-| `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleMigration.kt` | 決定遷移後的語言（純函式） |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLang.kt` | 歌詞預設語言的 enum |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/HantVariant.kt` | 繁體歌詞的地區版本（TW、HK）與對應的目錄後綴 |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsAssets.kt` | 簡體歌詞路徑轉成繁體歌詞路徑 |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicy.kt` | 決定歌詞顯示簡或繁、轉換標準的預設值與解析 |
-| `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsMigration.kt` | 遷移舊的 `PREF_SIMPLIFY` 與 `PREF_CONVERSION_TYPE`（純函式） |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/search/SearchPattern.kt` | 把使用者的搜尋字串安全地轉成 `Pattern` |
 
 **新增（Kotlin，Android 邊界，靠手動和 instrumented test 驗證）：**
@@ -61,14 +62,11 @@
 | 檔案 | 職責 |
 |---|---|
 | `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleStore.kt` | 依 API 等級讀寫介面語言；API 33 以下負責包裝 context |
-| `hymnchtv/src/main/java/org/cog/hymnchtv/locale/PrefsMigrator.kt` | 執行兩項遷移並寫入旗標；API 33 以上把語言推送給 framework |
 
 **測試：**
 - `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleRulesTest.kt`
 - `hymnchtv/src/test/java/org/cog/hymnchtv/locale/AppLanguageTest.kt`
-- `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleMigrationTest.kt`
 - `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicyTest.kt`
-- `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsMigrationTest.kt`
 - `hymnchtv/src/test/java/org/cog/hymnchtv/search/SearchPatternTest.kt`
 - `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsAssetsTest.kt`
 - `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsHantAssetsTest.kt`：檢查簡體與繁體的 assets 是否同步
@@ -135,16 +133,6 @@
   Expected: BUILD SUCCESSFUL。
 
   把 lint 報告中 `MissingTranslation`、`ExtraTranslation`、`HardcodedText` 三項的數量記下來，作為之後比對的基準。
-
-- [ ] **Step 4：備份一份 v2.9.2 的 APK，供升級測試使用**
-
-  ```bash
-  git stash -u 2>/dev/null; git worktree add ../hymnchtv-v292 5e559b1
-  (cd ../hymnchtv-v292 && ./gradlew :hymnchtv:assembleDebug)
-  cp ../hymnchtv-v292/hymnchtv/build/outputs/apk/debug/*.apk /tmp/hymnchtv-v292-debug.apk
-  ```
-
-  Expected: `/tmp/hymnchtv-v292-debug.apk` 存在。
 
 ---
 
@@ -274,7 +262,7 @@
 
   class AppLanguageTest {
       @Test
-      fun fromPrefAcceptsCurrentAndLegacyValues() {
+      fun fromPrefAcceptsPersistedValues() {
           assertThat(AppLanguage.fromPref("system")).isEqualTo(AppLanguage.SYSTEM)
           assertThat(AppLanguage.fromPref("zh-Hans-CN")).isEqualTo(AppLanguage.ZH_HANS)
           assertThat(AppLanguage.fromPref("zh-Hant-TW")).isEqualTo(AppLanguage.ZH_HANT)
@@ -338,7 +326,7 @@
 
   /**
    * UI language choice. [tag] is the BCP-47 tag applied to resources; null means follow the system.
-   * [prefValue] is what is persisted in PREF_LOCALE (API < 33); legacy values "zh-Hans-CN"/"en-US" are unchanged.
+   * [prefValue] is what is persisted in PREF_LOCALE (API < 33).
    */
   enum class AppLanguage(val tag: String?) {
       SYSTEM(null), ZH_HANS("zh-Hans-CN"), ZH_HANT("zh-Hant-TW"), EN("en-US");
@@ -382,90 +370,6 @@
   ```bash
   git add hymnchtv/src/main/java/org/cog/hymnchtv/locale/AppLanguage.kt hymnchtv/src/test/java/org/cog/hymnchtv/locale/AppLanguageTest.kt
   git commit -m "feat: add AppLanguage model with pref and framework tag mapping"
-  ```
-
----
-
-### Task 3：LocaleMigration（純函式）
-
-**Files:**
-- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleMigration.kt`
-- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleMigrationTest.kt`
-
-- [ ] **Step 1：寫會失敗的測試**
-
-  ```kotlin
-  package org.cog.hymnchtv.locale
-
-  import com.google.common.truth.Truth.assertThat
-  import org.junit.Test
-
-  class LocaleMigrationTest {
-      @Test
-      fun keepsExplicitStoredChoice() {
-          assertThat(LocaleMigration.target("en-US", isUpgrade = true)).isEqualTo(AppLanguage.EN)
-          assertThat(LocaleMigration.target("zh-Hans-CN", isUpgrade = false)).isEqualTo(AppLanguage.ZH_HANS)
-      }
-
-      @Test
-      fun illegalStoredValueFallsBackToLegacyDefault() {
-          assertThat(LocaleMigration.target("garbage", isUpgrade = true)).isEqualTo(AppLanguage.ZH_HANS)
-      }
-
-      @Test
-      fun emptyStoredValueMeantSystemInOldLocaleHelper() {
-          assertThat(LocaleMigration.target("", isUpgrade = true)).isEqualTo(AppLanguage.SYSTEM)
-      }
-
-      @Test
-      fun missingValueOnUpgradeKeepsOldSimplifiedDefault() {
-          assertThat(LocaleMigration.target(null, isUpgrade = true)).isEqualTo(AppLanguage.ZH_HANS)
-      }
-
-      @Test
-      fun missingValueOnFreshInstallFollowsSystem() {
-          assertThat(LocaleMigration.target(null, isUpgrade = false)).isEqualTo(AppLanguage.SYSTEM)
-      }
-  }
-  ```
-
-- [ ] **Step 2：執行測試，確認它失敗**
-
-  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.LocaleMigrationTest'`
-  Expected: 編譯失敗，訊息為 `Unresolved reference 'LocaleMigration'`。
-
-- [ ] **Step 3：實作**
-
-  ```kotlin
-  package org.cog.hymnchtv.locale
-
-  /** One-time migration of PREF_LOCALE (key [KEY]); see plan A.1.3. */
-  object LocaleMigration {
-      const val KEY = "migr.locale.v1"
-
-      /**
-       * @param stored raw PREF_LOCALE value, null if absent
-       * @param isUpgrade true when the app was updated from an older version (firstInstallTime != lastUpdateTime)
-       */
-      @JvmStatic
-      fun target(stored: String?, isUpgrade: Boolean): AppLanguage = when {
-          stored == null -> if (isUpgrade) AppLanguage.ZH_HANS else AppLanguage.SYSTEM
-          stored.isEmpty() -> AppLanguage.SYSTEM
-          else -> AppLanguage.fromPref(stored) ?: AppLanguage.ZH_HANS
-      }
-  }
-  ```
-
-- [ ] **Step 4：執行測試，確認它通過**
-
-  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.LocaleMigrationTest'`
-  Expected: 5 個測試全部通過。
-
-- [ ] **Step 5：Commit**
-
-  ```bash
-  git add hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleMigration.kt hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleMigrationTest.kt
-  git commit -m "feat: add locale preference migration rules"
   ```
 
 ---
@@ -537,15 +441,14 @@
       }
 
       @Test
-      fun parseVariantMapsLegacyValues() {
+      fun parseVariantReadsStoredValues() {
           assertThat(LyricsLanguagePolicy.parseVariant("S2HK", hans)).isEqualTo(HantVariant.HK)
           assertThat(LyricsLanguagePolicy.parseVariant("S2TW", hantHk)).isEqualTo(HantVariant.TW)
-          assertThat(LyricsLanguagePolicy.parseVariant("S2TWP", hantHk)).isEqualTo(HantVariant.TW)
       }
 
       @Test
       fun parseVariantFallsBackToLocaleDefaultWithoutThrowing() {
-          listOf(null, "", "S2T", "T2S", "s2tw", "bogus").forEach {
+          listOf(null, "", "S2T", "S2TWP", "T2S", "s2tw", "bogus").forEach {
               assertThat(LyricsLanguagePolicy.parseVariant(it, hantHk)).isEqualTo(HantVariant.HK)
               assertThat(LyricsLanguagePolicy.parseVariant(it, hantTw)).isEqualTo(HantVariant.TW)
           }
@@ -599,7 +502,7 @@
       TW(ConversionType.S2TW, "_hant_tw"),
       HK(ConversionType.S2HK, "_hant_hk");
 
-      /** Value stored in PREF_CONVERSION_TYPE; the key and its values are kept for backward compatibility. */
+      /** Value stored in PREF_CONVERSION_TYPE. */
       val prefValue: String get() = conversion.name
   }
   ```
@@ -632,16 +535,10 @@
       @JvmStatic
       fun isCanonical(value: String?): Boolean = HantVariant.values().any { it.prefValue == value }
 
-      /**
-       * Never throws. Legacy S2TWP (explicit Taiwan choice) maps to TW; legacy S2T was the old implicit
-       * default, so it follows the UI region like a missing or invalid value.
-       */
+      /** Never throws; a missing or invalid value follows the UI region. */
       @JvmStatic
-      fun parseVariant(value: String?, uiLocale: Locale): HantVariant = when (value) {
-          "S2HK" -> HantVariant.HK
-          "S2TW", "S2TWP" -> HantVariant.TW
-          else -> defaultVariant(uiLocale)
-      }
+      fun parseVariant(value: String?, uiLocale: Locale): HantVariant =
+          HantVariant.values().firstOrNull { it.prefValue == value } ?: defaultVariant(uiLocale)
   }
   ```
 
@@ -655,93 +552,6 @@
   ```bash
   git add hymnchtv/src/main/java/org/cog/hymnchtv/lyrics hymnchtv/src/test/java/org/cog/hymnchtv/lyrics
   git commit -m "feat: add lyrics default language policy and Hant variants"
-  ```
-
----
-
-### Task 5：LyricsMigration（純函式）
-
-**Files:**
-- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsMigration.kt`
-- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsMigrationTest.kt`
-
-- [ ] **Step 1：寫會失敗的測試**
-
-  ```kotlin
-  package org.cog.hymnchtv.lyrics
-
-  import com.google.common.truth.Truth.assertThat
-  import org.junit.Test
-
-  class LyricsMigrationTest {
-      @Test
-      fun userWhoChoseTraditionalKeepsIt() {
-          assertThat(LyricsMigration.plan(simplify = false, conversionType = "S2TW").defaultLang)
-              .isEqualTo(LyricsLang.TRADITIONAL)
-      }
-
-      @Test
-      fun simplifiedOrUnsetBecomesFollowUi() {
-          assertThat(LyricsMigration.plan(true, null).defaultLang).isEqualTo(LyricsLang.FOLLOW_UI)
-          assertThat(LyricsMigration.plan(null, null).defaultLang).isEqualTo(LyricsLang.FOLLOW_UI)
-      }
-
-      @Test
-      fun conversionTypeAfterMigration() {
-          assertThat(LyricsMigration.plan(null, "S2TW").conversionType).isEqualTo("S2TW")
-          assertThat(LyricsMigration.plan(null, "S2HK").conversionType).isEqualTo("S2HK")
-          assertThat(LyricsMigration.plan(null, "S2TWP").conversionType).isEqualTo("S2TW")
-          // S2T was the old implicit default and invalid values carry no intent: remove so the UI region decides
-          assertThat(LyricsMigration.plan(null, "S2T").conversionType).isNull()
-          assertThat(LyricsMigration.plan(null, "bogus").conversionType).isNull()
-          assertThat(LyricsMigration.plan(null, null).conversionType).isNull()
-      }
-  }
-  ```
-
-- [ ] **Step 2：執行測試，確認它失敗**
-
-  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsMigrationTest'`
-  Expected: 編譯失敗，出現 `Unresolved reference 'LyricsMigration'`。
-
-- [ ] **Step 3：實作**
-
-  ```kotlin
-  package org.cog.hymnchtv.lyrics
-
-  /** One-time migration of the legacy lyrics prefs (key [KEY]); see plan A.1.5. */
-  object LyricsMigration {
-      const val KEY = "migr.lyrics.v1"
-
-      /** [conversionType] is the PREF_CONVERSION_TYPE value to store after migration; null = remove the key. */
-      data class Result(val defaultLang: LyricsLang, val conversionType: String?)
-
-      /**
-       * @param simplify legacy PREF_SIMPLIFY value, null if absent
-       * @param conversionType raw PREF_CONVERSION_TYPE value, null if absent
-       */
-      @JvmStatic
-      fun plan(simplify: Boolean?, conversionType: String?): Result = Result(
-          defaultLang = if (simplify == false) LyricsLang.TRADITIONAL else LyricsLang.FOLLOW_UI,
-          conversionType = when (conversionType) {
-              "S2TW", "S2HK" -> conversionType
-              "S2TWP" -> HantVariant.TW.prefValue
-              else -> null
-          },
-      )
-  }
-  ```
-
-- [ ] **Step 4：執行測試，確認它通過**
-
-  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsMigrationTest'`
-  Expected: 3 個測試全部通過。
-
-- [ ] **Step 5：Commit**
-
-  ```bash
-  git add hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsMigration.kt hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsMigrationTest.kt
-  git commit -m "feat: add lyrics preference migration rules"
   ```
 
 ---
@@ -1499,16 +1309,15 @@
 
 ---
 
-### Task 9：LocaleStore、PrefsMigrator，以及 HymnsApp／BaseActivity 的整合
+### Task 9：LocaleStore，以及 HymnsApp／BaseActivity 的整合
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleStore.kt`
-- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/locale/PrefsMigrator.kt`
 - Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/HymnsApp.java:100-166`
 - Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/BaseActivity.java:36-47`
 - Delete: `hymnchtv/src/main/java/org/cog/hymnchtv/utils/LocaleHelper.java`
 
-這個 task 的程式碼都在 Android 邊界，所以不寫 JVM 測試。判斷規則已經在 Task 2、3、5 測過，這裡由 Task 15 的手動測試驗證。
+這個 task 的程式碼都在 Android 邊界，所以不寫 JVM 測試。判斷規則已經在 Task 2、4 測過，這裡由 Task 15 的手動測試驗證。
 
 - [ ] **Step 1：新增 `LocaleStore.kt`**
 
@@ -1581,78 +1390,16 @@
   }
   ```
 
-- [ ] **Step 2：新增 `PrefsMigrator.kt`**
-
-  ```kotlin
-  package org.cog.hymnchtv.locale
-
-  import android.content.Context
-  import android.content.pm.PackageManager
-  import android.os.Build
-  import org.cog.hymnchtv.ContentView
-  import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy
-  import org.cog.hymnchtv.lyrics.LyricsMigration
-  import timber.log.Timber
-
-  /** Runs each one-time preference migration exactly once, each guarded by its own key (plan A.1.3). */
-  object PrefsMigrator {
-      private const val KEY_LOCALE_FRAMEWORK_PUSH = "migr.locale.v1.framework"
-
-      /** Must run in HymnsApp.attachBaseContext before LocaleStore.wrap(); needs only prefs + PackageManager. */
-      @JvmStatic
-      fun migrate(context: Context) {
-          val prefs = LocaleStore.prefs(context)
-          if (!prefs.getBoolean(LocaleMigration.KEY, false)) {
-              val target = LocaleMigration.target(prefs.getString(LocaleStore.PREF_LOCALE, null), isUpgrade(context))
-              prefs.edit()
-                  .putString(LocaleStore.PREF_LOCALE, target.prefValue)
-                  .putBoolean(LocaleMigration.KEY, true)
-                  .commit()
-          }
-          if (!prefs.getBoolean(LyricsMigration.KEY, false)) {
-              val simplify = if (prefs.contains(ContentView.PREF_SIMPLIFY)) prefs.getBoolean(ContentView.PREF_SIMPLIFY, true) else null
-              val result = LyricsMigration.plan(simplify, prefs.getString(ContentView.PREF_CONVERSION_TYPE, null))
-              val editor = prefs.edit().putString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, result.defaultLang.name)
-              if (result.conversionType == null) editor.remove(ContentView.PREF_CONVERSION_TYPE)
-              else editor.putString(ContentView.PREF_CONVERSION_TYPE, result.conversionType)
-              editor.putBoolean(LyricsMigration.KEY, true).commit()
-          }
-      }
-
-      /** API 33+ only, from HymnsApp.onCreate: hand the migrated choice to the framework once, never overriding it. */
-      @JvmStatic
-      fun pushLocaleToFramework(context: Context) {
-          if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-          val prefs = LocaleStore.prefs(context)
-          if (prefs.getBoolean(KEY_LOCALE_FRAMEWORK_PUSH, false)) return
-          val target = AppLanguage.fromPref(prefs.getString(LocaleStore.PREF_LOCALE, null)) ?: AppLanguage.SYSTEM
-          if (target != AppLanguage.SYSTEM && LocaleStore.frameworkTags(context).isEmpty()) {
-              LocaleStore.set(context, target)
-          }
-          prefs.edit().putBoolean(KEY_LOCALE_FRAMEWORK_PUSH, true).commit()
-      }
-
-      private fun isUpgrade(context: Context): Boolean = try {
-          val info = context.packageManager.getPackageInfo(context.packageName, 0)
-          info.firstInstallTime != info.lastUpdateTime
-      } catch (e: PackageManager.NameNotFoundException) {
-          Timber.w(e, "Cannot read own package info; treating as fresh install")
-          false
-      }
-  }
-  ```
-
-- [ ] **Step 3：修改 `HymnsApp.attachBaseContext`（`HymnsApp.java:151-166`）**
+- [ ] **Step 2：修改 `HymnsApp.attachBaseContext`（`HymnsApp.java:151-166`）**
 
   整個方法換成：
 
   ```java
       /**
-       * Run preference migrations first, then apply the UI language: wrapped only on API < 33 for an explicit choice.
+       * Apply the UI language: wrapped only on API < 33 for an explicit choice (API 33+ uses the framework).
        */
       @Override
       protected void attachBaseContext(Context base) {
-          PrefsMigrator.migrate(base);
           mInstance = LocaleStore.wrap(base);
           super.attachBaseContext(mInstance);
       }
@@ -1661,15 +1408,9 @@
   import 的調整：
   - 刪除 `import org.cog.hymnchtv.utils.LocaleHelper;`、`import static org.cog.hymnchtv.MainActivity.PREF_LOCALE;`
   - 如果 `SharedPreferences` 和 `PREF_SETTINGS` 不再被使用，也一起刪除。
-  - 新增 `import org.cog.hymnchtv.locale.LocaleStore;`、`import org.cog.hymnchtv.locale.PrefsMigrator;`
+  - 新增 `import org.cog.hymnchtv.locale.LocaleStore;`
 
-- [ ] **Step 4：修改 `HymnsApp.onCreate`，在 `super.onCreate();`（第 124 行）之後加一行**
-
-  ```java
-          PrefsMigrator.pushLocaleToFramework(this);
-  ```
-
-- [ ] **Step 5：修改 `BaseActivity.attachBaseContext`（`BaseActivity.java:36-47`）**
+- [ ] **Step 3：修改 `BaseActivity.attachBaseContext`（`BaseActivity.java:36-47`）**
 
   ```java
       /**
@@ -1683,7 +1424,7 @@
 
   import 改成 `import org.cog.hymnchtv.locale.LocaleStore;`，並刪除 `LocaleHelper` 的 import。
 
-- [ ] **Step 6：刪除 LocaleHelper**
+- [ ] **Step 4：刪除 LocaleHelper**
 
   Run: `git rm hymnchtv/src/main/java/org/cog/hymnchtv/utils/LocaleHelper.java`
 
@@ -1992,7 +1733,7 @@
           String rawType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, null);
           mVariant = LyricsLanguagePolicy.parseVariant(rawType, uiLocale);
           if (rawType != null && !LyricsLanguagePolicy.isCanonical(rawType)) {
-              // Self-heal a legacy or corrupted value so other readers never see it again
+              // Self-heal a corrupted value so other readers never see it again
               mSharedPref.edit().putString(ContentView.PREF_CONVERSION_TYPE, mVariant.getPrefValue()).apply();
           }
           checkVariantButton(mVariant);
@@ -2097,7 +1838,6 @@
   驗證：
   1. 從主選單開啟「歌詞語言」：畫面正常顯示，勾選的是「台灣」（簡中或台灣介面）。
   2. 用 `run-as ... cat shared_prefs/Settings.xml` 確認，`ConversionType` 已經被修正成 `S2TW`。
-  3. 把值改成 `S2TWP` 再重複一次：勾選的仍然是「台灣」。
 
 - [ ] **Step 6：Commit**
 
@@ -2203,11 +1943,7 @@
 
   (a) 刪除欄位 `private boolean isSimplify;`（第 124 行）。
 
-  (b) 第 105 行 `PREF_SIMPLIFY` 的上方加上註解：
-
-  ```java
-      /** Legacy: read only by PrefsMigrator (migr.lyrics.v1); replaced by LyricsLanguagePolicy.PREF_LYRICS_DEFAULT. */
-  ```
+  (b) 刪除第 105 行的常數 `PREF_SIMPLIFY`。全新項目，不需要保留舊的 key；預設語言改由 `LyricsLanguagePolicy.PREF_LYRICS_DEFAULT` 記錄。
 
   (c) **刪除**第 188-189 行：
 
@@ -2553,23 +2289,14 @@ Task 8 產生繁中初稿時，Task 7 新增的字串已經在 `values-zh` 裡�
 
   同時確認選單上打勾的是「跟隨系統」。
 
-- [ ] **Step 3：升級路徑**
-
-  1. `adb uninstall org.cog.hymnchtv && adb install /tmp/hymnchtv-v292-debug.apk`，開啟一次，什麼設定都不改，然後 `./gradlew :hymnchtv:installDebug`。
-     預期：介面是簡中，選單打勾的是「简体中文」。在 API 34 上，系統設定頁也顯示簡體中文。
-  2. 重新安裝 v2.9.2，在選單選 English 後升級。
-     預期：介面是英文。在 API 34 上，系統設定頁顯示 English，而且第一次啟動不會出現重啟迴圈（`adb logcat` 裡同一個 pid 只會出現一次 `ActivityThread` 的 start）。
-  3. 重新安裝 v2.9.2，在歌詞頁把簡繁按鈕切到「繁」後升級。
-     預期：歌詞預設是繁體，「歌詞語言」畫面勾選的是「繁體」。
-
-- [ ] **Step 4：切換語言**
+- [ ] **Step 3：切換語言**
 
   - 在兩個 API 等級上，從 app 內選單依序切換四種語言，每次切換後確認介面和選單的打勾都正確。
   - 在 API 34 上，從系統設定頁切換語言。
   - 在 API 34 上，把系統設定頁改回「系統預設」，app 選單應該打勾「跟隨系統」。
   - 切換語言後開啟英文歌詞（WebView），確認介面語言沒有被重設。
 
-- [ ] **Step 5：重建後狀態要保留**
+- [ ] **Step 4：重建後狀態要保留**
 
   開啟開發者選項的「不保留活動」，然後：
   - 在主頁輸入「12」，切換到其他 app 再回來，「12」仍然在。
@@ -2579,19 +2306,18 @@ Task 8 產生繁中初稿時，Task 7 新增的字串已經在 `values-zh` 裡�
 
   驗證完後關閉「不保留活動」。
 
-- [ ] **Step 6：歌詞、搜尋、螢幕常亮**
+- [ ] **Step 5：歌詞、搜尋、螢幕常亮**
 
   依照 Task 12 Step 7、Task 13 Step 6、Task 11 Step 4 的步驟，在 API 24 上各跑一次。
 
-- [ ] **Step 7：審查**
+- [ ] **Step 6：審查**
 
   - 用 `superpowers:requesting-code-review` 或 code-reviewer agent 審查 `git diff master...feat/zh-hant`。
   - 用 `/codex review` 做第二份獨立審查。
   - 有 P1 就修正，並重跑 Step 1。
 
-- [ ] **Step 8：準備 PR**
+- [ ] **Step 7：準備 PR**
 
   PR 描述要包含：
-  - Step 2～6 的結果表格
+  - Step 2～5 的結果表格
   - 繁中用語校對清單（`docs/superpowers/plans/2026-10-02-zh-hant-terms.md`），請使用者確認
-  - 已知限制：清除資料後，app 會被視為升級而顯示簡中

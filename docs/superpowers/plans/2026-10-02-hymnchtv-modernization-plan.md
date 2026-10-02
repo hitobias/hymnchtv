@@ -20,6 +20,7 @@
 | 子項目 | 內容 | 分支 | 規模 | 計畫成熟度 |
 |---|---|---|---|---|
 | A | 介面繁中、歌詞預設語言、搜尋安全性、螢幕常亮 | `feat/zh-hant` | 小～中 | **可執行**（已處理 Codex 的 P1） |
+| Z | 新身分發佈：新的 applicationId、停用或改寫內建更新服務（目前指向原作者 cmeng-git）、About 頁的連結與版權資訊、簽章 | `chore/new-identity` | 小～中 | 只有大綱，使用者在 2026-10-02 決定要做；排在第一次正式發佈之前 |
 | A2 | 閱讀設定：顯示模式（譜／詞／兩者）、歌詞預設字級、關閉翻頁動畫、播放器預設顯示與螢幕常亮開關 | `feat/reading-settings` | 小～中 | 只有大綱，開工前要先設計並經 Codex 審查 |
 | B | 效能優化 | `perf/startup-and-jank` | 中 | 熱點已找出，但 P1 尚未處理，開工前要補完（見 B.3） |
 | C | 介面現代化 | `feat/material3-ui` | 大 | 只有大綱，需要另做視覺設計與 spec |
@@ -67,7 +68,7 @@
 enum class AppLanguage(val tag: String?) {
     SYSTEM(null), ZH_HANS("zh-Hans-CN"), ZH_HANT("zh-Hant-TW"), EN("en-US");
     companion object {
-        /** 舊值相容："zh-Hans-CN"/"en-US"；null、空字串、非法值 → null（交給呼叫端決定 fallback）。絕不丟例外。 */
+        /** null、空字串、非法值 → null（交給呼叫端決定 fallback）。絕不丟例外。 */
         fun fromTag(v: String?): AppLanguage?
     }
 }
@@ -90,7 +91,7 @@ object LanguageResolver {
 | ≥ 33 | framework 的 per-app locale | `LocaleManager.getApplicationLocales()`：空清單表示 `SYSTEM`，否則取第一個 tag | `LocaleManager.setApplicationLocales(...)`，選 `SYSTEM` 時傳空清單 | framework 會自行套用設定並重建 Activity，**不呼叫 `doRestart()`** |
 | < 33 | `PREF_LOCALE` | pref | `commit()` 寫入 pref | 沿用既有的 `doRestart()` |
 
-- **在 API 33 以上，app 內選單和系統設定頁改的是同一份資料**，所以兩邊不可能不一致。`PREF_LOCALE` 在 API 33 以上只在遷移時讀一次（見 A.1.3）。
+- **在 API 33 以上，app 內選單和系統設定頁改的是同一份資料**，所以兩邊不可能不一致。`PREF_LOCALE` 在 API 33 以上不會被使用。
 - **讀取函式**：`LocaleStore.current(): AppLanguage`，介面放在 `LocaleStore`，依 API 等級提供兩種實作，方便單元測試時替換成假資料。
   - 對應規則寫成純函式 `AppLanguage.fromFrameworkTags(tags: List<String>): AppLanguage`：
     - 空清單 → `SYSTEM`
@@ -112,7 +113,7 @@ object LanguageResolver {
   - 這樣在所有 API 等級上，系統語言是不支援的語言時都會落到英文，`SYSTEM` 模式是真正的「跟隨系統」。
   - 這也是 Android 的標準做法。詳見 A.1.8。
 - **在哪裡決定語言**：
-  - `HymnsApp.attachBaseContext`：**先執行遷移的「決策」部分（A.1.3），再決定要不要包裝**（rev 3 Codex P1：原本把遷移放在 `onCreate` 會太晚）。
+  - `HymnsApp.attachBaseContext`：決定要不要包裝 context。
   - `BaseActivity.attachBaseContext`：每次都重新計算，不再依賴靜態欄位 `mLanguage`。
   - **不新增** `HymnsApp.onConfigurationChanged` 的重新包裝（rev 3 Codex P1）。API 33 以上本來就不包裝，交由 framework 更新；API 33 以下的語言只會透過 app 內選單改變，改完一定 `doRestart()`。
 - `doRestart()` 只在 API 33 以下、從 app 內選單切換時使用，而且只會在 `MainActivity` 呼叫。
@@ -120,32 +121,14 @@ object LanguageResolver {
 - **保留 `HymnsApp` 預建 WebView 的做法**（它是為了處理 locale，見 Codex P2）。
 - **預期的行為**：API 33 以上，不論從 app 內或系統設定頁切換語言，framework 都會觸發 configuration change，**Activity 會被重建**。這是正常的。驗收時只要確認重建後狀態正確、資料沒有遺失，例如輸入到一半的詩歌編號、目前的歌詞頁（rev 3 Codex P2）。
 
-#### A.1.3 偏好遷移（處理 Codex P1-1）
+#### A.1.3 不做偏好遷移（使用者決策，2026-10-02：全新項目）
 
-用明確的一次性遷移旗標，不再依賴「設定檔裡有沒有其他 key」來推測。**每一項遷移都有自己獨立的完成旗標**（處理 rev 2 的新 P1）：
+這是全新項目，**沒有舊使用者**，所以：
+- 不做任何偏好遷移。
+- 不需要判斷是升級還是全新安裝。
+- 不需要相容舊的 pref 值。
 
-- `Migration` 介面：`key: String`（例如 `"migr.locale.v1"`、`"migr.lyrics.v1"`），以及 `fun plan(snapshot): PrefsChanges`（純函式）。
-  - `Migrator` 依序執行旗標還沒設的遷移，每執行完一項就 `commit()` 寫入「變更＋該項旗標」。
-  - 每一項都是冪等的，未來新增的遷移只要加一個新的 key。
-- **`migr.locale.v1`**：
-  - 先決定目標語言：
-    - 如果 `PREF_LOCALE` 有值，用 `fromTag` 解析。解析失敗的話，依舊版的語意視為 `ZH_HANS`。
-    - 如果 `PREF_LOCALE` 沒有值，判斷是升級還是全新安裝：
-      - **升級**（`PackageInfo.firstInstallTime != lastUpdateTime`）→ `ZH_HANS`，維持舊版行為。
-      - **全新安裝** → `SYSTEM`。
-  - API 33 以下：把目標語言寫入 `PREF_LOCALE`。
-  - API 33 以上：如果 framework 的 per-app locale **是空的**，而且目標語言不是 `SYSTEM`，就呼叫 `setApplicationLocales(目標)` 一次；如果 framework 已經有值（例如使用者已經在系統設定頁選過），就不覆寫。
-  - 執行時機分成兩段（rev 3 Codex P1）：
-    1. **決策與寫入 pref**：在 `HymnsApp.attachBaseContext` 裡、決定要不要包裝 context 之前，用 base context 完成。只需要 SharedPreferences 和 PackageManager。
-    2. **API 33 以上推送給 framework**：在 `HymnsApp.onCreate` 呼叫 `setApplicationLocales`。API 33 以上本來就不自行包裝 context，所以這一步晚一點執行也不影響 context 的語言。
-  - API 33 以上這次推送可能會觸發一次 config change，只會在升級後第一次啟動時發生，結果是 Activity 被重建一次。這一點列入 A.3 的手動測試。
-- **`migr.lyrics.v1`**：見 A.1.5。
-- `isUpgrade` 由呼叫端傳入，遷移函式本身保持純函式，可以完整用單元測試覆蓋。
-- **已知限制（接受）**：`firstInstallTime` 和 `lastUpdateTime` 的判斷不是 100% 準確，會誤判的情況有：
-  - 清除資料：會被當成升級，得到簡中介面。
-  - 從備份還原，但沒有還原到 `PREF_LOCALE`：同樣被當成升級。
-
-  兩種誤判的結果都是「和舊版一樣顯示簡中」，不會變成意料之外的語言。使用者隨時可以在選單裡改。解除安裝後重新安裝時，兩個時間相同，會被正確判斷為全新安裝。
+`PREF_LOCALE` 沒有值時一律視為 `SYSTEM`；讀到非法值時也回到 `SYSTEM`，只做防禦性處理，不會當機。
 
 #### A.1.4 選單（處理 Codex P1-3）
 
@@ -175,7 +158,7 @@ object LyricsLanguagePolicy {
     fun resolveShowTraditional(pref: LyricsLang, uiLocale: Locale): Boolean
     fun defaultVariant(uiLocale: Locale): HantVariant          // zh-HK/MO → HK；其他 → TW
     fun parseVariant(v: String?, uiLocale: Locale): HantVariant
-    // "S2HK" → HK；"S2TW"、"S2TWP" → TW；"S2T"、null、非法值 → defaultVariant；絕不丟例外
+    // "S2HK" → HK；"S2TW" → TW；null、非法值 → defaultVariant；絕不丟例外
 }
 ```
 
@@ -184,12 +167,6 @@ object LyricsLanguagePolicy {
 - **轉換標準從 4 個精簡成 2 個（使用者決策，2026-10-02）**：
   - 只保留「台灣」（S2TW，只轉字形）和「香港」（S2HK）。
   - 移除「標準繁體」（S2T）和「台灣詞彙」（S2TWP），因為 S2TWP 會改動詩歌用詞。
-  - 舊值的對應：
-    - `S2TWP` → TW（使用者明確選過台灣）。
-    - `S2T` → 依介面地區決定的預設值。S2T 是舊版的預設值，不代表使用者真的選過。
-- 遷移 `migr.lyrics.v1`（獨立的旗標，見 A.1.3）：
-  - 舊的 `PREF_SIMPLIFY == false` → 設為 `TRADITIONAL`；其他情況設為 `FOLLOW_UI`。
-  - 只要 `PREF_CONVERSION_TYPE` 不是 `S2TW` 或 `S2HK`，就依 `parseVariant` 的結果改寫成其中之一；沒有值的話就維持沒有值。
 - **所有讀取 `PREF_CONVERSION_TYPE` 的地方都改用 `parseVariant`**：
   - `ContentView.java:189, 603`：原本用 `valueOf`，遇到非法值會當機。
   - `ChineseS2TSelection.java:53`：原本直接讀字串去勾選 RadioButton，遇到非法值會讓 `mConversionType` 沒有初始化。改成先用 `parseVariant` 初始化，再勾選對應的 RadioButton；如果讀到的原始值是非法的，就立刻把合法值寫回 pref。
@@ -197,7 +174,7 @@ object LyricsLanguagePolicy {
   - 狀態放在 `ContentHandler` 的欄位 `Boolean? lyricsViewOverride`，`null` 代表依照預設。
   - 翻頁時維持同一個狀態；`ContentHandler` 結束後就消失。
   - `ContentView` 每次要顯示時都計算 `override ?: policy.resolveShowTraditional(...)`。
-  - 不再寫入 `PREF_SIMPLIFY`。
+  - 刪除 `PREF_SIMPLIFY`（全新項目，不需保留舊 key）。
 - `ChineseS2TSelection` 的上方新增「歌詞預設語言」RadioGroup；下方的轉換標準改成只有「台灣／香港」兩個選項。主選單新增入口「歌詞語言」，開啟同一個畫面。
 - 注意（Codex P2）：這些改動跨越 Activity 與 Fragment 的狀態，不是純局部修改。A.3 有對應的整合測試項目。
 
@@ -293,7 +270,6 @@ object LyricsLanguagePolicy {
 2. 依照紅 → 綠 → 重構的順序實作下列模組：
    - `AppLanguage.fromTag` 與 `AppLanguage.fromFrameworkTags`
    - `LanguageResolver`
-   - `Migrator` 與兩個 `Migration`（各自的 plan 和冪等性；兩個 Migration 是 `migr.locale.v1`、`migr.lyrics.v1`）
    - `LocaleStore`（用假資料測試兩種 API 等級的讀寫邏輯）
    - `LyricsLang.fromPref`
    - `LyricsLanguagePolicy`
@@ -302,8 +278,7 @@ object LyricsLanguagePolicy {
    每個模組都要測非法輸入、`null`、邊界條件。
 3. **整合語言功能**：
    - `LocaleHelper` 改為委派給新模組。
-   - `HymnsApp.attachBaseContext`：先做遷移決策，再決定是否包裝 context（API 33 以上不包裝）。
-   - `HymnsApp.onCreate`：API 33 以上把遷移結果推送給 framework。
+   - `HymnsApp.attachBaseContext`：決定是否包裝 context（API 33 以上不包裝）。
    - `BaseActivity.attachBaseContext`：每次重新計算語言；API 33 以上不包裝。
    - `MainActivity`：更新選單與 `setAppLocale`。
 4. **整合歌詞功能**：修改 `ContentView`、`ContentHandler`（override 狀態與 keepScreenOn 的 window flag）、`ChineseS2TSelection`。
@@ -327,18 +302,16 @@ object LyricsLanguagePolicy {
 - `./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug :hymnchtv:lintDebug` 全部通過，lint 不能新增 `MissingTranslation` 或 `HardcodedText`。
 - 手動測試，至少在 API 24 和 API 34 以上的模擬器各跑一次：
   - **全新安裝**：系統語言分別設為 zh-TW、zh-HK、zh-CN、en-US，確認介面語言正確。
-  - **升級**：先裝 v2.9.2 並開啟一次（不改任何設定），再升級，介面要維持簡中。另外測一個 v2.9.2 曾選過 English 的情境，升級後要維持英文。
   - **app 內切換**：4 種語言都要切換到，而且重啟後選單的勾選要正確。
   - **API 34 系統設定**：
     - 在系統設定頁改 app 語言後回到 app，介面（包括用全域 context 取字串的 toast 和通知）和 app 內選單的勾選都要一致。Activity 被重建是預期行為，但重建後輸入到一半的編號、目前的歌詞頁都要保持。
     - 把系統設定改回「系統預設」，app 的選擇要變成「跟隨系統」。
     - 反過來，從 app 內切換語言後，系統設定頁要顯示相同的語言。
-  - **API 34 升級遷移**：從 v2.9.2（`PREF_LOCALE=en-US`）升級後，系統設定頁要顯示 English，app 是英文；第一次啟動不能出現重啟迴圈。
   - **系統語言是不支援的語言**（例如日文）＋跟隨系統：API 24 和 API 34 的介面都要顯示英文。
   - **資源目錄調整後的回歸測試**：簡中介面的所有畫面（主頁、目錄、搜尋、歌詞、媒體設定、關於）都要和 v2.9.2 顯示相同的文字，不能有任何字串掉回英文。可以用 lint 的翻譯檢查搭配逐頁截圖比對。
   - 切換語言後開啟英文歌詞（WebView），確認介面語言沒有被重設。
   - **歌詞預設**：3 種選項 × 簡繁兩種介面都要測。按切換鈕後翻頁要保持；離開再進來要回到預設值。
-  - 舊使用者原本 `PREF_SIMPLIFY=false`，升級後歌詞預設要是繁體。手動把 `PREF_CONVERSION_TYPE` 改成非法值，app 不能當機。
+  - 手動把 `PREF_CONVERSION_TYPE` 改成非法值，app 不能當機。
   - **搜尋**：輸入 `(`、`[`、`*` 不能當機；輸入繁體字要搜得到；搜「他」要能找到含「祂」的歌詞。
   - 在歌詞頁放置超過系統休眠時間，螢幕不能熄滅；回到首頁後，螢幕恢復正常的休眠行為。
 
@@ -394,7 +367,7 @@ object LyricsLanguagePolicy {
 | B-10 | ViewPager2 會預先建立大約 9 頁，每一頁都有一個 WebView 和 5 張圖片 | `ContentHandler.java:289-295` | 關閉 RecyclerView 的 item prefetch，並縮小 view cache。改完要量測翻頁是否變慢 |
 | B-11 | 低階裝置模式：用 `ActivityManager.isLowRamDevice()` 或 memoryClass 判斷是否為低階手機 | 新增 `DeviceProfile` | 低階手機自動套用下列設定：關閉翻頁動畫（和 A2 的設定共用同一個開關）、樂譜改用 RGB_565（需先通過 B.3 第 7 項的視覺驗收）、桌布降低解析度 |
 
-- **不做的事**：不把 6 張詩歌本資料表合併成一張，也不為了效能改用 Room。這兩件事對效能都沒有幫助，卻要遷移使用者既有的資料。等子項目 D-1 新增「收藏／歌單」資料表時，再評估要不要用 Room。
+- **資料表結構**：把 6 張詩歌本資料表合併成一張、或改用 Room，對效能都沒有幫助。不過既然是全新項目，沒有既有資料要遷移，可以在子項目 D-1 新增「收藏／歌單」資料表時，順便評估是否直接改用 Room 並重設 schema。
 - **既有 bug**：`ContentView.showLyricsScore` 的第 5 頁樂譜沒有呼叫 `findViewById(R.id.contentView_d)`，會覆蓋掉第 4 頁的圖。在 B 或 A2 修正。
 
 ### B.2 已知方向
@@ -497,13 +470,12 @@ Codex 的 P1 指出，C 目前**還不是可執行的計畫**。開工前必須�
 
 ## 主要風險
 
-1. **語言遷移與同步**：使用者升級後，介面語言可能被錯誤地改掉。
+1. **語言同步**：app 內選單和系統設定頁的語言可能不一致。
    - 對策：
      - 每個 API 等級只有一個真實來源，不做雙向同步。
-     - 每項遷移各有獨立的旗標，並搭配安裝時間判斷。
      - 純函式都有單元測試。
-     - A.3 有升級與系統設定頁的手動測試。
-2. **舊設定值是非法值**：可能導致當機。
+     - A.3 有系統設定頁的手動測試。
+2. **設定值是非法值**：可能導致當機。
    - 對策：所有讀取 pref 的地方都要能處理非法值、絕不丟例外，並寫測試覆蓋。
 3. **B 的非同步改動**：可能把結果寫到錯誤的頁面，或寫回已經銷毀的 view。
    - 對策：B.3 開工前必須先補完設計。
@@ -525,7 +497,7 @@ Codex 的 P1 指出，C 目前**還不是可執行的計畫**。開工前必須�
 - **CODEX**：子項目 A 經過 4 輪審查。主要修正如下：
   - API 33+ 改成「每個 API 等級只有一個真實來源」，並由 framework 套用語言，不再自行包裝 context。
   - 預設資源改成英文。
-  - 每項遷移各有獨立的旗標。
+  - 全新項目，不做任何偏好遷移（使用者決策）。
   - 搜尋改成安全的字面比對。
   - 讀取 pref 時能處理非法值，不會當機。
   - Activity 重建後會保留狀態。
