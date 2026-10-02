@@ -2,4 +2,6 @@
 <resources>
     <!-- Height of the keypad and source keys (at least the 48dp touch target) -->
     <dimen name="c_key_height">48dp</dimen>
+    <!-- Big hymn number on the home preview card: 34sp below 360dp wide, values-w360dp has 40sp -->
+    <dimen name="c_number_size">34sp</dimen>
 </resources>

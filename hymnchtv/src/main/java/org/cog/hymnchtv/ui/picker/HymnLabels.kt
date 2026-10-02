@@ -23,6 +23,13 @@ object HymnLabels {
     private fun numberLabel(ctx: Context, ref: HymnRef): String =
         if (ref.isFu) ctx.getString(R.string.c_label_fu, ref.displayNo) else ctx.getString(R.string.c_label_no, ref.displayNo)
 
+    /** The book's long name ("補充本") for a hymn. */
+    fun bookName(ctx: Context, ref: HymnRef): String = typeName(ctx, ref.book)
+
+    /** Just the number part for the big preview number: "37", or "附 3" in an appendix. */
+    fun numberText(ctx: Context, ref: HymnRef): String =
+        if (ref.isFu) ctx.getString(R.string.c_label_fu, ref.displayNo) else ref.displayNo.toString()
+
     /** e.g. "補充本 第 37 首", "大本詩歌 附 3". */
     fun headline(ctx: Context, ref: HymnRef): String = "${typeName(ctx, ref.book)} ${numberLabel(ctx, ref)}"
 

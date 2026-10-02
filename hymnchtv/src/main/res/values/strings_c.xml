@@ -26,13 +26,13 @@
     <string name="c_lyrics_more">More</string>
     <string name="c_auto_stream">Auto-next</string>
     <string name="c_search_hint">Search titles or lyrics</string>
-    <string name="c_src_db">Main</string>
-    <string name="c_src_bb">Supp.</string>
-    <string name="c_src_xb">Songs</string>
-    <string name="c_src_xg">Hymns</string>
+    <string name="c_src_db">Hymns</string>
+    <string name="c_src_bb">Suppl</string>
+    <string name="c_src_xb">NewSg</string>
+    <string name="c_src_xg">NewHy</string>
     <string name="c_src_yb">Youth</string>
-    <string name="c_src_er">Kids</string>
-    <string name="c_src_en">English</string>
+    <string name="c_src_er">Child</string>
+    <string name="c_src_en">Eng</string>
     <string name="c_short_db">Main</string>
     <string name="c_short_bb">Supp</string>
     <string name="c_short_xb">NewS</string>
@@ -41,7 +41,7 @@
     <string name="c_short_er">Kids</string>
     <string name="c_chip_fmt">%1$s %2$d</string>
     <string name="c_chip_fu_fmt">%1$s App.%2$d</string>
-    <string name="c_toc_open">Contents</string>
+    <string name="c_toc_open">Index</string>
     <string name="c_open">Open</string>
     <string name="c_label_no">No. %1$d</string>
     <string name="c_label_fu">Appx. %1$d</string>
@@ -57,7 +57,7 @@
     <string name="c_key_fu_desc">Appendix hymns</string>
     <string name="c_key_delete_desc">Delete last digit</string>
     <string name="c_recent_label">Recent</string>
-    <string name="c_recent_more">More</string>
+    <string name="c_recent_more">All history</string>
     <string name="c_history_title">Recently opened</string>
     <string name="c_history_empty">Nothing opened yet</string>
     <string name="c_chip_desc">%1$s, %2$s, %3$s</string>
