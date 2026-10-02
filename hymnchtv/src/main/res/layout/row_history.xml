@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One history row (home tab): tap opens, the trailing button deletes (visible alternative to swipe / long press) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="48dp"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/tv_item_name"
+        style="?attr/listItemRow"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:singleLine="true" />
+
+    <ImageButton
+        android:id="@+id/b_delete_in_list"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/c_history_delete"
+        android:src="@drawable/ic_delete_red" />
+</LinearLayout>

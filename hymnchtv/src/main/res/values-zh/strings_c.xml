@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sub-project C: modern UI -->
+    <string name="c_add_playlist">＋歌单</string>
+    <string name="c_next_hymn">下一首</string>
+    <string name="c_history_delete">从历史移除</string>
+</resources>
