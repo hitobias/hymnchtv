@@ -29,12 +29,16 @@ import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_YB_NO_MAX;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.database.SQLException;
 import android.graphics.Color;
 import android.text.TextUtils;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import androidx.annotation.VisibleForTesting;
+import androidx.annotation.WorkerThread;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -46,6 +50,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.MediaType;
 import org.cog.hymnchtv.R;
@@ -191,9 +196,10 @@ public class NotionRecord extends MediaRecord {
 
     private static final Map<WebView, JSONObject> webList = new HashMap<>();
 
-    private static boolean isOverWrite = false;
-    private static int mfound = 0;
-    private static int mSaved = 0;
+    private static volatile boolean isOverWrite = false;
+    // Accumulated only on the AppExecutors IO thread (storeNQPage); read on the main thread for toasts.
+    private static volatile int mfound = 0;
+    private static volatile int mSaved = 0;
     private static Context mContext;
 
     // Create a specific MediaRecord for the web url fetch
@@ -410,23 +416,18 @@ public class NotionRecord extends MediaRecord {
         }
 
         getURLSource(webView, title, url, data -> {
-            try {
-                JSONArray jsonArray = fetchJsonArray(data, false);
-                if (jsonArray != null && jsonArray.length() != 0) {
-                    webList.remove(webView);
-                    webView.destroy();
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject jsonObject = (JSONObject) jsonArray.get(i);
-                        storeNQJObject(jsonObject);
-                    }
-                    Timber.d(HymnsApp.getResString(R.string.nq_download_completed, title, mSaved, mfound));
-                    showToastMessage(R.string.nq_download_completed, title, mSaved, mfound);
-                }
-            } catch (JSONException e) {
-                Timber.e("URL get source exception: %s", e.getMessage());
+            JSONArray jsonArray = fetchJsonArray(data, false);
+            if (jsonArray != null && jsonArray.length() != 0) {
+                webList.remove(webView);
+                webView.destroy();
+                storeNQPage(title, jsonArray);
             }
         });
     }
+
+    private static final Pattern NQ_PATTERN = Pattern.compile("[DBCQX](\\d+)");
+    private static final Pattern NQ_FU_PATTERN = Pattern.compile("Q*附([1-9])");
+    private static final Pattern NQ_YB_PATTERN = Pattern.compile("Q(\\d+)(首B|\\(B\\))+");
 
     /**
      * Save the given JSONObject to the database table hymnType, if contains valid info, else abort.
@@ -434,69 +435,96 @@ public class NotionRecord extends MediaRecord {
      * a. valid hymnType
      * b. valid hymnNo
      * c. isFu based on "(附1)颂赞与尊贵与荣耀归"
+     *
+     * @return the record to store, or null when the JSON is malformed (logged and skipped). Never touches the DB.
      */
-    private static void storeNQJObject(JSONObject jsonRecord) {
-        final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
-        Pattern pattern = Pattern.compile("[DBCQX](\\d+)");
-        Pattern patternFu = Pattern.compile("Q*附([1-9])");
-        Pattern patternYb = Pattern.compile("Q(\\d+)(首B|\\(B\\))+");
-
+    @VisibleForTesting
+    public static NotionRecord parseNQJObject(JSONObject jsonRecord) {
         try {
             String title = jsonRecord.getString(NQ_TITLE);
-            String hymnType = nqHymn2Type.get(title.substring(0, 1));
-
+            String hymnType = title.isEmpty() ? null : nqHymn2Type.get(title.substring(0, 1));
             if (TextUtils.isEmpty(hymnType)) {
                 Timber.w("### Invalid Notion record HymnTitle: %s", jsonRecord);
-                return;
+                return null;
             }
 
             int hymnNo = 0;
             Matcher matcher;
             if (title.contains("附")) {
                 hymnNo = title.startsWith("Q") ? HYMN_YB_NO_MAX : HYMN_DB_NO_MAX;
-                matcher = patternFu.matcher(title);
+                matcher = NQ_FU_PATTERN.matcher(title);
             }
             else {
-                matcher = pattern.matcher(title);
+                matcher = NQ_PATTERN.matcher(title);
+            }
+            if (!matcher.find() || TextUtils.isEmpty(matcher.group(1))) {
+                Timber.w("### Invalid Notion record HymnNo: %s", jsonRecord);
+                return null;
+            }
+            hymnNo += Integer.parseInt(matcher.group(1));
+
+            // renumber 青年诗歌 alternate hymn No,
+            if (HYMN_YB.equals(hymnType) && NQ_YB_PATTERN.matcher(title).find()) {
+                Integer altNo = HYMN_YB_ALT.get(hymnNo);
+                if (altNo != null)
+                    hymnNo = altNo;
             }
 
-            if (matcher.find()) {
-                String noStr = matcher.group(1);
-                if (TextUtils.isEmpty(noStr)) {
-                    Timber.w("### Invalid Notion record HymnNo: %s", noStr);
-                    return;
-                }
-                else {
-                    hymnNo += Integer.parseInt(noStr);
-                }
-                // renumber 青年诗歌 alternate hymn No,
-                if (HYMN_YB.equals(hymnType) && patternYb.matcher(title).find()) {
-                    Integer altNo = HYMN_YB_ALT.get(hymnNo);
-                    if (altNo != null)
-                        hymnNo = altNo;
-                }
-
-                NotionRecord mRecord = new NotionRecord(hymnType, hymnNo);
-                mRecord.setMediaUri(jsonRecord.getString(NQ_URL));
-                Timber.d("Notion Hymn Record processing (%s): %s", mSaved, title);
-                mfound++;
-                if (isOverWrite || !MediaConfig.hasMediaRecord(mRecord)) {
-                    long row = mDB.storeMediaRecord(mRecord);
-                    if (row < 0) {
-                        Timber.e("### Error in creating Notion record for: %s", title);
-                    }
-                    else {
-                        mSaved++;
-                        Timber.d("Notion Hymn Record saved (%s): %s", mSaved, jsonRecord);
-                    }
-                }
-            }
-            else {
-                Timber.w("### Invalid QQ record HymnTitle: %s", jsonRecord);
-            }
-        } catch (Exception e) {
-            Timber.e("### Error in creating Notion record with json exception: %s", e.getMessage());
+            NotionRecord mRecord = new NotionRecord(hymnType, hymnNo);
+            mRecord.setMediaUri(jsonRecord.getString(NQ_URL));
+            return mRecord;
+        } catch (JSONException | NumberFormatException e) {
+            Timber.w("### Invalid Notion record (%s): %s", e.getMessage(), jsonRecord);
+            return null;
         }
+    }
+
+    /**
+     * Store one page of Notion links in a single transaction. Malformed items are skipped; any SQL error
+     * propagates as android.database.SQLException after the whole page has been rolled back.
+     *
+     * @return ImportResult(saved, found) for this page only
+     */
+    @VisibleForTesting
+    @WorkerThread
+    public static ImportResult storeNQJArray(DatabaseBackend db, JSONArray jsonArray, boolean overWrite) {
+        return db.inTransaction(() -> {
+            int found = 0;
+            int saved = 0;
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.optJSONObject(i);
+                NotionRecord mRecord = (jsonObject == null) ? null : parseNQJObject(jsonObject);
+                if (mRecord == null)
+                    continue;
+
+                found++;
+                if (overWrite || !db.getMediaRecord(mRecord, false)) {
+                    db.storeMediaRecordOrThrow(mRecord);
+                    saved++;
+                }
+            }
+            return new ImportResult(saved, found);
+        });
+    }
+
+    /**
+     * Store one fetched page on the shared IO thread (B-9a) and report with the same per-page toast as before.
+     * Captures only immutable inputs; no Activity.
+     */
+    private static void storeNQPage(String title, JSONArray jsonArray) {
+        final boolean overWrite = isOverWrite;
+        AppExecutors.io("notion-store", () -> {
+            try {
+                ImportResult result = storeNQJArray(DatabaseBackend.getInstance(HymnsApp.getGlobalContext()), jsonArray, overWrite);
+                mfound += result.getTotal();
+                mSaved += result.getImported();
+                Timber.d(HymnsApp.getResString(R.string.nq_download_completed, title, mSaved, mfound));
+                showToastMessage(R.string.nq_download_completed, title, mSaved, mfound);
+            } catch (SQLException e) {
+                Timber.e(e, "Notion page rolled back: %s", title);
+                showToastMessage(R.string.nq_download_failed, title);
+            }
+        });
     }
 
     /**
