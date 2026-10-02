@@ -101,7 +101,8 @@
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/display_mode_both" />
+                android:contentDescription="@string/display_mode_both"
+                android:text="@string/c_btn_mode_both" />
 
             <Button
                 android:id="@+id/aa_mode_lyrics"
@@ -109,7 +110,8 @@
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/display_mode_lyrics" />
+                android:contentDescription="@string/display_mode_lyrics"
+                android:text="@string/c_btn_mode_lyrics" />
 
             <Button
                 android:id="@+id/aa_mode_score"
@@ -117,7 +119,8 @@
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="@string/display_mode_score" />
+                android:contentDescription="@string/display_mode_score"
+                android:text="@string/c_btn_mode_score" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <Button

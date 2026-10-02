@@ -10,6 +10,7 @@ import android.widget.EditText
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.widget.CompoundButtonCompat
+import com.google.android.material.button.MaterialButton
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.reading.background.UiTokens
 
@@ -21,6 +22,7 @@ import org.cog.hymnchtv.reading.background.UiTokens
 object PlayerCardStyle {
     private const val CARD_RADIUS_DP = 16f
     private const val CHIP_RADIUS_DP = 12f
+    private const val SOURCE_TEXT_SP = 14f
     private const val TRACK_ALPHA = 0x4D // 0.3
 
     private val SOURCE_IDS = intArrayOf(R.id.btn_media, R.id.btn_jiaochang, R.id.btn_changshi, R.id.btn_banzhou)
@@ -57,13 +59,25 @@ object PlayerCardStyle {
     fun styleSources(card: View, tokens: UiTokens, available: BooleanArray) {
         val density = card.resources.displayMetrics.density
         card.findViewById<TextView>(R.id.btn_hymnSearch).apply {
-            background = chip(tokens.surfaceTone, tokens.surfaceTone, density)
+            // A Button inflated under a Material theme is a MaterialButton, which paints from its tint, not its background
+            if (this is MaterialButton) {
+                backgroundTintList = ColorStateList.valueOf(tokens.surfaceTone)
+                cornerRadius = (CHIP_RADIUS_DP * density).toInt()
+            } else {
+                background = chip(tokens.surfaceTone, tokens.surfaceTone, density)
+            }
             setTextColor(tokens.onSurface)
             compoundDrawableTintList = ColorStateList.valueOf(tokens.onSurface)
         }
         SOURCE_IDS.forEachIndexed { i, id ->
             card.findViewById<TextView>(id).apply {
                 background = chip(tokens.surfaceTone, tokens.accent, density)
+                // Segmented look: no radio dot, label centred at the lyrics page button size
+                (this as? CompoundButton)?.buttonDrawable = null
+                gravity = android.view.Gravity.CENTER
+                setPadding(0, 0, 0, 0)
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, SOURCE_TEXT_SP)
+                paint.isUnderlineText = false
                 val idle = if (available.getOrElse(i) { true }) tokens.onSurface else tokens.disabledOnSurface
                 setTextColor(
                     ColorStateList(
