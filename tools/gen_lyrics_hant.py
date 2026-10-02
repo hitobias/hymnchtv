@@ -24,8 +24,9 @@ ASSETS = ROOT / "hymnchtv/src/main/assets"
 GENERATOR = pathlib.Path(__file__).resolve()
 OVERRIDES = ROOT / "tools/lyrics_hant_overrides.tsv"
 RCV_INPUTS = [ROOT / "tools" / n for n in ("rcv_prefs.py", "rcv_word_prefs.tsv", "rcv_char_prefs.tsv", "rcv_pair_decisions.tsv",
-                                           "rcv_review_decisions.tsv")]
-REVIEW_DECISIONS = RCV_INPUTS[-1]
+                                           "rcv_review_decisions.tsv", "rcv_word_fixes.tsv")]
+REVIEW_DECISIONS = RCV_INPUTS[-2]
+WORD_FIXES = RCV_INPUTS[-1]
 MANIFEST = ASSETS / "lyrics_hant_manifest.txt"
 STAGING = ROOT / "hymnchtv/build/lyrics-hant-staging"
 T2S_MAP = ASSETS / "lyrics_t2s_map.txt"
@@ -104,6 +105,25 @@ def apply_overrides(text, variant, source, rules):
         hits = text.count(frm)
         if hits != count:
             sys.exit(f"{OVERRIDES.name}:{n}: expected {count} hit(s) of '{frm}' in {source} [{variant}], found {hits}")
+        text = text.replace(frm, to)
+    return text
+
+
+def load_word_fixes():
+    """(from, to) whole-word spellings from tools/rcv_word_fixes.tsv."""
+    fixes = []
+    for n, line in enumerate(WORD_FIXES.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip() or line.startswith("#"):
+            continue
+        cols = line.split("\t")
+        if len(cols) != 3 or not cols[0] or len(cols[0]) != len(cols[1]):
+            sys.exit(f"{WORD_FIXES.name}:{n}: expected 'from<TAB>to<TAB>note' with equal lengths")
+        fixes.append((cols[0], cols[1]))
+    return fixes
+
+
+def apply_word_fixes(text, fixes):
+    for frm, to in fixes:
         text = text.replace(frm, to)
     return text
 
@@ -250,13 +270,15 @@ def main():
     texts = [read(p) for p in sources]
     rules = load_overrides({rel(p) for p in sources})
     prefs = load_rcv_prefs()
+    word_fixes = load_word_fixes()
     # Convert every variant first so a failure leaves the working tree untouched.
     decisions = load_review_decisions({rel(p) for p in sources})
     raw, preferred, events = convert(texts, prefs)
     converted = {}
     for variant in VARIANTS:
         decided = apply_review_decisions(preferred[variant], sources, decisions, variant)
-        converted[variant] = [apply_overrides(t, variant, rel(src), rules) for src, t in zip(sources, decided)]
+        fixed = [apply_word_fixes(t, word_fixes) for t in decided]
+        converted[variant] = [apply_overrides(t, variant, rel(src), rules) for src, t in zip(sources, fixed)]
     # The search map also keeps OpenCC's own forms (e.g. 裡 next to the RcV's 裏) because that is what people type.
     is_l = [is_lyrics(p) for p in sources]
     pick = lambda items: [x for x, keep in zip(items, is_l) if keep]  # noqa: E731

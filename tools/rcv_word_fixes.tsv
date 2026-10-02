@@ -1,0 +1,5 @@
+# Whole-word Recovery Version spellings applied to the converted Traditional text (after the RcV tables, before the exact-count overrides).
+# Format: from<TAB>to<TAB>note   (from = what OpenCC/RcV tables produce, to = the RcV spelling)
+# Checked 2026-10-03 against line.twgbr.org/recoveryversion/bible/{40,43,45}.html (same text as recoveryversion.com.tw): 甚麼 174, 什麼 0.
+# 什咪 (colloquial, one lyrics line) is deliberately not matched.
+什麼	甚麼	RcV writes 甚麼 only
