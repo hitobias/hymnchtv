@@ -19,7 +19,8 @@ class LicensesActivity : BaseActivity() {
         setContentView(R.layout.licenses)
         setTitle(R.string.about_licenses_title)
         val list = findViewById<ListView>(R.id.licenses_list)
-        list.emptyView = findViewById(R.id.licenses_empty)
+        // Hidden until loading finishes, so the "not available" text never flashes.
+        findViewById<android.view.View>(R.id.licenses_empty).visibility = android.view.View.GONE
         Thread({
             val rows = loadRows()
             runOnUiThread { if (!isFinishing) bind(list, rows) }
@@ -27,6 +28,7 @@ class LicensesActivity : BaseActivity() {
     }
 
     private fun bind(list: ListView, rows: List<LicenseRow>) {
+        list.emptyView = findViewById(R.id.licenses_empty)
         list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, rows.map(LicenseText::title))
         list.setOnItemClickListener { _, _, position, _ -> showDetail(rows[position]) }
     }
