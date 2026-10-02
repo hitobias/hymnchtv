@@ -76,7 +76,7 @@ class HistoryFragmentTest {
         PickerTestSupport.launch { scenario ->
             openHistoryPage()
             FragmentHost.eventually {
-                scenario.onActivity { a -> assertThat(a.findViewById<RecyclerView>(R.id.history_list).adapter!!.itemCount).isEqualTo(2) }
+                scenario.onActivity { a -> assertThat((a.findViewById<RecyclerView>(R.id.history_list).adapter as HistoryAdapter).currentList.filterIsInstance<HistoryItem.Row>()).hasSize(2) }
             }
             onView(allOf(withId(R.id.b_delete_in_list), isDisplayed())).perform(click())
             FragmentHost.eventually { assertThat(DatabaseBackend.getInstance(ctx).historyRecords).hasSize(1) }
@@ -99,7 +99,7 @@ class HistoryFragmentTest {
             openHistoryPage()
             FragmentHost.eventually { onView(withText(containsString("標題1"))).check(matches(isDisplayed())) }
             onView(withText(containsString("標題1"))).perform(longClick())
-            onView(withText(R.string.delete)).inRoot(isDialog()).check(matches(isDisplayed()))
+            onView(allOf(withId(androidx.appcompat.R.id.alertTitle), withText(R.string.delete))).inRoot(isDialog()).check(matches(isDisplayed()))
             assertThat(DatabaseBackend.getInstance(ctx).historyRecords).hasSize(1)
             onView(withText(android.R.string.cancel)).inRoot(isDialog()).perform(click())
             assertThat(DatabaseBackend.getInstance(ctx).historyRecords).hasSize(1)
@@ -165,7 +165,7 @@ class HistoryFragmentTest {
                     assertThat(rows[1].time).isEqualTo(HistoryTimeText.clock(a, at(1, 12, 0)))
                 }
             }
-            onView(withText(org.cog.hymnchtv.R.string.c_date_yesterday)).check(matches(isDisplayed()))
+            onView(allOf(withId(R.id.tv_history_header), withText(R.string.c_date_yesterday))).check(matches(isDisplayed()))
         }
     }
 }
