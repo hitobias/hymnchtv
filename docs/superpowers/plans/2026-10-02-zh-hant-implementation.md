@@ -1028,7 +1028,7 @@
   #   variant     tw | hk | *        (* = both variants)
   #   source-path Simplified source relative to assets, e.g. lyrics_db_text/db12.txt
   #   from / to   Traditional text as produced by OpenCC / corrected text
-  #   count       exact number of occurrences of "from" in that file (per variant); mismatch = error
+  #   count       exact number (>= 1) of occurrences of "from" in that file (per variant); mismatch = error
   # Example (do not uncomment unless verified):
   # *	lyrics_db_text/db12.txt	皇後	皇后	1
   ```
@@ -1102,7 +1102,7 @@
           if not line.strip() or line.startswith("#"):
               continue
           cols = line.split("\t")
-          if len(cols) != 5 or cols[0] not in ("tw", "hk", "*") or not cols[2] or not cols[4].isdigit():
+          if len(cols) != 5 or cols[0] not in ("tw", "hk", "*") or not cols[2] or not cols[4].isdigit() or int(cols[4]) < 1:
               sys.exit(f"{OVERRIDES.name}:{n}: expected 'variant<TAB>source-path<TAB>from<TAB>to<TAB>count'")
           if cols[1] not in known_sources:
               sys.exit(f"{OVERRIDES.name}:{n}: unknown source file {cols[1]}")
@@ -1127,7 +1127,9 @@
               shutil.rmtree(d)
       for d in expected_dirs:
           for f in (ASSETS / d).iterdir():
-              if rel(f) not in expected_files:
+              if f.is_dir():
+                  shutil.rmtree(f)
+              elif rel(f) not in expected_files:
                   f.unlink()
 
 
@@ -1181,6 +1183,8 @@
       main()
   ```
 
+  **已知限制**：OpenCC 的版本只記在 manifest 的說明行，不會被驗證。升級 OpenCC 之後必須手動重新產生一次，並用 `git diff --stat hymnchtv/src/main/assets` 檢查有沒有變化（rev 6 Codex P2，刻意不做成自動檢查）。
+
   manifest 的格式：
   - 第一行是 `# generated ...`，記錄 OpenCC 的版本，只作為參考。
   - `#input<TAB>路徑<TAB>sha1`：產生工具和校對表的雜湊。
@@ -1211,7 +1215,11 @@
   4. 建立一個空目錄 `lyrics_zz_text_hant_tw`：`outputDirectoriesAreExactlyTheExpectedOnes` 要失敗。
   5. 在校對表加一條規則，故意寫錯次數，例如 `*	lyrics_db_text/db1.txt	神	神	99`，再執行 `tools/gen_lyrics_hant.py`：要以 `expected 99 hit(s)` 錯誤結束。
 
-  每一項做完都用 `git checkout -- hymnchtv/src/main/assets tools` 還原；第 4 項另外要 `rmdir` 刪掉那個空目錄。
+  每一項做完都只還原剛才改過的那一個檔案，不要整個目錄一起還原，以免蓋掉其他尚未 commit 的修改：
+  - 第 1 項：`git checkout -- hymnchtv/src/main/assets/lyrics_db_text/db1.txt`
+  - 第 2 項：`git checkout -- hymnchtv/src/main/assets/lyrics_db_text_hant_tw/db1.txt`
+  - 第 3 項和第 5 項：`git checkout -- tools/lyrics_hant_overrides.tsv`
+  - 第 4 項：`rmdir hymnchtv/src/main/assets/lyrics_zz_text_hant_tw`
 
 - [ ] **Step 9：Commit**
 
