@@ -37,7 +37,7 @@
   - Task 13 SAF 驗收預期改為 `export OK 1.0.0`（`BuildConfig.VERSION_NAME`）。Codex 第 3 輪提出的 P1（`flow.collect` import）判定為誤報：`FlowCollector` 自 coroutines 1.6 起是 `fun interface`，`tracker.recorded.collect { }` 可直接編譯，以 Task 12 實際編譯驗證。
   - Task 8 `BackupCodecTest.maliciousIdsAreSkipped`：`testUuid(1)` 全是數字，`.uppercase()` 後仍是合法 canonical UUID，實作正確接受它，測試必然失敗；改用含十六進位字母的 `testUuid(0xab)`（實作不變）。
   - Task 13 腳本 `saf` 情境：`adb exec-in` 在 API 24 上靜默不寫入任何內容（`import` 因找不到檔案失敗），改用 `adb push` 到 `/data/local/tmp` 再 `run-as … cp` 進 app 私有目錄。
-  - Task 9 `BackupMerger.resolvePositionCollisions` 改為只依「合併後的勝出列集合」決定歌單位置（不再「本機優先」）：每個被爭用的位置由 `compare` 較大者（再依較小 id）保留，其餘依 (position, id) 排到該歌單最高位置之後，必要時本機列也會被移動並寫回；兩台裝置互相匯入對方檔案後版面一致，再匯入原檔不產生變更（Codex 與 code-reviewer 的 P1：原寫法不收斂）。`BackupMergerTest` 新增 `exchangingFilesBothWaysConvergesToTheSameLayout`，並把原 `itemsAppendedToTheSameSlot…` 改名為 `theNewerItemKeepsAContestedSlotAndTheOlderLocalItemMoves`（預期改為 b 留在 0、a 移到 1）。
+  - Task 9 `BackupMerger.resolvePositionCollisions` 改為只依「合併後的勝出列集合」決定歌單位置（不再「本機優先」）：每個被爭用的位置由 `compare` 較大者（再依較小 id）保留，其餘依 (position, id) 排到該歌單最高位置之後，必要時本機列也會被移動並寫回；兩台裝置互相匯入對方檔案後版面一致，再匯入原檔不產生變更（Codex 與 code-reviewer 的 P1：原寫法不收斂）。`BackupMergerTest` 新增 `exchangingFilesBothWaysConvergesToTheSameLayout`，並把原 `itemsAppendedToTheSameSlot…` 改名為 `theNewerItemKeepsAContestedSlotAndTheOlderLocalItemMoves`（預期改為 b 留在 0、a 移到 1）；`RoomBackupStoreTest.mergedPlaylistItemsNeverViolateTheSlotIndex` 的預期同步改為較新的匯入列 id(5) 取得 0、本機 id(4) 移到 1。
   - Task 8 `BackupCodec` 對歌單 `position` 加上限 `MAX_POSITION = 1_000_000_000`（用 `getLong` 避免 `getInt` 截斷，並防止重排 +1 溢位）；新增 `absurdPlaylistPositionsAreSkipped`。
   - AVD 實際名稱是 `api34b`／`api24b`（原寫 `api34nb`／`api24nb`），全文更正。
 - rev 7（2026-10-02，依 Codex／code-reviewer 對 D-1a Task 8–13 的審查）：
@@ -5899,7 +5899,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
               playlistItems = listOf(PlaylistItemEntity(id(5), id(3), 0, key, createdAt = 2, updatedAt = 2, updatedBy = device)),
           )
           store.mergeAtomically { local -> BackupMerger.merge(local, incoming).let { Planned(it.changes, Unit) } }
-          assertThat(store.readAll().playlistItems.map { it.id to it.position }).containsExactly(id(4) to 0, id(5) to 1)
+          assertThat(store.readAll().playlistItems.map { it.id to it.position }).containsExactly(id(4) to 1, id(5) to 0) // the newer incoming item wins slot 0; the local item moves
       }
 
       private fun item(n: Int, position: Int, updatedAt: Long = 1) =
