@@ -23,6 +23,7 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.TestPermissions
 import org.cog.hymnchtv.reading.background.BackgroundChoice
 import org.cog.hymnchtv.reading.background.BackgroundPolicy
+import org.cog.hymnchtv.reading.background.BackgroundPreset
 import org.cog.hymnchtv.reading.background.BackgroundSlot
 import org.cog.hymnchtv.reading.background.MainScreenColors
 import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
@@ -144,9 +145,11 @@ class PhotoBackdropTest {
                 val grid = it.findViewById<GridView>(R.id.backgroundGrid)
                 val adapter = grid.adapter
                 val photoCell = adapter.getView(adapter.count - 1, null, grid)   // "your photo" is the last cell
-                assertPanel(photoCell.findViewById(R.id.bgSample), "picker photo sample")
+                // the thumbnail's mini card carries the photo tokens' surface, which keeps the sample text readable
+                assertSurface(photoCell.findViewById(R.id.bgMiniCard), "picker photo mini card")
                 val presetCell = adapter.getView(0, null, grid)
-                assertThat(presetCell.findViewById<View>(R.id.bgSample).background).isNull()
+                val presetSurface = UiTokens.from(BackgroundPolicy.tokenInput(BackgroundChoice.Preset(BackgroundPreset.entries[0]))).surface
+                assertThat(((presetCell.findViewById<View>(R.id.bgMiniCard).background) as GradientDrawable).color?.defaultColor).isEqualTo(presetSurface)
             }
         }
     }

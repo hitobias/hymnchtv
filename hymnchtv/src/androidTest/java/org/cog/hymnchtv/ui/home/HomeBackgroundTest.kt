@@ -67,6 +67,28 @@ class HomeBackgroundTest {
         FragmentHost.eventually { scenario.onActivity { a -> assertThat(topColor(a)).isNotEqualTo(before) } }
     }
 
+    /** The card colour the preview card is drawn with (a translucent token surface). */
+    private fun cardColor(a: MainActivity): Int =
+        (a.findViewById<android.view.View>(R.id.previewArea).background as android.graphics.drawable.GradientDrawable).color!!.defaultColor
+
+    @Test fun changingTheBackgroundChangesTheCardColours() = PickerTestSupport.launch { scenario ->
+        var before = 0
+        var openFill = 0
+        scenario.onActivity {
+            before = cardColor(it)
+            openFill = it.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_open).backgroundTintList!!.defaultColor
+        }
+        prefs.edit().putString(BackgroundSlot.MAIN.prefKey, BackgroundPreset.INK.id).commit()
+        scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+        scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        FragmentHost.eventually {
+            scenario.onActivity { a ->
+                assertThat(cardColor(a)).isNotEqualTo(before)
+                assertThat(a.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_open).backgroundTintList!!.defaultColor).isNotEqualTo(openFill)
+            }
+        }
+    }
+
     @Test fun backgroundIsKeptAfterARestart() {
         prefs.edit().putString(BackgroundSlot.MAIN.prefKey, BackgroundPreset.INK.id).commit()
         PickerTestSupport.launch { scenario ->
