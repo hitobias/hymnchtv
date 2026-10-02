@@ -68,6 +68,30 @@ class OverlayNavigationTest {
         }
     }
 
+    @Test fun contentBehindTheOverlayIsHiddenFromAccessibilityAndFocus() = PickerTestSupport.launch { scenario ->
+        fun check(open: Boolean) = scenario.onActivity { a ->
+            for (id in intArrayOf(R.id.fragment_container, R.id.bottom_nav)) {
+                val group = a.findViewById<android.view.ViewGroup>(id)
+                assertThat(group.importantForAccessibility == android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS).isEqualTo(open)
+                assertThat(group.descendantFocusability == android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS).isEqualTo(open)
+            }
+        }
+        check(open = false)
+        openHistory()
+        check(open = true)
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        FragmentHost.eventually { check(open = false) }
+    }
+
+    @Test fun showingTheSameOverlayTwiceAddsItOnce() = PickerTestSupport.launch { scenario ->
+        openHistory()
+        scenario.onActivity { a ->
+            (a as MainActivity).openHistory()
+            a.supportFragmentManager.executePendingTransactions()
+            assertThat(a.supportFragmentManager.backStackEntryCount).isEqualTo(1)
+        }
+    }
+
     @Suppress("unused")
     private val keep = MainActivity::class
 }

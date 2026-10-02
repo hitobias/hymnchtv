@@ -36,7 +36,7 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
             override fun onSwiped(holder: RecyclerView.ViewHolder, direction: Int) {
                 val position = holder.bindingAdapterPosition
                 val record = if (position != RecyclerView.NO_POSITION) adapter.recordAt(position) else null
-                if (record != null) delete(record)
+                if (record != null) delete(record, position)
             }
 
             override fun getSwipeDirs(rv: RecyclerView, holder: RecyclerView.ViewHolder): Int =
@@ -76,13 +76,23 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
         MainActivity.showContent(requireContext(), ref.book, ref.storedNo, false)
     }
 
-    private fun delete(record: HistoryRecord) {
+    /** [position] is the row's adapter position when it was swiped away, so a failed delete can bring it back. */
+    private fun delete(record: HistoryRecord, position: Int = RecyclerView.NO_POSITION) {
         HistoryActions.delete(requireContext(), record) { deleted ->
             if (list == null) return@delete
-            // The row was already gone (or the delete failed): reload so the list tells the truth
-            if (deleted) show(shown.filterNot { it === record }) else reload()
+            if (deleted) {
+                show(shown.filterNot { sameRecord(it, record) })
+            } else {
+                // The row was already gone (or the delete failed): put the swiped row back, then reload so the list tells the truth
+                if (position != RecyclerView.NO_POSITION) adapter.notifyItemChanged(position)
+                reload()
+            }
         }
     }
+
+    /** Records are matched by what identifies them (book, number, time), not by object identity: a reload makes new objects. */
+    private fun sameRecord(a: HistoryRecord, b: HistoryRecord) =
+        a.hymnType == b.hymnType && a.hymnNo == b.hymnNo && a.timeStamp == b.timeStamp
 
     private fun confirmDelete(record: HistoryRecord) {
         MaterialAlertDialogBuilder(requireContext())

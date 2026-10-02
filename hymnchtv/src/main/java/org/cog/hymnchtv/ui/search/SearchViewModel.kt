@@ -13,6 +13,7 @@ import org.cog.hymnchtv.search.T2sMap
 import timber.log.Timber
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /** What the search page shows. */
 sealed interface SearchUiState {
@@ -47,7 +48,7 @@ class SearchViewModel : ViewModel() {
     var onChanged: (() -> Unit)? = null
 
     private var initialized = false
-    private var requestId = 0
+    private val requestId = AtomicInteger()
     private var t2s: T2sMap? = null
 
     /** Applies the arguments once; later calls (rotation) keep the live scope. */
@@ -67,7 +68,7 @@ class SearchViewModel : ViewModel() {
     /** Starts (or restarts) a search; a blank query clears the result. Main thread. */
     fun search(text: String, context: Context, prefs: SharedPreferences) {
         query = text
-        val id = ++requestId
+        val id = requestId.incrementAndGet()
         if (text.isBlank()) {
             publish(SearchUiState.Idle)
             return
@@ -79,12 +80,12 @@ class SearchViewModel : ViewModel() {
         executor.execute {
             val table = t2s ?: AssetLyricsSource.loadT2s(appContext).also { t2s = it }
             val page = try {
-                HymnSearch(source, table).search(text, usedScope, isCancelled = { id != requestId })
+                HymnSearch(source, table).search(text, usedScope, isCancelled = { id != requestId.get() })
             } catch (e: RuntimeException) {
                 Timber.e(e, "Search failed for '%s'", text)
                 SearchPage(emptyList(), false)
             }
-            AppExecutors.MAIN.post { if (id == requestId) publish(SearchUiState.Done(page)) }
+            AppExecutors.MAIN.post { if (id == requestId.get()) publish(SearchUiState.Done(page)) }
         }
     }
 
@@ -94,7 +95,7 @@ class SearchViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-        requestId++
+        requestId.incrementAndGet()
         onChanged = null
     }
 

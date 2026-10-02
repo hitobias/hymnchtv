@@ -114,15 +114,6 @@ public class HistoryRecord {
         return mTimeStamp;
     }
 
-    public String getHymnNoFu() {
-        HymnRef ref = new HymnRef(mHymnType, mHymnNo);
-        // the media layer stores isFu = 0 for the youth book's appendix; HymnRef derives it from the number
-        if ((mIsFu && mHymnType.equals(HYMN_DB)) || ref.isFu()) {
-            return "附" + ref.getDisplayNo();
-        }
-        return Integer.toString(mHymnNo);
-    }
-
     /**
      * Fetch the hymn tile from the given hymnType and hymnNo for the lyrics file
      * The lyrics filename is based on the two given parameters

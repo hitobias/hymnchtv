@@ -2,6 +2,7 @@ package org.cog.hymnchtv.ui.host
 
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -97,6 +98,7 @@ class MainHost(private val activity: AppCompatActivity) {
 
     /** Shows [fragment] full-screen over the tabs; the back key closes it. */
     fun showOverlay(fragment: Fragment, tag: String) {
+        if (fm.findFragmentByTag(tag) != null) return
         fm.beginTransaction().setReorderingAllowed(true)
             .add(R.id.overlay_container, fragment, tag)
             .addToBackStack(tag)
@@ -111,6 +113,13 @@ class MainHost(private val activity: AppCompatActivity) {
         val open = fm.backStackEntryCount > 0
         activity.findViewById<View>(R.id.overlay_container)?.visibility = if (open) View.VISIBLE else View.GONE
         if (!open) activity.supportActionBar?.setTitle(R.string.app_title_main)
+        // What is behind the overlay must not be reachable by TalkBack or the keyboard
+        for (id in intArrayOf(R.id.fragment_container, R.id.bottom_nav)) {
+            val group = activity.findViewById<ViewGroup>(id) ?: continue
+            group.importantForAccessibility =
+                if (open) View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+            group.descendantFocusability = if (open) ViewGroup.FOCUS_BLOCK_DESCENDANTS else ViewGroup.FOCUS_AFTER_DESCENDANTS
+        }
     }
 
     private fun show(tabId: Int) {

@@ -143,7 +143,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun showKeyboard(input: View) {
         input.requestFocus()
         input.post {
-            (requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+            (input.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
                 ?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
         }
     }
