@@ -53,13 +53,32 @@ import timber.log.Timber;
  * <p>
  * Threading: every method should run on {@code AppExecutors.io}. TODO(1.0): the transitional main-thread call
  * sites below still query on the main thread (the database allows it for now) and must be moved to
- * {@code AppExecutors.io} before the 1.0 release (plan section 2.4):
+ * {@code AppExecutors.io} before the 1.0 release (plan section 2.4). Line numbers drift; grep the method names:
  * <ul>
  * <li>MainActivity.initHistoryList -> getHistoryRecords</li>
- * <li>MainActivity history row delete -> deleteHymnHistory</li>
+ * <li>MainActivity history row delete (MySwipeListAdapter.remove) -> deleteHymnHistory</li>
  * <li>ContentHandler.getHymnMediaState -> getMediaRecord x4 (plan B-4)</li>
- * <li>ContentView long press delete of English lyrics -> deleteLyricsEng</li>
+ * <li>ContentHandler options-menu item lyrcsEnglishDelete -> deleteLyricsEng</li>
+ * <li>ContentHandler.getMediaUrl (share menu) -> getMediaRecord</li>
+ * <li>MediaContentHandler.getMediaUris -> getMediaRecord (from ContentHandler, two call sites)</li>
+ * <li>LyricsEnglishRecord.fetchLyrics -> getLyricsEnglish (from ContentView), and storeLyricsEng in its
+ * WebView download callback (WebView callbacks run on the main thread)</li>
+ * <li>MediaConfig.onCreate / checkEntry -> hasMediaRecord, getMediaRecord (checkEntry also runs from the
+ * entry text watchers)</li>
+ * <li>MediaConfig.updateMediaRecord (button_add onClick) -> hasMediaRecord</li>
+ * <li>MediaConfig.saveMediaRecord -> storeMediaRecord</li>
+ * <li>MediaConfig record delete dialog onConfirmClicked -> getMediaRecord, deleteMediaRecord</li>
  * </ul>
+ * Everything else (url, Notion and QQ importers, MediaLinksUpdater, MainActivity store-history, record list and
+ * export reads) already runs on a worker thread.
+ * <p>
+ * 1.0 gate: build the debug app with {@code ./gradlew -PstrictDbThread :hymnchtv:installDebug}. That sets
+ * {@code BuildConfig.ALLOW_MAIN_THREAD_DB} to false, the app database is built without
+ * {@code allowMainThreadQueries()}, and every remaining main-thread query throws IllegalStateException
+ * ("Cannot access database on the main thread"). Walk the main flows (open a hymn, share, history list and swipe
+ * delete, English lyrics show/delete, media config add/overwrite/delete/list/export/import); the gate passes when
+ * nothing crashes. The gate mechanism itself is covered by {@code MainThreadQueryGateTest}. Once the list above is
+ * empty, remove {@code allowMainThreadQueries()} for good.
  *
  * @author Eng Chong Meng
  */
