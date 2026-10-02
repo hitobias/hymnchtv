@@ -43,14 +43,22 @@ class ContentHandlerMainThreadDbTest {
 
     private fun media(type: MediaType) = MediaRecord(MainActivity.HYMN_DB, 1, false, type)
 
+    /** The share copies db1.* into the tmp store; on API 34 a second copy over an existing file fails (EEXIST). */
+    private fun clearSharedTmpFiles() {
+        val tmp = org.cog.hymnchtv.persistance.FileBackend.getHymnchtvStore(org.cog.hymnchtv.persistance.FileBackend.TMP, true)
+        listOf("db1.png", "db1.txt", "db2.png", "db2.txt").forEach { java.io.File(tmp, it).delete() }
+    }
+
     @Before
     fun setUp() {
         mainScenario = launchMainActivityIfNeeded()
+        clearSharedTmpFiles()
         MediaType.values().forEach { backend.deleteMediaRecord(media(it)) }
     }
 
     @After
     fun tearDown() {
+        clearSharedTmpFiles()
         MediaType.values().forEach { backend.deleteMediaRecord(media(it)) }
         mainScenario?.close()
     }
