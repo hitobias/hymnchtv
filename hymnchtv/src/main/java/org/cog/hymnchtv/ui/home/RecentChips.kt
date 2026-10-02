@@ -47,7 +47,7 @@ class RecentChips(
                 confirmDelete(record)
                 true
             }
-        }
+        }.also(views::styleChip)
     }
 
     private fun confirmDelete(record: HistoryRecord) {

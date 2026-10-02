@@ -55,10 +55,23 @@ class HymnPickerViews(val root: View) {
         HymnSource.ENGLISH to root.findViewById(R.id.bs_english),
     )
 
-    /** Every button whose label follows the user's font colour. */
-    val coloredButtons: List<MaterialButton> = digits + fu + books.values + toc + open
+    /** Every button (but the filled open button) whose label follows the user's font colour. */
+    val coloredButtons: List<MaterialButton> = digits + fu + books.values + toc
+
+    /** The text colour the home appearance chose, or null (jump panel: the theme's). Chips created later take it too. */
+    var textColor: Int? = null
+
+    /** Gives a chip the picker's colours instead of the theme's surface colours. */
+    fun styleChip(chip: com.google.android.material.chip.Chip) {
+        val color = textColor ?: return
+        chip.setTextColor(color)
+        chip.chipBackgroundColor = android.content.res.ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(color, CHIP_FILL_ALPHA))
+        chip.chipStrokeColor = android.content.res.ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(color, CHIP_STROKE_ALPHA))
+    }
 
     private companion object {
+        const val CHIP_FILL_ALPHA = 0x1F
+        const val CHIP_STROKE_ALPHA = 0x66
         val DIGIT_IDS = listOf(
             R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5, R.id.n6, R.id.n7, R.id.n8, R.id.n9,
         )

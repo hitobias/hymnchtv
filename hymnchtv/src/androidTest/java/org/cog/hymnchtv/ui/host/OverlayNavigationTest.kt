@@ -5,6 +5,7 @@ import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -30,8 +31,8 @@ class OverlayNavigationTest {
     @After fun tearDown() = PickerTestSupport.cleanUp()
 
     private fun openHistory() {
-        FragmentHost.eventually { onView(withId(R.id.btn_recent_more)).check(matches(isDisplayed())) }
-        onView(withId(R.id.btn_recent_more)).perform(click())
+        FragmentHost.eventually { onView(withId(R.id.btn_recent_more)).check(matches(withEffectiveVisibility(androidx.test.espresso.matcher.ViewMatchers.Visibility.VISIBLE))) }
+        onView(withId(R.id.btn_recent_more)).perform(androidx.test.espresso.action.ViewActions.scrollTo(), click())
         onView(withId(R.id.history_list)).check(matches(isDisplayed()))
     }
 

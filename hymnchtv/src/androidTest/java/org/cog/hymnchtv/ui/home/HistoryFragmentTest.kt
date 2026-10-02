@@ -7,7 +7,9 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.longClick
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.action.ViewActions.swipeLeft
+import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
@@ -43,8 +45,8 @@ class HistoryFragmentTest {
     private fun records(n: Int) = (1..n).map { HistoryRecord(HymnTypes.DB, it, false, "標題$it", 1000L + it) }.toTypedArray()
 
     private fun openHistoryPage() {
-        FragmentHost.eventually { onView(withId(R.id.btn_recent_more)).check(matches(isDisplayed())) }
-        onView(withId(R.id.btn_recent_more)).perform(click())
+        FragmentHost.eventually { onView(withId(R.id.btn_recent_more)).check(matches(withEffectiveVisibility(androidx.test.espresso.matcher.ViewMatchers.Visibility.VISIBLE))) }
+        onView(withId(R.id.btn_recent_more)).perform(scrollTo(), click())
         onView(withId(R.id.history_list)).check(matches(isDisplayed()))
     }
 
@@ -108,8 +110,8 @@ class HistoryFragmentTest {
     @Test fun chipLongPressRemovesTheRecordAfterConfirmation() {
         PickerTestSupport.resetHistory(*records(1))
         PickerTestSupport.launch {
-            FragmentHost.eventually { onView(withText(chipLabel(1))).check(matches(isDisplayed())) }
-            onView(withText(chipLabel(1))).perform(longClick())
+            FragmentHost.eventually { onView(withText(chipLabel(1))).check(matches(withEffectiveVisibility(androidx.test.espresso.matcher.ViewMatchers.Visibility.VISIBLE))) }
+            onView(withText(chipLabel(1))).perform(scrollTo(), longClick())
             onView(allOf(withText(R.string.delete), isAssignableFrom(Button::class.java))).inRoot(isDialog()).perform(click())
             FragmentHost.eventually { assertThat(DatabaseBackend.getInstance(ctx).historyRecords).isEmpty() }
         }

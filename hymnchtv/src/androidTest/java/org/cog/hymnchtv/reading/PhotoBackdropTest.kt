@@ -79,7 +79,7 @@ class PhotoBackdropTest {
     fun mainScreenEntryAndSearchTextAreReadableOnThePanel() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
-                assertPanel(it.findViewById<TextView>(R.id.tv_entry), "tv_entry")
+                assertPanel(it.findViewById<View>(R.id.previewArea), "previewArea")
                 assertPanel(it.findViewById<TextView>(R.id.tv_search), "tv_search")
                 assertPanel(it.findViewById<View>(R.id.keypadArea), "keypadArea")
                 for (id in listOf(R.id.tv_entry, R.id.tv_search, R.id.n1)) {
