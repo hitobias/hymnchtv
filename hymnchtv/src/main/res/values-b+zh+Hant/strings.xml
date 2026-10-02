@@ -305,15 +305,10 @@
     <string name="hymn_no_chinese_lyrics">英文 #%1$d: 這首英文詩歌沒有匹配的中文歌詞</string>
     <string name="update_none">無更新</string>
 
-    <!--
-    * S2HK, Simplified Chinese to Traditional Chinese (Hong Kong Standard)簡體到香港繁體（香港小學學習字詞表標準）
-    * S2T, Simplified Chinese to Traditional Chinese 簡體到繁體
-    * S2TW, Simplified Chinese to Traditional Chinese (Taiwan Standard) 簡體到臺灣正體
-    * S2TWP, Simplified Chinese to Traditional Chinese (Taiwan Standard) with Taiwanese idiom 簡體到繁體（臺灣正體標準）並轉換為臺灣常用詞彙
-    -->
-    <string name="STD">字詞轉換標準表</string>
-    <string name="S2HK">簡體到香港繁體</string>
-    <string name="S2TW">簡體到臺灣正體</string>
+    <!-- Traditional variant (pref ConversionType): S2TW = Taiwan, S2HK = Hong Kong; lyrics are pre-generated assets -->
+    <string name="STD">繁體字形標準</string>
+    <string name="S2HK">香港繁體</string>
+    <string name="S2TW">台灣正體</string>
 
     <!--  ChangeLog parameters -->
     <string name="changelog_full_title">應用程式變更歷史</string>

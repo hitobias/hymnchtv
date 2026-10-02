@@ -46,7 +46,8 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
     private SharedPreferences mSharedPref;
     private HantVariant mVariant;
     private LyricsLang mLyricsLang;
-    private boolean mHasChanges = false;
+    private HantVariant mInitialVariant;
+    private LyricsLang mInitialLyricsLang;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,6 +65,8 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         checkVariantButton(mVariant);
 
         mLyricsLang = LyricsLang.fromPref(mSharedPref.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null));
+        mInitialVariant = mVariant;
+        mInitialLyricsLang = mLyricsLang;
         checkLyricsLangButton(mLyricsLang);
 
         // Only enable OnCheckedChangeListener after the initial check states are set
@@ -79,7 +82,7 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.btnOk) {
-            updateS2TSelection(mHasChanges);
+            updateS2TSelection(hasChanges());
         }
         else if (id == R.id.btnCancel) {
             checkUnsavedChanges();
@@ -112,7 +115,6 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         if (group.findViewById(checkedId) == null) {
             return;
         }
-        mHasChanges = true;
         if (group.getId() == R.id.radioGroupLyricsDefault) {
             if (checkedId == R.id.radioLyricsSimplified) {
                 mLyricsLang = LyricsLang.SIMPLIFIED;
@@ -127,6 +129,10 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         else {
             mVariant = (checkedId == R.id.radioButtonS2HK) ? HantVariant.HK : HantVariant.TW;
         }
+    }
+
+    private boolean hasChanges() {
+        return mVariant != mInitialVariant || mLyricsLang != mInitialLyricsLang;
     }
 
     /**
@@ -144,7 +150,6 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         result.putExtra(ContentView.EXTR_KEY_HAS_CHANGES, hasChanges);
         setResult(Activity.RESULT_OK, result);
 
-        mHasChanges = false;
         finish();
     }
 
@@ -152,7 +157,7 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
      * check for any unsaved changes and alert user before the exit.
      */
     private void checkUnsavedChanges() {
-        if (mHasChanges) {
+        if (hasChanges()) {
             DialogActivity.showConfirmDialog(this,
                     R.string.to_be_added,
                     R.string.unsaved_changes,

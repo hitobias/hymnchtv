@@ -331,15 +331,10 @@
     <string name="hymn_no_chinese_lyrics">English #%1$d: this English hymn has no matching Chinese lyrics</string>
     <string name="update_none">No updates</string>
 
-    <!--
-    * S2HK, Simplified Chinese to Traditional Chinese (Hong Kong Standard)簡體到香港繁體（香港小學學習字詞表標準）
-    * S2T, Simplified Chinese to Traditional Chinese 簡體到繁體
-    * S2TW, Simplified Chinese to Traditional Chinese (Taiwan Standard) 簡體到臺灣正體
-    * S2TWP, Simplified Chinese to Traditional Chinese (Taiwan Standard) with Taiwanese idiom 簡體到繁體（臺灣正體標準）並轉換爲臺灣常用詞彙
-    -->
-    <string name="STD">Word conversion standard table</string>
-    <string name="S2HK">Simplified to HongKong Traditional</string>
-    <string name="S2TW">Simplified to Taiwan Traditional</string>
+    <!-- Traditional variant (pref ConversionType): S2TW = Taiwan, S2HK = Hong Kong; lyrics are pre-generated assets -->
+    <string name="STD">Traditional Chinese variant</string>
+    <string name="S2HK">Hong Kong Traditional</string>
+    <string name="S2TW">Taiwan Traditional</string>
 
     <!--  ChangeLog parameters -->
     <string name="changelog_full_title">Change History</string>
