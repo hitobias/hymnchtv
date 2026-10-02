@@ -34,6 +34,7 @@
   - Task 10 `BackupServiceTest.exportBytes()` 改成一般 suspend 函式，不在非 suspend 的 `also {}` 中呼叫 suspend `exportTo()`（原寫法無法編譯）。
   - Task 12 `NotebookAsync` 建構子新增 `workDispatcher`（production 用 `Dispatchers.IO`）：repository 工作（含 `RoomSingLogRepository.create()` 同步呼叫的 `deviceId()`）不再跑在主執行緒，結果仍在 callback dispatcher 回呼；`NotebookAsyncTest` 與 `Notebook.get()` 同步更新。
   - Task 13 busy Auto Backup E2E 的 `integrity()` 也驗證舊三表（`hymnHistoryDao().listNewestFirst()` 含 `LEGACY_HISTORY`）。
+  - Task 13 SAF 驗收預期改為 `export OK 1.0.0`（`BuildConfig.VERSION_NAME`）。Codex 第 3 輪提出的 P1（`flow.collect` import）判定為誤報：`FlowCollector` 自 coroutines 1.6 起是 `fun interface`，`tracker.recorded.collect { }` 可直接編譯，以 Task 12 實際編譯驗證。
   - AVD 實際名稱是 `api34b`／`api24b`（原寫 `api34nb`／`api24nb`），全文更正。
 - rev 7（2026-10-02，依 Codex／code-reviewer 對 D-1a Task 8–13 的審查）：
   - 分支策略：實際只有 `feat/notebook-data`（worktree `/Users/hitobias/orca/hymnchtv-d1a`），Task 0–7 已線性完成在其上；Task 8–13 全部在同一條分支上線性進行，刪除 Task 12 的三個 lane merge 與「三 lane 已 commit」前置，Task 8–11 的 lane 前置與「Lane C 只編譯」改寫；Task 0–7 的 lane 歷史片段只加註記不改寫。
@@ -6962,7 +6963,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   ```
 
   Expected:
-  - 每次都印出 `export OK 2.9.2 [3, 3, 2, 1, 2]`，最後是 `SCENARIO saf on <avd>: PASS`。
+  - 每次都印出 `export OK 1.0.0（即 BuildConfig.VERSION_NAME）[3, 3, 2, 1, 2]`，最後是 `SCENARIO saf on <avd>: PASS`。
   - `verifyEmpty` 通過，證明重新安裝後資料是空的、匯入前沒有被自動備份還原。
   - `import` 新增 11 列；`importAgain` 新增 0 列（idempotent）。
 
