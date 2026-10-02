@@ -53,6 +53,15 @@ class SearchPatternTest {
     }
 
     @Test
+    fun recoveryVersionAndTaiwanGlyphsBothMatchSimplifiedText() {
+        val map = T2sMap.parse(listOf("裏\t里", "裡\t里", "靈\t灵"))
+        // Search runs on the Simplified lyrics: 里/裏/裡 queries all find the line shown as 「靈裏」.
+        listOf("灵里", "靈裏", "靈裡").forEach {
+            assertThat(SearchPattern.build(it, map)!!.matcher("活在灵里面").find()).isTrue()
+        }
+    }
+
+    @Test
     fun consecutiveHeMatchesAnyCombination() {
         assertThat(finds("他他", "祂他")).isTrue()
         assertThat(finds("他他", "他祂")).isTrue()

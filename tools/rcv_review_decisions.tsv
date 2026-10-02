@@ -1,0 +1,147 @@
+# Per-occurrence decisions for the RcV review rows, written by tools/gen_rcv_review_decisions.py.
+# Format: file<TAB>line<TAB>pos<TAB>from<TAB>to<TAB>reason (1-based line and char position in the TW output)
+lyrics_bb_text/bb1004.txt	12	10	里	裏	overall 裏 5124
+lyrics_bb_text/bb127.txt	21	17	鍊	煉	overall 煉 59
+lyrics_bb_text/bb137.txt	18	3	複	複	bigram 重複一 2
+lyrics_bb_text/bb137.txt	33	3	複	複	bigram 重複一 2
+lyrics_bb_text/bb149.txt	19	6	係	係	bigram 關係- 2
+lyrics_bb_text/bb206.txt	13	1	矇	蒙	bigram -蒙昧 2
+lyrics_bb_text/bb249.txt	14	3	儘	儘	bigram 疑儘可 2
+lyrics_bb_text/bb258.txt	30	15	里	裏	overall 裏 5124
+lyrics_bb_text/bb301.txt	16	5	髮	發	overall 發 1343
+lyrics_bb_text/bb301.txt	17	5	髮	發	overall 發 1343
+lyrics_bb_text/bb313.txt	16	3	複	複	bigram 重複- 2
+lyrics_bb_text/bb317.txt	22	12	複	複	bigram 重複最 2
+lyrics_bb_text/bb328.txt	36	8	係	係	bigram 關係- 2
+lyrics_bb_text/bb332.txt	28	4	複	複	bigram 重複最 2
+lyrics_bb_text/bb343.txt	14	3	里	裏	bigram 一裏注 1
+lyrics_bb_text/bb406.txt	25	5	併	並	bigram 大並成 3
+lyrics_bb_text/bb416.txt	17	3	複	複	bigram 重複末 2
+lyrics_bb_text/bb448.txt	7	16	係	係	bigram 關係- 2
+lyrics_bb_text/bb454.txt	2	1	迴	回	overall 回 1419
+lyrics_bb_text/bb503.txt	18	3	複	複	bigram 重複最 2
+lyrics_bb_text/bb511.txt	2	7	複	複	guard 複製
+lyrics_bb_text/bb511.txt	18	10	複	複	guard 複製
+lyrics_bb_text/bb534.txt	35	7	複	複	bigram 重複第 2
+lyrics_bb_text/bb603.txt	30	3	複	複	bigram 重複最 2
+lyrics_bb_text/bb604.txt	31	5	纔	才	noun 才能 (talent)
+lyrics_bb_text/bb606.txt	26	5	併	並	bigram 動並火 1
+lyrics_bb_text/bb608.txt	19	4	係	係	bigram 關係情 2
+lyrics_bb_text/bb627.txt	16	3	複	複	bigram 重複末 2
+lyrics_bb_text/bb7.txt	27	4	針	針	thin evidence 鍼 3
+lyrics_bb_text/bb7.txt	27	5	針	針	thin evidence 鍼 3
+lyrics_bb_text/bb701.txt	8	8	里	裏	overall 裏 5124
+lyrics_bb_text/bb813.txt	14	11	複	複	bigram 重複頭 2
+lyrics_bb_text/bb815.txt	14	3	複	複	bigram 重複- 2
+lyrics_bb_text/bb815.txt	19	3	複	複	bigram 重複- 2
+lyrics_bb_text/bb815.txt	24	3	複	複	bigram 重複- 2
+lyrics_bb_text/bb815.txt	29	3	複	複	bigram 重複- 2
+lyrics_bb_text/bb818.txt	12	8	複	複	bigram 重複二 2
+lyrics_bb_text/bb823.txt	14	7	鍊	煉	overall 煉 59
+lyrics_bb_text/bb842.txt	16	3	複	複	bigram 重複第 2
+lyrics_bb_text/bb872.txt	6	10	里	里	guard 萬里
+lyrics_bb_text/bb879.txt	16	11	迴	回	overall 回 1419
+lyrics_bb_text/bb903.txt	13	3	複	複	bigram 重複三 2
+lyrics_db_text/db103.txt	15	14	髮	髮	bigram 毫髮- 1
+lyrics_db_text/db142.txt	13	8	幹	乾	overall 乾 214
+lyrics_db_text/db154.txt	16	7	複	複	bigram 耀複本 1
+lyrics_db_text/db154.txt	25	6	複	複	guard 複製
+lyrics_db_text/db16.txt	23	8	併	並	bigram -並為 22
+lyrics_db_text/db164.txt	95	13	併	並	bigram 一並二 1
+lyrics_db_text/db167.txt	8	14	幹	乾	overall 乾 214
+lyrics_db_text/db177.txt	12	1	併	並	bigram -並為 22
+lyrics_db_text/db188.txt	25	15	併	並	bigram 罪並成 2
+lyrics_db_text/db197.txt	36	6	迴	回	overall 回 1419
+lyrics_db_text/db209.txt	20	6	鍊	煉	overall 煉 59
+lyrics_db_text/db24.txt	25	2	幹	乾	overall 乾 214
+lyrics_db_text/db257.txt	8	15	幹	乾	overall 乾 214
+lyrics_db_text/db258.txt	27	1	矇	蒙	bigram -蒙昧 2
+lyrics_db_text/db268.txt	17	13	瞭	了	bigram 明了- 14
+lyrics_db_text/db290.txt	23	10	矇	蒙	bigram 仍蒙昧 2
+lyrics_db_text/db352.txt	2	4	迴	回	overall 回 1419
+lyrics_db_text/db366.txt	23	15	迴	回	overall 回 1419
+lyrics_db_text/db380.txt	35	15	併	並	bigram 大並成 3
+lyrics_db_text/db393.txt	16	13	併	並	overall 並 2376
+lyrics_db_text/db409.txt	38	7	儘	盡	overall 盡 343
+lyrics_db_text/db465.txt	64	13	幹	乾	overall 乾 214
+lyrics_db_text/db468.txt	11	13	係	系	bigram 關系都 2
+lyrics_db_text/db469.txt	25	16	鍊	煉	overall 煉 59
+lyrics_db_text/db47.txt	15	9	闢	辟	overall 辟 15
+lyrics_db_text/db507.txt	9	5	針	針	guard 南針
+lyrics_db_text/db547.txt	27	3	纔	才	noun 才能 (talent)
+lyrics_db_text/db582.txt	33	8	瞭	了	bigram 明了- 14
+lyrics_db_text/db593.txt	24	7	複	複	bigram 實複本 1
+lyrics_db_text/db594.txt	32	7	複	複	bigram -複本 1
+lyrics_db_text/db602.txt	44	4	里	裏	overall 裏 5124
+lyrics_db_text/db620.txt	21	5	鍊	煉	overall 煉 59
+lyrics_db_text/db631.txt	9	1	併	並	bigram -並為 22
+lyrics_db_text/db642.txt	8	12	纔	才	noun 才能 (talent)
+lyrics_db_text/db665.txt	7	16	云	云	guard 所云
+lyrics_db_text/db691.txt	8	7	迴	回	overall 回 1419
+lyrics_db_text/db726.txt	15	10	併	並	bigram -並除 1
+lyrics_db_text/db755.txt	25	1	儘	盡	overall 盡 343
+lyrics_db_text/db770.txt	42	12	幹	乾	overall 乾 214
+lyrics_db_text/db94.txt	17	10	併	並	bigram -並為 22
+lyrics_er_text/er1203.txt	8	8	划	划	guard 划船
+lyrics_er_text/er402.txt	8	15	迴	回	bigram 們回天 56
+lyrics_er_text/er414.txt	2	7	盪	蕩	overall 蕩 32
+lyrics_er_text/er414.txt	5	8	盪	蕩	overall 蕩 32
+lyrics_er_text/er703.txt	6	14	纔	才	noun 才能 (talent)
+lyrics_xb_text/xb1.txt	13	15	闢	闢	guard 開闢
+lyrics_xb_text/xb101.txt	8	5	麵	面	bigram 冷面如 2
+lyrics_xb_text/xb101.txt	23	19	複	複	guard 複製
+lyrics_xb_text/xb132.txt	6	18	複	複	trigram 的複本 1
+lyrics_xb_text/xb137.txt	21	17	複	複	guard 複製
+lyrics_xb_text/xb161.txt	23	5	併	並	bigram 養並成 1
+lyrics_xb_text/xb165.txt	15	11	迴	回	overall 回 1419
+lyrics_xb_text/xb28.txt	11	19	鍊	煉	overall 煉 59
+lyrics_xb_text/xb70.txt	8	7	盪	盪	bigram 動盪- 1
+lyrics_xb_text/xb90.txt	7	6	併	並	bigram 好並合 1
+lyrics_xg_text/xg103.txt	11	8	複	複	guard 複製
+lyrics_xg_text/xg109.txt	8	17	幹	乾	overall 乾 214
+lyrics_xg_text/xg114.txt	11	19	鍊	煉	overall 煉 59
+lyrics_xg_text/xg117.txt	13	9	里	里	guard 萬里
+lyrics_xg_text/xg128.txt	28	14	里	里	guard 後一里
+lyrics_xg_text/xg129.txt	8	12	複	複	guard 複製
+lyrics_xg_text/xg131.txt	8	11	迴	回	overall 回 1419
+lyrics_xg_text/xg133.txt	8	8	矇	蒙	bigram 雖蒙昧 2
+lyrics_xg_text/xg140.txt	7	8	矇	蒙	bigram 知蒙昧 2
+lyrics_xg_text/xg141.txt	16	8	複	複	guard 複製
+lyrics_xg_text/xg151.txt	31	11	複	複	guard 複製
+lyrics_xg_text/xg158.txt	11	11	儘	儘	bigram 此儘可 2
+lyrics_xg_text/xg159.txt	17	9	係	係	bigram 關係- 2
+lyrics_xg_text/xg159.txt	20	8	複	複	guard 複製
+lyrics_xg_text/xg161.txt	23	12	鍊	煉	overall 煉 59
+lyrics_xg_text/xg170.txt	19	3	複	複	bigram 重複末 2
+lyrics_xg_text/xg186.txt	22	10	複	複	guard 複製
+lyrics_xg_text/xg189.txt	28	11	複	複	guard 複製
+lyrics_xg_text/xg206.txt	10	2	儘	盡	overall 盡 343
+lyrics_xg_text/xg47.txt	14	11	係	係	bigram 關係- 2
+lyrics_xg_text/xg47.txt	24	11	係	係	bigram 關係蔓 2
+lyrics_xg_text/xg47.txt	29	2	係	係	bigram 關係越 2
+lyrics_xg_text/xg52.txt	16	5	鍊	煉	overall 煉 59
+lyrics_xg_text/xg57.txt	8	3	矇	蒙	bigram 單蒙昧 2
+lyrics_xg_text/xg66.txt	10	3	矇	蒙	bigram 原蒙昧 2
+lyrics_xg_text/xg76.txt	7	4	複	複	guard 複製
+lyrics_xg_text/xg81.txt	35	8	併	並	bigram 心並合 1
+lyrics_xg_text/xg83.txt	39	7	複	複	guard 複製
+lyrics_xg_text/xg86.txt	21	7	併	並	bigram 全並成 1
+lyrics_xg_text/xg96.txt	18	12	係	係	bigram 關係- 2
+lyrics_yb_text/yb130.txt	6	13	瞭	了	bigram 明了- 14
+lyrics_yb_text/yb184.txt	22	17	複	複	guard 複製
+lyrics_yb_text/yb189.txt	14	11	係	係	bigram 關係- 2
+lyrics_yb_text/yb189.txt	24	11	係	係	bigram 關係蔓 2
+lyrics_yb_text/yb189.txt	29	2	係	係	bigram 關係越 2
+lyrics_yb_text/yb190.txt	7	3	矇	蒙	bigram 單蒙昧 2
+lyrics_yb_text/yb191.txt	14	12	併	並	overall 並 2376
+lyrics_yb_text/yb199.txt	20	9	里	裏	bigram 安裏- 1
+lyrics_yb_text/yb224.txt	14	14	併	並	bigram 全並成 1
+lyrics_yb_text/yb228.txt	41	4	里	里	guard 後一里
+lyrics_yb_text/yb232.txt	21	3	矇	蒙	bigram 時蒙昧 2
+lyrics_yb_text/yb247.txt	7	15	係	係	bigram 關係- 2
+lyrics_yb_text/yb249.txt	18	12	係	係	bigram 關係- 2
+lyrics_yb_text/yb276.txt	11	3	里	里	bigram 阿里路 1
+lyrics_yb_text/yb276.txt	11	9	里	里	bigram 阿里路 1
+lyrics_yb_text/yb35.txt	16	11	迴	回	overall 回 1419
+lyrics_yb_text/yb36.txt	15	13	係	係	bigram 關係可 2
+lyrics_yb_text/yb67.txt	22	8	矇	蒙	bigram 仍蒙昧 2

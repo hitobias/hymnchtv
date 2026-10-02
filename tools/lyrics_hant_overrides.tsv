@@ -6,3 +6,4 @@
 #   count       exact number (>= 1) of occurrences of "from" in that file (per variant); mismatch = error
 # Example (do not uncomment unless verified):
 # *	lyrics_db_text/db12.txt	皇後	皇后	1
+*	lyrics_db_text/db556.txt	加上覆活	加上復活	1

@@ -187,7 +187,8 @@ tasks.withType(Test).configureEach {
     inputs.files(fileTree('src/main/assets') { include 'lyrics_*_text*/**', 'lyrics_hant_manifest.txt', 'lyrics_t2s_map.txt' })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName('lyricsAssets')
-    inputs.files(rootProject.file('tools/gen_lyrics_hant.py'), rootProject.file('tools/lyrics_hant_overrides.tsv'))
+    inputs.files(['gen_lyrics_hant.py', 'lyrics_hant_overrides.tsv', 'rcv_prefs.py', 'rcv_word_prefs.tsv', 'rcv_char_prefs.tsv',
+                  'rcv_pair_decisions.tsv', 'rcv_review_decisions.tsv'].collect { rootProject.file("tools/$it") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName('lyricsGeneratorInputs')
 }

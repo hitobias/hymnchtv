@@ -6,8 +6,8 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * Fails when lyrics sources, generated Traditional outputs, the overrides table or the generator
- * change without re-running tools/gen_lyrics_hant.py (plan A.1.9).
+ * Fails when lyrics sources, generated Traditional outputs, the overrides table, the Recovery Version tables or
+ * the generator change without re-running tools/gen_lyrics_hant.py (plan A.1.9).
  */
 class LyricsHantAssetsTest {
     private val assets = File(checkNotNull(System.getProperty("hymnchtv.assetsDir")) { "hymnchtv.assetsDir not set" })
@@ -70,17 +70,21 @@ class LyricsHantAssetsTest {
 
     @Test
     fun manifestMatchesGeneratorInputs() {
-        assertThat(manifest().first).isEqualTo(
-            mapOf(
-                "tools/gen_lyrics_hant.py" to sha1(File(repoRoot, "tools/gen_lyrics_hant.py")),
-                "tools/lyrics_hant_overrides.tsv" to sha1(File(repoRoot, "tools/lyrics_hant_overrides.tsv")),
-            )
-        )
+        assertThat(manifest().first).isEqualTo(GENERATOR_INPUTS.associateWith { sha1(File(repoRoot, it)) })
     }
 
     private companion object {
         val SOURCE_DIR = Regex("lyrics_[a-z]+_text")
         val PATH = Regex("lyrics_t2s_map\\.txt|lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
         val SHA1 = Regex("[0-9a-f]{40}")
+        val GENERATOR_INPUTS = listOf(
+            "tools/gen_lyrics_hant.py",
+            "tools/lyrics_hant_overrides.tsv",
+            "tools/rcv_prefs.py",
+            "tools/rcv_word_prefs.tsv",
+            "tools/rcv_char_prefs.tsv",
+            "tools/rcv_pair_decisions.tsv",
+            "tools/rcv_review_decisions.tsv",
+        )
     }
 }
