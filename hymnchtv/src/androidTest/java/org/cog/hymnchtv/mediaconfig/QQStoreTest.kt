@@ -1,12 +1,13 @@
 package org.cog.hymnchtv.mediaconfig
 
-import android.database.DatabaseUtils
 import android.database.SQLException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.persistance.DatabaseBackend
+import org.cog.hymnchtv.persistance.mediaCount
+import org.cog.hymnchtv.persistance.failInsertsFor
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -38,7 +39,7 @@ class QQStoreTest {
 
     private fun page(vararg items: Any) = JSONArray(items.toList())
 
-    private fun rows(table: String) = DatabaseUtils.queryNumEntries(db.readableDatabase, table)
+    private fun rows(table: String) = db.mediaCount(table)
 
     @Test
     fun storesWellFormedLinksAndSkipsMalformedOnes() {
@@ -61,7 +62,7 @@ class QQStoreTest {
 
     @Test
     fun databaseErrorRollsBackTheWholePage() {
-        db.writableDatabase.execSQL("DROP TABLE ${MainActivity.HYMN_BB}")
+        db.failInsertsFor(MainActivity.HYMN_BB)
         val fixture = page(
             link("D1但愿荣耀归于圣父", "https://q.example/d1"),
             link("B755跟随榜样", "https://q.example/b755"),

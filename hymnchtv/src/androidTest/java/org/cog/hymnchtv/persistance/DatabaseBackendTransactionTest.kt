@@ -1,6 +1,5 @@
 package org.cog.hymnchtv.persistance
 
-import android.database.DatabaseUtils
 import android.database.SQLException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -34,7 +33,7 @@ class DatabaseBackendTransactionTest {
     private fun record(no: Int) =
         MediaRecord(MainActivity.HYMN_DB, no, false, MediaType.HYMN_MEDIA, "https://example.org/$no", null)
 
-    private fun rows() = DatabaseUtils.queryNumEntries(db.readableDatabase, MainActivity.HYMN_DB)
+    private fun rows() = db.mediaCount(MainActivity.HYMN_DB)
 
     @Test
     fun commitsEveryWriteOfTheBody() {
@@ -64,7 +63,7 @@ class DatabaseBackendTransactionTest {
 
     @Test
     fun testDatabaseIsSeparateFromTheAppDatabase() {
-        assertThat(db.databaseName).isEqualTo(NAME)
+        assertThat(db.roomDatabase().openHelper.databaseName).isEqualTo(NAME)
     }
 
     /** Nested success: the inner transaction joins the outer one and both writes commit together. */
@@ -100,7 +99,7 @@ class DatabaseBackendTransactionTest {
     /** storeMediaRecord() swallows SQL errors (returns -1); the OrThrow variant must surface them. */
     @Test
     fun storeMediaRecordOrThrowSurfacesDatabaseErrors() {
-        db.writableDatabase.execSQL("DROP TABLE ${MainActivity.HYMN_BB}")
+        db.failInsertsFor(MainActivity.HYMN_BB)
         val bb = MediaRecord(MainActivity.HYMN_BB, 1, false, MediaType.HYMN_MEDIA, "https://example.org/bb", null)
         assertThrows(SQLException::class.java) { db.storeMediaRecordOrThrow(bb) }
         assertThat(db.storeMediaRecord(bb)).isEqualTo(-1L)

@@ -1,6 +1,5 @@
 package org.cog.hymnchtv.mediaconfig
 
-import android.database.DatabaseUtils
 import android.database.SQLException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -8,6 +7,8 @@ import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.MediaType
 import org.cog.hymnchtv.persistance.DatabaseBackend
+import org.cog.hymnchtv.persistance.mediaCount
+import org.cog.hymnchtv.persistance.failInsertsFor
 import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Before
@@ -31,7 +32,7 @@ class UrlImportTest {
         ctx.deleteDatabase(NAME)
     }
 
-    private fun rows() = DatabaseUtils.queryNumEntries(db.readableDatabase, MainActivity.HYMN_DB)
+    private fun rows() = db.mediaCount(MainActivity.HYMN_DB)
 
     private fun uriOf(no: Int, type: MediaType): String? {
         val record = MediaRecord(MainActivity.HYMN_DB, no, false, type)
@@ -66,10 +67,22 @@ class UrlImportTest {
         assertThat(uriOf(1, MediaType.HYMN_MEDIA)).isEqualTo("https://new")
     }
 
+    /** The existing-key lookup is prefetched once, so a repeated line of the same file must still see the first one. */
+    @Test
+    fun repeatedLineInOneFileKeepsTheFirstUnlessOverwrite() {
+        val content = "hymn_db,1,0,HYMN_MEDIA,https://first,null\nhymn_db,1,0,HYMN_MEDIA,https://second,null"
+
+        assertThat(MediaConfig.importUrlRecords(db, content, false)).isEqualTo(ImportResult(1, 2))
+        assertThat(uriOf(1, MediaType.HYMN_MEDIA)).isEqualTo("https://first")
+
+        assertThat(MediaConfig.importUrlRecords(db, content, true)).isEqualTo(ImportResult(2, 2))
+        assertThat(uriOf(1, MediaType.HYMN_MEDIA)).isEqualTo("https://second")
+    }
+
     /** A database error part-way through rolls back every earlier write of the same import. */
     @Test
     fun databaseErrorRollsBackTheWholeImport() {
-        db.writableDatabase.execSQL("DROP TABLE ${MainActivity.HYMN_BB}")
+        db.failInsertsFor(MainActivity.HYMN_BB)
         val content = "hymn_db,1,0,HYMN_MEDIA,https://example.org/1,null\nhymn_bb,1,0,HYMN_MEDIA,https://example.org/bb1,null"
 
         assertThrows(SQLException::class.java) { MediaConfig.importUrlRecords(db, content, false) }

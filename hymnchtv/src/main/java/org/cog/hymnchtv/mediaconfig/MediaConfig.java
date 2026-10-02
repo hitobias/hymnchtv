@@ -96,6 +96,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.cog.hymnchtv.concurrent.AppExecutors;
@@ -422,6 +423,8 @@ public class MediaConfig extends BaseActivity
         View btnImport = findViewById(R.id.button_import);
         urlImportRunning.observe(this, running -> btnImport.setEnabled(!Boolean.TRUE.equals(running)));
         findViewById(R.id.button_export).setOnClickListener(this);
+        exportOutcome.observe(this, this::consumeExportOutcome);
+        mediaRecordsResult.observe(this, this::renderMediaRecords);
 
         mPlayerView = findViewById(R.id.player_container);
         mPlayerView.setVisibility(View.GONE);
@@ -1065,9 +1068,9 @@ public class MediaConfig extends BaseActivity
         }
     }
 
-    /** Same as {@link #hasMediaRecord(DatabaseBackend, MediaRecord)}, with local files looked up in localMedia. */
-    private static boolean hasMediaRecord(DatabaseBackend db, LocalMediaIndex localMedia, MediaRecord mediaRecord) {
-        return db.getMediaRecord(mediaRecord, false)
+    /** Same as {@link #hasMediaRecord(DatabaseBackend, MediaRecord)}, answered from the prefetched database keys and localMedia. */
+    private static boolean isKnown(Set<String> databaseKeys, LocalMediaIndex localMedia, MediaRecord mediaRecord) {
+        return databaseKeys.contains(DatabaseBackend.mediaKey(mediaRecord))
                 || localMedia.has(mediaRecord.getHymnType() + mediaDir.get(mediaRecord.getMediaType()), mediaRecord.getHymnNo());
     }
 
@@ -1183,6 +1186,8 @@ public class MediaConfig extends BaseActivity
         int imported = 0;
         int total = 0;
         LocalMediaIndex localMedia = newLocalMediaIndex();
+        // One read of the existing keys instead of one lookup per line; records stored by this import are added.
+        Set<String> knownKeys = isOverWrite ? null : db.getMediaRecordKeys();
         for (String line : lines) {
             MediaRecord mediaRecord = parseImportLine(line);
             if (mediaRecord == null)
@@ -1191,8 +1196,11 @@ public class MediaConfig extends BaseActivity
             boolean isFu = mediaRecord.isFu();
             int hymnNo = isFu ? (mediaRecord.getHymnNo() - HYMN_DB_NO_MAX) : mediaRecord.getHymnNo();
             int nui = HymnNoValidate.validateHymnNo(mediaRecord.getHymnType(), hymnNo, isFu);
-            if ((nui != -1) && (isOverWrite || !hasMediaRecord(db, localMedia, mediaRecord))) {
+            if ((nui != -1) && (isOverWrite || !isKnown(knownKeys, localMedia, mediaRecord))) {
                 db.storeMediaRecordOrThrow(mediaRecord); // SQL errors propagate: the whole import rolls back
+                if (knownKeys != null) {
+                    knownKeys.add(DatabaseBackend.mediaKey(mediaRecord));
+                }
                 imported++;
             }
             total++;
@@ -1269,45 +1277,81 @@ public class MediaConfig extends BaseActivity
         return file;
     }
 
+    /** Outcome of the background export: the records written (0 = none) and the export file, null on failure. */
+    private static final class ExportOutcome {
+        final int recordSize;
+        final File exportFile;
+
+        ExportOutcome(int recordSize, File exportFile) {
+            this.recordSize = recordSize;
+            this.exportFile = exportFile;
+        }
+    }
+
     /**
-     * Export the media records in database for the current selected mHymnType and
-     * filename tagged with timeStamp e.g hymn_db-20201212_092033
+     * Process-wide (like {@link #urlImportRunning}) so that an outcome posted by the background export reaches the
+     * screen that is current when it arrives, also after a rotation re-created the Activity. It is delivered only
+     * while a screen is started and cleared once shown (see {@link #consumeExportOutcome}), so it never repeats.
+     */
+    private static final MutableLiveData<ExportOutcome> exportOutcome = new MutableLiveData<>();
+
+    /**
+     * Export the links in database for all the hymn types to a file tagged with timeStamp
+     * e.g hymn_link-20201212_092033.txt. The database reads and the file write run on AppExecutors.io;
+     * the result is shown by {@link #consumeExportOutcome(ExportOutcome)} when a screen is started.
      */
     private void createExportLink() {
         String fileName = String.format("hymn_link-%s.txt",
                 new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()));
 
+        // Stays on the calling (main) thread: it may ask for the storage permission and shows toasts.
         File exportFile = createFileIfNotExist(fileName, true);
-        if (exportFile != null) {
+        if (exportFile == null) {
+            return;
+        }
+
+        AppExecutors.io("export-links", () -> {
             int recordSize = 0;
-            FileWriter fileWriter;
-            try {
-                fileWriter = new FileWriter(exportFile.getAbsolutePath());
+            try (FileWriter fileWriter = new FileWriter(exportFile.getAbsolutePath())) {
                 for (String hymnType : hymnTypeValue) {
                     List<MediaRecord> mediaRecords = mDB.getMediaLinks(hymnType);
-                    if (!mediaRecords.isEmpty()) {
-                        recordSize += mediaRecords.size();
-                        for (MediaRecord mediaRecord : mediaRecords) {
-                            String mRecord = mediaRecord.toExportString();
-                            if (mRecord != null)
-                                fileWriter.write(mRecord);
-                        }
+                    recordSize += mediaRecords.size();
+                    for (MediaRecord mediaRecord : mediaRecords) {
+                        String mRecord = mediaRecord.toExportString();
+                        if (mRecord != null)
+                            fileWriter.write(mRecord);
                     }
                 }
-                fileWriter.close();
-
-                if (recordSize != 0) {
-                    HymnsApp.showToastMessage(R.string.hymn_match, recordSize);
-                    tvImportFile.setText(exportFile.getPath());
-                    editFile(exportFile.getPath());
-                }
-                else {
-                    HymnsApp.showToastMessage(R.string.hymn_match_none);
-                }
+                exportOutcome.postValue(new ExportOutcome(recordSize, exportFile));
             }
             catch (IOException e) {
                 Timber.e("Export media record exception: %s", e.getMessage());
             }
+        });
+    }
+
+    /** True while an export outcome has been posted but not yet shown by a started screen. */
+    @VisibleForTesting
+    static boolean isExportOutcomePending() {
+        return exportOutcome.getValue() != null;
+    }
+
+    private void consumeExportOutcome(ExportOutcome outcome) {
+        if (outcome == null) {
+            return;
+        }
+        exportOutcome.setValue(null);
+        showExportOutcome(outcome);
+    }
+
+    private void showExportOutcome(ExportOutcome outcome) {
+        if (outcome.recordSize != 0) {
+            HymnsApp.showToastMessage(R.string.hymn_match, outcome.recordSize);
+            tvImportFile.setText(outcome.exportFile.getPath());
+            editFile(outcome.exportFile.getPath());
+        }
+        else {
+            HymnsApp.showToastMessage(R.string.hymn_match_none);
         }
     }
 
@@ -1347,9 +1391,29 @@ public class MediaConfig extends BaseActivity
     /**
      * Show all the DB media records in the DB based on user selected HymnType
      */
-    @SuppressLint("ClickableViewAccessibility")
     private void showMediaRecords(int scrollPos) {
-        List<MediaRecord> mediaRecords = mDB.getMediaRecords(mHymnType);
+        final String hymnType = mHymnType;
+        AppExecutors.io("media-records", () ->
+                mediaRecordsResult.postValue(new MediaRecordsResult(mDB.getMediaRecords(hymnType), scrollPos)));
+    }
+
+    /** The records of one hymn type read on AppExecutors.io, delivered to the screen only while it is started. */
+    private static final class MediaRecordsResult {
+        final List<MediaRecord> mediaRecords;
+        final int scrollPos;
+
+        MediaRecordsResult(List<MediaRecord> mediaRecords, int scrollPos) {
+            this.mediaRecords = mediaRecords;
+            this.scrollPos = scrollPos;
+        }
+    }
+
+    private final MutableLiveData<MediaRecordsResult> mediaRecordsResult = new MutableLiveData<>();
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void renderMediaRecords(MediaRecordsResult result) {
+        List<MediaRecord> mediaRecords = result.mediaRecords;
+        int scrollPos = result.scrollPos;
         if (mediaRecords.isEmpty()) {
             HymnsApp.showToastMessage(R.string.hymn_match_none);
             return;

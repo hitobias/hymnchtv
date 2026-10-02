@@ -1,6 +1,5 @@
 package org.cog.hymnchtv.mediaconfig
 
-import android.database.DatabaseUtils
 import android.database.SQLException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -8,6 +7,8 @@ import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.MediaType
 import org.cog.hymnchtv.persistance.DatabaseBackend
+import org.cog.hymnchtv.persistance.mediaCount
+import org.cog.hymnchtv.persistance.failInsertsFor
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -39,7 +40,7 @@ class NotionStoreTest {
 
     private fun page(vararg items: Any) = JSONArray(items.toList())
 
-    private fun rows(table: String) = DatabaseUtils.queryNumEntries(db.readableDatabase, table)
+    private fun rows(table: String) = db.mediaCount(table)
 
     private fun uriOf(table: String, no: Int): String? {
         val record = MediaRecord(table, no, false, MediaType.HYMN_JIAOCHANG)
@@ -83,7 +84,7 @@ class NotionStoreTest {
     /** A DB error on the second link must roll back the first one and propagate (no silent partial commit). */
     @Test
     fun databaseErrorRollsBackTheWholePage() {
-        db.writableDatabase.execSQL("DROP TABLE ${MainActivity.HYMN_BB}")
+        db.failInsertsFor(MainActivity.HYMN_BB)
         val fixture = page(
             link("D1但愿荣耀归于圣父", "https://n.example/d1"),
             link("B23羔羊是配", "https://n.example/b23"),

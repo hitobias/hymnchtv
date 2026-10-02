@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.mikepenz.aboutlibraries.plugin.android'
+apply plugin: 'com.google.devtools.ksp'
 
 android {
     compileSdk = rootProject.compileSdk
@@ -20,6 +21,12 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Gradle-driven installs (connected tests) grant runtime permissions up front so that the app process starts with
+    // the storage group; a later `pm grant` from inside a test does not reach an already running process.
+    installation {
+        installOptions = ['-g']
+    }
+
     androidResources {
         generateLocaleConfig = true
     }
@@ -33,11 +40,15 @@ android {
         release {
             minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField 'boolean', 'ALLOW_MAIN_THREAD_DB', 'true'
         }
 
         debug {
             debuggable = true
             minifyEnabled = false
+            // 1.0 gate (DatabaseBackend class doc): -PstrictDbThread builds the app database without
+            // allowMainThreadQueries(), so any remaining main-thread query throws IllegalStateException.
+            buildConfigField 'boolean', 'ALLOW_MAIN_THREAD_DB', project.hasProperty('strictDbThread') ? 'false' : 'true'
         }
 
         // Startup measurements only (plan B.3-1): release configuration, not debuggable, debug-signed so it installs anywhere.
@@ -107,6 +118,12 @@ android {
     }
 }
 
+// Room schema JSON is committed so future versions can write and test migrations.
+ksp {
+    arg('room.schemaLocation', "$projectDir/schemas")
+    arg('room.generateKotlin', 'true')
+}
+
 dependencies {
     implementation project(':android-youtube-player:core')
 
@@ -146,6 +163,11 @@ dependencies {
 
     implementation 'org.jetbrains:annotations:26.1.0'
     implementation 'org.jsoup:jsoup:1.23.2'
+
+    // Unified Room database (plan: Room unification)
+    implementation 'androidx.room:room-runtime:2.8.5'
+    implementation 'androidx.room:room-ktx:2.8.5'
+    ksp 'androidx.room:room-compiler:2.8.5'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'com.google.truth:truth:1.4.5'

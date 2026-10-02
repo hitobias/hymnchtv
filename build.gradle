@@ -11,6 +11,8 @@ buildscript {
         // AboutLibraries 15.2.0 (license notices for About): supports AGP 9 / compileSdk 37 per its README version
         // matrix; the Android plugin requires AGP >= 8.13 and Gradle >= 8.8.
         classpath 'com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin:15.2.0'
+        // KSP2 (decoupled from the Kotlin version); AGP 9 built-in Kotlin supplies KGP
+        classpath 'com.google.devtools.ksp:symbol-processing-gradle-plugin:2.3.12'
 
         // NOTE: Do not place your application dependencies here;
         // they belong in the individual module build.gradle files

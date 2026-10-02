@@ -1,12 +1,12 @@
 package org.cog.hymnchtv.mediaconfig
 
-import android.database.DatabaseUtils
 import androidx.lifecycle.Observer
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.persistance.DatabaseBackend
+import org.cog.hymnchtv.persistance.mediaCount
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -50,7 +50,7 @@ class UrlImportJobTest {
             assertThat(firstStarted.get()).isTrue()
             assertThat(secondStarted.get()).isFalse()
             assertThat(finished.await(60, TimeUnit.SECONDS)).isTrue()
-            assertThat(DatabaseUtils.queryNumEntries(db.readableDatabase, MainActivity.HYMN_DB)).isGreaterThan(0L)
+            assertThat(db.mediaCount(MainActivity.HYMN_DB)).isGreaterThan(0L)
         } finally {
             instrumentation.runOnMainSync { MediaConfig.urlImportRunning().removeObserver(observer) }
         }
