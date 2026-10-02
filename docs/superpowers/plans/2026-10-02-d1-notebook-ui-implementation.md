@@ -8146,6 +8146,8 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   ./gradlew :hymnchtv:assembleDebug --console=plain
   git add hymnchtv/src/main/java/org/cog/hymnchtv/ContentHandler.java \
     hymnchtv/src/main/res/layout/content_main.xml \
+    hymnchtv/src/main/java/org/cog/hymnchtv/ContentView.java \
+    hymnchtv/src/main/res/layout/content_lyrics.xml \
     hymnchtv/src/main/java/org/cog/hymnchtv/MediaGuiController.java \
     hymnchtv/src/main/java/org/cog/hymnchtv/mediaplayer/MediaExoPlayerFragment.java \
     hymnchtv/src/main/java/org/cog/hymnchtv/mediaplayer/YoutubePlayerFragment.java \
