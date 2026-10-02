@@ -21,6 +21,12 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Gradle-driven installs (connected tests) grant runtime permissions up front so that the app process starts with
+    // the storage group; a later `pm grant` from inside a test does not reach an already running process.
+    installation {
+        installOptions = ['-g']
+    }
+
     androidResources {
         generateLocaleConfig = true
     }

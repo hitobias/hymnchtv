@@ -422,7 +422,7 @@ public class MediaConfig extends BaseActivity
         View btnImport = findViewById(R.id.button_import);
         urlImportRunning.observe(this, running -> btnImport.setEnabled(!Boolean.TRUE.equals(running)));
         findViewById(R.id.button_export).setOnClickListener(this);
-        exportOutcome.observe(this, this::showExportOutcome);
+        exportOutcome.observe(this, this::consumeExportOutcome);
         mediaRecordsResult.observe(this, this::renderMediaRecords);
 
         mPlayerView = findViewById(R.id.player_container);
@@ -1287,13 +1287,17 @@ public class MediaConfig extends BaseActivity
         }
     }
 
-    /** Delivers the export outcome to the screen only while it is started; the work itself runs on AppExecutors.io. */
-    private final MutableLiveData<ExportOutcome> exportOutcome = new MutableLiveData<>();
+    /**
+     * Process-wide (like {@link #urlImportRunning}) so that an outcome posted by the background export reaches the
+     * screen that is current when it arrives, also after a rotation re-created the Activity. It is delivered only
+     * while a screen is started and cleared once shown (see {@link #consumeExportOutcome}), so it never repeats.
+     */
+    private static final MutableLiveData<ExportOutcome> exportOutcome = new MutableLiveData<>();
 
     /**
      * Export the links in database for all the hymn types to a file tagged with timeStamp
      * e.g hymn_link-20201212_092033.txt. The database reads and the file write run on AppExecutors.io;
-     * the result is shown by {@link #showExportOutcome(ExportOutcome)} when the screen is started.
+     * the result is shown by {@link #consumeExportOutcome(ExportOutcome)} when a screen is started.
      */
     private void createExportLink() {
         String fileName = String.format("hymn_link-%s.txt",
@@ -1323,6 +1327,20 @@ public class MediaConfig extends BaseActivity
                 Timber.e("Export media record exception: %s", e.getMessage());
             }
         });
+    }
+
+    /** True while an export outcome has been posted but not yet shown by a started screen. */
+    @VisibleForTesting
+    static boolean isExportOutcomePending() {
+        return exportOutcome.getValue() != null;
+    }
+
+    private void consumeExportOutcome(ExportOutcome outcome) {
+        if (outcome == null) {
+            return;
+        }
+        exportOutcome.setValue(null);
+        showExportOutcome(outcome);
     }
 
     private void showExportOutcome(ExportOutcome outcome) {
