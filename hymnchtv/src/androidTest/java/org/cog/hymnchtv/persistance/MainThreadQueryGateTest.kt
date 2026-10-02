@@ -13,19 +13,18 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The mechanism of the debug-only "1.0 gate" (DatabaseBackend class doc): a database built without
- * allowMainThreadQueries() refuses queries on the main thread and still serves other threads. Running the app with
- * -PstrictDbThread applies exactly this to the app database.
+ * The permanent main-thread gate (DatabaseBackend class doc): every database built by HymnchtvDatabase (the app
+ * database and the test databases alike) refuses queries on the main thread and still serves other threads.
  */
 @RunWith(AndroidJUnit4::class)
 class MainThreadQueryGateTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
-    fun strictDatabaseRejectsMainThreadQueriesButServesOtherThreads() {
+    fun databaseRejectsMainThreadQueriesButServesOtherThreads() {
         val name = "gate-test.db"
         ctx.deleteDatabase(name)
-        val db = HymnchtvDatabase.build(ctx, name, allowMainThreadQueries = false)
+        val db = HymnchtvDatabase.build(ctx, name)
         try {
             assertThat(db.mediaRecordDao()).isNotNull()
             // Worker thread (this instrumentation thread): allowed.

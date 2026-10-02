@@ -40,15 +40,11 @@ android {
         release {
             minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField 'boolean', 'ALLOW_MAIN_THREAD_DB', 'true'
         }
 
         debug {
             debuggable = true
             minifyEnabled = false
-            // 1.0 gate (DatabaseBackend class doc): -PstrictDbThread builds the app database without
-            // allowMainThreadQueries(), so any remaining main-thread query throws IllegalStateException.
-            buildConfigField 'boolean', 'ALLOW_MAIN_THREAD_DB', project.hasProperty('strictDbThread') ? 'false' : 'true'
         }
 
         // Startup measurements only (plan B.3-1): release configuration, not debuggable, debug-signed so it installs anywhere.

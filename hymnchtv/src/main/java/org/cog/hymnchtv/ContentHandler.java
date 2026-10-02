@@ -91,11 +91,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.apache.http.util.EncodingUtils;
 import org.apache.http.util.TextUtils;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import kotlin.jvm.functions.Function1;
 import org.cog.hymnchtv.mediaconfig.HymnFileName;
@@ -196,6 +198,8 @@ public class ContentHandler extends BaseActivity {
     // Both flogs are defined here as MediaGuiController can be destroyed when play video
     private boolean mAutoPlay = false; // start playing on content shown
     private boolean mAutoStream = false; // Autoplay next video
+    private boolean mMediaConfigPending = false; // media config lookup in flight: ignore further taps
+    private boolean mSharePending = false; // lyrics share lookup in flight: ignore further taps
 
     // Hymn Type and number selected by user
     public boolean mAutoEnglish = false;
@@ -560,27 +564,7 @@ public class ContentHandler extends BaseActivity {
             return true;
         }
         else if (itemId == R.id.media_config) {
-            MediaType mediaType = mMediaGuiController.getMediaType();
-            String dir = mHymnType + MediaConfig.mediaDir.get(mediaType);
-
-            // Default to not empty string so mediaConfig will fill all other provided bundle info.
-            String mediaUrl = " ";
-            List<Uri> uriList = new ArrayList<>();
-            if (mMediaContentHandler.getMediaUris(mHymnType, mHymnNo, mediaType, uriList)
-                    || isFileExist(dir, mHymnNo, uriList)) {
-                if (!uriList.isEmpty()) {
-                    mediaUrl = uriList.get(0).toString();
-                }
-            }
-
-            Intent intent = new Intent(this, MediaConfig.class);
-            Bundle bundle = new Bundle();
-            bundle.putString(ATTR_MEDIA_URI, mediaUrl);
-            bundle.putInt(ATTR_MEDIA_TYPE, mediaType.getValue());
-            bundle.putString(ATTR_HYMN_TYPE, mHymnType);
-            bundle.putInt(ATTR_HYMN_NUMBER, mHymnNo);
-            intent.putExtras(bundle);
-            startActivity(intent);
+            openMediaConfig();
             return true;
         }
         else if (itemId == R.id.lyrcsEnglish) {
@@ -592,7 +576,7 @@ public class ContentHandler extends BaseActivity {
             return true;
         }
         else if (itemId == R.id.lyrcsEnglishDelete) {
-            mDB.deleteLyricsEng(mHymnNoEng);
+            deleteEnglishLyrics();
             return true;
         }
         else if (itemId == R.id.lyrcsShare) {
@@ -616,41 +600,112 @@ public class ContentHandler extends BaseActivity {
     }
 
     /**
+     * Open the media config screen prefilled with the current hymn's media link. The stored media record is read
+     * on AppExecutors.io; the screen is started on the main thread. A second request while one is pending is ignored.
+     */
+    private void openMediaConfig() {
+        if (mMediaConfigPending) {
+            return;
+        }
+        mMediaConfigPending = true;
+        final MediaType mediaType = mMediaGuiController.getMediaType();
+        final String hymnType = mHymnType;
+        final int hymnNo = mHymnNo;
+
+        AppExecutors.ioThenMain("media-config-lookup", this,
+                () -> mMediaContentHandler.findMediaRecord(hymnType, hymnNo, mediaType),
+                mediaRecord -> {
+                    mMediaConfigPending = false;
+                    String dir = hymnType + MediaConfig.mediaDir.get(mediaType);
+
+                    // Default to not empty string so mediaConfig will fill all other provided bundle info.
+                    String mediaUrl = " ";
+                    List<Uri> uriList = new ArrayList<>();
+                    if (mMediaContentHandler.getMediaUris(mediaRecord, uriList)
+                            || isFileExist(dir, hymnNo, uriList)) {
+                        if (!uriList.isEmpty()) {
+                            mediaUrl = uriList.get(0).toString();
+                        }
+                    }
+
+                    Intent intent = new Intent(this, MediaConfig.class);
+                    Bundle bundle = new Bundle();
+                    bundle.putString(ATTR_MEDIA_URI, mediaUrl);
+                    bundle.putInt(ATTR_MEDIA_TYPE, mediaType.getValue());
+                    bundle.putString(ATTR_HYMN_TYPE, hymnType);
+                    bundle.putInt(ATTR_HYMN_NUMBER, hymnNo);
+                    intent.putExtras(bundle);
+                    startActivity(intent);
+                }, () -> mMediaConfigPending = false);
+    }
+
+    /**
+     * Delete the stored English lyrics of the current hymn on AppExecutors.io.
+     */
+    private void deleteEnglishLyrics() {
+        final Integer hymnNoEng = mHymnNoEng;
+        if (hymnNoEng == null) {
+            HymnsApp.showToastMessage(R.string.error_english_lyrics_null, mHymnNo);
+            return;
+        }
+        final int dbKey = LyricsEnglishRecord.dbHymnNo(hymnNoEng, HYMN_ER.equals(mHymnType));
+        AppExecutors.io("lyrics-eng-delete", () -> mDB.deleteLyricsEng(dbKey));
+    }
+
+    /**
      * Sharing of both the score png and lyrics text files via e.g. whatsapp
      */
     private void lyricsShare() {
+        if (mSharePending) {
+            return;
+        }
+        mSharePending = true;
+        final String hymnType = mHymnType;
+        final int hymnNo = mHymnNo;
+        AppExecutors.ioThenMain("lyrics-share-url", this, () -> getMediaUrl(hymnType, hymnNo), mediaUrl -> {
+            mSharePending = false;
+            lyricsShare(hymnType, hymnNo, mediaUrl);
+        }, () -> mSharePending = false);
+    }
+
+    /**
+     * @param hymnType the hymn type the share was requested for (the user may have moved on meanwhile)
+     * @param hymnNo the hymn number the share was requested for
+     * @param mediaUrl that hymn's media link read from the DB, or null
+     */
+    private void lyricsShare(String hymnType, int hymnNo, String mediaUrl) {
         String resPrefix = "";
         String resFName = "";
 
-        switch (mHymnType) {
+        switch (hymnType) {
         case HYMN_ER:
-            resPrefix = SCORE_ER_DIR + mHymnNo;
-            resFName = LYRICS_ER_DIR + "er" + mHymnNo;
+            resPrefix = SCORE_ER_DIR + hymnNo;
+            resFName = LYRICS_ER_DIR + "er" + hymnNo;
             break;
 
         case HYMN_XB:
-            resPrefix = SCORE_XB_DIR + "xb" + mHymnNo;
-            resFName = LYRICS_XB_DIR + "xb" + mHymnNo;
+            resPrefix = SCORE_XB_DIR + "xb" + hymnNo;
+            resFName = LYRICS_XB_DIR + "xb" + hymnNo;
             break;
 
         case HYMN_XG:
-            resPrefix = SCORE_XG_DIR + "xg" + mHymnNo;
-            resFName = LYRICS_XG_DIR + "xg" + mHymnNo;
+            resPrefix = SCORE_XG_DIR + "xg" + hymnNo;
+            resFName = LYRICS_XG_DIR + "xg" + hymnNo;
             break;
 
         case HYMN_YB:
-            resPrefix = SCORE_XB_DIR + "yb" + mHymnNo;
-            resFName = LYRICS_XB_DIR + "yb" + mHymnNo;
+            resPrefix = SCORE_XB_DIR + "yb" + hymnNo;
+            resFName = LYRICS_XB_DIR + "yb" + hymnNo;
             break;
 
         case HYMN_BB:
-            resPrefix = SCORE_BB_DIR + "bb" + mHymnNo;
-            resFName = LYRICS_BB_DIR + "bb" + mHymnNo;
+            resPrefix = SCORE_BB_DIR + "bb" + hymnNo;
+            resFName = LYRICS_BB_DIR + "bb" + hymnNo;
             break;
 
         case HYMN_DB:
-            resPrefix = SCORE_DB_DIR + "db" + mHymnNo;
-            resFName = LYRICS_DB_DIR + "db" + mHymnNo;
+            resPrefix = SCORE_DB_DIR + "db" + hymnNo;
+            resFName = LYRICS_DB_DIR + "db" + hymnNo;
             break;
         }
 
@@ -676,7 +731,7 @@ public class ContentHandler extends BaseActivity {
             ArrayList<Uri> imageUris = new ArrayList<>();
             imageUris.add(FileBackend.getUriForFile(this, fileScore));
             imageUris.add(FileBackend.getUriForFile(this, fileLyrics));
-            ShareWith.share(this, getMediaUrl(), imageUris);
+            ShareWith.share(this, mediaUrl, imageUris);
         }
         catch (IOException e) {
             Timber.e("lyrics shared: %s", e.getMessage());
@@ -684,17 +739,22 @@ public class ContentHandler extends BaseActivity {
     }
 
     /**
-     * Get the current mediaRecord URL link
+     * Get the media record URL link of the given hymn. Reads the DB: AppExecutors.io only.
      *
      * @return urlLink if available else null
      */
-    private String getMediaUrl() {
+    private String getMediaUrl(String hymnType, int hymnNo) {
         String urlLink = null;
-        boolean isFu = mHymnType.equals(HYMN_DB) && (mHymnNo > HYMN_DB_NO_MAX);
-        MediaRecord mediaRecord = new MediaRecord(mHymnType, mHymnNo, isFu, MediaType.HYMN_MEDIA);
+        boolean isFu = hymnType.equals(HYMN_DB) && (hymnNo > HYMN_DB_NO_MAX);
+        MediaRecord mediaRecord = new MediaRecord(hymnType, hymnNo, isFu, MediaType.HYMN_MEDIA);
 
-        if (mDB.getMediaRecord(mediaRecord, true) && (mediaRecord.getMediaUri() != null)) {
-            urlLink = mediaRecord.toString();
+        try {
+            if (mDB.getMediaRecord(mediaRecord, true) && (mediaRecord.getMediaUri() != null)) {
+                urlLink = mediaRecord.toString();
+            }
+        }
+        catch (RuntimeException e) {
+            Timber.e(e, "Media link lookup failed: %s", mediaRecord);
         }
         return urlLink;
     }
@@ -738,10 +798,18 @@ public class ContentHandler extends BaseActivity {
             mHymnNoEng = HymnNoCh2EngXRef.hymnNoCh2EngConvert(mHymnType, mHymnNo);
         }
 
-        // Check to see if all the mediaTypes are defined/available for the current user selected HymnType/HymnNo
-        boolean[] isAvailable = getHymnMediaState();
         mHymnInfo = getHymnInfo();
-        mMediaGuiController.initHymnInfo(mHymnInfo, isAvailable);
+
+        // Check to see if all the mediaTypes are defined/available for the current user selected HymnType/HymnNo;
+        // the DB and file lookups run on AppExecutors.io, a result for a hymn the user has left is dropped.
+        final String hymnType = mHymnType;
+        final int hymnNo = mHymnNo;
+        final String hymnInfo = mHymnInfo;
+        AppExecutors.ioThenMain("hymn-media-state", this, () -> getHymnMediaState(hymnType, hymnNo), isAvailable -> {
+            if (hymnNo == mHymnNo && hymnType.equals(mHymnType)) {
+                mMediaGuiController.initHymnInfo(hymnInfo, isAvailable);
+            }
+        }, () -> { });
     }
 
     /**
@@ -797,22 +865,24 @@ public class ContentHandler extends BaseActivity {
         }
     }
 
-    /**
-     * For testing of the getPlayHymn algorithms for the specified media Type
-     * and proceed to download if proceedDownload is true;
-     */
-    public void da_link_test(MediaType mediaType, boolean proceedDownLoad) {
-        for (int hymnIdx = 1; hymnIdx <= HYMN_DB_NO_TMAX; hymnIdx++) {
-            int[] hymnNoPage = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, hymnIdx);
-            mHymnNo = hymnNoPage[0];
-            if (mHymnNo != -1) {
-                getPlayHymn(mediaType, proceedDownLoad);
-            }
-        }
-    }
-
 // 第112首 神生命的种子 https://g.cgbr.org/music/x/media/112x.mp3
 // https://g.cgbr.org/music/x/media/139.mp3
+
+    /**
+     * Fetch the playback list of the current hymn without blocking the main thread: the stored media record is read
+     * on AppExecutors.io, then {@link #getPlayHymn(MediaType, boolean, MediaRecord)} runs on the main thread.
+     *
+     * @param onResult receives the playback list, or null if the user changed the hymn meanwhile (nothing played)
+     */
+    public void fetchPlayHymn(MediaType mediaType, boolean proceedDownLoad, Consumer<List<Uri>> onResult) {
+        final String hymnType = mHymnType;
+        final int hymnNo = mHymnNo;
+        AppExecutors.ioThenMain("play-hymn-lookup", this,
+                () -> mMediaContentHandler.findMediaRecord(hymnType, hymnNo, mediaType),
+                mediaRecord -> onResult.accept((hymnNo == mHymnNo && hymnType.equals(mHymnType))
+                        ? getPlayHymn(mediaType, proceedDownLoad, mediaRecord) : null),
+                () -> onResult.accept(null));
+    }
 
     /**
      * First priority: fetch the user defined DB media links/contents for the selected hymnType/hymnNo.
@@ -821,14 +891,15 @@ public class ContentHandler extends BaseActivity {
      * <p>
      * If none found, then fetch the required playback media resources from local directory if available.
      * Otherwise, fetch from online sites with the predefined link if available and if proceedDownLoad is true;
-     * else drop to next mediaType search for playback
+     * else drop to next mediaType search for playback. Main thread; reads no DB.
      *
      * @param mediaType media Type for the playback i.e. hymnType ER, JIAOCHANG, CHANGSHI or BANZOU
      * @param proceedDownLoad download from the specified dnLink if true;
+     * @param mediaRecord the stored media record of the current hymn and mediaType, or null if none
      *
      * @return list of media resource to playback. Usually only one item, two for midi resources
      */
-    public List<Uri> getPlayHymn(MediaType mediaType, boolean proceedDownLoad) {
+    private List<Uri> getPlayHymn(MediaType mediaType, boolean proceedDownLoad, MediaRecord mediaRecord) {
         List<Uri> uriList = new ArrayList<>();
         /*
          * Fetch the user defined DB media links/contents for the selected hymnType/hymnNo;
@@ -838,7 +909,7 @@ public class ContentHandler extends BaseActivity {
          * A media audio link or download link is returned. The media audio content can be
          * in mp3, mid, midi format.
          */
-        if (mMediaContentHandler.getMediaUris(mHymnType, mHymnNo, mediaType, uriList)) {
+        if (mMediaContentHandler.getMediaUris(mediaRecord, uriList)) {
             return uriList;
         }
 
@@ -1224,18 +1295,29 @@ public class ContentHandler extends BaseActivity {
         return false;
     }
 
+    /** A failing read counts as "no stored record" (logged), so the other media types are still evaluated. */
+    private boolean hasStoredMediaRecord(MediaRecord mediaRecord) {
+        try {
+            return mDB.getMediaRecord(mediaRecord, false);
+        }
+        catch (RuntimeException e) {
+            Timber.e(e, "Media state lookup failed: %s", mediaRecord);
+            return false;
+        }
+    }
+
     /**
-     * Get the local availability of the hymn media content for all mediaType
+     * Get the local availability of the hymn media content for all mediaType. Reads the DB: AppExecutors.io only.
      *
      * @return array of media content availability for all mediaType
      */
-    private boolean[] getHymnMediaState() {
+    private boolean[] getHymnMediaState(String hymnType, int hymnNo) {
         boolean[] isAvailable = {false, false, false, false};
 
-        // Check to see if HYMN_MEDIA is available for the current selected HymnType/HymnNo
-        boolean isFu = mHymnType.equals(HYMN_DB) && (mHymnNo > HYMN_DB_NO_MAX);
+        // Check to see if HYMN_MEDIA is available for the given HymnType/HymnNo
+        boolean isFu = hymnType.equals(HYMN_DB) && (hymnNo > HYMN_DB_NO_MAX);
 
-        switch (mHymnType) {
+        switch (hymnType) {
         case HYMN_ER:
         case HYMN_XB:
         case HYMN_XG:
@@ -1243,11 +1325,11 @@ public class ContentHandler extends BaseActivity {
             break;
 
         case HYMN_BB:
-            isAvailable[3] = HymnsApp.getFileResId(MIDI_BB + mHymnNo, "raw") != 0;
+            isAvailable[3] = HymnsApp.getFileResId(MIDI_BB + hymnNo, "raw") != 0;
             break;
 
         case HYMN_DB:
-            isAvailable[3] = HymnsApp.getFileResId(MIDI_DB + mHymnNo, "raw") != 0;
+            isAvailable[3] = HymnsApp.getFileResId(MIDI_DB + hymnNo, "raw") != 0;
             break;
         }
 
@@ -1255,31 +1337,31 @@ public class ContentHandler extends BaseActivity {
         MediaType[] mediaTypes = MediaType.values();
         for (int i = 0; i < mediaTypes.length; i++) {
             MediaType mediaType = mediaTypes[i];
-            MediaRecord mediaRecord = new MediaRecord(mHymnType, mHymnNo, isFu, mediaType);
+            MediaRecord mediaRecord = new MediaRecord(hymnType, hymnNo, isFu, mediaType);
 
             // Skip to next if state is already evaluated to true i.e. defined in DB media link
-            if ((isAvailable[i] |= mDB.getMediaRecord(mediaRecord, false)))
+            if ((isAvailable[i] |= hasStoredMediaRecord(mediaRecord)))
                 continue;
 
             switch (mediaType) {
             case HYMN_MEDIA:
-                dir = mHymnType + MEDIA_MEDIA;
-                isAvailable[0] = isFileExist(dir, mHymnNo, null);
+                dir = hymnType + MEDIA_MEDIA;
+                isAvailable[0] = isFileExist(dir, hymnNo, null);
                 break;
 
             case HYMN_JIAOCHANG:
-                dir = mHymnType + MEDIA_JIAOCHANG;
-                isAvailable[1] = isFileExist(dir, mHymnNo, null);
+                dir = hymnType + MEDIA_JIAOCHANG;
+                isAvailable[1] = isFileExist(dir, hymnNo, null);
                 break;
 
             case HYMN_CHANGSHI:
-                dir = mHymnType + MEDIA_CHANGSHI;
-                isAvailable[2] = isFileExist(dir, mHymnNo, null);
+                dir = hymnType + MEDIA_CHANGSHI;
+                isAvailable[2] = isFileExist(dir, hymnNo, null);
                 break;
 
             case HYMN_BANZOU:
-                dir = mHymnType + MEDIA_BANZOU;
-                isAvailable[3] |= isFileExist(dir, mHymnNo, null);
+                dir = hymnType + MEDIA_BANZOU;
+                isAvailable[3] |= isFileExist(dir, hymnNo, null);
                 break;
             }
         }

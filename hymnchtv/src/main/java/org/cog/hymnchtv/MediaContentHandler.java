@@ -41,6 +41,8 @@ import org.cog.hymnchtv.mediaplayer.YoutubePlayerFragment;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
 
+import timber.log.Timber;
+
 /**
  * The class handles the actual content source address decoding for the user selected hymn
  *
@@ -82,24 +84,41 @@ public class MediaContentHandler {
     }
 
     /**
-     * Get the hymn media information:
+     * Read the stored media record of the given hymn and mediaType. Reads the DB: AppExecutors.io only.
+     *
+     * @return the stored record or null if there is none (or the read failed: it is logged, playback falls back to
+     * the local files)
+     */
+    public MediaRecord findMediaRecord(String hymnTable, int hymnNo, MediaType mediaType) {
+        boolean isFu = hymnTable.equals(HYMN_DB) && (hymnNo > HYMN_DB_NO_MAX);
+        MediaRecord mediaRecord = new MediaRecord(hymnTable, hymnNo, isFu, mediaType);
+        try {
+            return mDB.getMediaRecord(mediaRecord, true) ? mediaRecord : null;
+        }
+        catch (RuntimeException e) {
+            Timber.e(e, "Media record lookup failed: %s", mediaRecord);
+            return null;
+        }
+    }
+
+    /**
+     * Get the hymn media information of a stored record (see {@link #findMediaRecord}); main thread only:
      * a. play back locally if it is a video media OR
      * b. return the uriList if available for the media content handler.
      *
+     * @param mediaRecord the stored record, or null if none
+     *
      * @return true if already handled locally in playback or uriList is not empty
      */
-    public boolean getMediaUris(String hymnTable, int hymnNo, MediaType mediaType, List<Uri> uriList) {
-        boolean isHandled;
-
-        boolean isFu = hymnTable.equals(HYMN_DB) && (hymnNo > HYMN_DB_NO_MAX);
-        MediaRecord mediaRecord = new MediaRecord(hymnTable, hymnNo, isFu, mediaType);
-        if (mDB.getMediaRecord(mediaRecord, true)) {
-            if (!(isHandled = getUriList(mediaRecord.getMediaFilePath(), uriList))) {
-                isHandled = getUriList(mediaRecord.getMediaUri(), uriList);
-            }
-            return (isHandled || !uriList.isEmpty());
+    public boolean getMediaUris(MediaRecord mediaRecord, List<Uri> uriList) {
+        if (mediaRecord == null) {
+            return false;
         }
-        return false;
+        boolean isHandled;
+        if (!(isHandled = getUriList(mediaRecord.getMediaFilePath(), uriList))) {
+            isHandled = getUriList(mediaRecord.getMediaUri(), uriList);
+        }
+        return (isHandled || !uriList.isEmpty());
     }
 
     /**
