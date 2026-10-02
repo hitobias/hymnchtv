@@ -26,6 +26,7 @@
 - rev 7（2026-10-02）：依 Codex 第六輪 2 P1 + 2 P2 修正（rev 5 的 P1 已確認解決）。①§2.3 以現有 `storeHymnHistory` 為規格寫出完整 prune 演算法（pivot = 第 `excess+10` 筆、嚴格 `<` 刪除、先清除後插入）與 199／200／201／重複鍵／並列測試表，移除「B 已改為」敘述；②WAL 改為 production `build()` 明確設定，並以 `PRAGMA journal_mode` 驗證；③普通 `storeMediaRecord()` 捕捉例外回傳 `-1L`，`OrThrow` 版不捕捉（Task 2 Step 2a）；④schema 路徑統一為 `org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json`。
 - rev 8（2026-10-02）：依 Codex 第七輪 1 P1 + 2 P2 + 1 P3 修正（**修訂後未再送 Codex**：已達 3 輪上限）。①Task 6(a) 加 Step 0 硬性 gate：D-1a worktree 實測不乾淨，有未追蹤的 Task 8 產物（`notebook/backup/`＋測試），§2.9 狀態更正；②`deleteHymnHistory` 明定不含 `isFu`＋回歸測試；③`hymnType` 驗證涵蓋所有以 hymnType 為輸入的 API，並定義各自失敗結果；④Task 1 Step 4 措辭改「明確設定 WAL（非 Room 預設）」。
 - rev 9（2026-10-02）：依 PR #6 審查 P2-1 補齊主執行緒呼叫點清單：§1 表格中 `storeMediaRecord`、`deleteMediaRecord`、`getMediaRecord`、`storeLyricsEng`、`getLyricsEnglish` 被誤標「否」或漏列呼叫端者改正（`getMediaRecords`／`getMediaLinks` 已由 Task 4 移到背景，改標「否」），§2.4 清單由 4 項擴為完整清單，英文歌詞刪除更正為 `ContentHandler` 選單項，新增 1.0 關卡驗證方法（`-PstrictDbThread`）。
+- rev 10（2026-10-02）：依 PR #6 審查 P2-2／P3：Task 6(a) Step 6 註記 api34 補跑結果（131/131 通過）；Step 7 的 grep 描述更正為 `HymnchtvDatabase.build(` 只出現在 `getInstance` 與 `@VisibleForTesting` 的 `DatabaseBackend.createForTest`。
 
 ---
 
@@ -314,7 +315,8 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 - [x] **Step 4**：重新產生 `HymnchtvDatabase/1.json`（**仍 v1**，§2.5 決策）並 commit。
 - [x] **Step 5（rev 5，Codex P1-2）舊檔處置**：在**每一台**開發／測試裝置與模擬器上，執行遷移後的組建**之前**先 `adb uninstall com.ziontkec.hymnal`（或 `adb shell pm clear com.ziontkec.hymnal`），清掉三表 v1 的 `hymnchtv.db`（含 `-wal`／`-shm`）。把這條與「`hymnchtv.db`（＋`-wal`／`-shm`）是中間三表組建的殘留」寫進 dev-notes（交接文件）。**不要**把 `hymnchtv.db` 加進啟動刪檔清單（§2.5）。本計畫合併後到本步驟完成前產生的三表 APK **不得分發**。
 - [x] **Step 6**：`./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug` 必須 `BUILD SUCCESSFUL`；`api34nb`／`api24nb` 跑全部 instrumented test（含 D-1a 既有的 7 個）通過。grep 確認不再有 `NotebookDatabase`／`notebook.db`／`TRUNCATE`（計畫文件除外，那是 (b)(c)）。
-- [x] **Step 7**：`Notebook.get()`（D-1a Task 12）一律取 `HymnchtvDatabase.getInstance(app)`（§2.4a）；grep 確認 production 程式碼中 `HymnchtvDatabase.build(` 只出現在 `getInstance` 內。
+  - **api34 補跑（2026-10-02）**：emulator-5580（API 34）131/131 通過（D-1a worktree `feat/notebook-data`，已提交內容；schema 測試已改名並斷言 8 張表）；emulator-5582（API 24）131/131 通過；單元測試 287 個全綠。跑前 `com.ziontkec.hymnal` 在 5580 上未安裝（無舊三表 `hymnchtv.db`）。
+- [x] **Step 7**：`Notebook.get()`（D-1a Task 12）一律取 `HymnchtvDatabase.getInstance(app)`（§2.4a）；grep 確認 production 程式碼中 `HymnchtvDatabase.build(` 只出現在 `getInstance` 與 `@VisibleForTesting` 的 `DatabaseBackend.createForTest`。
 
 **(b) D-1a 計畫 rev：Task 10–13 完整重寫**（`docs/superpowers/plans/2026-10-02-d1a-notebook-data-implementation.md`）
 

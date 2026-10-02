@@ -30,6 +30,11 @@
   - Task 8–13 完整更正：`RoomBackupStore`／測試／物件圖改用 `HymnchtvDatabase`（`Notebook.get` 取 `HymnchtvDatabase.getInstance(app)`，不另建資料庫）；備份規則與 `BackupRulesTest` 改為 `hymnchtv.db` ＋ `-wal`／`-shm`；備份範圍擴大為整個統一 DB（媒體連結、歷史、英文歌詞、筆記本）；E2E 的應用程式 ID 改為 `com.ziontkec.hymnal`。
   - Task 11 加 Auto Backup 25 MB 配額風險與實測資料。
   - dev-notes：中間三表組建（Room 統一計畫合併後、本遷移完成前）留下的 `hymnchtv.db`（含 `-wal`／`-shm`）schema 與現在不同，開發／測試裝置在安裝遷移後的組建前必須 `adb uninstall com.ziontkec.hymnal`（或 `adb shell pm clear com.ziontkec.hymnal`）；不要把 `hymnchtv.db` 加進啟動刪檔清單。`org.cog.hymnchtv` 現在只是 namespace，應用程式 ID 是 `com.ziontkec.hymnal`。
+- rev 7（2026-10-02，依 Codex／code-reviewer 對 D-1a Task 8–13 的審查）：
+  - 分支策略：實際只有 `feat/notebook-data`（worktree `/Users/hitobias/orca/hymnchtv-d1a`），Task 0–7 已線性完成在其上；Task 8–13 全部在同一條分支上線性進行，刪除 Task 12 的三個 lane merge 與「三 lane 已 commit」前置，Task 8–11 的 lane 前置與「Lane C 只編譯」改寫；Task 0–7 的 lane 歷史片段只加註記不改寫。
+  - E2E：不再斷言還原後 `-wal`／`-shm` 存在（暫態檔），改為驗證主 DB 已還原且至少一筆舊表（`hymn_history`）與一筆 notebook 資料正確；sidecar 只記錄。
+  - `BackupRulesTest`：`forbidden` 拆成 `forbiddenPaths`（只比對 `path="…`）與 `forbiddenAttribute`，避免 XML 註解提到 `notebook_device.xml` 造成誤判；已逐條手動推演 Task 11 範例 XML 會通過。
+  - 文字更正：`org.json:json` 實際沿用 master 的 20250517；instrumented test 覆蓋的是 `com.ziontkec.hymnal`。
 
 ## 給執行者（Sonnet 5.5）的說明
 
@@ -42,7 +47,7 @@
    > 使用 superpowers:subagent-driven-development 執行 `docs/superpowers/plans/2026-10-02-d1a-notebook-data-implementation.md`。Task 0 是硬性關卡：沒有全部通過，就不要開始 Task 1。Lane 0 的 Task 0～3 依序做完並 commit 後，用 worktree 平行派出 Lane A、B、C 三個 Sonnet 5.5 子代理；三條 lane 都完成後依 A → B → C 的順序合併，再做 Task 12、13。Task 13 的破壞性步驟要先取得我的同意。計畫和程式碼對不上就停下來問我，不要自行猜測。
 
 **執行規則：**
-- **Lane 與順序**：
+- **Lane 與順序**（rev 7 註記：實際上沒有開 lane 分支。Task 0–7 已線性完成在 `feat/notebook-data`，Task 8–13 也在這條分支與 worktree `/Users/hitobias/orca/hymnchtv-d1a` 上線性進行，不再有 lane 合併。下表與下方 Lane／worktree／模擬器分工的說明只作為 Task 0–7 的歷史紀錄；Task 8–13 的指示以各 task 本文為準）：
 
   | Lane | Tasks | 前置條件 | 會碰到的檔案（彼此不重疊） |
   |---|---|---|---|
@@ -58,7 +63,7 @@
 - **和 A2、B 共用的檔案與整合順序**：見下方「共用檔案與整合順序」一節。**Task 0 開始前必須先確認那一節的前置條件。**
 - **Worktree**：Lane A、B、C 各用一個 worktree。可以用 Agent tool 的 `isolation: "worktree"`，或手動執行 `git worktree add ../hymnchtv-d1a-lane-a -b feat/d1a-notebook-data-lane-a feat/d1a-notebook-data`。手動建立時，要把 `local.properties` 複製進 worktree（它在 `.gitignore` 裡）。
 - **模擬器（重要）**：另一個代理正在這台電腦上用模擬器做驗證。
-  - D-1a 的 instrumented test 會安裝並覆蓋 `org.cog.hymnchtv`，Task 13 還會刻意解除安裝。
+  - D-1a 的 instrumented test 會安裝並覆蓋 `com.ziontkec.hymnal`，Task 13 還會刻意解除安裝。
   - 依社群文件，AGP 的 connected test 跑完後會解除安裝 APK。AGP 9.3.3 的實際行為在 Task 0 Step 7 記錄，不要預設任一種結果。
   - 所以 D-1a 一律使用**專用的 AVD**：`api34nb`（port 5580）和 `api24nb`（port 5582）。所有 adb／gradle 指令前都要先 `export ANDROID_SERIAL=emulator-5580`（或 5582）。
 - **Instrumented test 的分工**：
@@ -94,7 +99,7 @@
   - `NotebookAsync`：給 Java 呼叫的 callback 包裝。
 - 執行緒：Kotlin 端用 coroutines，Room 的 `suspend` DAO 會自己切到背景執行緒。Java 端透過 `NotebookAsync` 取得「主執行緒回呼＋可取消」的 API。
 
-**Tech Stack:** Android（minSdk 24、compileSdk 37、AGP 9.3.3 內建 Kotlin＝KGP 2.2.10、Gradle 9.7.1、Java 11）、Room 2.8.5、KSP 2.3.12、kotlinx-coroutines 1.11.0（退路 1.10.2）、`org.json`（Android 內建；JVM 測試用 `org.json:json:20260814`）、JUnit 4.13.2、Truth 1.4.5、AndroidX Test（runner 1.7.0、ext-junit 1.3.0）。
+**Tech Stack:** Android（minSdk 24、compileSdk 37、AGP 9.3.3 內建 Kotlin＝KGP 2.2.10、Gradle 9.7.1、Java 11）、Room 2.8.5、KSP 2.3.12、kotlinx-coroutines 1.11.0（退路 1.10.2）、`org.json`（Android 內建；JVM 測試用 `org.json:json`，實際沿用 master 的 20250517，rev 7 更正）、JUnit 4.13.2、Truth 1.4.5、AndroidX Test（runner 1.7.0、ext-junit 1.3.0）。
 
 **規格來源:** `docs/superpowers/plans/2026-10-02-hymnchtv-modernization-plan.md` 的「子項目 D → D-1 詩歌筆記本」與「子項目 S」。
 
@@ -104,7 +109,7 @@
   - `feat/zh-hant` 已經合併到 `master` → 從 `origin/master` 開。
   - 還沒合併 → 從 `feat/zh-hant` 的最新 commit 開，等 A 合併後再 rebase 到 `master`。
 - PR 的目標是 `master`。
-- Lane 分支為 `feat/d1a-notebook-data-lane-a`、`-lane-b`、`-lane-c`。
+- Lane 分支為 `feat/d1a-notebook-data-lane-a`、`-lane-b`、`-lane-c`（歷史設計；rev 7 起未採用，實際分支只有 `feat/notebook-data`）。
 
 ### 共用檔案與整合順序
 
@@ -171,7 +176,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 | KSP | **2.3.12**（`com.google.devtools.ksp:symbol-processing-gradle-plugin`） | <ul><li>KSP 2.3.x 是 KSP2，版本已經和 Kotlin 脫鉤。</li><li>2.3.1 開始支援 AGP 9 內建 Kotlin；2.3.10 修了內建 Kotlin 下的 R class 解析；2.3.12 的最低 AGP 是 8.12.0（我們是 9.3.3）。</li><li>Maven Central 上的最新版是 2.3.12。</li><li>AGP 9 release notes：要用新版 KSP 時，在根目錄 `buildscript` 加 classpath。</li></ul> |
 | Room | **2.8.5**（runtime、ktx、compiler） | <ul><li>Room release 頁：2.8.5 是最新穩定版（2026-09-09）。</li><li>Kotlin 專案要用 KSP。</li><li>2.7.0 起需要 Kotlin 2.0 以上；2.8.0 起 minSdk 23（我們是 24）。</li><li>`room-runtime-android-2.8.5.pom` 依賴 kotlin-stdlib 2.1.20。</li></ul> |
 | kotlinx-coroutines | **1.11.0**（`-android`、`-test`）；退路 **1.10.2** | <ul><li>Maven Central 最新版。</li><li>`kotlinx-coroutines-core-jvm-1.11.0.pom` 依賴 kotlin-stdlib 2.2.20，和 2.2.10 編譯器同一個 minor 版本，理論上能讀 metadata。</li><li>這一點由 Task 0 的關卡實際編譯證明；不通過就改用 1.10.2（用 Kotlin 2.1 編譯）。</li></ul> |
-| JSON | Android 內建 `org.json`；JVM 測試加 `testImplementation 'org.json:json:20260814'` | <ul><li>不用 kotlinx-serialization：它需要 compiler plugin，而且新版用比 2.2 更新的 Kotlin 編譯。</li><li>`android.jar` 裡的 `org.json` 只是 stub，JVM 測試要另外加真正的套件。Task 0 會證明這樣可行。</li></ul> |
+| JSON | Android 內建 `org.json`；JVM 測試加 `testImplementation 'org.json:json:20250517'`（rev 7：原寫 20260814，實際沿用 master 已有的 20250517，行為相同） | <ul><li>不用 kotlinx-serialization：它需要 compiler plugin，而且新版用比 2.2 更新的 Kotlin 編譯。</li><li>`android.jar` 裡的 `org.json` 只是 stub，JVM 測試要另外加真正的套件。Task 0 會證明這樣可行。</li></ul> |
 | Room 測試方式 | instrumented test＋in-memory DB（併發測試用檔案 DB） | <ul><li>不用 Robolectric：4.17 是另一個大依賴，而且不一定有 compileSdk 37 的 SDK jar。</li><li>真的 SQLite 行為（unique index、交易、併發）在裝置上測最可靠。</li></ul> |
 
 來源：
@@ -184,7 +189,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 - [Back up user data with Auto Backup（備份時會先關閉 app）](https://developer.android.com/identity/data/autobackup)
 - [Test backup and restore（bmgr 指令）](https://developer.android.com/identity/data/testingbackup)
 - [Gradle forum：connectedAndroidTest 會在結束後解除安裝 APK](https://discuss.gradle.org/t/how-can-i-run-espresso-tests-without-uninstalling-apk-after/15492)（社群說法；實際行為在 Task 0 Step 7 驗證）
-- Maven metadata（2026-10-02）：`com.google.devtools.ksp.gradle.plugin` 2.3.12、`androidx.room:room-*` 2.8.5、`kotlinx-coroutines-android` 1.11.0、`org.json:json` 20260814。
+- Maven metadata（2026-10-02）：`com.google.devtools.ksp.gradle.plugin` 2.3.12、`androidx.room:room-*` 2.8.5、`kotlinx-coroutines-android` 1.11.0、`org.json:json` 20260814（rev 7：實際沿用 master 的 20250517）。
 
 ---
 
@@ -4238,9 +4243,9 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ---
 
-### Task 8：備份模型與 JSON 編碼（Lane C）
+### Task 8：備份模型與 JSON 編碼（線性，`feat/notebook-data`）
 
-**前置條件：** Task 3 已 commit。在 worktree `feat/d1a-notebook-data-lane-c` 中進行。只跑 JVM 測試，不使用模擬器。
+**前置條件：** Task 0–7 與 Room 統一遷移已 commit 在 `feat/notebook-data`（rev 7：實際只有這一條分支，不再有 lane 分支）。Task 8–13 全部直接在 worktree `/Users/hitobias/orca/hymnchtv-d1a`（分支 `feat/notebook-data`）上線性進行。Task 8–11 只跑 JVM 測試並以 `assembleDebugAndroidTest` 確認 androidTest 能編譯，不使用模擬器；instrumented test 由 Task 12 Step 1 統一執行。
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/backup/BackupModels.kt`、`BackupCodec.kt`
@@ -4973,7 +4978,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ---
 
-### Task 9：BackupMerger（Lane C）
+### Task 9：BackupMerger（線性，`feat/notebook-data`）
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/backup/BackupMerger.kt`
@@ -5297,12 +5302,12 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ---
 
-### Task 10：BackupService、RoomBackupStore 與 SAF 介面（Lane C）
+### Task 10：BackupService、RoomBackupStore 與 SAF 介面（線性，`feat/notebook-data`）
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/backup/BackupStore.kt`、`BackupService.kt`、`BackupFileName.kt`、`RoomBackupStore.kt`、`BackupDocuments.kt`
 - Test（JVM）: `hymnchtv/src/test/java/org/cog/hymnchtv/notebook/backup/InMemoryBackupStore.kt`、`BackupServiceTest.kt`、`BackupFileNameTest.kt`
-- Test（instrumented，Lane C 只編譯）: `hymnchtv/src/androidTest/java/org/cog/hymnchtv/notebook/backup/RoomBackupStoreTest.kt`
+- Test（instrumented；本 task 只編譯，Task 12 Step 1 執行）: `hymnchtv/src/androidTest/java/org/cog/hymnchtv/notebook/backup/RoomBackupStoreTest.kt`
 
 - [ ] **Step 1：寫 `BackupStore` 介面**
 
@@ -5896,7 +5901,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ---
 
-### Task 11：開啟 Android 自動備份（Lane C）
+### Task 11：開啟 Android 自動備份（線性，`feat/notebook-data`）
 
 **Files:**
 - Create: `hymnchtv/src/main/res/xml/notebook_backup_rules.xml`、`hymnchtv/src/main/res/xml/notebook_data_extraction_rules.xml`
@@ -5957,7 +5962,10 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
       private val dbIncludes = listOf("", "-wal", "-shm").map { "domain=\"database\" path=\"${HymnchtvDatabase.FILE_NAME}$it\"" }
       private val prefsInclude = "domain=\"sharedpref\" path=\"${NotebookPrefs.FILE_NAME}.xml\""
       private val settingsInclude = "domain=\"sharedpref\" path=\"${SettingsPrefsNameTest.SETTINGS_FILE}.xml\""
-      private val forbidden = listOf("dbHymnApp", "notebook.db", NotebookPrefs.DEVICE_FILE_NAME, "disableIfNoEncryptionCapabilities")
+      // Match on the path attribute only: the XML comments legitimately mention e.g. notebook_device.xml.
+      private val forbiddenPaths = listOf("dbHymnApp", "notebook.db", NotebookPrefs.DEVICE_FILE_NAME)
+      private val forbiddenAttribute = "disableIfNoEncryptionCapabilities=\""
+
 
       private fun count(xml: String, needle: String) = Regex(Regex.escape(needle)).findAll(xml).count()
 
@@ -5966,7 +5974,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           val xml = read("src/main/res/xml/notebook_backup_rules.xml")
           (dbIncludes + listOf(prefsInclude, settingsInclude)).forEach { assertThat(count(xml, it)).isEqualTo(1) }
           assertThat(count(xml, "<include ")).isEqualTo(5)
-          forbidden.forEach { assertThat(xml).doesNotContain("path=\"$it") }
+          forbiddenPaths.forEach { assertThat(xml).doesNotContain("path=\"$it") }
       }
 
       @Test
@@ -5976,7 +5984,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           assertThat(xml).contains("<device-transfer>")
           (dbIncludes + listOf(prefsInclude, settingsInclude)).forEach { assertThat(count(xml, it)).isEqualTo(2) }
           assertThat(count(xml, "<include ")).isEqualTo(10)
-          forbidden.forEach { assertThat(xml).doesNotContain(it) }
+          forbiddenPaths.forEach { assertThat(xml).doesNotContain("path=\"$it") }
+          assertThat(xml).doesNotContain(forbiddenAttribute)
       }
 
       @Test
@@ -6085,30 +6094,28 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ---
 
-### Task 12：合併 lane、物件圖與 Java 介面（Lane 0）
+### Task 12：物件圖與 Java 介面（線性，`feat/notebook-data`）
 
-**前置條件：** Lane A、B、C 都已 commit 完成。
+**前置條件：** Task 0–11 都已依序 commit 在 `feat/notebook-data`（rev 7：不再合併 lane）。
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/Notebook.kt`、`NotebookAsync.kt`
 - Test: `hymnchtv/src/test/java/org/cog/hymnchtv/notebook/NotebookAsyncTest.kt`、`hymnchtv/src/test/java/org/cog/hymnchtv/notebook/fakes/InMemoryFavoriteRepository.kt`
 
-- [ ] **Step 1：合併並跑全部測試**
+- [ ] **Step 1：跑全部測試**
 
   ```bash
-  git switch feat/d1a-notebook-data
-  git merge --no-ff feat/d1a-notebook-data-lane-a -m "merge: D-1a lane A (Room repositories)"
-  git merge --no-ff feat/d1a-notebook-data-lane-b -m "merge: D-1a lane B (auto-record tracker and prefs)"
-  git merge --no-ff feat/d1a-notebook-data-lane-c -m "merge: D-1a lane C (backup and Auto Backup)"
+  cd /Users/hitobias/orca/hymnchtv-d1a
+  test "$(git branch --show-current)" = feat/notebook-data
   ./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug --console=plain
   export ANDROID_SERIAL=emulator-5580
   test "$(adb emu avd name | head -1 | tr -d '\r')" = api34nb && ./gradlew :hymnchtv:connectedDebugAndroidTest --console=plain
   ```
 
   Expected:
-  - 三次 merge 都沒有衝突（三條 lane 的檔案沒有重疊）。如果有衝突，停下來回報。
+  - 目前分支是 `feat/notebook-data`，工作樹乾淨（沒有未提交的 Task 8–11 檔案）。
   - JVM 測試全部通過。
-  - instrumented test 全部通過。其中 `SharedPrefsNotebookPrefsTest`（5 個）和 `RoomBackupStoreTest`（6 個）是第一次在這裡執行。
+  - instrumented test 全部通過。其中 `RoomBackupStoreTest`（6 個）是第一次在這裡執行；`SharedPrefsNotebookPrefsTest`（5 個）已隨 Task 7 之後的全套 instrumented test 執行過，這裡只是再跑一次。
 
 - [ ] **Step 2：寫會失敗的測試**
 
@@ -6610,7 +6617,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ---
 
-### Task 13：E2E 驗證（模擬器）與審查（Lane 0）
+### Task 13：E2E 驗證（模擬器）與審查（線性，`feat/notebook-data`）
 
 **Files:**
 - Create: `hymnchtv/src/androidTest/java/org/cog/hymnchtv/notebook/NotebookE2eTest.kt`
@@ -6653,6 +6660,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   import org.cog.hymnchtv.notebook.model.HymnTypes
   import org.cog.hymnchtv.notebook.model.Occasion
   import org.cog.hymnchtv.notebook.model.SingSource
+  import org.cog.hymnchtv.persistance.room.entity.HymnHistoryEntity
   import org.junit.Assert.fail
   import org.junit.Assume.assumeTrue
   import org.junit.Test
@@ -6706,6 +6714,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           val playlist = graph.playlists.createPlaylist("主日 10/4")
           graph.playlists.addItem(playlist.id, DB1)
           graph.playlists.addItem(playlist.id, FU1)
+          // A legacy-table row (not part of the notebook JSON backup); only Auto Backup carries it across a restore.
+          withContext(Dispatchers.IO) { graph.database.hymnHistoryDao().insert(LEGACY_HISTORY) }
           graph.prefs.setAutoRecordEnabled(false)
           settings().edit().putString(SETTINGS_MARKER_KEY, SETTINGS_MARKER_VALUE).commit()
           verifySeeded(checkPrefs = true)
@@ -6736,6 +6746,10 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           assertThat(all.playlistItems).hasSize(2)
           assertThat(graph.favorites.findAll().map { it.hymn }).containsExactly(DB1, FU1)
           assertThat(graph.favorites.isFavorite(BB5)).isFalse()
+          if (checkPrefs) { // legacy rows are not in the JSON backup, so only the Auto Backup restore carries them
+              val history = withContext(Dispatchers.IO) { graph.database.hymnHistoryDao().listNewestFirst() }
+              assertThat(history).contains(LEGACY_HISTORY)
+          }
           assertThat(graph.singLogs.statsFor(DB1)).isEqualTo(SingStats(2, T2))
           assertThat(graph.singLogs.statsFor(FU1)).isEqualTo(SingStats(0, null))
           assertThat(graph.notes.findByHymn(FU1).map { it.body }).containsExactly("附歌一的筆記")
@@ -6775,6 +6789,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           const val WRITE_LOOP_COUNT = 300
           const val SETTINGS_MARKER_KEY = "notebook_e2e_marker"
           const val SETTINGS_MARKER_VALUE = "restored"
+          val LEGACY_HISTORY = HymnHistoryEntity("hymn_db", 12, false, "legacy-row", 1_759_300_000_000L)
           val DB1 = HymnKey.of(HymnTypes.DB, 1)
           val FU1 = HymnKey.of(HymnTypes.DB, 781)
           val BB5 = HymnKey.of(HymnTypes.BB, 5)
@@ -6853,6 +6868,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   }
   restore_gms_transport() { adb shell bmgr transport com.google.android.gms/.backup.BackupTransportService >/dev/null 2>&1 || true; }
   # Note: `! grep` would not abort under `set -e`, so every check exits explicitly.
+  # Sidecars (hymnchtv.db-wal / -shm) are transient: record them in restored-files.txt, never assert on them.
   require_file() { grep -qx "$1" "$OUT/restored-files.txt" || { echo "FAILED: $1 was not restored"; exit 1; }; }
   forbid_file()  { if grep -q "$1" "$OUT/restored-files.txt"; then echo "FAILED: $1 must not be restored"; exit 1; fi; }
   check_restored_files() {
@@ -6944,7 +6960,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   Expected:
   - `autobackup`：
     - `backupnow.txt` 含 `Package com.ziontkec.hymnal with result: Success`。
-    - 還原的檔案包含 `hymnchtv.db`（＋`-wal`／`-shm`）、`notebook.xml`、`Settings.xml`，**不包含** `dbHymnApp*`、`notebook.db`、`notebook_device.xml`；可另斷言媒體連結、歷史、英文歌詞資料列隨之還原。
+    - 還原的檔案包含 `hymnchtv.db`、`notebook.xml`、`Settings.xml`，**不包含** `dbHymnApp*`、`notebook.db`、`notebook_device.xml`。`-wal`／`-shm` 是暫態檔（還原後 Room 可能已 checkpoint 並刪除它們），**只記錄**（腳本把還原後的檔案清單寫進 `restored-files.txt`），**不斷言**存在與否；三個 `<include>` 由 `BackupRulesTest` 驗證。
+    - 驗證主 DB 已還原且資料正確：`verifySeeded` 除了筆記本五表，還要確認至少一筆舊三表資料（例如種入一筆 `hymn_history` 或 `media_record`，還原後仍在且內容相同）與至少一筆 notebook 資料。`seed` 要用 `HymnchtvDatabase.hymnHistoryDao().insert(...)`（或 `mediaRecordDao()`）種入舊表資料，`verifySeeded` 與 `integrity` 要斷言它存在。
     - `verifySeeded` 通過（含 `autoRecordEnabled == false` 和 `Settings.xml` 的 marker）。
     - API 34 驗證的是 `dataExtractionRules`，API 24 驗證的是 `fullBackupContent`。
   - `busy`：**記錄**以下觀察，不要預設結果：
@@ -6956,7 +6973,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 - [ ] **Step 6：審查**
 
-  - 用 `superpowers:requesting-code-review` 或 code-reviewer agent 審查 `git diff origin/master...feat/d1a-notebook-data`（如果 A 還沒合併，改成 `feat/zh-hant...feat/d1a-notebook-data`）。
+  - 用 `superpowers:requesting-code-review` 或 code-reviewer agent 審查 `git diff origin/master...feat/notebook-data`（如果 A 還沒合併，改成 `feat/zh-hant...feat/notebook-data`）。
   - 審查重點：
     - 去重的原子性。
     - 合併排序是否確定。
