@@ -37,6 +37,8 @@
   - Task 13 SAF 驗收預期改為 `export OK 1.0.0`（`BuildConfig.VERSION_NAME`）。Codex 第 3 輪提出的 P1（`flow.collect` import）判定為誤報：`FlowCollector` 自 coroutines 1.6 起是 `fun interface`，`tracker.recorded.collect { }` 可直接編譯，以 Task 12 實際編譯驗證。
   - Task 8 `BackupCodecTest.maliciousIdsAreSkipped`：`testUuid(1)` 全是數字，`.uppercase()` 後仍是合法 canonical UUID，實作正確接受它，測試必然失敗；改用含十六進位字母的 `testUuid(0xab)`（實作不變）。
   - Task 13 腳本 `saf` 情境：`adb exec-in` 在 API 24 上靜默不寫入任何內容（`import` 因找不到檔案失敗），改用 `adb push` 到 `/data/local/tmp` 再 `run-as … cp` 進 app 私有目錄。
+  - Task 9 `BackupMerger.resolvePositionCollisions` 改為只依「合併後的勝出列集合」決定歌單位置（不再「本機優先」）：每個被爭用的位置由 `compare` 較大者（再依較小 id）保留，其餘依 (position, id) 排到該歌單最高位置之後，必要時本機列也會被移動並寫回；兩台裝置互相匯入對方檔案後版面一致，再匯入原檔不產生變更（Codex 與 code-reviewer 的 P1：原寫法不收斂）。`BackupMergerTest` 新增 `exchangingFilesBothWaysConvergesToTheSameLayout`，並把原 `itemsAppendedToTheSameSlot…` 改名為 `theNewerItemKeepsAContestedSlotAndTheOlderLocalItemMoves`（預期改為 b 留在 0、a 移到 1）。
+  - Task 8 `BackupCodec` 對歌單 `position` 加上限 `MAX_POSITION = 1_000_000_000`（用 `getLong` 避免 `getInt` 截斷，並防止重排 +1 溢位）；新增 `absurdPlaylistPositionsAreSkipped`。
   - AVD 實際名稱是 `api34b`／`api24b`（原寫 `api34nb`／`api24nb`），全文更正。
 - rev 7（2026-10-02，依 Codex／code-reviewer 對 D-1a Task 8–13 的審查）：
   - 分支策略：實際只有 `feat/notebook-data`（worktree `/Users/hitobias/orca/hymnchtv-d1a`），Task 0–7 已線性完成在其上；Task 8–13 全部在同一條分支上線性進行，刪除 Task 12 的三個 lane merge 與「三 lane 已 commit」前置，Task 8–11 的 lane 前置與「Lane C 只編譯」改寫；Task 0–7 的 lane 歷史片段只加註記不改寫。
@@ -4664,6 +4666,17 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           assertThat(failureOf("""{"format":"hymnchtv-notebook","schemaVersion":2}"""))
               .isEqualTo(BackupError.UNSUPPORTED_VERSION)
       }
+
+      @Test
+      fun absurdPlaylistPositionsAreSkipped() {
+          fun item(id: String, position: String) =
+              """{"id":"$id","playlistId":"${testUuid(9)}","position":$position,"hymnType":"hymn_db","hymnNo":1,"isFu":false,""" +
+                  """"createdAt":1,"updatedAt":1,"deletedAt":null,"updatedBy":"$DEVICE_A"}"""
+          val rows = listOf(item(testUuid(1), "2147483647"), item(testUuid(2), "4294967296"), item(testUuid(3), "1000000000"))
+          val decoded = decodeOk(doc("playlistItems" to rows.joinToString(",", "[", "]")))
+          assertThat(decoded.snapshot.tables.playlistItems.map { it.id }).containsExactly(testUuid(3))
+          assertThat(decoded.skipped).isEqualTo(SkippedRows(invalid = 2))
+      }
   }
   ```
 
@@ -4697,6 +4710,9 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   object BackupCodec {
       const val FORMAT = "hymnchtv-notebook"
       const val CURRENT_SCHEMA_VERSION = 1
+
+      /** Upper bound for imported playlist positions, so re-slotting after the highest slot cannot overflow Int. */
+      const val MAX_POSITION = 1_000_000_000L
 
       private const val KEY_FORMAT = "format"
       private const val KEY_SCHEMA_VERSION = "schemaVersion"
@@ -4926,12 +4942,12 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
       private fun playlistItemFromJson(json: JSONObject, maxTime: Long): PlaylistItemEntity {
           val sync = json.sync(maxTime)
-          val position = json.getInt("position")
-          require(position >= 0) { "Negative position" }
+          val position = json.getLong("position")
+          require(position in 0..MAX_POSITION) { "Position out of range" }
           return PlaylistItemEntity(
               id = NotebookValidation.uuid(sync.id),
               playlistId = NotebookValidation.uuid(json.getString("playlistId")),
-              position = position,
+              position = position.toInt(),
               hymn = json.hymn(),
               createdAt = sync.createdAt,
               updatedAt = sync.updatedAt,
@@ -5107,11 +5123,11 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
       }
 
       @Test
-      fun itemsAppendedToTheSameSlotOnTwoDevicesAreReslotted() {
+      fun theNewerItemKeepsAContestedSlotAndTheOlderLocalItemMoves() {
           val local = NotebookTables(playlistItems = listOf(SampleTables.item(a, pl, 0)))
           val incoming = NotebookTables(playlistItems = listOf(SampleTables.item(b, pl, 0, updatedAt = 200)))
           val changes = BackupMerger.merge(local, incoming).changes.playlistItems
-          assertThat(changes.map { it.id to it.position }).containsExactly(b to 1)
+          assertThat(changes.associate { it.id to it.position }).containsExactly(b, 0, a, 1)
       }
 
       @Test
@@ -5167,6 +5183,28 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           val incoming = NotebookTables(playlistItems = listOf(SampleTables.item(c, pl, 0), SampleTables.item(b, pl, 0)))
           val changes = BackupMerger.merge(local, incoming).changes.playlistItems
           assertThat(changes.associate { it.id to it.position }).containsExactly(b, 1, c, 2)
+      }
+
+      private fun positions(tables: NotebookTables) = tables.playlistItems.associate { it.id to it.position }
+
+      @Test
+      fun exchangingFilesBothWaysConvergesToTheSameLayout() {
+          // Device A reordered (newer edits); device B appended an item into a slot that A reused.
+          val x = testUuid(11)
+          val y = testUuid(12)
+          val z = testUuid(13)
+          val base = listOf(SampleTables.item(x, pl, 0), SampleTables.item(y, pl, 1))
+          val deviceA = NotebookTables(
+              playlistItems = listOf(SampleTables.item(y, pl, 2, updatedAt = 300), SampleTables.item(x, pl, 3, updatedAt = 300)),
+          )
+          val deviceB = NotebookTables(playlistItems = base + SampleTables.item(z, pl, 2, updatedAt = 200, updatedBy = DEVICE_B))
+          val mergedOnA = deviceA.upserted(BackupMerger.merge(deviceA, deviceB).changes)
+          val mergedOnB = deviceB.upserted(BackupMerger.merge(deviceB, deviceA).changes)
+          assertThat(positions(mergedOnA)).isEqualTo(positions(mergedOnB))
+          assertThat(positions(mergedOnA).values.toSet()).hasSize(3)
+          // a later exchange of the original files changes nothing
+          assertThat(BackupMerger.merge(mergedOnA, deviceB).changes.playlistItems).isEmpty()
+          assertThat(BackupMerger.merge(mergedOnB, deviceA).changes.playlistItems).isEmpty()
       }
   }
   ```
@@ -5252,30 +5290,34 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
       }
 
       /**
-       * Local rows that are not being replaced keep their slot (soft-deleted ones too). Incoming rows whose slot is
-       * taken move after the playlist's highest slot, in (position, id) order. updatedAt is not changed: re-slotting
-       * is a local adjustment, not an edit.
+       * Makes (playlistId, position) unique after a merge, using only the merged set of winning rows, so the layout does
+       * not depend on which side is "local" and two devices importing each other's files end up identical. For each
+       * contested slot the row that wins [compare] (then the smaller id) keeps it; the others move after the playlist's
+       * highest slot, in (position, id) order. Returns the incoming rows plus any local row that had to move.
+       * updatedAt is not changed: re-slotting is a layout adjustment, not an edit.
        */
       internal fun resolvePositionCollisions(
           local: List<PlaylistItemEntity>,
           changes: List<PlaylistItemEntity>,
       ): List<PlaylistItemEntity> {
-          val changedIds = changes.map { it.id }.toSet()
-          val kept = local.filter { it.id !in changedIds }
-          val reslotted = changes.groupBy { it.playlistId }.flatMap { (playlistId, rows) ->
-              val keptSlots = kept.filter { it.playlistId == playlistId }.map { it.position }
-              val highest = (keptSlots + rows.map { it.position }).maxOrNull() ?: -1
-              val start = Slots(keptSlots.toSet(), highest, emptyList())
-              rows.sortedWith(compareBy({ it.position }, { it.id })).fold(start) { slots, row ->
-                  if (row.position !in slots.occupied) slots.take(row) else slots.take(row.copy(position = slots.highest + 1))
-              }.rows
-          }.associateBy { it.id }
-          return changes.map { reslotted.getValue(it.id) }
-      }
-
-      private data class Slots(val occupied: Set<Int>, val highest: Int, val rows: List<PlaylistItemEntity>) {
-          fun take(row: PlaylistItemEntity) =
-              Slots(occupied + row.position, maxOf(highest, row.position), rows + row)
+          if (changes.isEmpty()) return changes
+          val changedIds = changes.mapTo(HashSet()) { it.id }
+          val incomingByPlaylist = changes.groupBy { it.playlistId }
+          val keptByPlaylist =
+              local.filter { it.id !in changedIds && it.playlistId in incomingByPlaylist }.groupBy { it.playlistId }
+          val finalPosition = HashMap<String, Int>()
+          val contested = Comparator<PlaylistItemEntity> { x, y -> compare(y, x) }.thenBy { it.id }
+          for ((playlistId, incoming) in incomingByPlaylist) {
+              val winners = keptByPlaylist[playlistId].orEmpty() + incoming
+              var nextSlot = winners.maxOf { it.position } + 1
+              for ((_, rows) in winners.groupBy { it.position }.toSortedMap()) {
+                  val ranked = rows.sortedWith(contested)
+                  finalPosition[ranked.first().id] = ranked.first().position
+                  ranked.drop(1).sortedBy { it.id }.forEach { finalPosition[it.id] = nextSlot++ }
+              }
+          }
+          val movedKept = keptByPlaylist.values.flatten().filter { finalPosition.getValue(it.id) != it.position }
+          return (changes + movedKept).map { it.copy(position = finalPosition.getValue(it.id)) }
       }
 
       private fun <T : SyncRecord> decide(current: T?, incoming: T): Decision = when {
@@ -5294,7 +5336,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 - [ ] **Step 3：執行測試，確認它通過**
 
   Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.notebook.backup.*'`
-  Expected: `BackupMergerTest` 18 個，加上 `BackupCodecTest` 18 個，全部通過。
+  Expected: `BackupMergerTest` 19 個，加上 `BackupCodecTest` 19 個，全部通過。
 
   `statsAddUpAcrossTables` 的算法：
   - 本機 db1 收藏的 updatedAt 是 999，比檔案新 → unchanged 1。
