@@ -120,6 +120,10 @@
             android:label="@string/STD" />
 
         <activity
+            android:name=".reading.ReadingSettingsActivity"
+            android:label="@string/reading_settings" />
+
+        <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
