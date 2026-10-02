@@ -28,8 +28,8 @@
     <string name="c_search_hint">Search titles or lyrics</string>
     <string name="c_src_db">Main</string>
     <string name="c_src_bb">Supp.</string>
-    <string name="c_src_xb">New Songs</string>
-    <string name="c_src_xg">New Hymns</string>
+    <string name="c_src_xb">Songs</string>
+    <string name="c_src_xg">Hymns</string>
     <string name="c_src_yb">Youth</string>
     <string name="c_src_er">Kids</string>
     <string name="c_src_en">English</string>
