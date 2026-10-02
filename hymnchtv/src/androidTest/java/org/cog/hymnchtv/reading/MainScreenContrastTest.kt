@@ -41,11 +41,16 @@ class MainScreenContrastTest {
             val palette = BackgroundPolicy.palette(BackgroundChoice.Preset(preset))
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 scenario.onActivity {
-                    for (id in listOf(R.id.tv_entry, R.id.tv_search, R.id.n1, R.id.btn_search)) {
+                    for (id in listOf(R.id.tv_entry, R.id.tv_search, R.id.n1, R.id.bs_db, R.id.btn_toc)) {
                         val color = it.findViewById<TextView>(id).currentTextColor
                         assertWithMessage("${preset.id} view $id")
                             .that(Wcag.contrast(color, palette.paperColor)).isAtLeast(MainScreenColors.MIN_TEXT_CONTRAST)
                     }
+                    // the filled open button is drawn on the palette's accent, not on the paper
+                    val open = it.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_open)
+                    assertWithMessage("${preset.id} open button")
+                        .that(Wcag.contrast(open.textColors.defaultColor, open.backgroundTintList!!.defaultColor))
+                        .isAtLeast(MainScreenColors.MIN_TEXT_CONTRAST)
                 }
             }
         }

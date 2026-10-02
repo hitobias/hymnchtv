@@ -21,15 +21,7 @@ class AssetHymnTitles(
 
     override fun lookup(hymnType: String, hymnNo: Int): String? {
         val path = lyricsPath(hymnType, hymnNo) ?: return null
-        val lines = (reader(path) ?: return null).split(LINE_BREAK)
-        if (lines.size < 2) return null
-
-        val title = lines[1].substringAfterLast(CATEGORY_SEPARATOR)
-        val note = lines.getOrNull(2)?.let { third ->
-            val idx = third.indexOf(NOTE_OPEN)
-            if (idx == -1) "" else third.substring(idx)
-        }.orEmpty()
-        return title + note
+        return titleOf(reader(path) ?: return null)
     }
 
     private fun lyricsPath(hymnType: String, hymnNo: Int): String? {
@@ -62,7 +54,24 @@ class AssetHymnTitles(
             MainActivity.HYMN_YB to "yb",
         )
 
-        private fun prefixOf(hymnType: String): String? = PREFIXES[hymnType]
+        internal fun prefixOf(hymnType: String): String? = PREFIXES[hymnType]
+
+        /**
+         * The title (with any "（…）" note) of one lyrics file's text: line 2 minus the category before the last "－",
+         * plus the "（…）" part of line 3. Null when the text has fewer than two lines.
+         */
+        @JvmStatic
+        fun titleOf(text: String): String? {
+            val lines = text.split(LINE_BREAK)
+            if (lines.size < 2) return null
+
+            val title = lines[1].substringAfterLast(CATEGORY_SEPARATOR)
+            val note = lines.getOrNull(2)?.let { third ->
+                val idx = third.indexOf(NOTE_OPEN)
+                if (idx == -1) "" else third.substring(idx)
+            }.orEmpty()
+            return title + note
+        }
 
         private fun typeOfPrefix(prefix: String): String? = PREFIXES.entries.firstOrNull { it.value == prefix }?.key
 

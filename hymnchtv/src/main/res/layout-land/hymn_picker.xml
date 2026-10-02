@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hymn picker (H3): book first, then the number, live preview. Shared by the home tab and the lyrics jump panel (H5); every id is the same in layout-land. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/picker_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:baselineAligned="false"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_picker_search"
+            android:clickable="true"
+            android:contentDescription="@string/c_search_hint"
+            android:focusable="true"
+            android:drawablePadding="12dp"
+            android:drawableStart="@drawable/ic_search"
+            android:gravity="center_vertical"
+            android:hint="@string/c_search_hint"
+            android:importantForAutofill="no"
+            android:maxLines="1"
+            android:minHeight="@dimen/c_key_height"
+            android:paddingHorizontal="16dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant"
+            android:textSize="18sp" />
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/src_group_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            app:selectionRequired="false"
+            app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bs_db"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checkable="true"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="2"
+                    android:minHeight="@dimen/c_key_height"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="@string/c_src_db"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bs_bb"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checkable="true"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="2"
+                    android:minHeight="@dimen/c_key_height"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="@string/c_src_bb"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bs_xb"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checkable="true"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="2"
+                    android:minHeight="@dimen/c_key_height"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="@string/c_src_xb"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bs_xg"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checkable="true"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="2"
+                    android:minHeight="@dimen/c_key_height"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="@string/c_src_xg"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/src_group_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="4"
+                app:selectionRequired="false"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bs_yb"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checkable="true"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="2"
+                    android:minHeight="@dimen/c_key_height"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="@string/c_src_yb"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bs_er"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checkable="true"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="2"
+                    android:minHeight="@dimen/c_key_height"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="@string/c_src_er"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bs_english"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checkable="true"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="2"
+                    android:minHeight="@dimen/c_key_height"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="@string/c_src_en"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_toc"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="2"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:maxLines="1"
+                android:minHeight="@dimen/c_key_height"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:text="@string/c_toc_open"
+                android:textSize="16sp" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/previewArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:accessibilityLiveRegion="polite"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_entry"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:maxLines="2"
+                android:minHeight="36dp"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                app:autoSizeMaxTextSize="26sp"
+                app:autoSizeMinTextSize="14sp"
+                app:autoSizeStepGranularity="1sp"
+                app:autoSizeTextType="uniform" />
+
+            <!-- Shared cell: the hymn title, or (when the number has no hymn here) where else it exists / the other English candidates -->
+            <FrameLayout
+                android:id="@+id/previewSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="40dp">
+
+                <TextView
+                    android:id="@+id/title_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="16sp" />
+
+                <HorizontalScrollView
+                    android:id="@+id/also_in_scroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tv_also_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="16sp" />
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/also_in_group"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:singleLine="true" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </FrameLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/recentArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_recent_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/c_recent_label"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp" />
+
+            <HorizontalScrollView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scrollbars="none">
+
+                <LinearLayout
+                android:id="@+id/recent_chips"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_recent_more"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/c_recent_more"
+                app:icon="@drawable/ic_chevron_right"
+                app:iconGravity="textEnd" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/keypadArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n7"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn7"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n8"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn8"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n9"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn9"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n4"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn4"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n5"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn5"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n6"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn6"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n1"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn1"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n2"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn2"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n3"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn3"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n10"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn10"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n0"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    android:text="@string/nn0"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/n11"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/c_key_delete_desc"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="@dimen/c_key_height"
+                    app:icon="@drawable/ic_backspace"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="28dp" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/actionArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_open"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:enabled="false"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="@dimen/c_key_height"
+                android:text="@string/c_open"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                app:icon="@drawable/ic_chevron_right"
+                app:iconGravity="textEnd" />
+
+            <!-- C-7: id only; sub-project D-1 wires it to its add-to-playlist dialog -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_add_playlist"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="@dimen/c_key_height"
+                android:text="@string/c_add_playlist"
+                android:textSize="18sp"
+                android:visibility="gone" />
+
+            <!-- Jump panel only (H5) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_set_next"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="@dimen/c_key_height"
+                android:text="@string/c_set_next"
+                android:textSize="18sp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

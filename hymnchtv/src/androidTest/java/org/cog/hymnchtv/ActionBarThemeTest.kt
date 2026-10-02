@@ -38,8 +38,6 @@ class ActionBarThemeTest {
         }
     }
 
-    @Test fun contentSearchHasActionBar() = assertHasVisibleActionBar(ContentSearch::class.java)
-
     @Test fun mediaConfigHasActionBar() = assertHasVisibleActionBar(MediaConfig::class.java)
 
     @Test fun helpHasActionBar() = assertHasVisibleActionBar(HelpActivity::class.java)
