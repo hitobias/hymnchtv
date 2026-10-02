@@ -1,0 +1,128 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "58c1e69933053be297d40e69721ee299",
+    "entities": [
+      {
+        "tableName": "media_record",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hymnType` TEXT NOT NULL, `hymnNo` INTEGER NOT NULL, `isFu` INTEGER NOT NULL, `mediaType` TEXT NOT NULL, `mediaUri` TEXT, `mediaFilePath` TEXT, PRIMARY KEY(`hymnType`, `hymnNo`, `isFu`, `mediaType`))",
+        "fields": [
+          {
+            "fieldPath": "hymnType",
+            "columnName": "hymnType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hymnNo",
+            "columnName": "hymnNo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFu",
+            "columnName": "isFu",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaType",
+            "columnName": "mediaType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaUri",
+            "columnName": "mediaUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "mediaFilePath",
+            "columnName": "mediaFilePath",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "hymnType",
+            "hymnNo",
+            "isFu",
+            "mediaType"
+          ]
+        }
+      },
+      {
+        "tableName": "hymn_history",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hymnType` TEXT NOT NULL, `hymnNo` INTEGER NOT NULL, `isFu` INTEGER NOT NULL, `hymnTitle` TEXT, `timeStamp` INTEGER NOT NULL, PRIMARY KEY(`hymnType`, `hymnNo`, `isFu`))",
+        "fields": [
+          {
+            "fieldPath": "hymnType",
+            "columnName": "hymnType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hymnNo",
+            "columnName": "hymnNo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFu",
+            "columnName": "isFu",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hymnTitle",
+            "columnName": "hymnTitle",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "timeStamp",
+            "columnName": "timeStamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "hymnType",
+            "hymnNo",
+            "isFu"
+          ]
+        }
+      },
+      {
+        "tableName": "english_lyrics",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hymnNoEng` INTEGER NOT NULL, `lyricsEng` TEXT, PRIMARY KEY(`hymnNoEng`))",
+        "fields": [
+          {
+            "fieldPath": "hymnNoEng",
+            "columnName": "hymnNoEng",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lyricsEng",
+            "columnName": "lyricsEng",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "hymnNoEng"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '58c1e69933053be297d40e69721ee299')"
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.mikepenz.aboutlibraries.plugin.android'
+apply plugin: 'com.google.devtools.ksp'
 
 android {
     compileSdk = rootProject.compileSdk
@@ -107,6 +108,12 @@ android {
     }
 }
 
+// Room schema JSON is committed so future versions can write and test migrations.
+ksp {
+    arg('room.schemaLocation', "$projectDir/schemas")
+    arg('room.generateKotlin', 'true')
+}
+
 dependencies {
     implementation project(':android-youtube-player:core')
 
@@ -146,6 +153,11 @@ dependencies {
 
     implementation 'org.jetbrains:annotations:26.1.0'
     implementation 'org.jsoup:jsoup:1.23.2'
+
+    // Unified Room database (plan: Room unification)
+    implementation 'androidx.room:room-runtime:2.8.5'
+    implementation 'androidx.room:room-ktx:2.8.5'
+    ksp 'androidx.room:room-compiler:2.8.5'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'com.google.truth:truth:1.4.5'
