@@ -115,10 +115,10 @@ class PhotoBackdropTest {
     }
 
     @Test
-    fun mainScreenHintSitsOnThePanel() {
-        // MainActivity may show its changelog dialog; the hint is still in the activity's own window
+    fun mainScreenPreviewSitsOnThePanel() {
+        // MainActivity may show its changelog dialog; the preview is still in the activity's own window
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { assertPanel(it.findViewById<TextView>(R.id.tv_hint), "tv_hint") }
+            scenario.onActivity { assertPanel(it.findViewById<View>(R.id.previewArea), "previewArea") }
         }
     }
 

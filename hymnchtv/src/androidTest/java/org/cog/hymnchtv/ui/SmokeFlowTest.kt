@@ -32,9 +32,10 @@ class SmokeFlowTest {
             listOf("AUDIO", "IMAGES", "VIDEO").forEach { grant(pkg, "android.permission.READ_MEDIA_$it") }
         }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            onView(withId(R.id.n1)).perform(click())
             // the home tab scrolls: the toolbar and bottom navigation leave little room on a small screen
             onView(withId(R.id.bs_db)).perform(scrollTo(), click())
+            onView(withId(R.id.n1)).perform(scrollTo(), click())
+            onView(withId(R.id.btn_open)).perform(scrollTo(), click())
             onView(withId(R.id.viewPager)).check(matches(isDisplayed()))
             onView(withId(R.id.viewPager)).perform(swipeLeft())
             onView(withId(R.id.viewPager)).check(matches(isDisplayed()))

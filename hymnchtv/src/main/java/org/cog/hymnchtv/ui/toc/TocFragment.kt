@@ -39,8 +39,25 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
         val prefs = requireContext().getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
         // Start on the book last used on the home tab unless this fragment restores its own state
         val remembered = runCatching { prefs.getString(HomePrefs.LAST_HYMN_TYPE, null) }.getOrNull()
-        hymnType = savedInstanceState?.getString(STATE_BOOK) ?: remembered?.takeIf { it in BOOK_CHIPS } ?: hymnType
-        tocPage = savedInstanceState?.getString(STATE_PAGE) ?: tocPage
+        // Own saved state first, then what the opener asked for (the home tab's contents button), then the home tab's book
+        hymnType = savedInstanceState?.getString(STATE_BOOK) ?: arguments?.getString(STATE_BOOK)?.takeIf { it in BOOK_CHIPS }
+            ?: remembered?.takeIf { it in BOOK_CHIPS } ?: hymnType
+        tocPage = savedInstanceState?.getString(STATE_PAGE) ?: arguments?.getString(STATE_PAGE)?.takeIf { page -> PAGES.any { it.second == page } }
+            ?: tocPage
+    }
+
+    /** Preselects [book] and the index kind [page] (one of the values of [PAGES]); shows them at once when the view exists. */
+    fun select(book: String, page: String) {
+        require(book in BOOK_CHIPS) { "Unknown hymn book: $book" }
+        val pageIndex = PAGES.indexOfFirst { it.second == page }
+        require(pageIndex >= 0) { "Unknown index kind: $page" }
+        // The fields are set first, so the chip and tab listeners below see "no change" and do not load twice
+        hymnType = book
+        tocPage = page
+        val v = views ?: return
+        v.books.check(BOOK_CHIPS.getValue(book))
+        v.pages.getTabAt(pageIndex)?.select()
+        load()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -131,11 +148,17 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
         v.list.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
 
-    private companion object {
-        const val STATE_BOOK = "toc_book"
-        const val STATE_PAGE = "toc_page"
+    companion object {
+        private const val STATE_BOOK = "toc_book"
+        private const val STATE_PAGE = "toc_page"
 
-        val BOOK_CHIPS = mapOf(
+        /** Arguments that open the tab on [book] and the index kind [page]. */
+        fun args(book: String, page: String): Bundle = Bundle().apply {
+            putString(STATE_BOOK, book)
+            putString(STATE_PAGE, page)
+        }
+
+        private val BOOK_CHIPS = mapOf(
             MainActivity.HYMN_DB to R.id.toc_book_db,
             MainActivity.HYMN_BB to R.id.toc_book_bb,
             MainActivity.HYMN_XB to R.id.toc_book_xb,
@@ -145,7 +168,7 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
         )
 
         /** Tab label -> the index kind TocBuilder understands (the 目录 tab of the old spinner listed nothing). */
-        val PAGES = listOf(
+        private val PAGES = listOf(
             R.string.hymn_category to HymnToc.TOC_CATEGORY,
             R.string.hymn_stroke to HymnToc.TOC_STROKE,
             R.string.hymn_pinyin to HymnToc.TOC_PINYIN,
