@@ -21,6 +21,9 @@
 | baseline | 34 | 10 | 812 | 595 | 1210 | 419 | 6065 | e248b629 |
 | baseline-rerun | 34 | 10 | 443 | 358 | 486 | 321 | 604 | e248b629 |
 | baseline | 24 | 10 | 203 | 178 | 216 | 151 | 356 | e248b629 |
+| after（最終，同一個 api34b 實例） | 34 | 10 | 334 | - | - | 299 | 372 | perf/b-data-startup |
+
+最終比較（api34b headless：`-no-window -no-audio -no-snapshot-save`，同一實例、benchmark build、process-cold cache-warm、`am start -W` TotalTime、n=10、暖機 2 次）：baseline（098fdc5b）中位數 443 ms、IQR 128 -> after 中位數 334 ms、IQR 13，約快 25%，散佈也明顯收斂。原始檔：`build/perf/cold_start-baseline-rerun-api34.txt`、`build/perf/cold_start-after-same-api34.txt`。
 
 註：依協調者縮減，n=10（計畫為 15）、暖機 2 次。api34b 第一組有離群值（最大 6065），IQR 超過中位數 20%；重跑後 IQR 128/443 = 29%，仍超過 20%，不再重跑（模擬器雜訊），以 baseline-rerun（443 ms）為參考值，雜訊帶取 max(10 ms, 5%) = 22 ms，但實際散佈遠大於此，後續比較只能視為粗略。api24b 為次要裝置，只記錄。
 
@@ -30,6 +33,15 @@
 |---|---|---|---|---|---|
 | baseline | 34 | legacy | 6367 | 6050,6085,6367,6714,7167 | 2696 |
 | baseline | 24 | legacy | 4189 | 3673,4044,4189,4698,5374 | 2696 |
+
+### 最終（api34b，ImportPerfTest，2,696 行）
+
+| 路徑 | 中位數 | 倍率 |
+|---|---|---|
+| legacy 逐筆 commit | 9357 ms | 1x |
+| batch 單一 transaction | 683 ms | 13.7x |
+
+api24b 較早一次（索引修正前）：legacy 3389 ms／batch 188 ms。
 
 資料來源為 assets 內建的 url_import.txt（子項目 Z 之後即為首次啟動匯入的內建路徑），1 次暖機 + 5 次。
 
@@ -52,9 +64,9 @@ API 34（api34b），一次執行（冷啟動 → 開大本 #1 → 返回）。
 
 註：`storeHymnHistory` 的最內層 frame 是 `getWritableDatabase`（`storeHymnHistory` 在其呼叫鏈上），after 報告需以呼叫鏈比對，而不只看最內層 frame。
 
-### after
-| 次數 | 類型 @ 最內層 app frame |
-|---|---|
+### after（最終）
+API 34（api34b），同一流程。DB 類（`DatabaseBackend.*`）違規降為 0；總數 26 -> 20。剩下的都在 `getHymnMediaState` 媒體路徑，留給 B-4 第二波。
+原始檔：`build/perf/strictmode-before-api34.log`、`build/perf/strictmode-after-final-api34.log`。
 
 ## 語系檢查（WebView）
 
@@ -68,3 +80,8 @@ API 34（api34b），一次執行（冷啟動 → 開大本 #1 → 返回）。
 - 冷啟動雜訊帶：api34b 以 443 ms 計為 max(10, 22) = 22 ms；但 IQR 29%，實際雜訊更大，驗收以「無明顯退步」為準。
 - 語系檢查基準未量測（見上）。
 - 舊 emu_lock 殘留的 per-serial 鎖（owner 程序已不存在）已手動移除。
+- 較早從 AVD `api34`（有視窗）量到的數字與 api34b baseline 不可比，已全部捨棄。
+- ImportPerfTest 的 legacy 迴圈改為與正式程式相同的去重（`MediaConfig.hasMediaRecord`，查 DB + 本機檔案），否則比較不公平。
+- LocalMediaIndex：每次匯入對每個媒體目錄只列一次，不再每筆各列一次（匯入加速倍率由 2.65x 提升到 13.7x）。
+- 延後：`NotionRecord.storeNQJArray` 仍逐筆列目錄；語系 WebView 檢查（`tools/perf/locale_webview_check.sh`）因腳本會殺掉模擬器，尚未量測；Lane A（perf/b-lane-db）刻意略過，已被 Room 資料層統一計畫取代。
+- 驗證：`connectedDebugAndroidTest` 44 項全數通過（api34b）。
