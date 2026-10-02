@@ -302,7 +302,7 @@
     <string name="lyrics_follow_ui">跟隨介面語言</string>
     <string name="lyrics_simplified">簡中</string>
     <string name="lyrics_traditional">繁中</string>
-    <string name="hymn_no_chinese_lyrics">英文 #%1$d: 這首英文詩歌沒有匹配的中文歌詞</string>
+    <string name="hymn_no_chinese_lyrics">英文 #%1$d: 這首英文詩歌沒有對應的中文歌詞</string>
     <string name="update_none">無更新</string>
 
     <!-- Traditional variant (pref ConversionType): S2TW = Taiwan, S2HK = Hong Kong; lyrics are pre-generated assets -->
