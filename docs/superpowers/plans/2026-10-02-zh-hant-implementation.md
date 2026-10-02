@@ -1207,7 +1207,10 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
       mapping, identity = {}, set()
       for variant_out in converted.values():
           for src, out in zip(texts, variant_out):
-              for s_line, t_line in zip(src.splitlines(), out.splitlines()):
+              s_lines, t_lines = src.splitlines(), out.splitlines()
+              if len(s_lines) != len(t_lines):
+                  sys.exit("OpenCC changed the line count of a lyrics file; cannot align for the T2S map")
+              for s_line, t_line in zip(s_lines, t_lines):
                   if len(s_line) != len(t_line):
                       continue  # phrase conversion changed the length; no reliable alignment
                   for a, b in zip(s_line, t_line):
@@ -1267,7 +1270,7 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
 
   ```bash
   wc -l hymnchtv/src/main/assets/lyrics_t2s_map.txt
-  grep -P '^乾\t' hymnchtv/src/main/assets/lyrics_t2s_map.txt
+  grep $'^乾\t' hymnchtv/src/main/assets/lyrics_t2s_map.txt
   ./gradlew :hymnchtv:testDebugUnitTest --console=plain
   ```
 
@@ -1462,7 +1465,7 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
 
   - 第 89-90 行的 `import com.zqc.opencc.android.lib.ChineseConverter;` 和 `import com.zqc.opencc.android.lib.ConversionType;`。
 
-  查詢字串原樣傳給 `ContentSearch`，由 Task 13 的 `SearchPattern.build(query, t2s)` 處理簡繁。
+  查詢字串原樣傳給 `ContentSearch`。**同一步要一起完成 `ContentSearch` 的整合**，否則繁體查詢會暫時搜不到（rev 7 Codex P1）：照 Task 13 的 Step 1 和 Step 2 的內容修改 `ContentSearch.java`，包括 `SearchPattern.build(searchString, loadT2sMap())`、`loadT2sMap()`、6 個呼叫點和 `getMatchResult` 的簽名。Task 13 執行時會跳過這兩步。
 
 - [ ] **Step 7：移除其他 OpenCC 使用處**
 
@@ -1508,6 +1511,8 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
 
     最後新增 import：`org.cog.hymnchtv.lyrics.HantVariant` 和 `org.cog.hymnchtv.lyrics.LyricsAssets`。
 
+    注意：這是過渡狀態，所有使用者都暫時看到台灣版，要到 Task 12 才會依設定選擇台灣或香港版。所以 6C 到 12 之間的 commit 不可以單獨發佈（rev 7 Codex P2）。
+
   (b) `ChineseS2TSelection.java`：
   - 把 `private ConversionType mConversionType;` 改成 `private String mConversionType;`。
   - 第 53 行的 `ConversionType.S2T.toString()` 改成 `"S2T"`。
@@ -1518,10 +1523,10 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
   (c) 確認沒有遺漏：
 
   ```bash
-  grep -rn 'opencc\|ChineseConverter\|ConversionType' hymnchtv/src || echo none
+  grep -rn 'com.zqc.opencc\|ChineseConverter\|ConversionType' hymnchtv/src || echo none
   ```
 
-  Expected: `none`。只有 `About.java` 列出 OpenCC 的那一行可以保留，因為繁體資料仍然是用 OpenCC 產生的，保留致謝是合理的。
+  Expected: `none`。`About.java` 裡致謝 OpenCC 的那一行不符合這個條件，會保留下來，因為繁體資料仍然是用 OpenCC 產生的。
 
 - [ ] **Step 8：移除模組與 submodule**
 
@@ -1544,6 +1549,8 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
 
   Expected: `none`。
 
+  **README**：在 `README.md` 裡，把「Android 建置必須透過 `build.gradle#initJniLibs` 下載 OpenCC」這類描述改成「App 不包含 OpenCC；只有開發者要重新產生繁體歌詞時，才需要安裝 OpenCC CLI（`brew install opencc`），並執行 `tools/gen_lyrics_hant.py`」。用 `grep -n -i opencc README.md` 找出所有相關段落。
+
 - [ ] **Step 9：Build、測試、量 APK**
 
   ```bash
@@ -1562,7 +1569,7 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
 - [ ] **Step 10：Commit**
 
   ```bash
-  git add -A tools hymnchtv settings.gradle
+  git add -A tools hymnchtv settings.gradle README.md
   git commit -m "refactor: drop OpenCC from the app; search uses generated T2S map"
   ```
 
@@ -2626,6 +2633,8 @@ OpenCC CLI 仍然只在開發時被 `tools/gen_lyrics_hant.py` 使用。
 - Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/ContentSearch.java:93-97, 110-244, 305-322`
 - Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/service/androidupdate/UpdateServiceImpl.java:156`
 - Modify: `hymnchtv/src/main/res/layout/hymn_toc_list_item.xml:26`、`hymn_toc_list_group.xml:23`
+
+> **Step 1 和 Step 2 已在 Task 6C 的 Step 6 完成，執行 Task 13 時直接從 Step 3 開始**；這兩步保留在這裡，是為了讓 6C 引用。
 
 - [ ] **Step 1：在 `ContentSearch.onCreate` 建立 pattern**
 
