@@ -22,4 +22,20 @@ class T2sMapTest {
         assertThat(map.candidates("劃")).contains("划")
         assertThat(map.candidates("裡")).contains("里")
     }
+
+    @Test
+    fun realAssetMapIsConsistentWithSimplifiedSources() {
+        val assets = File(checkNotNull(System.getProperty("hymnchtv.assetsDir")))
+        val sourceText = assets.listFiles { f -> f.isDirectory && Regex("lyrics_[a-z]+_text").matches(f.name) }!!
+            .flatMap { dir -> dir.listFiles { f -> f.name.endsWith(".txt") }!!.toList() }
+            .joinToString("") { it.readText(Charsets.UTF_8) }
+        val sourceChars = sourceText.codePoints().toArray().map { String(Character.toChars(it)) }.toSet()
+        val entries = File(assets, "lyrics_t2s_map.txt").readLines().filter { it.isNotEmpty() }.map { it.split('\t') }
+        assertThat(entries).isNotEmpty()
+        for ((key, candidates) in entries) {
+            val chars = candidates.codePoints().toArray().map { String(Character.toChars(it)) }
+            if (key in sourceChars) assertThat(chars).contains(key)
+            assertThat(sourceChars).containsAtLeastElementsIn(chars)
+        }
+    }
 }

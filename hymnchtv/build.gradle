@@ -110,7 +110,6 @@ dependencies {
     annotationProcessor 'com.github.bumptech.glide:compiler:5.0.9'
     implementation 'com.github.bumptech.glide:glide:5.0.9'
     implementation 'com.github.yalantis:ucrop:2.2.10'
-    // implementation 'com.github.qichuan:android-opencc:1.2.0'
 
     implementation 'de.cketti.library.changelog:ckchangelog:1.2.2'
     // 1.16.1: Failed to transform commons-codec-1.16.1.jar

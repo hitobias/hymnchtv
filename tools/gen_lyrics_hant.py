@@ -100,7 +100,7 @@ def clean_stale(expected_dirs, expected_files):
 
 
 def build_t2s_map(texts, converted):
-    """Traditional char -> every Simplified char it came from (itself included when it also stays unchanged)."""
+    """Return the T2S map file text. Traditional char -> every Simplified char it came from (itself included when it also stays unchanged)."""
     mapping, identity = {}, set()
     for variant_out in converted.values():
         for src, out in zip(texts, variant_out):
@@ -119,7 +119,7 @@ def build_t2s_map(texts, converted):
     for b in sorted(mapping):
         candidates = mapping[b] | ({b} if b in identity else set())
         lines.append(f"{b}\t{''.join(sorted(candidates))}")
-    T2S_MAP.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return "\n".join(lines) + "\n"
 
 
 def main():
@@ -138,6 +138,7 @@ def main():
                   for src, t in zip(sources, opencc_batch(texts, config))]
         for variant, config in VARIANTS.items()
     }
+    t2s_text = build_t2s_map(texts, converted)  # may sys.exit; must run before any write
     expected_dirs, expected_files = set(), set()
     for variant in VARIANTS:
         for src, text in zip(sources, converted[variant]):
@@ -147,7 +148,7 @@ def main():
             expected_dirs.add(dst_dir.name)
             expected_files.add(rel(dst_dir / src.name))
     clean_stale(expected_dirs, expected_files)
-    build_t2s_map(texts, converted)
+    T2S_MAP.write_bytes(t2s_text.encode("utf-8"))
 
     rows = [f"#input\t{rel_path}\t{sha1(path.read_bytes())}"
             for rel_path, path in (("tools/gen_lyrics_hant.py", GENERATOR), ("tools/lyrics_hant_overrides.tsv", OVERRIDES))]

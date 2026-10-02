@@ -184,7 +184,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsScaleEL = mSharedPref.getFloat(PREF_LYRICS_ENGLISH_SCALE_L, 1.0f);
 
         isSimplify = mSharedPref.getBoolean(PREF_SIMPLIFY, true);
-        
+
         mScoreColor = mSharedPref.getInt(PREF_SCORE_COLOR, 0);
         mMatrix = (mScoreColor == 0) ? null : getColorMatrix(mColorRange[mScoreColor]);
 
@@ -615,7 +615,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             if (intent != null) {
                 boolean hasChanges = intent.getBooleanExtra(EXTR_KEY_HAS_CHANGES, false);
                 if (!isSimplify && hasChanges) {
-                                        toggleLyricsView();
+                    toggleLyricsView();
                 }
             }
         }
