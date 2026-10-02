@@ -206,6 +206,7 @@
     <string name="hymn_title_mc_xb">新颂 %1$d: %2$s</string>
     <string name="hymn_title_mc_xg">新诗 %1$d: %2$s</string>
     <string name="hymn_title_mc_yb">青年 %1$d: %2$s</string>
+    <string name="hymn_title_mc_ybs">青年 附%1$d: %2$s</string>
 
     <!-- hymn search gui strings -->
     <string name="hymn_match">共有匹配 %1$d 首诗歌</string>
