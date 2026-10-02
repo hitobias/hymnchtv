@@ -466,7 +466,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         if (text != null) {
             return text;
         }
-        Timber.w("Missing pre-generated lyrics %s; showing Simplified", hantPath);
+        Timber.w("Missing pre-generated lyrics for %s (%s); showing Simplified", resFName, hantPath);
         return simplified;
     }
 

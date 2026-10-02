@@ -231,7 +231,7 @@ public class ContentHandler extends BaseActivity {
     /** Per-session lyrics script chosen with button_ts; null = use the default from LyricsLanguagePolicy. */
     public Boolean lyricsViewOverride = null;
 
-    private static final String STATE_PAGE = "state_page";
+    private static final String STATE_PAGE = "state_page"; // fallback; ViewPager2 also restores its own item
     private static final String STATE_LYRICS_OVERRIDE = "state_lyrics_override"; // -1 none, 0 simplified, 1 traditional
 
     public void onCreate(Bundle savedInstanceState) {
@@ -280,6 +280,13 @@ public class ContentHandler extends BaseActivity {
                 mAutoEnglish = true;
                 mHymnNoEng = tmpNo;
             }
+        }
+
+        // One-shot launch actions must not repeat after recreation (e.g. after changing lyrics settings)
+        if (savedInstanceState != null) {
+            mAutoJC = false;
+            mAutoPlay = false;
+            mAutoEnglish = false;
         }
 
         switch (mHymnType) {
