@@ -96,6 +96,8 @@ import java.util.regex.Pattern;
 
 import org.apache.http.util.EncodingUtils;
 import org.apache.http.util.TextUtils;
+import org.cog.hymnchtv.lyrics.LyricsLang;
+import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.mediaconfig.MediaConfig;
 import org.cog.hymnchtv.mediaconfig.MediaRecord;
@@ -105,6 +107,7 @@ import org.cog.hymnchtv.mediaconfig.ShareWith;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
 import org.cog.hymnchtv.reading.DisplayMode;
+import org.cog.hymnchtv.reading.LyricsFont;
 import org.cog.hymnchtv.reading.LyricsTypefaces;
 import org.cog.hymnchtv.reading.ReadingPrefs;
 import org.cog.hymnchtv.reading.ReadingSettingsActivity;
@@ -278,7 +281,12 @@ public class ContentHandler extends BaseActivity {
         sPreference = getSharedPreferences(PREF_SETTINGS, 0);
         mLyricsPalette = BackgroundPrefs.applyTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
         LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
-        LyricsTypefaces.preload(this);
+        if (ReadingPrefs.lyricsFont(sPreference) == LyricsFont.KAI) {
+            // Only the script the first page will show; the other one loads when first needed
+            LyricsTypefaces.preload(this, LyricsLanguagePolicy.resolveShowTraditional(
+                    LyricsLang.fromPref(sPreference.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null)),
+                    getResources().getConfiguration().getLocales().get(0)));
+        }
 
         // Attach the media controller player UI; Reuse the fragment if found;
         // do not create/add new, otherwise playerUi setVisibility is no working

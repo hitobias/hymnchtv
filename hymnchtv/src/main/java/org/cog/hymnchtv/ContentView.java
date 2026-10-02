@@ -141,6 +141,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private boolean mScoreLoaded = false;
     private boolean mHasLyricsText = false;
 
+    /** Stored default display mode, read once per onCreateView/onResume. */
+    private DisplayMode mStoredDisplayMode = DisplayMode.SCORE_AND_LYRICS;
+
     /** Score colour level from the context menu; 0 = automatic (follows the background, see ScoreTintPolicy). */
     private static int mScoreColor = 0;
 
@@ -198,6 +201,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
 
+        mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
         mPalette = mContentHandler.getLyricsPalette();
         applyPaletteAndFont();
 
@@ -230,6 +234,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public void onResume() {
         super.onResume();
         registerForContextMenu(lyricsView);
+        mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
         Timber.w("Content View on Resume");
 
         // get the corresponding English lyrics# or null if none
@@ -477,20 +482,43 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     /** Text colour, link/selection colours, text backdrop and typeface from the reading settings (plan A2). */
     private void applyPaletteAndFont() {
         boolean kai = ReadingPrefs.lyricsFont(mSharedPref) == LyricsFont.KAI;
-        styleLyrics(lyricsSimplify, kai ? LyricsTypefaces.get(mContentHandler, false) : null);
-        styleLyrics(lyricsTraditional, kai ? LyricsTypefaces.get(mContentHandler, true) : null);
+        styleLyrics(lyricsSimplify);
+        styleLyrics(lyricsTraditional);
+        applyFont(isShowTraditional());
         // Photo backgrounds: English lyrics also sit on the contrast-tested panel (PhotoPaletteTest).
         // The WebView's own colour stays transparent; the panel is the View background (set last, so it wins).
         lyricsEnglish.setBackgroundColor(Color.TRANSPARENT);
         lyricsEnglish.setBackground(BackgroundDrawables.backdrop(mContentHandler, mPalette));
     }
 
-    private void styleLyrics(ZoomTextView view, @Nullable Typeface typeface) {
+    /**
+     * Font for the script on screen only; never blocks. The other script loads when first shown.
+     * Until the face is ready the system font is used, then it is swapped in on the main thread.
+     */
+    private void applyFont(boolean traditional) {
+        ZoomTextView view = traditional ? lyricsTraditional : lyricsSimplify;
+        if (ReadingPrefs.lyricsFont(mSharedPref) != LyricsFont.KAI) {
+            view.setTypeface(Typeface.DEFAULT);
+            return;
+        }
+        Typeface ready = LyricsTypefaces.peek(traditional);
+        if (ready != null) {
+            view.setTypeface(ready);
+            return;
+        }
+        view.setTypeface(Typeface.DEFAULT);
+        LyricsTypefaces.request(mContentHandler, traditional, face -> {
+            if (isAdded()) {
+                view.setTypeface(face);
+            }
+        });
+    }
+
+    private void styleLyrics(ZoomTextView view) {
         int accent = mPalette.getAccentColor();
         view.setTextColor(mPalette.getTextColor());
         view.setLinkTextColor(accent);
         view.setHighlightColor((accent & 0x00FFFFFF) | 0x40000000);
-        view.setTypeface(typeface != null ? typeface : Typeface.DEFAULT);
         // null for drawn backgrounds; an 85 % panel for photos
         view.setBackground(BackgroundDrawables.backdrop(mContentHandler, mPalette));
     }
@@ -572,7 +600,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
     /** Stored default, or this session's button_mode choice. */
     private DisplayMode currentDisplayMode() {
-        return DisplayModePolicy.resolve(mContentHandler.displayModeOverride, ReadingPrefs.displayMode(mSharedPref));
+        return DisplayModePolicy.resolve(mContentHandler.displayModeOverride, mStoredDisplayMode);
     }
 
     /**
@@ -600,9 +628,15 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             lyricsTraditional.setVisibility(View.GONE);
             lyricsEnglish.setVisibility(View.GONE);
         }
-        else if (refreshLyrics) {
+        else if (refreshLyrics || noLyricsViewShown()) {
+            // Also when every lyrics view was hidden by an earlier mode (e.g. English page -> score only -> back)
             toggleLyricsView();
         }
+    }
+
+    private boolean noLyricsViewShown() {
+        return lyricsSimplify.getVisibility() != View.VISIBLE && lyricsTraditional.getVisibility() != View.VISIBLE
+                && lyricsEnglish.getVisibility() != View.VISIBLE;
     }
 
     /** "Lyrics only": let Glide recycle the score bitmaps; switching back reloads them (Codex P2). */
@@ -639,12 +673,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             mLyricsEnglishRecord.fetchLyrics(mHymnNoEng, isErGe);
         }
         else {
-            if (!isShowTraditional()) {
-                lyricsSimplify.setVisibility(View.VISIBLE);
-            }
-            else {
-                lyricsTraditional.setVisibility(View.VISIBLE);
-            }
+            boolean traditional = isShowTraditional();
+            applyFont(traditional);
+            (traditional ? lyricsTraditional : lyricsSimplify).setVisibility(View.VISIBLE);
         }
     }
 

@@ -157,4 +157,17 @@ class ContentHandlerReadingTest {
             assertThat(scenario.read { visible(it, R.id.scoreContainer) }).isFalse()   // new default LYRICS_ONLY applied
         }
     }
+
+    @Test
+    fun returningToAPageHiddenByAnEarlierModeShowsLyricsAgain() {
+        launch().use { scenario ->
+            scenario.waitFor("page") { page(it) != null }
+            scenario.click(R.id.button_mode)   // -> SCORE_ONLY: every lyrics view GONE
+            scenario.onActivity { it.displayModeOverride = DisplayMode.SCORE_AND_LYRICS }
+            // Resuming the page re-applies the mode; lyrics must not stay hidden (refreshLyrics = false path)
+            scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+            scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            scenario.waitFor("lyrics back") { visible(it, R.id.lyrics_simplified) || visible(it, R.id.lyrics_traditional) }
+        }
+    }
 }
