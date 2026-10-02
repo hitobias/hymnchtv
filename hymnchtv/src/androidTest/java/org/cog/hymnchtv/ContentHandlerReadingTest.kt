@@ -2,6 +2,7 @@ package org.cog.hymnchtv
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
@@ -33,8 +34,15 @@ class ContentHandlerReadingTest {
         LyricsLanguagePolicy.PREF_LYRICS_DEFAULT,
     )
 
+    /** API 24-28: FileBackend.getHymnchtvStore() reads MainActivity.getInstance(), which is null unless MainActivity exists. */
+    private var mainScenario: ActivityScenario<MainActivity>? = null
+
     @Before
     fun setUp() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            TestPermissions.grantLaunchPermission(ctx.packageName)
+            mainScenario = ActivityScenario.launch(MainActivity::class.java)
+        }
         prefs.edit()
             .putString(ReadingPrefKeys.DISPLAY_MODE, DisplayMode.SCORE_AND_LYRICS.name)
             .putBoolean(ReadingPrefKeys.KEEP_SCREEN_ON, true)
@@ -45,6 +53,8 @@ class ContentHandlerReadingTest {
 
     @After
     fun tearDown() {
+        mainScenario?.close()
+        mainScenario = null
         val editor = prefs.edit()
         keys.forEach { editor.remove(it) }
         editor.commit()

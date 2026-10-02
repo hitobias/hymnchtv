@@ -1,12 +1,10 @@
 package org.cog.hymnchtv.reading
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
@@ -22,6 +20,7 @@ import org.cog.hymnchtv.ContentHandler
 import org.cog.hymnchtv.ContentView
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.TestPermissions
 import org.cog.hymnchtv.reading.background.BackgroundPolicy
 import org.cog.hymnchtv.reading.background.BackgroundSlot
 import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
@@ -42,10 +41,7 @@ class PhotoBackdropTest {
 
     @Before
     fun setUp() {
-        // the permission MainActivity asks for at launch; granted through UiAutomation (no androidx.test.rules dependency)
-        val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.POST_NOTIFICATIONS
-        else Manifest.permission.WRITE_EXTERNAL_STORAGE
-        InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(ctx.packageName, permission)
+        TestPermissions.grantLaunchPermission(ctx.packageName)
         photo = PhotoBackgroundImporter.photoFileIn(ctx.filesDir)
         photo.parentFile?.mkdirs()
         val white = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
