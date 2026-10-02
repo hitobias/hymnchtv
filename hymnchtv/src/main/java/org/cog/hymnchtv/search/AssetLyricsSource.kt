@@ -2,12 +2,10 @@ package org.cog.hymnchtv.search
 
 import android.content.Context
 import android.content.SharedPreferences
-import org.cog.hymnchtv.ContentView
 import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.lyrics.HantVariant
 import org.cog.hymnchtv.lyrics.LyricsAssets
-import org.cog.hymnchtv.lyrics.LyricsLang
-import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy
+import org.cog.hymnchtv.lyrics.LyricsScript
 import org.cog.hymnchtv.ui.titles.AssetHymnTitles
 import timber.log.Timber
 import java.io.IOException
@@ -54,13 +52,7 @@ class AssetLyricsSource(
         /** Follows the lyrics script the reader chose (Traditional or Simplified) and the regional variant. */
         @JvmStatic
         fun forPrefs(context: Context, prefs: SharedPreferences, locale: Locale = context.resources.configuration.locales[0]): AssetLyricsSource {
-            val lang = LyricsLang.fromPref(prefs.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null))
-            val variant = if (LyricsLanguagePolicy.resolveShowTraditional(lang, locale)) {
-                LyricsLanguagePolicy.parseVariant(prefs.getString(ContentView.PREF_CONVERSION_TYPE, null), locale)
-            } else {
-                null
-            }
-            return create(context, variant)
+            return create(context, LyricsScript.hantVariant(prefs, locale))
         }
 
         /** The Traditional->Simplified table; empty (search still works for Simplified queries) when the asset is unreadable. */

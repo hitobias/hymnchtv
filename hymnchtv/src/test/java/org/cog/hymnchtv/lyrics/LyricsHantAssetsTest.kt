@@ -74,8 +74,8 @@ class LyricsHantAssetsTest {
     }
 
     private companion object {
-        val SOURCE_DIR = Regex("lyrics_[a-z]+_text")
-        val PATH = Regex("lyrics_t2s_map\\.txt|lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
+        val SOURCE_DIR = Regex("lyrics_([a-z]+_text|toc)")
+        val PATH = Regex("lyrics_t2s_map\\.txt|lyrics_([a-z]+_text|toc)(_hant_(tw|hk))?/[^/\t]+\\.txt")
         val SHA1 = Regex("[0-9a-f]{40}")
         val GENERATOR_INPUTS = listOf(
             "tools/gen_lyrics_hant.py",
