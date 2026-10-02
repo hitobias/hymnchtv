@@ -34,8 +34,11 @@ public class ThemeHelper {
         DARK
     }
 
-    // Note: mTheme will get initialized from DB by ConfigurationUtils on app startup
-    private static Theme mTheme = Theme.DARK;
+    /** Theme for users who never chose one (user decision 2026-10-02: light). MainActivity uses it as the pref default. */
+    public static final Theme DEFAULT_THEME = Theme.LIGHT;
+
+    // Note: mTheme is set from PREF_THEME by MainActivity.onCreate
+    private static Theme mTheme = DEFAULT_THEME;
 
     /**
      * Set the app Theme per current mTheme
