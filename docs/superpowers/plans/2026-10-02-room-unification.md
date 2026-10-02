@@ -161,7 +161,7 @@ Room 預設禁止主執行緒查詢。§1 的表列出的主執行緒呼叫點�
   - 若日後只想備份 notebook，就不能用 DB 檔案層級的 Auto Backup，必須改成可篩選的邏輯備份（`BackupService` 的 SAF 匯出已是此類）；本計畫不做。
 - **schema 版本決策（rev 5，Codex P1-2）**：**最終 schema 維持 version 1**。本計畫合併（3 表 v1）到 D-1a 遷移合併（8 表 v1）之間，同一個 `hymnchtv.db` 的 v1 schema 會被改寫（identity hash 不同，Room 開啟舊檔會失敗）。處置：
   - 這段期間產出的三表組建是**開發專用、絕不發佈、絕不分發給任何使用者**；
-  - 開發／測試裝置與模擬器在執行遷移後的組建之前，必須 `adb uninstall org.cog.hymnchtv`（或 `adb shell pm clear`）清掉舊的 `hymnchtv.db`（含 `-wal`／`-shm`）（Task 6(a) Step 並寫入 dev-notes）；
+  - 開發／測試裝置與模擬器在執行遷移後的組建之前，必須 `adb uninstall com.ziontkec.hymnal`（或 `adb shell pm clear com.ziontkec.hymnal`；applicationId 是 `com.ziontkec.hymnal`，`org.cog.hymnchtv` 只是 namespace）清掉舊的 `hymnchtv.db`（含 `-wal`／`-shm`）（Task 6(a) Step 並寫入 dev-notes）；
   - **不**把 `hymnchtv.db` 加進啟動時的舊檔刪除清單（那會在每次啟動清掉真實資料）；刪除清單只含 `dbHymnApp.db`、`notebook.db`；
   - **不選 v2 migration**：升到 v2 並提供「三表→八表」migration，等於要永遠背一個零使用者會用到的遷移（及其測試與 schema 歷史）；1.0 是第一個發佈版，沒有三表使用者。發版關卡見 Task 6(d)。
 - **安裝政策（明確寫死）**：**1.0 是第一個發佈版本，沒有任何已安裝使用者**，因此：
@@ -307,20 +307,20 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 
 **(a) D-1a 程式碼遷移**（在 `feat/notebook-data`，worktree `/Users/hitobias/orca/hymnchtv-d1a`）
 
-- [ ] **Step 0（硬性 gate，rev 8，Codex P1）**：rebase 前先 `git -C /Users/hitobias/orca/hymnchtv-d1a status --short`。2026-10-02 實測 worktree **不乾淨**：有**未追蹤**的 Task 8 產物 `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/backup/`（`BackupCodec.kt`、`BackupModels.kt`）與 `hymnchtv/src/test/java/org/cog/hymnchtv/notebook/backup/`（`BackupCodecTest.kt`、`SampleTables.kt`）——即 D-1a Task 8 **已有部分實作（未 commit）**，§2.9 所稱「Task 8–13 尚未實作」不完全正確。逐檔盤點，由 D-1a 負責人決定：納入並提交、暫存（`git stash push -u -m <唯一標籤>`，用 SHA 還原）、或捨棄；並 grep 這些檔案是否引用 `NotebookDatabase`／`notebook.db`（備份模型／編碼通常不碰 DB），有則納入遷移與 (b) 的搜尋清單。**未完成此 gate 不得 rebase。**
-- [ ] **Step 1**：把 `feat/notebook-data` rebase 到新的 `origin/master`（目前基底是 efca5c22），解衝突。**建置檔衝突**：D-1a 的 `9d468ecf`（根 `build.gradle`、`hymnchtv/build.gradle`）與 Task 1 Step 0 重複的 hunk（KSP classpath／plugin、Room 依賴、`ksp {}`）收斂到 master 的版本；保留 D-1a 專屬依賴（`kotlinx-coroutines-android`、`kotlinx-coroutines-test`、JVM `org.json`、`sharedTest` srcDirs）。
-- [ ] **Step 2**：依 §2.9 清單：5 個 entity／DAO／converter 併入 `HymnchtvDatabase`；刪除 `NotebookDatabase.kt` 與其 schema JSON；4 個 `Room*Repository` 建構子改收 `HymnchtvDatabase`；移除 `TRUNCATE`。
-- [ ] **Step 3**：7 個 androidTest 改用 `HymnchtvDatabase.inMemory`；並行測試改用 `HymnchtvDatabase.build(context, 檔名)`。
-- [ ] **Step 4**：重新產生 `HymnchtvDatabase/1.json`（**仍 v1**，§2.5 決策）並 commit。
-- [ ] **Step 5（rev 5，Codex P1-2）舊檔處置**：在**每一台**開發／測試裝置與模擬器上，執行遷移後的組建**之前**先 `adb uninstall org.cog.hymnchtv`（或 `adb shell pm clear org.cog.hymnchtv`），清掉三表 v1 的 `hymnchtv.db`（含 `-wal`／`-shm`）。把這條與「`hymnchtv.db`（＋`-wal`／`-shm`）是中間三表組建的殘留」寫進 dev-notes（交接文件）。**不要**把 `hymnchtv.db` 加進啟動刪檔清單（§2.5）。本計畫合併後到本步驟完成前產生的三表 APK **不得分發**。
-- [ ] **Step 6**：`./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug` 必須 `BUILD SUCCESSFUL`；`api34nb`／`api24nb` 跑全部 instrumented test（含 D-1a 既有的 7 個）通過。grep 確認不再有 `NotebookDatabase`／`notebook.db`／`TRUNCATE`（計畫文件除外，那是 (b)(c)）。
-- [ ] **Step 7**：`Notebook.get()`（D-1a Task 12）一律取 `HymnchtvDatabase.getInstance(app)`（§2.4a）；grep 確認 production 程式碼中 `HymnchtvDatabase.build(` 只出現在 `getInstance` 內。
+- [x] **Step 0（硬性 gate，rev 8，Codex P1）**：rebase 前先 `git -C /Users/hitobias/orca/hymnchtv-d1a status --short`。2026-10-02 實測 worktree **不乾淨**：有**未追蹤**的 Task 8 產物 `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/backup/`（`BackupCodec.kt`、`BackupModels.kt`）與 `hymnchtv/src/test/java/org/cog/hymnchtv/notebook/backup/`（`BackupCodecTest.kt`、`SampleTables.kt`）——即 D-1a Task 8 **已有部分實作（未 commit）**，§2.9 所稱「Task 8–13 尚未實作」不完全正確。逐檔盤點，由 D-1a 負責人決定：納入並提交、暫存（`git stash push -u -m <唯一標籤>`，用 SHA 還原）、或捨棄；並 grep 這些檔案是否引用 `NotebookDatabase`／`notebook.db`（備份模型／編碼通常不碰 DB），有則納入遷移與 (b) 的搜尋清單。**未完成此 gate 不得 rebase。**
+- [x] **Step 1**：把 `feat/notebook-data` rebase 到新的 `origin/master`（目前基底是 efca5c22），解衝突。**建置檔衝突**：D-1a 的 `9d468ecf`（根 `build.gradle`、`hymnchtv/build.gradle`）與 Task 1 Step 0 重複的 hunk（KSP classpath／plugin、Room 依賴、`ksp {}`）收斂到 master 的版本；保留 D-1a 專屬依賴（`kotlinx-coroutines-android`、`kotlinx-coroutines-test`、JVM `org.json`、`sharedTest` srcDirs）。
+- [x] **Step 2**：依 §2.9 清單：5 個 entity／DAO／converter 併入 `HymnchtvDatabase`；刪除 `NotebookDatabase.kt` 與其 schema JSON；4 個 `Room*Repository` 建構子改收 `HymnchtvDatabase`；移除 `TRUNCATE`。
+- [x] **Step 3**：7 個 androidTest 改用 `HymnchtvDatabase.inMemory`；並行測試改用 `HymnchtvDatabase.build(context, 檔名)`。
+- [x] **Step 4**：重新產生 `HymnchtvDatabase/1.json`（**仍 v1**，§2.5 決策）並 commit。
+- [x] **Step 5（rev 5，Codex P1-2）舊檔處置**：在**每一台**開發／測試裝置與模擬器上，執行遷移後的組建**之前**先 `adb uninstall com.ziontkec.hymnal`（或 `adb shell pm clear com.ziontkec.hymnal`），清掉三表 v1 的 `hymnchtv.db`（含 `-wal`／`-shm`）。把這條與「`hymnchtv.db`（＋`-wal`／`-shm`）是中間三表組建的殘留」寫進 dev-notes（交接文件）。**不要**把 `hymnchtv.db` 加進啟動刪檔清單（§2.5）。本計畫合併後到本步驟完成前產生的三表 APK **不得分發**。
+- [x] **Step 6**：`./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug` 必須 `BUILD SUCCESSFUL`；`api34nb`／`api24nb` 跑全部 instrumented test（含 D-1a 既有的 7 個）通過。grep 確認不再有 `NotebookDatabase`／`notebook.db`／`TRUNCATE`（計畫文件除外，那是 (b)(c)）。
+- [x] **Step 7**：`Notebook.get()`（D-1a Task 12）一律取 `HymnchtvDatabase.getInstance(app)`（§2.4a）；grep 確認 production 程式碼中 `HymnchtvDatabase.build(` 只出現在 `getInstance` 內。
 
 **(b) D-1a 計畫 rev：Task 10–13 完整重寫**（`docs/superpowers/plans/2026-10-02-d1a-notebook-data-implementation.md`）
 
 Task 0–7（已實作）的歷史片段**不重寫**，只在各 Task 標題下加一行註記「已由 Room 統一計畫 Task 6(a) 遷移」。Task 8–13 尚未實作，以下搜尋清單的每一處都要更正：
 
-- [ ] **Step 8**：搜尋並更正（行號為 2026-10-02 當時，以 grep 為準）：
+- [x] **Step 8**：搜尋並更正（行號為 2026-10-02 當時，以 grep 為準）：
   - `NotebookDatabase`（含 import）→ `HymnchtvDatabase`：Task 10 的 `RoomBackupStore`（約 5598–5612）、`RoomBackupStoreTest`（約 5742–5794）；Task 12 物件圖（約 6487–6547，含 `val database: NotebookDatabase`、`NotebookDatabase.build(app)` → `HymnchtvDatabase.getInstance(app)`）；Task 13 E2E 測試（約 6617–6657，`graph.database`）。
   - `notebook.db` → `hymnchtv.db`（＋`-wal`／`-shm`）：Task 11 備份規則 XML 與註解（約 5885、5982–6002）、`BackupRulesTest`（約 5912–5932，`NotebookDatabase.FILE_NAME` → `HymnchtvDatabase.FILE_NAME`）、Task 13 E2E script（約 6589、6828 `require_file`）、restore 斷言（約 6915）。
   - 「已決定事項」（約 6983–6985）：備份範圍由「`notebook.db`、`notebook.xml`、`Settings.xml`」改為「`hymnchtv.db`（統一 DB，含 `-wal`／`-shm`）、`notebook.xml`、`Settings.xml`」；寫入 §2.5 的備份範圍決定與理由（含媒體連結、歷史、英文歌詞）。
@@ -328,11 +328,11 @@ Task 0–7（已實作）的歷史片段**不重寫**，只在各 Task 標題下
   - `TRUNCATE`／「讓資料庫維持單一檔案」→ WAL 敘述（§2.5）。
   - 其餘檔名、測試名、git-add 指令中的 `NotebookDatabase`／`notebook.db`；再 `grep -nE "NotebookDatabase|notebook\.db|TRUNCATE"` 必須只剩歷史註記。
   - 修訂紀錄新增一條，說明依本計畫 rev 5 修訂。
-- [ ] **Step 9**：Task 11 加風險：Auto Backup 配額 25 MB；在本計畫 Task 5 或 Task 6 實測統一 DB 的大小（特別是**英文歌詞**表）；若接近上限，回報再決定（例如英文歌詞改為從 assets 載入、不入 DB）。
+- [x] **Step 9**：Task 11 加風險：Auto Backup 配額 25 MB；在本計畫 Task 5 或 Task 6 實測統一 DB 的大小（特別是**英文歌詞**表）；若接近上限，回報再決定（例如英文歌詞改為從 assets 載入、不入 DB）。
 
 **(c) D-1 UI 計畫更新：完整搜尋取代**（`docs/superpowers/plans/2026-10-02-d1-notebook-ui-implementation.md`）
 
-- [ ] **Step 10**：整份計畫 `grep -nE "NotebookDatabase|notebook\.db|schemas/|RoomTransactionRunner|RoomNotebookQueriesContractTest|graph\.database"`，**全部**改為 `HymnchtvDatabase`（資料庫型別、import、檔名、schema 路徑 `…persistance.room.HymnchtvDatabase/1.json`）。2026-10-02 已知位置（以 grep 為準）：
+- [x] **Step 10**：整份計畫 `grep -nE "NotebookDatabase|notebook\.db|schemas/|RoomTransactionRunner|RoomNotebookQueriesContractTest|graph\.database"`，**全部**改為 `HymnchtvDatabase`（資料庫型別、import、檔名、schema 路徑 `…persistance.room.HymnchtvDatabase/1.json`）。2026-10-02 已知位置（以 grep 為準）：
   - 第 28、104 行：敘述「在 `NotebookDatabase.kt` 加一行」「成為第六個 DAO」→ 改在 `HymnchtvDatabase`；schema 仍不變。
   - 第 287、288 行：關卡 G0／G1 的 `schemas/.../1.json`、`RoomNotebookQueriesContractTest`。
   - 第 337 行：檔案清單 `RoomTransactionRunner.kt`；第 344 行：修改清單 `notebook/data/NotebookDatabase.kt`（Task 1，一行）→ `HymnchtvDatabase.kt`；第 348 行：Instrumented 測試清單。
@@ -342,14 +342,14 @@ Task 0–7（已實作）的歷史片段**不重寫**，只在各 Task 標題下
   - 第 2225、2647–2655 行：Task 2 Files、`RoomTransactionRunner(private val db: NotebookDatabase)` 及其 import。
   - 第 4917–4943、4984 行：物件圖接線 `RoomTransactionRunner(graph.database)`、驗收敘述。
   - 另搜尋測試 fixture、file list、其餘 `git add` 命令，確保無遺漏。
-- [ ] **Step 11**：取代後再 grep，`NotebookDatabase`／`notebook.db` 不得殘留（修訂紀錄的歷史敘述除外）；修訂紀錄加一條。
+- [x] **Step 11**：取代後再 grep，`NotebookDatabase`／`notebook.db` 不得殘留（修訂紀錄的歷史敘述除外）；修訂紀錄加一條。
 
 **(d) 審查、PR、交接**
 
 - [ ] **Step 12**：code-reviewer ＋ Codex 審查本計畫的 diff（Task 0–5）與 D-1a 遷移 diff。
-- [ ] **Step 13**：**發版關卡檢查**（rev 5，Codex P1-2）：匯出的 `hymnchtv/schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json` 必須包含**全部 8 個 entity**（3 舊＋5 筆記本），且 `hymnchtv/schemas/` 下**只有一個 schema 版本**（`1.json`，無 `2.json`、無 `NotebookDatabase/` 目錄）。不符不得發佈 1.0。
+- [x] **Step 13**：**發版關卡檢查**（rev 5，Codex P1-2）：匯出的 `hymnchtv/schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json` 必須包含**全部 8 個 entity**（3 舊＋5 筆記本），且 `hymnchtv/schemas/` 下**只有一個 schema 版本**（`1.json`，無 `2.json`、無 `NotebookDatabase/` 目錄）。不符不得發佈 1.0。
 - [ ] **Step 14**：開 PR；PR 描述含 §2.4 的**主執行緒移除清單**與里程碑（1.0 發版前清空）。
-- [ ] **Step 15**：更新記憶與交接文件（D-1a 分支狀態、dev-notes 的 `adb uninstall`／`hymnchtv.db` 說明、下一步 Task 8–13）。
+- [ ] **Step 15**（dev-notes 已寫入 D-1a 計畫修訂紀錄 rev 6；記憶檔由協調者處理）：更新記憶與交接文件（D-1a 分支狀態、dev-notes 的 `adb uninstall`／`hymnchtv.db` 說明、下一步 Task 8–13）。
 
 ---
 
@@ -357,8 +357,8 @@ Task 0–7（已實作）的歷史片段**不重寫**，只在各 Task 標題下
 
 1. **主執行緒查詢**（§2.4）：`allowMainThreadQueries()` 是刻意的過渡；**1.0 發版前必須清空清單**，否則成為永久債。
 2. **B Lane A 白做**：B 已合併且確定略過 Lane A（§2.8）；若 Lane A 被誤併入，本計畫要先處理衝突再動工（Task 0 Step 2 檢查）。
-3. **schema 重設**：只因「尚未發佈、無使用者」才可行；發佈後不可再重設。中間三表組建僅限開發（§2.5），開發裝置需 `adb uninstall`／`pm clear`；發版前以 Task 6 Step 13 的關卡檢查把關。
-4. **備份規則與範圍**：WAL 下 `-wal`／`-shm` 需被備份涵蓋；D-1a 的 backup rules 與 `BackupRulesTest`（Task 11，尚未實作）要照統一單檔改寫（§2.5、§2.9）。備份範圍擴大為整個統一 DB（已決定接受，§2.5）；**Auto Backup 配額 25 MB**，統一 DB（尤其英文歌詞表）大小要在 Task 6 Step 9 實測。
+3. **schema 重設**：只因「尚未發佈、無使用者」才可行；發佈後不可再重設。中間三表組建僅限開發（§2.5），開發裝置需 `adb uninstall com.ziontkec.hymnal`／`pm clear`；發版前以 Task 6 Step 13 的關卡檢查把關。
+4. **備份規則與範圍**：WAL 下 `-wal`／`-shm` 需被備份涵蓋；D-1a 的 backup rules 與 `BackupRulesTest`（Task 11，尚未實作）要照統一單檔改寫（§2.5、§2.9）。備份範圍擴大為整個統一 DB（已決定接受，§2.5）；**Auto Backup 配額 25 MB**，統一 DB 大小已在 Task 6 Step 9 實測（emulator-5582 API 24，首次匯入後）：`hymnchtv.db` 464 KB（含 `-wal` 495 KB、`-shm` 32 KB），`media_record` 2696 列，`english_lyrics` 0 列（英文歌詞不在首次匯入，使用者開啟時才由 WebView 下載）；英文歌詞上限約一千首 × 數 KB，遠低於配額，Task 11 不需改為 assets 載入。
 5. **D-1a 已有程式碼要遷移**（rev 4）：約 20 個檔案；風險在 rebase 衝突（基底 efca5c22 與新 master 差距）與 schema 重生。以 Task 6 (a) 的完整測試把關；`NotebookDatabase`／`notebook.db`／`TRUNCATE` 殘留以 grep 檢查。
 6. **D-1a／D-1 UI 計畫被動到**：兩份計畫需要完整搜尋取代式的修訂（Task 6 (b)(c)），要在動工前讓使用者知道。
 7. **D-1a 暫停期間的落差**：本計畫合併前，`feat/notebook-data` 不可再合併進 master（否則出現兩個 `@Database`）；D-1a Task 8–13 在遷移完成前不得開工。

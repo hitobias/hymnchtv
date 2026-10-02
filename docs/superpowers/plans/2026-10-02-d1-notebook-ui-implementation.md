@@ -6,6 +6,7 @@
 - rev 1（2026-10-02）：初版。涵蓋 D-1 的四個階段（D-1a 收藏與唱詩紀錄的介面、D-1b 筆記、D-1c 歌單與聚會模式、D-1d 統計與回顧）以及備份匯出／匯入、自動記錄開關的畫面。子項目 C 的計畫（`2026-10-02-c-modern-ui-implementation.md`）撰寫本文時尚未存在，所有對 C 的假設集中在「依賴 C 的介面」一節，C 定案後要逐條對照。
 - rev 2（2026-10-02）：C 的計畫已定稿（commit `9e3e4c39`，Codex 0 P1）。逐條比對「依賴 C 的介面」，結論見該節下方的「rev 2 比對結果」。主要調整：C-1（C 不實作 `NotebookNavigator`，由 D-1 接）、C-3（品牌色 `#09354d`，非 `#9C2B23`）、C-4（DayNight 已確認）、C-5（選項 a 已定，單一宿主 `@id/notebookBar`）、C-6/C-7（接 C 的 `@id/btn_next`／`@id/btn_add_playlist`）、C-11（C 直接綁 LXGW WenKai，D-1 取消子集管線）。
 - rev 3（2026-10-02）：**補完 Phase 3（W0、W1a–W1c、W2a–W2c、W3a）與 Phase 4（I1、I2、I3、V1、R1）**，原 rev 1 停在 `<!-- CONTINUE -->`。並依 Codex 對 D-1 UI 的審查（10 P1）修：①I1 明確定義 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 三接點；②I1 的播放完成只記「成功」路徑，失敗/錯誤不記；③`queryDao()` 加進 D-1a 的契約（在 `NotebookDatabase` 加一行，非 schema 變更）；④C-8 簽名差異（C 同步 vs D-1 `suspend titlesFor`）以「各自擁有、不共用」收尾；⑤notebookBar 版型在 `content_main.xml` 明確約束。
+- rev 4（2026-10-02，依 Room 統一計畫 `2026-10-02-room-unification.md` rev 5～9）：資料庫統一為 `HymnchtvDatabase`（`hymnchtv.db`，v1，8 個 entity），整份計畫凡引用 `NotebookDatabase`／`notebook.db` 之處改為 `HymnchtvDatabase`（`persistance/room/HymnchtvDatabase.kt`）；schema 路徑改為 `hymnchtv/schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json`。`queryDao()` 一行加在 `HymnchtvDatabase`，schema 仍不變。
 
 ## 給執行者（Sonnet 5.5）的說明
 
@@ -25,7 +26,7 @@
 
 **執行規則：**
 - **每條 lane 只改自己「檔案範圍」裏的檔案。** 需要改範圍外的檔案時停下來回報。這是平行執行不衝突的前提。
-- **D-1a 的 API 一律照用，不改簽名。** 本計畫對 D-1a 檔案唯一的修改，是在 `NotebookDatabase.kt` 加一行 DAO 存取函式（Task 1），而且 schema（`hymnchtv/schemas/.../1.json`）必須完全不變，由 Task 1 Step 6 檢查。
+- **D-1a 的 API 一律照用，不改簽名。** 本計畫對 D-1a 檔案唯一的修改，是在 `HymnchtvDatabase.kt` 加一行 DAO 存取函式（Task 1），而且 schema（`hymnchtv/schemas/.../1.json`）必須完全不變，由 Task 1 Step 6 檢查。
 - **模擬器**：沿用 D-1a 的專用 AVD：`api34nb`（`emulator-5580`）和 `api24nb`（`emulator-5582`）。所有 adb／gradle 指令前先 `export ANDROID_SERIAL=…`，並用 `adb emu avd name` 確認名稱。另一個代理可能正在用 `api24`／`api34`，**不要碰它們**。
   - 階段 0 的 Lane 0 可以在 `api34nb` 跑 instrumented test（Task 1）。
   - 階段 1～3 的 lane 一律不啟動模擬器，只用 `./gradlew :hymnchtv:assembleDebugAndroidTest` 確認能編譯；它們的 instrumented test 由協調者在合併關卡統一跑。
@@ -101,7 +102,7 @@ git -C /Users/hitobias/orca/hymnchtv branch -d d1ui/lane-m
 
 D-1a 的 repository 回傳整張表或單首詩歌的資料，沒有分頁和聚合；直接拿來做「全部唱詩紀錄」或「最常唱」，會把幾千列讀進記憶體再算。所以：
 
-- **新增 `NotebookQueryDao`**（Room `@Dao`，只有 `@Query`），加進 `NotebookDatabase` 成為第六個 DAO。新增 DAO 不改 entity，所以 schema JSON 與 identity hash 不變，不需要 migration。
+- **新增 `NotebookQueryDao`**（Room `@Dao`，只有 `@Query`），加進 `HymnchtvDatabase` 成為第六個 DAO。新增 DAO 不改 entity，所以 schema JSON 與 identity hash 不變，不需要 migration。
 - **`NotebookQueries`** 介面包住它（Repository 模式），JVM 測試用 `FakeNotebookQueries`。兩者共用一組契約測試 `NotebookQueriesContract`（放在 D-1a 建立的 `src/sharedTest`），在 JVM 跑假實作、在裝置跑 Room，保證行為一致。
 - 所有寫入仍經過 D-1a 的 repository（驗證、時間戳、`updatedBy`、soft delete 都由它負責）。
 - 不加 index、不加 FTS：
@@ -267,7 +268,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 | 階段 | Lane | Tasks（lane 內依序） | 檔案範圍（只能改這些） | 前置（關卡） |
 |---|---|---|---|---|
-| 0 | 0 | Task 0 → 1 → 2 | `hymnchtv/build.gradle`、`res/values*/strings_notebook.xml`、`res/values/nb_themes.xml`、`res/values/nb_dimens.xml`、`res/drawable/nb_*`、`notebook/data/NotebookDatabase.kt`（一行，`queryDao()`）、`notebook/data/dao/NotebookQueryDao.kt`、`notebook/data/query/`、`notebook/query/`、`notebook/ui/text/`、`notebook/ui/time/LocalDays.kt`、`notebook/ui/domain/`、對應測試、`test/.../notebook/fakes/{InMemoryNoteRepository,InMemoryPlaylistRepository,FakeNotebookQueries}.kt`、`test/.../notebook/ui/testing/`、`sharedTest/.../notebook/contract/NotebookQueriesContract.kt`、`test/.../notebook/NotebookStringsTest.kt`、`test/.../notebook/NotebookPrivacyTest.kt` | **G0**：D-1a 已合併。**rev 3：字型不再於此建**（改重用 C 的 `@font/lxgw_wenkai`）；`build.gradle` 與 `NotebookDatabase.kt` 與 C 重疊，若與 C 平行需協調（見 rev 2 修正點） |
+| 0 | 0 | Task 0 → 1 → 2 | `hymnchtv/build.gradle`、`res/values*/strings_notebook.xml`、`res/values/nb_themes.xml`、`res/values/nb_dimens.xml`、`res/drawable/nb_*`、`persistance/room/HymnchtvDatabase.kt`（一行，`queryDao()`）、`notebook/data/dao/NotebookQueryDao.kt`、`notebook/data/query/`、`notebook/query/`、`notebook/ui/text/`、`notebook/ui/time/LocalDays.kt`、`notebook/ui/domain/`、對應測試、`test/.../notebook/fakes/{InMemoryNoteRepository,InMemoryPlaylistRepository,FakeNotebookQueries}.kt`、`test/.../notebook/ui/testing/`、`sharedTest/.../notebook/contract/NotebookQueriesContract.kt`、`test/.../notebook/NotebookStringsTest.kt`、`test/.../notebook/NotebookPrivacyTest.kt` | **G0**：D-1a 已合併。**rev 3：字型不再於此建**（改重用 C 的 `@font/lxgw_wenkai`）；`build.gradle` 與 `HymnchtvDatabase.kt` 與 C 重疊，若與 C 平行需協調（見 rev 2 修正點） |
 | 1 | M | M1 → M2 | `notebook/ui/time/{ShortDate,ManualTime}.kt`、`notebook/ui/bar/BarText.kt`、`notebook/ui/log/SingLogSections.kt`、`notebook/ui/paging/`、對應測試 | **G1**：階段 0 已 commit |
 | 1 | P | P1 | `notebook/ui/playlist/{PlaylistCursor,MarkSungPlanner,PlaylistShareText,ItemMoves}.kt`、`notebook/ui/picker/HymnPick.kt`、對應測試 | G1 |
 | 1 | S | S1 → S2 | `notebook/ui/review/{HeatmapBuckets,BookCoverage}.kt`、`notebook/ui/favorites/FavoriteOrdering.kt`、`notebook/ui/notes/NoteSearch.kt`、`notebook/ui/backup/{BackupMessages,BackupRunner}.kt`、`notebook/ui/settings/NotebookPrefsDataStore.kt`、`notebook/ui/NotebookThemes.kt`、對應測試 | G1 |
@@ -341,7 +342,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 **資源：** `res/values{,-zh,-b+zh+Hant}/strings_notebook.xml`、`res/values/nb_themes.xml`、`res/values/nb_dimens.xml`、`res/drawable/nb_ic_*.xml`、`res/drawable/nb_star_selector.xml`、`res/drawable/nb_badge_background.xml`、`res/layout/nb_*.xml`、`res/menu/nb_*.xml`、`res/xml/nb_preferences.xml`；重產 `res/font/hymnal_kai_{sc,tc}.ttf`、`tools/font_subset_manifest.txt`（只在 `FontSubsetTest` 失敗時）。
 
-**修改：** `hymnchtv/build.gradle`（Task 0）、`notebook/data/NotebookDatabase.kt`（Task 1，一行）、`AndroidManifest.xml`（W1）、`ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`（I1）、`MainActivity.java`、`res/menu/menu_main.xml`（I2，pre-C 模式）。
+**修改：** `hymnchtv/build.gradle`（Task 0）、`persistance/room/HymnchtvDatabase.kt`（Task 1，一行）、`AndroidManifest.xml`（W1）、`ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`（I1）、`MainActivity.java`、`res/menu/menu_main.xml`（I2，pre-C 模式）。
 
 **JVM 測試：** `NotebookStringsTest`、`NotebookPrivacyTest`、`InMemoryNotebookQueriesContractTest`、`UiTextTest`、`HymnLabelsTest`、`LocalDaysTest`、`ShortDateTest`、`ManualTimeTest`、`BarTextTest`、`SingLogSectionsTest`、`KeysetPagerTest`、`PlaylistCursorTest`、`MarkSungPlannerTest`、`PlaylistShareTextTest`、`ItemMovesTest`、`HymnPickTest`、`HeatmapBucketsTest`、`BookCoverageTest`、`FavoriteOrderingTest`、`NoteSearchTest`、`BackupMessagesTest`、`BackupRunnerTest`、`NotebookPrefsDataStoreTest`、`NotebookThemesTest`、`LyricsTitlePathsTest`、`TitleLineTest`、`SingLogActionsTest`、`HymnBarViewModelTest`、`SingLogViewModelTest`、`HymnNotebookViewModelTest`、`PlaylistSungRecorderTest`、`PlaylistsViewModelTest`、`PlaylistDetailViewModelTest`、`HymnPickerViewModelTest`、`FavoritesViewModelTest`、`NotesViewModelTest`、`NoteEditorViewModelTest`、`StatsViewModelTest`、`UnsungListViewModelTest`、`DualHostLayoutTest`。
 
@@ -377,7 +378,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   BASE=origin/master
   git cat-file -e $BASE:hymnchtv/src/main/java/org/cog/hymnchtv/notebook/NotebookAsync.kt && echo "NotebookAsync: ok"
   git cat-file -e $BASE:hymnchtv/src/main/java/org/cog/hymnchtv/notebook/Notebook.kt && echo "Notebook: ok"
-  git cat-file -e "$BASE:hymnchtv/schemas/org.cog.hymnchtv.notebook.data.NotebookDatabase/1.json" && echo "schema: ok"
+  git cat-file -e "$BASE:hymnchtv/schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json" && echo "schema: ok"
   git cat-file -e $BASE:hymnchtv/src/main/java/org/cog/hymnchtv/reading/ReadingPrefs.kt && echo "A2: ok"
   git cat-file -e $BASE:hymnchtv/src/main/java/org/cog/hymnchtv/toc/YbCrossRef.kt && echo "B: ok"
   ```
@@ -1245,7 +1246,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/query/PageCursor.kt`、`NotebookQueries.kt`、`RoomNotebookQueries.kt`
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/query/QueryRows.kt`
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/dao/NotebookQueryDao.kt`
-- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/NotebookDatabase.kt`（一行）
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/persistance/room/HymnchtvDatabase.kt`（一行）
 - Create（測試替身）: `hymnchtv/src/test/java/org/cog/hymnchtv/notebook/fakes/InMemoryNoteRepository.kt`、`InMemoryPlaylistRepository.kt`、`FakeNotebookQueries.kt`
 - Create（契約）: `hymnchtv/src/sharedTest/java/org/cog/hymnchtv/notebook/contract/NotebookQueriesContract.kt`
 - Test: `hymnchtv/src/test/java/org/cog/hymnchtv/notebook/fakes/InMemoryNotebookQueriesContractTest.kt`、`hymnchtv/src/androidTest/java/org/cog/hymnchtv/notebook/query/RoomNotebookQueriesContractTest.kt`
@@ -2135,7 +2136,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   }
   ```
 
-  `NotebookDatabase.kt`：在 `abstract fun playlistItemDao(): PlaylistItemDao` 的下一行加入（另加對應的 `import org.cog.hymnchtv.notebook.data.dao.NotebookQueryDao`）：
+  `HymnchtvDatabase.kt`：在 `abstract fun playlistItemDao(): PlaylistItemDao` 的下一行加入（另加對應的 `import org.cog.hymnchtv.notebook.data.dao.NotebookQueryDao`）：
 
   ```kotlin
       /** Read-only queries for the notebook UI (plan D-1 UI); adds no entity, so the schema stays at version 1. */
@@ -2150,7 +2151,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   import androidx.test.core.app.ApplicationProvider
   import androidx.test.ext.junit.runners.AndroidJUnit4
   import org.cog.hymnchtv.notebook.contract.NotebookQueriesContract
-  import org.cog.hymnchtv.notebook.data.NotebookDatabase
+  import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
   import org.cog.hymnchtv.notebook.model.Clock
   import org.cog.hymnchtv.notebook.model.DeviceIdProvider
   import org.cog.hymnchtv.notebook.model.IdGenerator
@@ -2162,10 +2163,10 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
   @RunWith(AndroidJUnit4::class)
   class RoomNotebookQueriesContractTest : NotebookQueriesContract() {
-      private var db: NotebookDatabase? = null
+      private var db: HymnchtvDatabase? = null
 
       override fun newFixture(clock: Clock, device: DeviceIdProvider): Fixture {
-          val database = NotebookDatabase.inMemory(ApplicationProvider.getApplicationContext()).also { db = it }
+          val database = HymnchtvDatabase.inMemory(ApplicationProvider.getApplicationContext()).also { db = it }
           val ids = IdGenerator.RANDOM_UUID
           return Fixture(
               favorites = RoomFavoriteRepository(database, clock, device),
@@ -2208,7 +2209,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   ./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug --console=plain
   git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/query hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/query \
     hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/dao/NotebookQueryDao.kt \
-    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/NotebookDatabase.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/persistance/room/HymnchtvDatabase.kt \
     hymnchtv/src/test/java/org/cog/hymnchtv/notebook/fakes \
     hymnchtv/src/sharedTest/java/org/cog/hymnchtv/notebook/contract/NotebookQueriesContract.kt \
     hymnchtv/src/androidTest/java/org/cog/hymnchtv/notebook/query
@@ -2650,9 +2651,9 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   package org.cog.hymnchtv.notebook.ui.domain
 
   import androidx.room.withTransaction
-  import org.cog.hymnchtv.notebook.data.NotebookDatabase
+  import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
 
-  class RoomTransactionRunner(private val db: NotebookDatabase) : TransactionRunner {
+  class RoomTransactionRunner(private val db: HymnchtvDatabase) : TransactionRunner {
       override suspend fun <R> inTransaction(block: suspend () -> R): R = db.withTransaction { block() }
   }
   ```

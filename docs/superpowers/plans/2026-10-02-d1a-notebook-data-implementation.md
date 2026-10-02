@@ -25,6 +25,11 @@
   - 假 repository 的驗證順序改成和 Room 實作完全相同。
   - 新增 `SingLogRepositoryContract`（`src/sharedTest/`），同一組測試分別對假實作（JVM）和 Room 實作（裝置）執行。
   - 明確列出和 A2、B 共用的檔案，以及整合順序。
+- rev 6（2026-10-02，依 Room 統一計畫 rev 5～9，`2026-10-02-room-unification.md`）：資料庫改為與舊 `DatabaseBackend` 統一的單一 `HymnchtvDatabase`（檔名 `hymnchtv.db`，WAL；schema 仍為 v1，8 個 entity）。
+  - Task 0–7（已實作）由 Room 統一計畫 Task 6(a) 遷移（`NotebookDatabase` 刪除、5 個 entity／DAO 併入 `HymnchtvDatabase`、`Room*Repository` 與 androidTest 改用 `HymnchtvDatabase`、TRUNCATE 移除）；其歷史片段不重寫，只在各 Task 標題下加註記。
+  - Task 8–13 完整更正：`RoomBackupStore`／測試／物件圖改用 `HymnchtvDatabase`（`Notebook.get` 取 `HymnchtvDatabase.getInstance(app)`，不另建資料庫）；備份規則與 `BackupRulesTest` 改為 `hymnchtv.db` ＋ `-wal`／`-shm`；備份範圍擴大為整個統一 DB（媒體連結、歷史、英文歌詞、筆記本）；E2E 的應用程式 ID 改為 `com.ziontkec.hymnal`。
+  - Task 11 加 Auto Backup 25 MB 配額風險與實測資料。
+  - dev-notes：中間三表組建（Room 統一計畫合併後、本遷移完成前）留下的 `hymnchtv.db`（含 `-wal`／`-shm`）schema 與現在不同，開發／測試裝置在安裝遷移後的組建前必須 `adb uninstall com.ziontkec.hymnal`（或 `adb shell pm clear com.ziontkec.hymnal`）；不要把 `hymnchtv.db` 加進啟動刪檔清單。`org.cog.hymnchtv` 現在只是 namespace，應用程式 ID 是 `com.ziontkec.hymnal`。
 
 ## 給執行者（Sonnet 5.5）的說明
 
@@ -64,7 +69,7 @@
 - **最後的審查**：Task 13 用 code-reviewer 和 `/codex review` 兩種方式審查。發現 P1 要先修好，才能開 PR。
 
 **Goal:**
-- 用 Room 建一個和舊 SQLite（`DatabaseBackend`）分開的「詩歌筆記本」資料庫：收藏、唱詩紀錄、筆記、歌單、歌單項目。五張表一開始就為同步預留欄位。
+- 在統一的 Room 資料庫 `HymnchtvDatabase`（與舊 `DatabaseBackend` 的三張表同庫）加入「詩歌筆記本」的五張表：收藏、唱詩紀錄、筆記、歌單、歌單項目。五張表一開始就為同步預留欄位。
 - 提供 UI 階段要呼叫的 API：
   - 收藏切換。
   - 唱過幾次與最近一次。
@@ -81,7 +86,7 @@
 - Room entity 直接當作資料模型（immutable `data class`），不另外做一層 domain model；所有修改都用 `copy()` 產生新物件。
 - 資料存取走 Repository 模式：`Repository<T>`（`findAll`／`findById`／`create`／`update`／`delete`）加上各表專用的查詢。Room 實作放在 `repo/room/`。刪除一律是 soft delete（寫入 `deletedAt`）。
 - 和 Android 打交道的部分集中在幾個薄類別：
-  - `NotebookDatabase`
+  - `HymnchtvDatabase`（統一資料庫，見 Room 統一計畫；筆記本的 5 張表併入其中，不再有獨立的 `NotebookDatabase`）
   - `SharedPrefsNotebookPrefs`
   - `RoomBackupStore`
   - `BackupDocuments`
@@ -252,7 +257,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 - 這樣在 unique index 下，不會撞到已刪除列或交換中的列。新增與重排都在 transaction 裡完成。
 
 **資料庫檔與 schema：**
-- 檔名 `notebook.db`，journal mode 用 `TRUNCATE`。這只是讓資料庫維持「單一檔案」，備份規則不必另外列 `-wal`、`-shm`。
+- 檔名 `hymnchtv.db`（`HymnchtvDatabase.FILE_NAME`，統一資料庫），journal mode 為 WAL（明確設定）。因此備份規則要同時列 `hymnchtv.db`、`hymnchtv.db-wal`、`hymnchtv.db-shm`。（原先的 `notebook.db` 加 TRUNCATE 決定已由 Room 統一計畫 §2.5 撤銷。）
 - **它不是備份一致性的保證**，一致性來自 Auto Backup 本身（見下面「Android 自動備份」）。
 - `exportSchema = true`，schema 輸出到 `hymnchtv/schemas/` 並 commit，供日後寫 migration。這是全新項目，v1 不需要任何 migration。
 
@@ -361,15 +366,15 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 - **啟用方式**：`android:allowBackup="true"`。
   - API 31 以上用 `android:dataExtractionRules="@xml/notebook_data_extraction_rules"`（`cloud-backup` 和 `device-transfer` 兩段）。
   - API 24～30 用 `android:fullBackupContent="@xml/notebook_backup_rules"`。
-- **只 include 三個檔案**（協調者決定，2026-10-02）：
-  - `database/notebook.db`
+- **只 include 這些檔案**（協調者決定，2026-10-02；Room 統一計畫 §2.5 修訂）：
+  - `database/hymnchtv.db`、`database/hymnchtv.db-wal`、`database/hymnchtv.db-shm`：統一資料庫。Auto Backup 的 `database` domain 只能以檔案為粒度，所以備份內容是**整個**統一 DB（媒體連結、歷史、英文歌詞、筆記本五張表），不再只有筆記本。這些都是使用者資料／設定，不含憑證或機密。
   - `sharedpref/notebook.xml`
   - `sharedpref/Settings.xml`：`MainActivity.PREF_SETTINGS`，裡面是語言、歌詞與閱讀設定。
-- 只要寫了 include，其他檔案都不會備份，包括舊的 `dbHymnApp.db`、`store.xml`、`files/`、`notebook_device.xml`（刻意排除，理由見上面的 `updatedBy`）。另外兩類本來就不在備份範圍：`cache/`，以及下載到公用 Downloads 目錄的媒體。
+- 只要寫了 include，其他檔案都不會備份，包括 `store.xml`、`files/`、`notebook_device.xml`（刻意排除，理由見上面的 `updatedBy`）。另外兩類本來就不在備份範圍：`cache/`，以及下載到公用 Downloads 目錄的媒體。
 - **一致性**：官方文件明確寫著「During Auto Backup, the system shuts down the app to make sure it is no longer writing to the file system」。
-  - 所以 Auto Backup 複製檔案時，app 已經停止寫入；TRUNCATE 只是讓資料庫維持單一檔案。
+  - 所以 Auto Backup 複製檔案時，app 已經停止寫入；WAL 的 `-wal`／`-shm` 一併備份，Room 關閉時 checkpoint。
   - Task 13 Step 5 會在 app **正在寫入時**觸發 `bmgr backupnow`，記錄 app 是否被關閉，並在還原後跑 `PRAGMA integrity_check`。
-- **刻意不備份舊的 `dbHymnApp.db`**：
+- **舊的 `dbHymnApp.db` 已不存在**（Room 統一計畫：它的三張表併入 `hymnchtv.db`，啟動時刪除舊檔）。以下為原先「不備份」的歷史理由，僅供參考：
   - 子項目 B 會把它改成 WAL 模式，備份規則就要另外列 `-wal`／`-shm` 檔。
   - 協調者原本的顧慮是「複製使用中的檔案可能不一致」。依上面的官方說法，Auto Backup 會先關閉 app，這個風險其實比較小。
   - 但它的內容價值低：媒體連結可以重新匯入，開啟歷史也不重要。所以維持不備份。
@@ -414,7 +419,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 |---|---|
 | `notebook/data/entity/*.kt`（5 個）、`notebook/data/SingStats.kt` | Room entity |
 | `notebook/data/dao/*.kt`（5 個 DAO＋`DaoSql.kt`） | 查詢 |
-| `notebook/data/NotebookConverters.kt`、`notebook/data/NotebookDatabase.kt` | Room 資料庫 |
+| `notebook/data/NotebookConverters.kt` | Room type converter（資料庫本體是 `persistance/room/HymnchtvDatabase.kt`，由 Room 統一計畫提供） |
 | `notebook/repo/*.kt`、`notebook/repo/room/*.kt` | Repository 介面與 Room 實作 |
 | `notebook/settings/NotebookPrefs.kt`、`SharedPrefsNotebookPrefs.kt` | 自動記錄開關、上次選的場合、裝置 id |
 | `notebook/backup/RoomBackupStore.kt`、`BackupDocuments.kt` | 備份的 Room 與 SAF 邊界 |
@@ -429,11 +434,13 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 | `hymnchtv/build.gradle` | 套用 KSP、Room schema 位置、依賴 |
 | `hymnchtv/src/main/AndroidManifest.xml` | 開啟自動備份 |
 
-**產生並 commit：** `hymnchtv/schemas/org.cog.hymnchtv.notebook.data.NotebookDatabase/1.json`
+**產生並 commit：** `hymnchtv/schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json`（統一資料庫，v1，8 個 entity）
 
 ---
 
 ### Task 0：建置設定與 spike——**硬性關卡**（Lane 0）
+
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
 
 **這個 task 沒有全部通過（包括 coroutines 版本確認），就不能開始 Task 1。**
 
@@ -692,6 +699,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 ---
 
 ### Task 1：核心模型（Lane 0）
+
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/model/HymnTypes.kt`、`HymnNumbering.kt`、`HymnKey.kt`、`Occasion.kt`、`SingSource.kt`、`SyncRecord.kt`、`Clock.kt`、`FavoriteIds.kt`、`DedupeWindow.kt`、`NotebookValidation.kt`
@@ -1349,6 +1358,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ### Task 2：Room entity、DAO、資料庫與 schema（Lane 0）
 
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
+
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/entity/FavoriteEntity.kt`、`SingLogEntity.kt`、`NoteEntity.kt`、`PlaylistEntity.kt`、`PlaylistItemEntity.kt`
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/data/SingStats.kt`、`NotebookConverters.kt`、`NotebookDatabase.kt`
@@ -1992,6 +2003,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ### Task 3：Repository 介面、prefs 介面與 JVM 測試替身（Lane 0）
 
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
+
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/repo/Repository.kt`、`FavoriteRepository.kt`、`SingLogRepository.kt`、`NoteRepository.kt`、`PlaylistRepository.kt`
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/settings/NotebookPrefs.kt`
@@ -2604,6 +2617,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 ---
 
 ### Task 4：Room repository 實作（Lane A）
+
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
 
 **前置條件：** Task 3 已 commit。在 worktree `feat/d1a-notebook-data-lane-a` 中進行。這條 lane 獨占 `api34nb`（`ANDROID_SERIAL=emulator-5580`）。
 
@@ -3508,6 +3523,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 ### Task 5：自動記錄參數與場合推測（Lane B）
 
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
+
 **前置條件：** Task 3 已 commit。在 worktree `feat/d1a-notebook-data-lane-b` 中進行。只跑 JVM 測試，不使用模擬器。
 
 **Files:**
@@ -3709,6 +3726,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 ---
 
 ### Task 6：SingTracker（Lane B）
+
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/record/SingTracker.kt`
@@ -4039,6 +4058,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 ---
 
 ### Task 7：SharedPrefsNotebookPrefs（Lane B）
+
+> 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/settings/SharedPrefsNotebookPrefs.kt`
@@ -5601,7 +5622,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   package org.cog.hymnchtv.notebook.backup
 
   import androidx.room.withTransaction
-  import org.cog.hymnchtv.notebook.data.NotebookDatabase
+  import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
   import org.cog.hymnchtv.notebook.data.entity.PlaylistItemEntity
 
   /**
@@ -5609,7 +5630,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
    * UUID only, and BackupMerger re-slots playlist items so their *final* (playlistId, position) is unique.
    * Playlist items are written in two phases so swaps and cycles never collide mid-transaction.
    */
-  class RoomBackupStore(private val db: NotebookDatabase) : BackupStore {
+  class RoomBackupStore(private val db: HymnchtvDatabase) : BackupStore {
       override suspend fun readAll(): NotebookTables = db.withTransaction { readAllRows() }
 
       override suspend fun <R> mergeAtomically(plan: (local: NotebookTables) -> Planned<R>): R =
@@ -5748,7 +5769,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   import androidx.test.ext.junit.runners.AndroidJUnit4
   import com.google.common.truth.Truth.assertThat
   import kotlinx.coroutines.runBlocking
-  import org.cog.hymnchtv.notebook.data.NotebookDatabase
+  import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
   import org.cog.hymnchtv.notebook.data.entity.FavoriteEntity
   import org.cog.hymnchtv.notebook.data.entity.NoteEntity
   import org.cog.hymnchtv.notebook.data.entity.PlaylistEntity
@@ -5767,7 +5788,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
   @RunWith(AndroidJUnit4::class)
   class RoomBackupStoreTest {
-      private lateinit var db: NotebookDatabase
+      private lateinit var db: HymnchtvDatabase
       private lateinit var store: RoomBackupStore
       private val key = HymnKey.of(HymnTypes.DB, 1)
       private fun id(n: Int) = UUID(0L, n.toLong()).toString()
@@ -5790,7 +5811,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
       @Before
       fun setUp() {
-          db = NotebookDatabase.inMemory(ApplicationProvider.getApplicationContext())
+          db = HymnchtvDatabase.inMemory(ApplicationProvider.getApplicationContext())
           store = RoomBackupStore(db)
       }
 
@@ -5882,7 +5903,11 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 - Modify: `hymnchtv/src/main/AndroidManifest.xml`（`<application>` 的屬性）
 - Test: `hymnchtv/src/test/java/org/cog/hymnchtv/notebook/backup/BackupRulesTest.kt`、`hymnchtv/src/test/java/org/cog/hymnchtv/notebook/backup/SettingsPrefsNameTest.java`
 
-備份範圍（協調者決定）：`notebook.db`、`notebook.xml`、`Settings.xml`。**不包含** `dbHymnApp.db` 和 `notebook_device.xml`，理由見「設計決策 → Android 自動備份」。
+備份範圍（協調者決定，Room 統一計畫 §2.5 修訂）：`hymnchtv.db`（統一資料庫）、`hymnchtv.db-wal`、`hymnchtv.db-shm`、`notebook.xml`、`Settings.xml`。**不包含** `notebook_device.xml`；舊的 `dbHymnApp.db`、`notebook.db` 已不存在（啟動時刪除）。備份範圍是**整個**統一 DB：媒體連結、歷史、英文歌詞與筆記本五張表一併備份與還原（無憑證或機密）。
+
+**隱私說明與還原預期**：備份內容包含媒體連結、歷史、英文歌詞（不只筆記本）；換機還原後這些與筆記本一併回來。
+
+**風險：Auto Backup 配額 25 MB。** 統一 DB 的大小已在 emulator-5582（API 24）實測：安裝並完成首次匯入後 `hymnchtv.db` 約 464 KB（含 `-wal` 約 495 KB、`-shm` 32 KB），`media_record` 2696 列，`english_lyrics` 為 0 列（英文歌詞不在首次匯入，使用者開啟時才由 WebView 下載並寫入）。英文歌詞的上限需再估算（約一千首、每首數 KB），遠低於 25 MB；若實測接近上限再決定改為從 assets 載入、不入 DB。
 
 - [ ] **Step 1：寫會失敗的測試**
 
@@ -5916,7 +5941,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
   import com.google.common.truth.Truth.assertThat
   import com.google.common.truth.Truth.assertWithMessage
-  import org.cog.hymnchtv.notebook.data.NotebookDatabase
+  import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
   import org.cog.hymnchtv.notebook.settings.NotebookPrefs
   import org.junit.Test
   import java.io.File
@@ -5929,18 +5954,18 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           return file.readText()
       }
 
-      private val dbInclude = "domain=\"database\" path=\"${NotebookDatabase.FILE_NAME}\""
+      private val dbIncludes = listOf("", "-wal", "-shm").map { "domain=\"database\" path=\"${HymnchtvDatabase.FILE_NAME}$it\"" }
       private val prefsInclude = "domain=\"sharedpref\" path=\"${NotebookPrefs.FILE_NAME}.xml\""
       private val settingsInclude = "domain=\"sharedpref\" path=\"${SettingsPrefsNameTest.SETTINGS_FILE}.xml\""
-      private val forbidden = listOf("dbHymnApp", NotebookPrefs.DEVICE_FILE_NAME, "disableIfNoEncryptionCapabilities")
+      private val forbidden = listOf("dbHymnApp", "notebook.db", NotebookPrefs.DEVICE_FILE_NAME, "disableIfNoEncryptionCapabilities")
 
       private fun count(xml: String, needle: String) = Regex(Regex.escape(needle)).findAll(xml).count()
 
       @Test
       fun legacyRulesIncludeNotebookAndSettingsOnly() {
           val xml = read("src/main/res/xml/notebook_backup_rules.xml")
-          listOf(dbInclude, prefsInclude, settingsInclude).forEach { assertThat(count(xml, it)).isEqualTo(1) }
-          assertThat(count(xml, "<include ")).isEqualTo(3)
+          (dbIncludes + listOf(prefsInclude, settingsInclude)).forEach { assertThat(count(xml, it)).isEqualTo(1) }
+          assertThat(count(xml, "<include ")).isEqualTo(5)
           forbidden.forEach { assertThat(xml).doesNotContain("path=\"$it") }
       }
 
@@ -5949,8 +5974,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           val xml = read("src/main/res/xml/notebook_data_extraction_rules.xml")
           assertThat(xml).contains("<cloud-backup>")
           assertThat(xml).contains("<device-transfer>")
-          listOf(dbInclude, prefsInclude, settingsInclude).forEach { assertThat(count(xml, it)).isEqualTo(2) }
-          assertThat(count(xml, "<include ")).isEqualTo(6)
+          (dbIncludes + listOf(prefsInclude, settingsInclude)).forEach { assertThat(count(xml, it)).isEqualTo(2) }
+          assertThat(count(xml, "<include ")).isEqualTo(10)
           forbidden.forEach { assertThat(xml).doesNotContain(it) }
       }
 
@@ -5974,12 +5999,15 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
   ```xml
   <?xml version="1.0" encoding="utf-8"?>
-  <!-- Auto Backup for API 24-30 (android:fullBackupContent): the notebook DB and prefs plus the app settings
-       (MainActivity.PREF_SETTINGS). With <include>, everything else is left out: the legacy dbHymnApp.db (WAL files,
-       re-importable media links, low-value history) and notebook_device.xml (per-install device id).
+  <!-- Auto Backup for API 24-30 (android:fullBackupContent): the unified Room database hymnchtv.db (with its WAL
+       files; media links, history, English lyrics and notebook tables all live in it) plus the notebook prefs and the
+       app settings (MainActivity.PREF_SETTINGS). With <include>, everything else is left out: notebook_device.xml
+       (per-install device id).
        Keep in sync with notebook_data_extraction_rules.xml (BackupRulesTest). -->
   <full-backup-content>
-      <include domain="database" path="notebook.db" />
+      <include domain="database" path="hymnchtv.db" />
+      <include domain="database" path="hymnchtv.db-wal" />
+      <include domain="database" path="hymnchtv.db-shm" />
       <include domain="sharedpref" path="notebook.xml" />
       <include domain="sharedpref" path="Settings.xml" />
   </full-backup-content>
@@ -5991,15 +6019,19 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   <?xml version="1.0" encoding="utf-8"?>
   <!-- Auto Backup and device-to-device transfer for API 31+ (android:dataExtractionRules). No encryption
        requirement on purpose: phones without a screen lock (common among elderly users) must still restore.
-       Excludes dbHymnApp.db and notebook_device.xml (see notebook_backup_rules.xml). Kept in sync by BackupRulesTest. -->
+       Excludes notebook_device.xml (see notebook_backup_rules.xml). Kept in sync by BackupRulesTest. -->
   <data-extraction-rules>
       <cloud-backup>
-          <include domain="database" path="notebook.db" />
+          <include domain="database" path="hymnchtv.db" />
+          <include domain="database" path="hymnchtv.db-wal" />
+          <include domain="database" path="hymnchtv.db-shm" />
           <include domain="sharedpref" path="notebook.xml" />
           <include domain="sharedpref" path="Settings.xml" />
       </cloud-backup>
       <device-transfer>
-          <include domain="database" path="notebook.db" />
+          <include domain="database" path="hymnchtv.db" />
+          <include domain="database" path="hymnchtv.db-wal" />
+          <include domain="database" path="hymnchtv.db-shm" />
           <include domain="sharedpref" path="notebook.xml" />
           <include domain="sharedpref" path="Settings.xml" />
       </device-transfer>
@@ -6486,7 +6518,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   import org.cog.hymnchtv.notebook.backup.BackupService
   import org.cog.hymnchtv.notebook.backup.RoomBackupStore
   import org.cog.hymnchtv.notebook.backup.UriBackupIo
-  import org.cog.hymnchtv.notebook.data.NotebookDatabase
+  import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
   import org.cog.hymnchtv.notebook.model.Clock
   import org.cog.hymnchtv.notebook.model.IdGenerator
   import org.cog.hymnchtv.notebook.record.SingTracker
@@ -6508,7 +6540,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
    * Kotlin UI uses the repositories directly; Java uses [async].
    */
   class NotebookGraph internal constructor(
-      val database: NotebookDatabase,
+      val database: HymnchtvDatabase,
       val appScope: CoroutineScope,
       val favorites: FavoriteRepository,
       val singLogs: SingLogRepository,
@@ -6535,7 +6567,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
       private fun create(app: Context): NotebookGraph {
           val clock = Clock.SYSTEM
           val ids = IdGenerator.RANDOM_UUID
-          val db = NotebookDatabase.build(app)
+          val db = HymnchtvDatabase.getInstance(app)
           val appScope = CoroutineScope(
               SupervisorJob() + Dispatchers.Default +
                   CoroutineExceptionHandler { _, e -> Timber.e(e, "Notebook background task failed") },
@@ -6586,7 +6618,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 **關於這個測試：**
 - 它只在用 `am instrument -e notebookE2e <mode>` 明確指定時執行；一般的 `connectedDebugAndroidTest` 會因為 `assumeTrue` 而跳過它。
-- 它操作的是 app 真正的 `notebook.db`。
+- 它操作的是 app 真正的 `hymnchtv.db`（統一資料庫）。
 - 種子資料的時間固定在 2026-09-30～10-01（UTC）。因為有 `sungAt ≤ 現在＋24 小時` 的驗證，模擬器的日期必須不早於 2026-10-01，請先確認 `adb shell date`。
 - D-1a 沒有 UI，所以用 `file://` Uri（`ContentResolver` 支援）代替 SAF 的檔案選擇器；`BackupDocuments` 走的程式路徑和 SAF 完全相同。真正透過檔案選擇器（本機、Google 雲端硬碟）的手動測試，留到 UI 階段。
 
@@ -6791,7 +6823,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   [ "$ACTUAL" = "$AVD" ] || { echo "ABORT: $SERIAL is '$ACTUAL', not $AVD"; exit 2; }
   export ANDROID_SERIAL=$SERIAL
   REPO=$(git rev-parse --show-toplevel)
-  PKG=org.cog.hymnchtv
+  PKG=com.ziontkec.hymnal   # applicationId; org.cog.hymnchtv is only the namespace
   RUNNER=$PKG.test/androidx.test.runner.AndroidJUnitRunner
   OUT=/private/tmp/claude-501/d1a-e2e/$AVD; mkdir -p "$OUT"
   SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
@@ -6825,8 +6857,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   forbid_file()  { if grep -q "$1" "$OUT/restored-files.txt"; then echo "FAILED: $1 must not be restored"; exit 1; fi; }
   check_restored_files() {
     adb shell run-as $PKG ls databases shared_prefs | tr -d '\r' | tee "$OUT/restored-files.txt"
-    require_file notebook.db; require_file notebook.xml; require_file Settings.xml
-    forbid_file dbHymnApp; forbid_file notebook_device; forbid_file store.xml
+    require_file hymnchtv.db; require_file notebook.xml; require_file Settings.xml
+    forbid_file dbHymnApp; forbid_file notebook.db; forbid_file notebook_device; forbid_file store.xml
   }
 
   case "$SCENARIO" in
@@ -6911,8 +6943,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
   Expected:
   - `autobackup`：
-    - `backupnow.txt` 含 `Package org.cog.hymnchtv with result: Success`。
-    - 還原的檔案包含 `notebook.db`、`notebook.xml`、`Settings.xml`，**不包含** `dbHymnApp*`、`notebook_device.xml`。
+    - `backupnow.txt` 含 `Package com.ziontkec.hymnal with result: Success`。
+    - 還原的檔案包含 `hymnchtv.db`（＋`-wal`／`-shm`）、`notebook.xml`、`Settings.xml`，**不包含** `dbHymnApp*`、`notebook.db`、`notebook_device.xml`；可另斷言媒體連結、歷史、英文歌詞資料列隨之還原。
     - `verifySeeded` 通過（含 `autoRecordEnabled == false` 和 `Settings.xml` 的 marker）。
     - API 34 驗證的是 `dataExtractionRules`，API 24 驗證的是 `fullBackupContent`。
   - `busy`：**記錄**以下觀察，不要預設結果：
@@ -6982,8 +7014,8 @@ starButton.setOnClickListener(v -> Notebook.async(this).toggleFavorite(HymnKey.o
 
 ## 已決定事項（協調者，2026-10-02）
 
-1. **自動備份的範圍**：`notebook.db`、`notebook.xml`、`Settings.xml`。
-   - 不包含舊的 `dbHymnApp.db`：WAL 會多出 `-wal`／`-shm` 檔，而且媒體連結可以重新匯入、開啟歷史的價值低。Auto Backup 會先關閉 app，所以「複製時不一致」的風險其實比較小，見設計決策。
+1. **自動備份的範圍**：`hymnchtv.db`（統一 DB，含 `-wal`／`-shm`）、`notebook.xml`、`Settings.xml`。
+   - 備份整個統一 DB（Room 統一計畫 §2.5 決定）：Auto Backup 的 database domain 只能以檔案為粒度，無法只選某幾張表，所以媒體連結、歷史、英文歌詞與筆記本一併備份；這些都是使用者資料／設定，不含憑證或機密。舊的 `dbHymnApp.db`、`notebook.db` 已不存在。Auto Backup 會先關閉 app，所以「複製時不一致」的風險其實比較小，見設計決策。若日後只想備份筆記本，必須改成可篩選的邏輯備份（`BackupService` 的 SAF 匯出已是此類）。
    - `notebook_device.xml` 刻意不備份。
    - `Settings.xml` 的 `PREF_WALLPAPER` 由 A2／UI 階段負責退回預設背景。
 2. **場合推測**：
