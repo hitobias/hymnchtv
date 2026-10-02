@@ -38,7 +38,7 @@
             android:id="@+id/src_group_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             app:selectionRequired="false"
             app:singleSelection="true">
 
@@ -111,7 +111,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButtonToggleGroup
@@ -192,7 +192,7 @@
             android:id="@+id/previewArea"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:accessibilityLiveRegion="polite"
             android:orientation="vertical">
 
@@ -202,7 +202,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:maxLines="2"
-                android:minHeight="40dp"
+                android:minHeight="36dp"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="26sp"
                 android:textStyle="bold"
@@ -216,7 +216,7 @@
                 android:id="@+id/previewSub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="44dp">
+                android:minHeight="40dp">
 
                 <TextView
                     android:id="@+id/title_preview"
@@ -262,7 +262,7 @@
             android:id="@+id/recentArea"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:visibility="gone">
@@ -311,7 +311,7 @@
             android:id="@+id/keypadArea"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:orientation="vertical">
 
             <LinearLayout
@@ -492,7 +492,7 @@
             android:id="@+id/actionArea"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton

@@ -9,6 +9,7 @@ import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.widget.TextViewCompat
 import androidx.core.view.ViewCompat
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.reading.background.BackgroundDrawables
@@ -55,8 +56,11 @@ class HomeAppearance(private val context: Context, private val views: HymnPicker
         views.digits.forEach { it.setTextSize(TypedValue.COMPLEX_UNIT_SP, size.toFloat()) }
         views.fu.setTextSize(TypedValue.COMPLEX_UNIT_SP, small)
         // The source buttons share a row of four: keep them between a readable minimum and what fits
-        views.books.values.forEach { it.setTextSize(TypedValue.COMPLEX_UNIT_SP, small.coerceIn(SOURCE_MIN_SP, SOURCE_MAX_SP)) }
-        views.toc.setTextSize(TypedValue.COMPLEX_UNIT_SP, small.coerceIn(SOURCE_MIN_SP, SOURCE_MAX_SP))
+        // (a large system font scale would cut a name off, so these shrink to fit their button instead)
+        val sourceMax = small.coerceIn(SOURCE_MIN_SP, SOURCE_MAX_SP).toInt()
+        (views.books.values + views.toc).forEach {
+            TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(it, AUTO_MIN_SP, sourceMax, 1, TypedValue.COMPLEX_UNIT_SP)
+        }
     }
 
     /** The search field on a plain background: a soft panel in the background's own paper colour, never the theme's surface. */
@@ -121,6 +125,7 @@ class HomeAppearance(private val context: Context, private val views: HymnPicker
     private companion object {
         const val SMALL_KEY_DELTA = 10
         const val SOURCE_MIN_SP = 14f
+        const val AUTO_MIN_SP = 9
         const val SOURCE_MAX_SP = 18f
         const val FIELD_RADIUS_DP = 28f
         const val FIELD_FILL_ALPHA = 0xCC
