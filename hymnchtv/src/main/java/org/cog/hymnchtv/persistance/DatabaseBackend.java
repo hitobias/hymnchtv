@@ -31,8 +31,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.cog.hymnchtv.BuildConfig;
 import org.cog.hymnchtv.HymnsApp;
@@ -63,7 +67,45 @@ public class DatabaseBackend extends SQLiteOpenHelper {
     private static DatabaseBackend instance = null;
 
     private DatabaseBackend(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        this(context, DATABASE_NAME);
+    }
+
+    private DatabaseBackend(Context context, String name) {
+        super(context, name, null, DATABASE_VERSION);
+    }
+
+    /**
+     * A separate database file for instrumented tests and measurements; never touches dbHymnApp.db.
+     * The caller closes it and deletes the file (Context#deleteDatabase).
+     */
+    @VisibleForTesting
+    public static DatabaseBackend createForTest(Context context, String name) {
+        return new DatabaseBackend(context, name);
+    }
+
+    /**
+     * Run body in one transaction: committed when it returns, rolled back when it throws.
+     * Nested calls join the outer transaction; if a nested body throws, the WHOLE outer transaction is
+     * rolled back even when the outer body catches the exception (Android SQLiteDatabase semantics,
+     * pinned by DatabaseBackendTransactionTest). Must not be called on the main thread for bulk work.
+     */
+    public <T> T inTransaction(@NonNull Supplier<T> body) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransactionNonExclusive();
+        try {
+            T result = body.get();
+            db.setTransactionSuccessful();
+            return result;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    public void runInTransaction(@NonNull Runnable body) {
+        inTransaction(() -> {
+            body.run();
+            return null;
+        });
     }
 
     /**
@@ -170,26 +212,34 @@ public class DatabaseBackend extends SQLiteOpenHelper {
         }
     }
 
-    /**
-     * Save the given MediaRecord to the database table mRecord.getHymnType()
-     *
-     * @param mRecord an instance of MediaRecord
-     */
-    public long storeMediaRecord(MediaRecord mRecord) {
-        SQLiteDatabase db = getWritableDatabase();
-
+    private static ContentValues toContentValues(MediaRecord mRecord) {
         ContentValues values = new ContentValues();
         values.put(MediaConfig.HYMN_NO, mRecord.getHymnNo());
         values.put(MediaConfig.HYMN_FU, mRecord.isFu());
         values.put(MediaConfig.MEDIA_TYPE, mRecord.getMediaType().toString());
         values.put(MediaConfig.MEDIA_URI, mRecord.getMediaUri());
         values.put(MediaConfig.MEDIA_FILE_PATH, mRecord.getMediaFilePath());
+        return values;
+    }
 
-        long row = db.insert(mRecord.getHymnType(), null, values);
+    /**
+     * Save the given MediaRecord to the database table mRecord.getHymnType().
+     * SQL errors are logged and reported as -1 (legacy behaviour, kept for single-record UI saves).
+     */
+    public long storeMediaRecord(MediaRecord mRecord) {
+        long row = getWritableDatabase().insert(mRecord.getHymnType(), null, toContentValues(mRecord));
         if (row == -1) {
             Timber.e("### Error in creating media record for table:hymNo: %s:%s", mRecord.getHymnType(), mRecord.getHymnNo());
         }
         return row;
+    }
+
+    /**
+     * Same as storeMediaRecord, but SQL errors propagate as android.database.SQLException.
+     * Bulk imports use this inside inTransaction() so one failure rolls the whole batch back.
+     */
+    public long storeMediaRecordOrThrow(MediaRecord mRecord) {
+        return getWritableDatabase().insertOrThrow(mRecord.getHymnType(), null, toContentValues(mRecord));
     }
 
     /**

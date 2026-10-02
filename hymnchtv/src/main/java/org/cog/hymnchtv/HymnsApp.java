@@ -50,6 +50,7 @@ import androidx.lifecycle.ProcessLifecycleOwner;
 import java.util.List;
 
 import org.cog.hymnchtv.impl.timberlog.TimberLogImpl;
+import org.cog.hymnchtv.perf.DebugStrictMode;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
 import org.cog.hymnchtv.service.androidupdate.OnlineUpdateService;
@@ -97,6 +98,9 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     @Override
     public void onCreate() {
         TimberLogImpl.init();
+        if (BuildConfig.DEBUG) {
+            DebugStrictMode.install();
+        }
         // https://github.com/guardian/toolargetool
         // TooLargeTool.startLogging(this);
 
