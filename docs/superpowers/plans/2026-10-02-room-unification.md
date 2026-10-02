@@ -27,6 +27,7 @@
 - rev 8（2026-10-02）：依 Codex 第七輪 1 P1 + 2 P2 + 1 P3 修正（**修訂後未再送 Codex**：已達 3 輪上限）。①Task 6(a) 加 Step 0 硬性 gate：D-1a worktree 實測不乾淨，有未追蹤的 Task 8 產物（`notebook/backup/`＋測試），§2.9 狀態更正；②`deleteHymnHistory` 明定不含 `isFu`＋回歸測試；③`hymnType` 驗證涵蓋所有以 hymnType 為輸入的 API，並定義各自失敗結果；④Task 1 Step 4 措辭改「明確設定 WAL（非 Room 預設）」。
 - rev 9（2026-10-02）：依 PR #6 審查 P2-1 補齊主執行緒呼叫點清單：§1 表格中 `storeMediaRecord`、`deleteMediaRecord`、`getMediaRecord`、`storeLyricsEng`、`getLyricsEnglish` 被誤標「否」或漏列呼叫端者改正（`getMediaRecords`／`getMediaLinks` 已由 Task 4 移到背景，改標「否」），§2.4 清單由 4 項擴為完整清單，英文歌詞刪除更正為 `ContentHandler` 選單項，新增 1.0 關卡驗證方法（`-PstrictDbThread`）。
 - rev 10（2026-10-02）：依 PR #6 審查 P2-2／P3：Task 6(a) Step 6 註記 api34 補跑結果（131/131 通過）；Step 7 的 grep 描述更正為 `HymnchtvDatabase.build(` 只出現在 `getInstance` 與 `@VisibleForTesting` 的 `DatabaseBackend.createForTest`。
+- rev 11（2026-10-02，1.1）：§2.4 主執行緒清單已清空並永久移除 `allowMainThreadQueries()`（PR #12），見 §2.4 頂端狀態說明；`-PstrictDbThread` 與 `BuildConfig.ALLOW_MAIN_THREAD_DB` 一併移除。
 
 ---
 
@@ -117,6 +118,8 @@ JVM／instrumented 測試表（皆以相異 timeStamp 為預設，另測並列�
 
 ### 2.4 主執行緒（**本計畫的關鍵取捨**）
 
+> **狀態（rev 11，1.1）：已完成。** 下方的過渡方案與清單是 1.0 的歷史紀錄；PR #12（`refactor/no-main-thread-db`）已把清單全部移到 `AppExecutors.io`（結果以新增的 `AppExecutors.ioThenMain` 回主執行緒，Activity finishing／destroyed 不回呼），**永久移除 `allowMainThreadQueries()`、`-PstrictDbThread` 開關與 `BuildConfig.ALLOW_MAIN_THREAD_DB`**：`HymnchtvDatabase.build`／`getInstance` 一律嚴格，主執行緒查詢直接丟 `IllegalStateException`（`MainThreadQueryGateTest` 涵蓋）。清單對照：`getHymnMediaState`、`media_config`、分享、`lyrcsEnglishDelete`、`MediaContentHandler.getMediaUris`（拆成背景 `findMediaRecord` ＋主執行緒處理）、播放清單（新 `fetchPlayHymn`）、`LyricsEnglishRecord`、`MediaConfig` 的 entry 檢查／新增／覆寫／刪除；歷史列表與刪除在 C 新介面（`HomeFragment`）已在背景。驗證：api24 `connectedDebugAndroidTest` 200 個全過（無任何主執行緒開關）、單元 342 個全過，手動走完主要流程 crash buffer 為空。之後新增的程式碼一律照此模式：資料庫存取放 `AppExecutors.io`／`Dispatchers.IO`。
+
 Room 預設禁止主執行緒查詢。§1 的表列出的主執行緒呼叫點（rev 9 更正後共 11 處，見下方清單；歷史讀取／刪除、媒體狀態查詢 ×4、英文歌詞、`MediaConfig` 編輯與刪除等，另有**匯出**／記錄清單兩處昂貴讀取由本計畫搬走）。
 
 **決策（方案 A，Codex 要求加上強制里程碑）：**
@@ -141,7 +144,7 @@ Room 預設禁止主執行緒查詢。§1 的表列出的主執行緒呼叫點�
 
 ### 2.4a 單一 instance（rev 5，Codex P2-1）
 
-`HymnchtvDatabase` 提供 **process-wide 單例** `@JvmStatic fun getInstance(context: Context): HymnchtvDatabase`：double-checked locking（`@Volatile` ＋ `synchronized`），內部用 `context.applicationContext` 呼叫 `build(context, FILE_NAME)`（因此帶 `allowMainThreadQueries()`，§2.4 過渡政策）。
+`HymnchtvDatabase` 提供 **process-wide 單例** `@JvmStatic fun getInstance(context: Context): HymnchtvDatabase`：double-checked locking（`@Volatile` ＋ `synchronized`），內部用 `context.applicationContext` 呼叫 `build(context, FILE_NAME)`（1.0 當時帶 `allowMainThreadQueries()`，§2.4 過渡政策；rev 11 起已移除，一律嚴格）。
 
 - `DatabaseBackend.getInstance(Context)` 持有的 DB 取自 `HymnchtvDatabase.getInstance`。
 - D-1a 遷移後的 `Notebook.get()` **也取自 `HymnchtvDatabase.getInstance(app)`**，不得自行呼叫 `build`——否則對同一檔案產生第二個 Room instance。
