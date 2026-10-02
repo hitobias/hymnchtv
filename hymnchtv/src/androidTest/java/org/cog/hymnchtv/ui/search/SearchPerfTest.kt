@@ -19,11 +19,17 @@ import org.junit.runner.RunWith
 class SearchPerfTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext
 
+    /** Live heap after collecting: the lowest of several attempts, because one System.gc() may not finish a concurrent collection. */
     private fun usedHeap(): Long {
-        System.gc()
-        System.gc()
         val rt = Runtime.getRuntime()
-        return rt.totalMemory() - rt.freeMemory()
+        var lowest = Long.MAX_VALUE
+        repeat(5) {
+            System.gc()
+            System.runFinalization()
+            Thread.sleep(200)
+            lowest = minOf(lowest, rt.totalMemory() - rt.freeMemory())
+        }
+        return lowest
     }
 
     @Test fun worstCaseSearchOverAllBooksStaysWithinBoundsAndMemory() {
@@ -35,7 +41,9 @@ class SearchPerfTest {
             val start = SystemClock.elapsedRealtime()
             val page = search.search("zzzqqq不存在", SearchScope.All)
             assertThat(page.results).isEmpty()
-            SystemClock.elapsedRealtime() - start
+            val took = SystemClock.elapsedRealtime() - start
+            Log.i("SearchPerf", "run $it: $took ms, heap after gc=${usedHeap() / 1024} KiB")
+            took
         }
         val median = times.sorted()[1]
         Log.i("SearchPerf", "all-books miss: runs=$times ms, median=$median ms")
