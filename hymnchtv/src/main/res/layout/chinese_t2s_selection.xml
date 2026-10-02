@@ -1,68 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="20dp"
-    android:orientation="vertical">
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="match_parent"
+    <LinearLayout android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="5dp"
-        android:textStyle="bold"
-        android:textSize="20sp"
-        android:text="@string/STD" />
+        android:padding="20dp"
+        android:orientation="vertical">
 
-    <RadioGroup
-        android:id="@+id/radioGroupVar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp">
-
-        <RadioButton
-            android:id="@+id/radioButtonS2T"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="@string/S2T" />
+            android:layout_marginBottom="5dp"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:text="@string/lyrics_default_title" />
 
-        <RadioButton
-            android:id="@+id/radioButtonS2HK"
+        <RadioGroup
+            android:id="@+id/radioGroupLyricsDefault"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/S2HK" />
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="20dp">
 
-        <RadioButton
-            android:id="@+id/radioButtonS2TW"
+            <RadioButton
+                android:id="@+id/radioLyricsFollowUi"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/lyrics_follow_ui" />
+
+            <RadioButton
+                android:id="@+id/radioLyricsSimplified"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/lyrics_simplified" />
+
+            <RadioButton
+                android:id="@+id/radioLyricsTraditional"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/lyrics_traditional" />
+        </RadioGroup>
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/S2TW" />
+            android:layout_marginBottom="5dp"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:text="@string/STD" />
 
-        <RadioButton
-            android:id="@+id/radioButtonS2TWP"
+        <RadioGroup
+            android:id="@+id/radioGroupVar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/S2TWP" />
-    </RadioGroup>
+            android:layout_marginTop="10dp">
 
-    <LinearLayout
-        android:id="@+id/buttons"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="10dp">
+            <RadioButton
+                android:id="@+id/radioButtonS2TW"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/S2TW" />
 
-        <Button
-            android:id="@+id/btnCancel"
-            style="@style/ButtonTop"
-            android:text="@string/cancel"
-            android:textSize="22sp" />
+            <RadioButton
+                android:id="@+id/radioButtonS2HK"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/S2HK" />
+        </RadioGroup>
 
-        <Button
-            android:id="@+id/btnOk"
-            style="@style/ButtonTop"
-            android:layout_marginStart="4dp"
-            android:text="@string/ok"
-            android:textSize="22sp" />
+        <LinearLayout
+            android:id="@+id/buttons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="10dp">
+
+            <Button
+                android:id="@+id/btnCancel"
+                style="@style/ButtonTop"
+                android:text="@string/cancel"
+                android:textSize="22sp" />
+
+            <Button
+                android:id="@+id/btnOk"
+                style="@style/ButtonTop"
+                android:layout_marginStart="4dp"
+                android:text="@string/ok"
+                android:textSize="22sp" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</ScrollView>
