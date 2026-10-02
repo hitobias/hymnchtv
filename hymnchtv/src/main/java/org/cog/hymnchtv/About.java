@@ -30,11 +30,18 @@ import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+
 import org.cog.hymnchtv.logutils.LogUploadServiceImpl;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
 import org.cog.hymnchtv.utils.ThemeHelper;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 import de.cketti.library.changelog.ChangeLog;
+import org.apache.commons.io.IOUtils;
 import timber.log.Timber;
 
 /**
@@ -94,6 +101,7 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
 
         TextView hymnchtvHelp = findViewById(R.id.hymnchtv_help);
         hymnchtvHelp.setOnClickListener(this);
+        findViewById(R.id.font_credit).setOnClickListener(this);
 
         TextView copyRight = findViewById(R.id.copyRight);
         copyRight.setMovementMethod(LinkMovementMethod.getInstance());
@@ -156,9 +164,32 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
         else if (id == R.id.hymnchtv_help || id == R.id.hymnchtv_link) {
             hymnUrlAccess(this, HYMNCHTV_LINK);
         }
+        else if (id == R.id.font_credit) {
+            showFontLicense();
+        }
         else {
             finish();
         }
+    }
+
+    /**
+     * Show the SIL OFL text that must ship with the bundled HymnalKai fonts (plan A2).
+     */
+    private void showFontLicense() {
+        String licence;
+        try (InputStream in = getAssets().open("licenses/OFL-HymnalKai.txt")) {
+            licence = new String(IOUtils.toByteArray(in), StandardCharsets.UTF_8);
+        }
+        catch (IOException e) {
+            Timber.e(e, "Font licence asset missing");
+            HymnsApp.showToastMessage(R.string.font_license_title);
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.font_license_title)
+                .setMessage(licence)
+                .setPositiveButton(R.string.ok, null)
+                .show();
     }
 
     @Override
