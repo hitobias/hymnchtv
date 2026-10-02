@@ -341,19 +341,20 @@ class ContentHandlerMainThreadDbTest {
         backend.storeMediaRecord(MediaRecord(MainActivity.HYMN_DB, 1, false, MediaType.HYMN_JIAOCHANG, jcLink, null))
         launch().use { scenario ->
             scenario.onActivity { it.findViewById<RadioButton>(R.id.btn_media).isChecked = true }
+            val player = scenario.player() // kept: the screen may swap the fragment once playback starts
             val gate = IoGate.close()
             try {
                 scenario.onActivity {
-                    (it.supportFragmentManager.findFragmentById(R.id.mediaPlayer) as MediaGuiController).startPlay()
+                    player.startPlay()
                     it.findViewById<RadioButton>(R.id.btn_jiaochang).isChecked = true // the type changes mid-lookup
                 }
                 Thread.sleep(300)
             } finally {
                 gate.release()
             }
-            assertThat(awaitUntil { scenario.player().mFetchedTypes.size >= 2 }).isTrue()
+            assertThat(awaitUntil { player.mFetchedTypes.size >= 2 }).isTrue()
             Thread.sleep(500) // a retry that loops would keep adding lookups
-            assertThat(scenario.player().mFetchedTypes).containsExactly(MediaType.HYMN_MEDIA, MediaType.HYMN_JIAOCHANG).inOrder()
+            assertThat(player.mFetchedTypes).containsExactly(MediaType.HYMN_MEDIA, MediaType.HYMN_JIAOCHANG).inOrder()
         }
     }
 }
