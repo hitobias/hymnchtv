@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.cog.hymnchtv.BuildConfig
 import org.cog.hymnchtv.notebook.backup.BackupService
 import org.cog.hymnchtv.notebook.backup.RoomBackupStore
@@ -64,6 +65,8 @@ object Notebook {
                 CoroutineExceptionHandler { _, e -> Timber.e(e, "Notebook background task failed") },
         )
         val prefs = SharedPrefsNotebookPrefs(app)
+        // The first SharedPreferences read loads the XML file; do it here so isAutoRecordEnabled() on the main thread finds it in memory.
+        appScope.launch(Dispatchers.IO) { prefs.autoRecordEnabled }
         val favorites = RoomFavoriteRepository(db, clock, prefs)
         val singLogs = RoomSingLogRepository(db, clock, ids, prefs)
         val tracker = SingTracker(singLogs, prefs, clock, appScope)

@@ -23,8 +23,8 @@ object BackupCodec {
     const val FORMAT = "hymnchtv-notebook"
     const val CURRENT_SCHEMA_VERSION = 1
 
-    /** Upper bound for imported playlist positions, so re-slotting after the highest slot cannot overflow Int. */
-    const val MAX_POSITION = 1_000_000_000L
+    /** Upper bound for imported playlist positions, so re-slotting after the highest slot (at most maxRowsPerTable moves) stays below 10^9 and can never overflow Int. */
+    const val MAX_POSITION = 900_000_000L
 
     private const val KEY_FORMAT = "format"
     private const val KEY_SCHEMA_VERSION = "schemaVersion"
@@ -56,9 +56,7 @@ object BackupCodec {
     /** [nowMillis] is the importing device's time; rows later than now + maxFutureSkewMillis are skipped. */
     fun decode(text: String, nowMillis: Long, limits: BackupLimits = BackupLimits()): DecodeResult {
         val body = text.removePrefix(BOM)
-        if (nestingDepth(body, limits.maxNestingDepth) > limits.maxNestingDepth) {
-            return DecodeResult.Failure(BackupError.WRONG_FORMAT, "Nesting deeper than ${limits.maxNestingDepth}")
-        }
+        shapeFailure(body, limits)?.let { return it }
         val root = try {
             JSONObject(body)
         } catch (e: JSONException) {
@@ -121,10 +119,10 @@ object BackupCodec {
             else -> TableArray(null, DecodeResult.Failure(BackupError.WRONG_FORMAT, "$name is not an array"))
         }
 
-    /** Max object/array nesting outside strings; stops counting once [limit] is exceeded. */
-    internal fun nestingDepth(text: String, limit: Int): Int {
+    /** One pass outside strings: rejects nesting deeper than the limit or more than maxNodes values, before any parsing. */
+    private fun shapeFailure(text: String, limits: BackupLimits): DecodeResult.Failure? {
         var depth = 0
-        var max = 0
+        var commas = 0
         var inString = false
         var escaped = false
         for (c in text) {
@@ -134,19 +132,20 @@ object BackupCodec {
                     c == '\\' -> escaped = true
                     c == '"' -> inString = false
                 }
-            } else {
-                when (c) {
-                    '"' -> inString = true
-                    '{', '[' -> {
-                        depth++
-                        if (depth > max) max = depth
-                        if (max > limit) return max
-                    }
-                    '}', ']' -> depth--
+                continue
+            }
+            when (c) {
+                '"' -> inString = true
+                '{', '[' -> if (++depth > limits.maxNestingDepth) {
+                    return DecodeResult.Failure(BackupError.WRONG_FORMAT, "Nesting deeper than ${limits.maxNestingDepth}")
+                }
+                '}', ']' -> depth--
+                ',' -> if (++commas >= limits.maxNodes) {
+                    return DecodeResult.Failure(BackupError.TOO_LARGE, "More than ${limits.maxNodes} values")
                 }
             }
         }
-        return max
+        return null
     }
 
     // ---- row-level parsing ----
@@ -193,7 +192,10 @@ object BackupCodec {
         updatedAt = time(getLong("updatedAt"), maxTime),
         deletedAt = nullableLong("deletedAt")?.let { time(it, maxTime) },
         updatedBy = NotebookValidation.uuid(getString("updatedBy")),
-    )
+    ).also {
+        require(it.createdAt <= it.updatedAt) { "createdAt is after updatedAt" }
+        require(it.deletedAt == null || it.deletedAt >= it.updatedAt) { "deletedAt is before updatedAt" }
+    }
 
     private fun JSONObject.hymn() = HymnKey(getString("hymnType"), getInt("hymnNo"), getBoolean("isFu"))
 

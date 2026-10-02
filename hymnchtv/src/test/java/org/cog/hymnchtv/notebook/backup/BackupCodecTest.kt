@@ -202,14 +202,43 @@ class BackupCodecTest {
             .isEqualTo(BackupError.UNSUPPORTED_VERSION)
     }
 
+    private fun itemJson(id: String, position: String) =
+        """{"id":"$id","playlistId":"${testUuid(9)}","position":$position,"hymnType":"hymn_db","hymnNo":1,"isFu":false,""" +
+            """"createdAt":1,"updatedAt":1,"deletedAt":null,"updatedBy":"$DEVICE_A"}"""
+
     @Test
     fun absurdPlaylistPositionsAreSkipped() {
-        fun item(id: String, position: String) =
-            """{"id":"$id","playlistId":"${testUuid(9)}","position":$position,"hymnType":"hymn_db","hymnNo":1,"isFu":false,""" +
-                """"createdAt":1,"updatedAt":1,"deletedAt":null,"updatedBy":"$DEVICE_A"}"""
-        val rows = listOf(item(testUuid(1), "2147483647"), item(testUuid(2), "4294967296"), item(testUuid(3), "1000000000"))
+        val rows = listOf(
+            itemJson(testUuid(1), "2147483647"),
+            itemJson(testUuid(2), "4294967296"),
+            itemJson(testUuid(3), "900000000"),
+            itemJson(testUuid(4), "900000001"),
+            itemJson(testUuid(5), "-1"),
+        )
         val decoded = decodeOk(doc("playlistItems" to rows.joinToString(",", "[", "]")))
         assertThat(decoded.snapshot.tables.playlistItems.map { it.id }).containsExactly(testUuid(3))
-        assertThat(decoded.skipped).isEqualTo(SkippedRows(invalid = 2))
+        assertThat(decoded.skipped).isEqualTo(SkippedRows(invalid = 4))
+    }
+
+    @Test
+    fun tooManyJsonValuesRejectTheFile() {
+        val values = (1..50).joinToString(",", "[", "]")
+        assertThat(failureOf(doc("extra" to values), BackupLimits(maxNodes = 10))).isEqualTo(BackupError.TOO_LARGE)
+        assertThat(decode(doc("extra" to values), BackupLimits(maxNodes = 1_000))).isInstanceOf(DecodeResult.Success::class.java)
+        // commas inside strings do not count
+        val text = noteJson(",".repeat(500))
+        assertThat(decode(doc("notes" to "[$text]"), BackupLimits(maxNodes = 100))).isInstanceOf(DecodeResult.Success::class.java)
+    }
+
+    @Test
+    fun inconsistentTimestampsAreInvalidRows() {
+        fun fav(createdAt: Long, updatedAt: Long, deletedAt: String) =
+            """{"id":"$favDb1","hymnType":"hymn_db","hymnNo":1,"isFu":false,"createdAt":$createdAt,"updatedAt":$updatedAt,""" +
+                """"deletedAt":$deletedAt,"updatedBy":"$DEVICE_A"}"""
+        fun skipped(json: String) = decodeOk(doc("favorites" to "[$json]")).skipped
+        assertThat(skipped(fav(5, 5, "5"))).isEqualTo(SkippedRows.NONE)
+        assertThat(skipped(fav(5, 9, "null"))).isEqualTo(SkippedRows.NONE)
+        assertThat(skipped(fav(6, 5, "null"))).isEqualTo(SkippedRows(invalid = 1))
+        assertThat(skipped(fav(1, 5, "4"))).isEqualTo(SkippedRows(invalid = 1))
     }
 }

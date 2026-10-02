@@ -52,15 +52,22 @@ class BackupService(
     }
 
     companion object {
-        const val DEFAULT_MAX_BYTES = 16 * 1024 * 1024
+        /** Parsing needs several times the file size in heap, so keep it small; 4 MB is far above a realistic notebook. */
+        const val DEFAULT_MAX_BYTES = 4 * 1024 * 1024
     }
 }
 
-/** Maps I/O errors to IO and anything else (e.g. SQLite) to STORAGE; cancellation propagates. */
-private inline fun <T> guarded(onError: (BackupError, Exception) -> T, block: () -> T): T = try {
+/**
+ * Maps I/O errors to IO, running out of memory to TOO_LARGE and anything else (e.g. SQLite) to STORAGE;
+ * cancellation propagates. OutOfMemoryError is caught here because it would otherwise crash the app.
+ */
+private inline fun <T> guarded(onError: (BackupError, Throwable) -> T, block: () -> T): T = try {
     block()
 } catch (e: CancellationException) {
     throw e
+} catch (e: OutOfMemoryError) {
+    Timber.w(e, "Notebook backup ran out of memory")
+    onError(BackupError.TOO_LARGE, e)
 } catch (e: IOException) {
     Timber.w(e, "Notebook backup I/O failed")
     onError(BackupError.IO, e)

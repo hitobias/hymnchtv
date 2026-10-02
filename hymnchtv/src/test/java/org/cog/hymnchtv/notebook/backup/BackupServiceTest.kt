@@ -101,4 +101,34 @@ class BackupServiceTest {
         assertThat((imported as ImportResult.Failure).error).isEqualTo(BackupError.STORAGE)
         assertThat(target.tables).isEqualTo(NotebookTables.EMPTY)
     }
+
+    @Test
+    fun defaultLimitIsFourMegabytes() {
+        assertThat(BackupService.DEFAULT_MAX_BYTES).isEqualTo(4 * 1024 * 1024)
+    }
+
+    @Test
+    fun outOfMemoryDuringExportOrImportIsTooLargeNotACrash() = runTest {
+        val oom = OutOfMemoryError("simulated")
+        val exporting = InMemoryBackupStore(SampleTables.full()).apply { failNext = true; failure = oom }
+        assertThat((service(exporting).exportTo(ByteArrayOutputStream()) as ExportResult.Failure).error)
+            .isEqualTo(BackupError.TOO_LARGE)
+
+        val bytes = service(InMemoryBackupStore(SampleTables.full())).exportBytes()
+        val importing = InMemoryBackupStore().apply { failNext = true; failure = oom }
+        assertThat((service(importing).importFrom(ByteArrayInputStream(bytes)) as ImportResult.Failure).error)
+            .isEqualTo(BackupError.TOO_LARGE)
+    }
+
+    @Test
+    fun streamThatKeepsGoingPastTheLimitIsRejectedWithoutReadingItAll() = runTest {
+        var served = 0L
+        val endless = object : java.io.InputStream() {
+            override fun read(): Int = 0.also { served++ }
+            override fun read(b: ByteArray, off: Int, len: Int): Int = len.also { served += it }
+        }
+        val result = service(InMemoryBackupStore(), maxBytes = 1_000_000).importFrom(endless)
+        assertThat((result as ImportResult.Failure).error).isEqualTo(BackupError.TOO_LARGE)
+        assertThat(served).isLessThan(2_000_000L)
+    }
 }

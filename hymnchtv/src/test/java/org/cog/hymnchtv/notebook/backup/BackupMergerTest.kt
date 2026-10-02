@@ -172,6 +172,19 @@ class BackupMergerTest {
         assertThat(changes.associate { it.id to it.position }).containsExactly(b, 1, c, 2)
     }
 
+    @Test
+    fun reslottingAtTheMaximumImportedPositionStaysBelowTenDigitsAndConverges() {
+        val max = BackupCodec.MAX_POSITION.toInt()
+        val ids = (1..50).map { testUuid(100 + it) }
+        val local = NotebookTables(playlistItems = listOf(SampleTables.item(a, pl, max, updatedAt = 500)))
+        val incoming = NotebookTables(playlistItems = ids.map { SampleTables.item(it, pl, max, updatedAt = 100) })
+        val merged = local.upserted(BackupMerger.merge(local, incoming).changes)
+        val all = merged.playlistItems.map { it.position }
+        assertThat(all.toSet()).hasSize(51)
+        assertThat(all.max()).isLessThan(1_000_000_000)
+        assertThat(BackupMerger.merge(merged, incoming).changes.playlistItems).isEmpty()
+    }
+
     private fun positions(tables: NotebookTables) = tables.playlistItems.associate { it.id to it.position }
 
     @Test

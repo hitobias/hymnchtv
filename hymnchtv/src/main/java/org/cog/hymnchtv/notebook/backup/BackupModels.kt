@@ -35,11 +35,13 @@ data class BackupSnapshot(
 data class BackupLimits(
     val maxRowsPerTable: Int = 100_000,
     val maxNestingDepth: Int = 4,
+    /** Upper bound for the number of JSON values (counted as commas); each costs heap while parsing. */
+    val maxNodes: Int = 500_000,
     val maxFutureSkewMillis: Long = 24 * 60 * 60 * 1000L,
     val maxAppVersionLength: Int = 64,
 ) {
     init {
-        require(maxRowsPerTable > 0 && maxNestingDepth > 0 && maxFutureSkewMillis >= 0 && maxAppVersionLength > 0)
+        require(maxRowsPerTable > 0 && maxNestingDepth > 0 && maxNodes > 0 && maxFutureSkewMillis >= 0 && maxAppVersionLength > 0)
     }
 }
 

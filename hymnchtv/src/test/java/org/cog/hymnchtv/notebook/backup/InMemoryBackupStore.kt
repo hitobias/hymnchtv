@@ -10,10 +10,14 @@ class InMemoryBackupStore(initial: NotebookTables = NotebookTables.EMPTY) : Back
     @Volatile
     var failNext: Boolean = false
 
+    /** Thrown instead of IllegalStateException when [failNext] is set. */
+    @Volatile
+    var failure: Throwable = IllegalStateException("simulated storage failure")
+
     private fun maybeFail() {
         if (failNext) {
             failNext = false
-            throw IllegalStateException("simulated storage failure")
+            throw failure
         }
     }
 

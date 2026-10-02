@@ -4,6 +4,10 @@ import android.net.Uri
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -22,8 +26,13 @@ import org.cog.hymnchtv.notebook.model.HymnTypes
 import org.cog.hymnchtv.notebook.model.Occasion
 import org.cog.hymnchtv.notebook.model.SingSource
 import org.cog.hymnchtv.notebook.record.SingTracker
+import org.cog.hymnchtv.notebook.repo.FavoriteRepository
 import org.junit.Test
 import java.util.TimeZone
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotebookAsyncTest {
@@ -153,5 +162,60 @@ class NotebookAsyncTest {
         assertThat(h.async.isAutoRecordEnabled()).isTrue()
         h.async.setAutoRecordEnabled(false)
         assertThat(h.prefs.autoRecordEnabled).isFalse()
+    }
+
+    private class HookedFavorites(private val inner: InMemoryFavoriteRepository, private val hook: () -> Unit) :
+        FavoriteRepository by inner {
+        override suspend fun isFavorite(key: HymnKey): Boolean {
+            hook()
+            return inner.isFavorite(key)
+        }
+    }
+
+    @Test
+    fun outOfMemoryBecomesErrInsteadOfCrashing() = runTest {
+        val h = Harness(this)
+        val async = NotebookAsync(
+            HookedFavorites(h.favorites) { throw OutOfMemoryError("simulated") }, h.singLogs, h.prefs, h.tracker, UnusedBackupIo,
+            callbackDispatcher = UnconfinedTestDispatcher(testScheduler),
+            workDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        var outcome: Outcome<Boolean>? = null
+        async.isFavorite(key) { outcome = it }
+        runCurrent()
+        assertThat(outcome?.errorOrNull()).isInstanceOf(OutOfMemoryError::class.java)
+    }
+
+    @Test
+    fun workRunsOnTheWorkThreadAndCallbacksOnTheCallbackThread() {
+        val workThread = Executors.newSingleThreadExecutor { Thread(it, "notebook-work-test") }
+        val callbackThread = Executors.newSingleThreadExecutor { Thread(it, "notebook-callback-test") }
+        val scope = CoroutineScope(Job())
+        try {
+            val clock = Clock { 1_790_733_600_000L }
+            val singLogs = InMemorySingLogRepository(clock)
+            val prefs = FakeNotebookPrefs()
+            val workName = AtomicReference<String>()
+            val favorites = HookedFavorites(InMemoryFavoriteRepository(clock)) { workName.set(Thread.currentThread().name) }
+            val async = NotebookAsync(
+                favorites, singLogs, prefs, SingTracker(singLogs, prefs, clock, scope), UnusedBackupIo,
+                callbackDispatcher = callbackThread.asCoroutineDispatcher(),
+                workDispatcher = workThread.asCoroutineDispatcher(),
+            )
+            val callbackName = AtomicReference<String>()
+            val done = CountDownLatch(1)
+            async.isFavorite(key) {
+                callbackName.set(Thread.currentThread().name)
+                done.countDown()
+            }
+            assertThat(done.await(5, TimeUnit.SECONDS)).isTrue()
+            // the coroutine debug agent appends " @coroutine#N" to the thread name
+            assertThat(workName.get()).startsWith("notebook-work-test")
+            assertThat(callbackName.get()).startsWith("notebook-callback-test")
+        } finally {
+            scope.cancel()
+            workThread.shutdownNow()
+            callbackThread.shutdownNow()
+        }
     }
 }

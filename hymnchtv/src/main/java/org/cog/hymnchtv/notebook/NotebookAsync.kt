@@ -137,6 +137,10 @@ class NotebookAsync(
             } catch (e: Exception) {
                 Timber.w(e, "Notebook call failed")
                 Outcome.Err(e)
+            } catch (e: OutOfMemoryError) {
+                // Must not escape into the scope: it would crash the main thread.
+                Timber.w(e, "Notebook call ran out of memory")
+                Outcome.Err(e)
             }
             callback.onResult(outcome)
         }

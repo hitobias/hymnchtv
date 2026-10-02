@@ -2,6 +2,7 @@ package org.cog.hymnchtv.notebook.backup
 
 import android.content.ContentResolver
 import android.net.Uri
+import android.provider.DocumentsContract
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -29,27 +30,63 @@ object BackupDocuments {
 
     suspend fun exportTo(resolver: ContentResolver, uri: Uri, service: BackupService): ExportResult =
         withContext(Dispatchers.IO) {
-            val stream = openOutput(resolver, uri)
-                ?: return@withContext ExportResult.Failure(BackupError.IO, "Cannot open document for writing")
-            try {
-                stream.use { service.exportTo(it) }
-            } catch (e: IOException) {
-                Timber.w(e, "Closing exported document failed")
-                ExportResult.Failure(BackupError.IO, e.message.orEmpty())
-            }
+            exportVia(
+                open = { openOutput(resolver, uri) },
+                discard = {
+                    if (!DocumentsContract.deleteDocument(resolver, uri)) Timber.w("Provider did not delete %s", uri)
+                },
+                service = service,
+            )
         }
 
     suspend fun importFrom(resolver: ContentResolver, uri: Uri, service: BackupService): ImportResult =
-        withContext(Dispatchers.IO) {
-            val stream = openInput(resolver, uri)
-                ?: return@withContext ImportResult.Failure(BackupError.IO, "Cannot open document for reading")
+        withContext(Dispatchers.IO) { importVia(open = { openInput(resolver, uri) }, service = service) }
+
+    /**
+     * Writes through [open]. Unless the export succeeds (including on failure, exception or cancellation) the empty or
+     * partial document is removed with [discard], best effort, so a failed export never leaves a file that looks like a backup.
+     */
+    internal suspend fun exportVia(open: () -> OutputStream?, discard: () -> Unit, service: BackupService): ExportResult {
+        var result: ExportResult? = null
+        try {
+            val stream = open()
+            result = if (stream == null) {
+                ExportResult.Failure(BackupError.IO, "Cannot open document for writing")
+            } else {
+                try {
+                    stream.use { service.exportTo(it) }
+                } catch (e: IOException) {
+                    Timber.w(e, "Closing exported document failed")
+                    ExportResult.Failure(BackupError.IO, e.message.orEmpty())
+                }
+            }
+            return result
+        } finally {
+            if (result !is ExportResult.Success) discardQuietly(discard)
+        }
+    }
+
+    /** A failure to close the input after a completed import is only logged: the rows are already committed. */
+    internal suspend fun importVia(open: () -> InputStream?, service: BackupService): ImportResult {
+        val stream = open() ?: return ImportResult.Failure(BackupError.IO, "Cannot open document for reading")
+        try {
+            return service.importFrom(stream)
+        } finally {
             try {
-                stream.use { service.importFrom(it) }
+                stream.close()
             } catch (e: IOException) {
                 Timber.w(e, "Closing imported document failed")
-                ImportResult.Failure(BackupError.IO, e.message.orEmpty())
             }
         }
+    }
+
+    private fun discardQuietly(discard: () -> Unit) {
+        try {
+            discard()
+        } catch (e: Exception) {
+            Timber.w(e, "Could not delete the incomplete backup document")
+        }
+    }
 
     private fun openOutput(resolver: ContentResolver, uri: Uri): OutputStream? = try {
         openTruncating(resolver, uri)
