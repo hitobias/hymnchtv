@@ -26,6 +26,7 @@
     <string name="pref_keep_screen_on">閱讀時螢幕保持開啟</string>
     <string name="bg_photo">自訂照片</string>
     <string name="bg_picker_sample">聖哉，聖哉，聖哉</string>
+    <string name="bg_photo_import_failed">無法使用該照片，原本的背景沒有改變。</string>
     <string name="about_font_credit">歌詞字型 HymnalKai 衍生自 LXGW WenKai（霞鶩文楷），採用 SIL Open Font License 1.1 授權。點此閱讀授權全文。</string>
     <string name="font_license_title">字型授權</string>
 

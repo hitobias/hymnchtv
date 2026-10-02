@@ -2,20 +2,17 @@ package org.cog.hymnchtv.reading.background
 
 import android.content.SharedPreferences
 import android.widget.ImageView
-import org.cog.hymnchtv.MainActivity
-import org.cog.hymnchtv.persistance.FileBackend
+import org.cog.hymnchtv.HymnsApp
 import org.cog.hymnchtv.utils.ThemeHelper
-import org.cog.hymnchtv.utils.WallPaperUtil
 import java.io.File
 
 /** Reads the background settings and applies them; the single entry point for MainActivity and ContentHandler. */
 object BackgroundPrefs {
-    /** The user's cropped photo (WallPaperUtil), or null if none is stored or the file is gone. */
+    /** The user's imported photo ([PhotoBackgroundImporter]), or null if none is stored. [prefs] is kept for call-site compatibility. */
     @JvmStatic
-    fun photoFile(prefs: SharedPreferences): File? {
-        val name = runCatching { prefs.getString(MainActivity.PREF_WALLPAPER, null) }.getOrNull() ?: return null
-        return FileBackend.getHymnchtvStore(WallPaperUtil.DIR_WALLPAPER + name, false)?.takeIf { it.isFile }
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun photoFile(prefs: SharedPreferences): File? =
+        PhotoBackgroundImporter.photoFileIn(HymnsApp.getGlobalContext().filesDir).takeIf { it.isFile }
 
     @JvmStatic
     fun isDarkTheme(): Boolean = ThemeHelper.isAppTheme(ThemeHelper.Theme.DARK)

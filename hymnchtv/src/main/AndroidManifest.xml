@@ -112,10 +112,6 @@
         <activity android:name=".RichTextEditor" />
 
         <activity
-            android:name=".utils.WallPaperUtil"
-            android:label="@string/wallpaperUser" />
-
-        <activity
             android:name=".utils.ChineseS2TSelection"
             android:label="@string/STD" />
 
@@ -124,10 +120,6 @@
             android:label="@string/reading_settings" />
 
         <activity android:name=".reading.BackgroundPickerActivity" />
-
-        <activity
-            android:name="com.yalantis.ucrop.UCropActivity"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
         <activity
             android:name=".About"

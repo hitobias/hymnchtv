@@ -21,7 +21,6 @@ import static org.cog.hymnchtv.HymnToc.hymnTocPage;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_BB_DUMMY;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_MAX;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_YB_NO_MAX;
-import static org.cog.hymnchtv.utils.WallPaperUtil.DIR_WALLPAPER;
 
 import android.Manifest;
 import android.animation.ArgbEvaluator;
@@ -93,6 +92,7 @@ import org.cog.hymnchtv.mediaconfig.MediaConfig;
 import org.cog.hymnchtv.mediaconfig.MediaRecord;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.reading.background.BackgroundPrefs;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
@@ -105,7 +105,6 @@ import org.cog.hymnchtv.utils.MySwipeListAdapter;
 import org.cog.hymnchtv.utils.ThemeHelper;
 import org.cog.hymnchtv.utils.ThemeHelper.Theme;
 import org.cog.hymnchtv.utils.TouchListener;
-import org.cog.hymnchtv.utils.WallPaperUtil;
 
 import de.cketti.library.changelog.ChangeLog;
 import timber.log.Timber;
@@ -959,10 +958,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             setBgColor(11, R.drawable.bg25);
             return true;
         }
-        else if (itemId == R.id.sbguser) {
-            mStartForResult.launch(new Intent(this, WallPaperUtil.class));
-            return true;
-        }
         else if (itemId == R.id.sn_convert) {
             // HymnIdx2NoConvert.validateIdx2NoConversion(HYMN_ER, HYMN_ER_INDEX_MAX);
             // HymnNo2IdxConvert.validateNo2IdxConversion(HYMN_DB, HYMN_DB_NO_TMAX);
@@ -1291,8 +1286,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             background.setBackgroundResource(MainActivity.bgResId[bgResId]);
         }
         else {
-            String fileName = mSharedPref.getString(PREF_WALLPAPER, null);
-            File wpFile = FileBackend.getHymnchtvStore(DIR_WALLPAPER + fileName, false);
+            File wpFile = BackgroundPrefs.photoFile(mSharedPref);
             if ((wpFile != null) && wpFile.exists()) {
                 Drawable drawable = Drawable.createFromPath(wpFile.getAbsolutePath());
                 background.setBackground(drawable);
