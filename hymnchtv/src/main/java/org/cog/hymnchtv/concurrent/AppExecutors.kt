@@ -59,6 +59,30 @@ object AppExecutors {
         }
     }
 
+    /**
+     * [ioThenMain] that also reports a failing [work]: [onFailure] runs on the main thread (under the same [isAlive]
+     * rule), so a caller that set a "request pending" flag always gets to reset it.
+     */
+    @JvmStatic
+    fun <T> ioThenMain(tag: String, isAlive: BooleanSupplier, work: Supplier<T>, onMain: Consumer<T>, onFailure: Runnable) {
+        io(tag) {
+            val result = try {
+                work.get()
+            } catch (e: RuntimeException) {
+                Timber.e(e, "Background task '%s' failed", tag)
+                MAIN.post { if (isAlive.asBoolean) onFailure.run() }
+                return@io
+            }
+            MAIN.post { if (isAlive.asBoolean) onMain.accept(result) }
+        }
+    }
+
+    /** [ioThenMain] with a failure callback for an Activity. */
+    @JvmStatic
+    fun <T> ioThenMain(tag: String, activity: Activity, work: Supplier<T>, onMain: Consumer<T>, onFailure: Runnable) {
+        ioThenMain(tag, { !activity.isFinishing && !activity.isDestroyed }, work, onMain, onFailure)
+    }
+
     /** [ioThenMain] for an Activity: the result is delivered only while it is neither finishing nor destroyed. */
     @JvmStatic
     fun <T> ioThenMain(tag: String, activity: Activity, work: Supplier<T>, onMain: Consumer<T>) {

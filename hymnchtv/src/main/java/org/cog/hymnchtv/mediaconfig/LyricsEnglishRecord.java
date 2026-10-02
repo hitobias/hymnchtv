@@ -116,6 +116,14 @@ public class LyricsEnglishRecord {
     }
 
     /**
+     * The key of a hymn's English lyrics row in the database: ErGe hymn numbers are shifted by ER_GE_ENG_OFFSET so they
+     * never collide with the Da Ben hymn of the same English number. Use it for every read, write and delete.
+     */
+    public static int dbHymnNo(int hymnNoEng, boolean isErGe) {
+        return hymnNoEng + (isErGe ? ER_GE_ENG_OFFSET : 0);
+    }
+
+    /**
      * Get the English lyrics from SQL DB if available, else retrieve it online; save to DB available.
      * mLyricsEnglish may only contain a link for external access. Currently, the link is http i.e.
      * not secure ssl and will be blocked by android if proceed to access its content.
@@ -123,7 +131,7 @@ public class LyricsEnglishRecord {
      */
     public void fetchLyrics(int hymnNoEng, boolean isErGe) {
         final String webUrl = (isErGe ? HYMNAL_LINK_MAIN_ER : HYMNAL_LINK_MAIN) + hymnNoEng;
-        final int hymnNoE = hymnNoEng + (isErGe ? ER_GE_ENG_OFFSET : 0);
+        final int hymnNoE = dbHymnNo(hymnNoEng, isErGe);
 
         // The DB read runs on AppExecutors.io; the lyrics (or the web fetch) continue on the main thread.
         AppExecutors.ioThenMain("lyrics-eng-read", this::isContextAlive,

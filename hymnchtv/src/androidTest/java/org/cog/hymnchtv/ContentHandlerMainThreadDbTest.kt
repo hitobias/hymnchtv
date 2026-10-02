@@ -237,4 +237,123 @@ class ContentHandlerMainThreadDbTest {
             backend.deleteLyricsEng(9990)
         }
     }
+
+    private fun launchEr(no: Int): ActivityScenario<ContentHandler> {
+        val extras = Bundle().apply {
+            putString(MainActivity.ATTR_HYMN_TYPE, MainActivity.HYMN_ER)
+            putInt(MainActivity.ATTR_HYMN_NUMBER, no)
+        }
+        return ActivityScenario.launch(Intent(ctx, ContentHandler::class.java).putExtras(extras))
+    }
+
+    @Test
+    fun deleteEnglishLyricsOfAnErGeHymnRemovesTheOffsetRowAndKeepsTheDaBenRowOfTheSameNumber() {
+        launchEr(1).use { scenario ->
+            val eng = scenario.read { it.hymnNoEng }
+            assertThat(eng).isNotNull()
+            val erKey = LyricsEnglishRecord.dbHymnNo(eng!!, true)
+            assertThat(erKey).isNotEqualTo(eng)
+            backend.storeLyricsEng(erKey, "<h1>er-row</h1>")
+            backend.storeLyricsEng(eng, "<h1>daben-row</h1>")
+            try {
+                scenario.onActivity { it.onLyricsAction(R.id.lyrcsEnglishDelete) }
+                assertThat(awaitUntil { backend.getLyricsEnglish(erKey).isNullOrEmpty() }).isTrue()
+                assertThat(backend.getLyricsEnglish(eng)).contains("daben-row")
+            } finally {
+                backend.deleteLyricsEng(erKey)
+                backend.deleteLyricsEng(eng)
+            }
+        }
+    }
+
+    @Test
+    fun aShareStartedOnOneHymnStaysOnThatHymnWhenTheUserSwipesBeforeTheReadFinishes() {
+        val tmp = org.cog.hymnchtv.persistance.FileBackend.getHymnchtvStore(org.cog.hymnchtv.persistance.FileBackend.TMP, true)!!
+        val first = listOf(java.io.File(tmp, "db1.png"), java.io.File(tmp, "db1.txt"))
+        val second = listOf(java.io.File(tmp, "db2.png"), java.io.File(tmp, "db2.txt"))
+        (first + second).forEach { it.delete() }
+        launch().use { scenario ->
+            val monitor = instrumentation.addMonitor(
+                IntentFilter(Intent.ACTION_CHOOSER), Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
+            try {
+                val gate = IoGate.close()
+                try {
+                    scenario.onActivity { it.onLyricsAction(R.id.lyrcsShare) }
+                    scenario.onActivity { it.findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.viewPager).setCurrentItem(1, false) }
+                    assertThat(awaitUntil { scenario.read { it.hymnNo } != 1 }).isTrue()
+                } finally {
+                    gate.release()
+                }
+                assertThat(awaitUntil { monitor.hits > 0 }).isTrue()
+                assertThat(first.all { it.exists() }).isTrue()
+                assertThat(second.any { it.exists() }).isFalse()
+            } finally {
+                instrumentation.removeMonitor(monitor)
+                (first + second).forEach { it.delete() }
+            }
+        }
+    }
+
+    @Test
+    fun aFailedLinkReadStillCompletesTheShareAndLaterTapsWork() {
+        launch().use { scenario ->
+            val monitor = instrumentation.addMonitor(
+                IntentFilter(Intent.ACTION_CHOOSER), Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
+            val room = backend.roomDatabase().openHelper.writableDatabase
+            try {
+                room.execSQL("ALTER TABLE media_record RENAME TO media_record_hidden")
+                try {
+                    scenario.onActivity { it.onLyricsAction(R.id.lyrcsShare) }
+                    assertThat(awaitUntil { monitor.hits > 0 }).isTrue()
+                    val before = monitor.hits
+                    scenario.onActivity { it.onLyricsAction(R.id.lyrcsShare) } // the pending flag was reset
+                    assertThat(awaitUntil { monitor.hits > before }).isTrue()
+                } finally {
+                    room.execSQL("ALTER TABLE media_record_hidden RENAME TO media_record")
+                }
+            } finally {
+                instrumentation.removeMonitor(monitor)
+            }
+        }
+    }
+
+    @Test
+    fun aFailedMediaStateReadLeavesTheScreenUsable() {
+        val room = backend.roomDatabase().openHelper.writableDatabase
+        room.execSQL("ALTER TABLE media_record RENAME TO media_record_hidden")
+        try {
+            launch().use { scenario ->
+                Thread.sleep(500)
+                assertThat(scenario.read { it.hymnNo }).isEqualTo(1)
+            }
+        } finally {
+            room.execSQL("ALTER TABLE media_record_hidden RENAME TO media_record")
+        }
+    }
+
+    private fun ActivityScenario<ContentHandler>.player(): MediaGuiController =
+        read { it.supportFragmentManager.findFragmentById(R.id.mediaPlayer) as MediaGuiController }
+
+    @Test
+    fun playPressedWhileTheLookupRunsIsRepeatedForTheMediaTypeChosenMeanwhile() {
+        val jcLink = "https://example.org/ch-mt-test-jc.mp3"
+        backend.storeMediaRecord(MediaRecord(MainActivity.HYMN_DB, 1, false, MediaType.HYMN_MEDIA, link, null))
+        backend.storeMediaRecord(MediaRecord(MainActivity.HYMN_DB, 1, false, MediaType.HYMN_JIAOCHANG, jcLink, null))
+        launch().use { scenario ->
+            scenario.onActivity { it.findViewById<RadioButton>(R.id.btn_media).isChecked = true }
+            val gate = IoGate.close()
+            try {
+                scenario.onActivity {
+                    (it.supportFragmentManager.findFragmentById(R.id.mediaPlayer) as MediaGuiController).startPlay()
+                    it.findViewById<RadioButton>(R.id.btn_jiaochang).isChecked = true // the type changes mid-lookup
+                }
+                Thread.sleep(300)
+            } finally {
+                gate.release()
+            }
+            assertThat(awaitUntil { scenario.player().mFetchedTypes.size >= 2 }).isTrue()
+            Thread.sleep(500) // a retry that loops would keep adding lookups
+            assertThat(scenario.player().mFetchedTypes).containsExactly(MediaType.HYMN_MEDIA, MediaType.HYMN_JIAOCHANG).inOrder()
+        }
+    }
 }

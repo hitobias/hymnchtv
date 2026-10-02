@@ -636,7 +636,7 @@ public class ContentHandler extends BaseActivity {
                     bundle.putInt(ATTR_HYMN_NUMBER, hymnNo);
                     intent.putExtras(bundle);
                     startActivity(intent);
-                });
+                }, () -> mMediaConfigPending = false);
     }
 
     /**
@@ -648,7 +648,8 @@ public class ContentHandler extends BaseActivity {
             HymnsApp.showToastMessage(R.string.error_english_lyrics_null, mHymnNo);
             return;
         }
-        AppExecutors.io("lyrics-eng-delete", () -> mDB.deleteLyricsEng(hymnNoEng));
+        final int dbKey = LyricsEnglishRecord.dbHymnNo(hymnNoEng, HYMN_ER.equals(mHymnType));
+        AppExecutors.io("lyrics-eng-delete", () -> mDB.deleteLyricsEng(dbKey));
     }
 
     /**
@@ -663,46 +664,48 @@ public class ContentHandler extends BaseActivity {
         final int hymnNo = mHymnNo;
         AppExecutors.ioThenMain("lyrics-share-url", this, () -> getMediaUrl(hymnType, hymnNo), mediaUrl -> {
             mSharePending = false;
-            lyricsShare(mediaUrl);
-        });
+            lyricsShare(hymnType, hymnNo, mediaUrl);
+        }, () -> mSharePending = false);
     }
 
     /**
-     * @param mediaUrl the current hymn's media link read from the DB, or null
+     * @param hymnType the hymn type the share was requested for (the user may have moved on meanwhile)
+     * @param hymnNo the hymn number the share was requested for
+     * @param mediaUrl that hymn's media link read from the DB, or null
      */
-    private void lyricsShare(String mediaUrl) {
+    private void lyricsShare(String hymnType, int hymnNo, String mediaUrl) {
         String resPrefix = "";
         String resFName = "";
 
-        switch (mHymnType) {
+        switch (hymnType) {
         case HYMN_ER:
-            resPrefix = SCORE_ER_DIR + mHymnNo;
-            resFName = LYRICS_ER_DIR + "er" + mHymnNo;
+            resPrefix = SCORE_ER_DIR + hymnNo;
+            resFName = LYRICS_ER_DIR + "er" + hymnNo;
             break;
 
         case HYMN_XB:
-            resPrefix = SCORE_XB_DIR + "xb" + mHymnNo;
-            resFName = LYRICS_XB_DIR + "xb" + mHymnNo;
+            resPrefix = SCORE_XB_DIR + "xb" + hymnNo;
+            resFName = LYRICS_XB_DIR + "xb" + hymnNo;
             break;
 
         case HYMN_XG:
-            resPrefix = SCORE_XG_DIR + "xg" + mHymnNo;
-            resFName = LYRICS_XG_DIR + "xg" + mHymnNo;
+            resPrefix = SCORE_XG_DIR + "xg" + hymnNo;
+            resFName = LYRICS_XG_DIR + "xg" + hymnNo;
             break;
 
         case HYMN_YB:
-            resPrefix = SCORE_XB_DIR + "yb" + mHymnNo;
-            resFName = LYRICS_XB_DIR + "yb" + mHymnNo;
+            resPrefix = SCORE_XB_DIR + "yb" + hymnNo;
+            resFName = LYRICS_XB_DIR + "yb" + hymnNo;
             break;
 
         case HYMN_BB:
-            resPrefix = SCORE_BB_DIR + "bb" + mHymnNo;
-            resFName = LYRICS_BB_DIR + "bb" + mHymnNo;
+            resPrefix = SCORE_BB_DIR + "bb" + hymnNo;
+            resFName = LYRICS_BB_DIR + "bb" + hymnNo;
             break;
 
         case HYMN_DB:
-            resPrefix = SCORE_DB_DIR + "db" + mHymnNo;
-            resFName = LYRICS_DB_DIR + "db" + mHymnNo;
+            resPrefix = SCORE_DB_DIR + "db" + hymnNo;
+            resFName = LYRICS_DB_DIR + "db" + hymnNo;
             break;
         }
 
@@ -745,8 +748,13 @@ public class ContentHandler extends BaseActivity {
         boolean isFu = hymnType.equals(HYMN_DB) && (hymnNo > HYMN_DB_NO_MAX);
         MediaRecord mediaRecord = new MediaRecord(hymnType, hymnNo, isFu, MediaType.HYMN_MEDIA);
 
-        if (mDB.getMediaRecord(mediaRecord, true) && (mediaRecord.getMediaUri() != null)) {
-            urlLink = mediaRecord.toString();
+        try {
+            if (mDB.getMediaRecord(mediaRecord, true) && (mediaRecord.getMediaUri() != null)) {
+                urlLink = mediaRecord.toString();
+            }
+        }
+        catch (RuntimeException e) {
+            Timber.e(e, "Media link lookup failed: %s", mediaRecord);
         }
         return urlLink;
     }
@@ -801,7 +809,7 @@ public class ContentHandler extends BaseActivity {
             if (hymnNo == mHymnNo && hymnType.equals(mHymnType)) {
                 mMediaGuiController.initHymnInfo(hymnInfo, isAvailable);
             }
-        });
+        }, () -> { });
     }
 
     /**
@@ -857,41 +865,8 @@ public class ContentHandler extends BaseActivity {
         }
     }
 
-    /**
-     * For testing of the getPlayHymn algorithms for the specified media Type
-     * and proceed to download if proceedDownload is true;
-     */
-    public void da_link_test(MediaType mediaType, boolean proceedDownLoad) {
-        for (int hymnIdx = 1; hymnIdx <= HYMN_DB_NO_TMAX; hymnIdx++) {
-            int[] hymnNoPage = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, hymnIdx);
-            mHymnNo = hymnNoPage[0];
-            if (mHymnNo != -1) {
-                getPlayHymn(mediaType, proceedDownLoad);
-            }
-        }
-    }
-
 // 第112首 神生命的种子 https://g.cgbr.org/music/x/media/112x.mp3
 // https://g.cgbr.org/music/x/media/139.mp3
-
-    /**
-     * First priority: fetch the user defined DB media links/contents for the selected hymnType/hymnNo.
-     * To save local storage space; the media url link is played via streaming using YoutubePlayer,
-     * or ExoPlayer without downloading the file.
-     * <p>
-     * If none found, then fetch the required playback media resources from local directory if available.
-     * Otherwise, fetch from online sites with the predefined link if available and if proceedDownLoad is true;
-     * else drop to next mediaType search for playback
-     *
-     * @param mediaType media Type for the playback i.e. hymnType ER, JIAOCHANG, CHANGSHI or BANZOU
-     * @param proceedDownLoad download from the specified dnLink if true;
-     *
-     * @return list of media resource to playback. Usually only one item, two for midi resources
-     * Reads the DB: not for the main thread (the app uses {@link #fetchPlayHymn}); only the da_link_test debug loop calls it.
-     */
-    public List<Uri> getPlayHymn(MediaType mediaType, boolean proceedDownLoad) {
-        return getPlayHymn(mediaType, proceedDownLoad, mMediaContentHandler.findMediaRecord(mHymnType, mHymnNo, mediaType));
-    }
 
     /**
      * Fetch the playback list of the current hymn without blocking the main thread: the stored media record is read
@@ -905,13 +880,24 @@ public class ContentHandler extends BaseActivity {
         AppExecutors.ioThenMain("play-hymn-lookup", this,
                 () -> mMediaContentHandler.findMediaRecord(hymnType, hymnNo, mediaType),
                 mediaRecord -> onResult.accept((hymnNo == mHymnNo && hymnType.equals(mHymnType))
-                        ? getPlayHymn(mediaType, proceedDownLoad, mediaRecord) : null));
+                        ? getPlayHymn(mediaType, proceedDownLoad, mediaRecord) : null),
+                () -> onResult.accept(null));
     }
 
     /**
-     * Main-thread part of {@link #getPlayHymn(MediaType, boolean)}.
+     * First priority: fetch the user defined DB media links/contents for the selected hymnType/hymnNo.
+     * To save local storage space; the media url link is played via streaming using YoutubePlayer,
+     * or ExoPlayer without downloading the file.
+     * <p>
+     * If none found, then fetch the required playback media resources from local directory if available.
+     * Otherwise, fetch from online sites with the predefined link if available and if proceedDownLoad is true;
+     * else drop to next mediaType search for playback. Main thread; reads no DB.
      *
+     * @param mediaType media Type for the playback i.e. hymnType ER, JIAOCHANG, CHANGSHI or BANZOU
+     * @param proceedDownLoad download from the specified dnLink if true;
      * @param mediaRecord the stored media record of the current hymn and mediaType, or null if none
+     *
+     * @return list of media resource to playback. Usually only one item, two for midi resources
      */
     private List<Uri> getPlayHymn(MediaType mediaType, boolean proceedDownLoad, MediaRecord mediaRecord) {
         List<Uri> uriList = new ArrayList<>();
@@ -1309,6 +1295,17 @@ public class ContentHandler extends BaseActivity {
         return false;
     }
 
+    /** A failing read counts as "no stored record" (logged), so the other media types are still evaluated. */
+    private boolean hasStoredMediaRecord(MediaRecord mediaRecord) {
+        try {
+            return mDB.getMediaRecord(mediaRecord, false);
+        }
+        catch (RuntimeException e) {
+            Timber.e(e, "Media state lookup failed: %s", mediaRecord);
+            return false;
+        }
+    }
+
     /**
      * Get the local availability of the hymn media content for all mediaType. Reads the DB: AppExecutors.io only.
      *
@@ -1343,7 +1340,7 @@ public class ContentHandler extends BaseActivity {
             MediaRecord mediaRecord = new MediaRecord(hymnType, hymnNo, isFu, mediaType);
 
             // Skip to next if state is already evaluated to true i.e. defined in DB media link
-            if ((isAvailable[i] |= mDB.getMediaRecord(mediaRecord, false)))
+            if ((isAvailable[i] |= hasStoredMediaRecord(mediaRecord)))
                 continue;
 
             switch (mediaType) {

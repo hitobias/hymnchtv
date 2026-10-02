@@ -84,4 +84,21 @@ class AppExecutorsTest {
         assertThat(flushed.await(5, TimeUnit.SECONDS)).isTrue()
         assertThat(delivered.get()).isFalse()
     }
+
+    @Test
+    fun ioThenMainCallsOnFailureOnMainWhenTheWorkFailsButNotWhenTheOwnerIsGone() {
+        val failedOnMain = AtomicBoolean(false)
+        val delivered = AtomicBoolean(false)
+        AppExecutors.ioThenMain<Int>("test-fail-cb", { true }, { throw IllegalStateException("expected in test") },
+            { delivered.set(true) }, { failedOnMain.set(Looper.myLooper() == Looper.getMainLooper()) })
+        val goneCalled = AtomicBoolean(false)
+        AppExecutors.ioThenMain<Int>("test-fail-gone", { false }, { throw IllegalStateException("expected in test") },
+            { delivered.set(true) }, { goneCalled.set(true) })
+        val flushed = CountDownLatch(1)
+        AppExecutors.ioThenMain("flush", { true }, { 0 }) { flushed.countDown() }
+        assertThat(flushed.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(failedOnMain.get()).isTrue()
+        assertThat(goneCalled.get()).isFalse()
+        assertThat(delivered.get()).isFalse()
+    }
 }

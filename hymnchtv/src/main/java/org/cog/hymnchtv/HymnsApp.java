@@ -77,6 +77,14 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     // Use the clear current toast state so new one can be shown immediately
     private static Toast toast = null;
 
+    /** The text of the toast most recently requested, for tests (a Toast's text cannot be read back on newer APIs). */
+    private static volatile String lastToastMessage = null;
+
+    @androidx.annotation.VisibleForTesting
+    public static String getLastToastMessage() {
+        return lastToastMessage;
+    }
+
     /**
      * Static instance holder.
      */
@@ -371,6 +379,7 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
      * @param message the string message to display.
      */
     public static void showToastMessage(final String message) {
+        lastToastMessage = message;
         new Handler(Looper.getMainLooper()).post(() -> {
             if (toast != null && toast.getView() != null) {
                 toast.cancel();

@@ -729,6 +729,7 @@ public class MediaConfig extends BaseActivity
      */
     private void updateMediaRecord() {
         if (mDbBusy) {
+            HymnsApp.showToastMessage(R.string.in_progress);
             return;
         }
         final MediaRecord mRecord = createMediaRecord();
@@ -739,7 +740,7 @@ public class MediaConfig extends BaseActivity
         mDbBusy = true;
         AppExecutors.ioThenMain("media-has-record", this, () -> safeHasMediaRecord(mRecord), exists -> {
             mDbBusy = false;
-                if (exists) {
+            if (exists) {
                 DialogActivity.showConfirmDialog(this,
                         R.string.to_be_added,
                         R.string.db_overwrite_media,
@@ -835,6 +836,7 @@ public class MediaConfig extends BaseActivity
      */
     private void saveMediaRecord(MediaRecord mRecord) {
         if (mDbBusy) {
+            HymnsApp.showToastMessage(R.string.in_progress);
             return;
         }
         mDbBusy = true;
@@ -843,7 +845,7 @@ public class MediaConfig extends BaseActivity
 
         AppExecutors.ioThenMain("media-save", this, () -> {
             try {
-                        return storeMediaRecord(mRecord, hymnType, mediaType);
+                return storeMediaRecord(mRecord, hymnType, mediaType);
             }
             catch (RuntimeException e) {
                 Timber.e(e, "Media record save failed: %s", mRecord);
@@ -933,6 +935,7 @@ public class MediaConfig extends BaseActivity
                         @Override
                         public boolean onConfirmClicked(DialogActivity dialog) {
                             if (mDbBusy) {
+                                HymnsApp.showToastMessage(R.string.in_progress);
                                 return true;
                             }
                             mDbBusy = true;

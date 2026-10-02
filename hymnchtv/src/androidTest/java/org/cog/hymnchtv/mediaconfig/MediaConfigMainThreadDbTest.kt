@@ -12,6 +12,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
+import org.cog.hymnchtv.HymnsApp
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.MainThreadDbSupport.awaitUntil
 import org.cog.hymnchtv.MainThreadDbSupport.launchMainActivityIfNeeded
@@ -133,6 +134,27 @@ class MediaConfigMainThreadDbTest {
                 gate.release()
             }
             assertThat(awaitUntil { stored() == null }).isTrue()
+        }
+    }
+
+    @Test
+    fun deleteConfirmedWhileADbRequestIsPendingShowsAnInProgressNotice() {
+        backend.storeMediaRecord(MediaRecord(MainActivity.HYMN_DB, hymnNo, false, MediaType.HYMN_MEDIA, link, null))
+        ActivityScenario.launch(MediaConfig::class.java).use { scenario ->
+            scenario.fillEntry(link)
+            val gate = IoGate.close()
+            try {
+                // the overwrite check of the add button is queued behind the gate: the screen is busy
+                scenario.onActivity { it.findViewById<Button>(R.id.button_add).performClick() }
+                scenario.onActivity { it.findViewById<Button>(R.id.button_delete).performClick() }
+                onView(allOf(withId(R.id.okButton), withText(R.string.delete), isAssignableFrom(Button::class.java))).perform(click())
+                assertThat(awaitUntil {
+                    HymnsApp.getLastToastMessage() == InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.in_progress)
+                }).isTrue()
+                assertThat(stored()).isNotNull() // nothing was deleted
+            } finally {
+                gate.release()
+            }
         }
     }
 }

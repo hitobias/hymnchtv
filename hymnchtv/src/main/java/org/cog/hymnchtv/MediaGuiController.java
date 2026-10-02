@@ -156,6 +156,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     List<Uri> mediaHymns = new ArrayList<>();
     /** True while the playback list is being looked up off the main thread: further play taps are ignored. */
     private boolean mFetchingHymns = false;
+    /** The media type of every playback lookup started so far, for tests. */
+    final List<MediaType> mFetchedTypes = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     private ContentHandler mContentHandler;
 
@@ -383,12 +385,11 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
      * This is activated by user; or automatic from mediaController when the downloaded uri is completed
      */
     public void startPlay() {
-        // Set true to test the getPlayHymn algorithms
-        boolean test = false;
-        if (test) {
-            mContentHandler.da_link_test(mMediaType, false);
-            return;
-        }
+        startPlay(true);
+    }
+
+    /** @param retryOnTypeChange allow one new lookup when the media type changes while this one is in flight */
+    private void startPlay(boolean retryOnTypeChange) {
         // proceed to fetch the playback uri list if it is empty; the DB lookup runs off the main thread
         if (mediaHymns.isEmpty()) {
             if (mFetchingHymns) {
@@ -396,12 +397,20 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             }
             mFetchingHymns = true;
             final MediaType mediaType = mMediaType;
+            mFetchedTypes.add(mediaType);
             mContentHandler.fetchPlayHymn(mediaType, true, uriList -> {
                 mFetchingHymns = false;
-                // dropped when the user changed the hymn or the media type meanwhile
-                if (uriList != null && mediaType == mMediaType) {
+                // dropped when the user changed the hymn meanwhile (uriList null)
+                if (uriList == null) {
+                    return;
+                }
+                if (mediaType == mMediaType) {
                     mediaHymns = uriList;
                     playFetchedHymns();
+                }
+                else if (retryOnTypeChange) {
+                    // the media type changed while the lookup ran: play again once for the type now selected
+                    startPlay(false);
                 }
             });
             return;
