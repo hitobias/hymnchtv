@@ -63,6 +63,7 @@ import timber.log.Timber;
  * DownloadManager, verifies it in the background (published SHA-256, package, version code, signing certificate)
  * and posts a notification; the user's tap opens UpdateInstallActivity. The download receiver never starts
  * activities. Every public method except {@link #removeOldDownloads()} does network or file I/O: call off the main thread.
+ * The download-id store has its own lock ({@code storeLock}), so store access never waits for {@link #fetchLatest()}'s network calls.
  *
  * @author Eng Chong Meng
  */
@@ -73,6 +74,13 @@ public class UpdateServiceImpl {
     private static final String ENTRY_NAME = "apk_ids";
 
     private static UpdateServiceImpl mInstance = null;
+
+    /**
+     * Guards the download-id store only. Deliberately not the instance monitor: {@link #fetchLatest()} holds
+     * that during network calls (up to 60 s), and the store is touched from the main thread
+     * (downloadApk) and from DownloadReceiver.onReceive, which must never wait for the network.
+     */
+    private final Object storeLock = new Object();
 
     private GitHubReleaseClient releaseClient = null;
     private volatile Offer latestOffer = null;
@@ -355,16 +363,20 @@ public class UpdateServiceImpl {
         }
     }
 
-    private synchronized SharedPreferences getStore() {
-        if (store == null) {
-            store = HymnsApp.getGlobalContext().getSharedPreferences("store", Context.MODE_PRIVATE);
+    private SharedPreferences getStore() {
+        synchronized (storeLock) {
+            if (store == null) {
+                store = HymnsApp.getGlobalContext().getSharedPreferences("store", Context.MODE_PRIVATE);
+            }
+            return store;
         }
-        return store;
     }
 
-    private synchronized void rememberDownloadId(long id) {
-        SharedPreferences store = getStore();
-        store.edit().putString(ENTRY_NAME, store.getString(ENTRY_NAME, "") + id + ",").apply();
+    private void rememberDownloadId(long id) {
+        synchronized (storeLock) {
+            SharedPreferences prefs = getStore();
+            prefs.edit().putString(ENTRY_NAME, prefs.getString(ENTRY_NAME, "") + id + ",").apply();
+        }
     }
 
     private List<Long> getOldDownloads() {
@@ -388,12 +400,14 @@ public class UpdateServiceImpl {
      * Removes old update downloads (DownloadManager deletes their files) and staged apks that are already
      * installed. Called at app start-up.
      */
-    public synchronized void removeOldDownloads() {
+    public void removeOldDownloads() {
         DownloadManager downloadManager = HymnsApp.getDownloadManager();
-        for (long id : getOldDownloads()) {
-            downloadManager.remove(id);
+        synchronized (storeLock) {
+            for (long id : getOldDownloads()) {
+                downloadManager.remove(id);
+            }
+            getStore().edit().remove(ENTRY_NAME).apply();
         }
-        getStore().edit().remove(ENTRY_NAME).apply();
 
         SemVer installed = SemVer.parse(VersionServiceImpl.getInstance().getCurrentVersionName());
         File[] staged = ApkVerifier.updatesDir(HymnsApp.getGlobalContext()).listFiles();
