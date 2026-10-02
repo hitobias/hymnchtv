@@ -1,0 +1,9 @@
+# Approved licenses for bundled libraries (sub-project Z). assembleRelease fails on anything not listed here,
+# on libraries without a license, and on licenses without full text. Only the project owner adds entries.
+#   license <key>               approve a license key for every library
+#   library <uniqueId> <key>    approve one license key for one library (hash-keyed or unusual licenses)
+license Apache-2.0
+license MIT
+license BSD-2-Clause
+license BSD-3-Clause
+license OFL-1.1

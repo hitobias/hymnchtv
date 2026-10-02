@@ -21,4 +21,8 @@
     <cache-path
         name="camera"
         path="Camera/" />
+    <!-- Verified update apks (sub-project Z): the only root used to hand an apk to the installer. -->
+    <files-path
+        name="updates"
+        path="updates/" />
 </paths>

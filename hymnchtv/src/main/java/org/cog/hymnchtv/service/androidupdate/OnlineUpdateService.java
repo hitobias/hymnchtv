@@ -32,6 +32,8 @@ import java.util.Calendar;
 import org.cog.hymnchtv.MainActivity;
 import org.cog.hymnchtv.R;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
+import org.cog.hymnchtv.update.MediaLinksUpdater;
+import org.cog.hymnchtv.update.UpdateInstallActivity;
 
 /**
  * Online Update Service started on first HymnApp launched. It is set to check for update every 24hours
@@ -43,9 +45,8 @@ public class OnlineUpdateService extends IntentService {
     public static final String ACTION_AUTO_UPDATE_START = "org.cog.hymnchtv.ACTION_AUTO_UPDATE_START";
     public static final String ACTION_AUTO_UPDATE_STOP = "org.cog.hymnchtv.ACTION_AUTO_UPDATE_STOP";
 
-    private static final String ACTION_UPDATE_AVAILABLE = "org.cog.hymnchtv.ACTION_UPDATE_AVAILABLE";
     private static final String ONLINE_UPDATE_SERVICE = "OnlineUpdateService";
-    private static final String UPDATE_AVAIL_TAG = "hymnchtv Update Available";
+    private static final String UPDATE_AVAIL_TAG = "hymnal_update_available";
 
     // in unit of seconds
     public static int CHECK_INTERVAL_ON_LAUNCH = 30;
@@ -75,10 +76,9 @@ public class OnlineUpdateService extends IntentService {
                     case ACTION_AUTO_UPDATE_APP:
                         checkAppUpdate();
                         break;
-                    case ACTION_UPDATE_AVAILABLE:
-                        UpdateServiceImpl.getInstance().checkForUpdates();
-                        break;
                     case ACTION_AUTO_UPDATE_START:
+                        // First run, or an upgrade with a newer bundled list: import media links on this worker thread.
+                        MediaLinksUpdater.importBundledIfNeeded(getApplicationContext());
                         setNextAlarm(CHECK_INTERVAL_ON_LAUNCH);
                         break;
                     case ACTION_AUTO_UPDATE_STOP:
@@ -102,12 +102,13 @@ public class OnlineUpdateService extends IntentService {
             nBuilder.setAutoCancel(true);
             nBuilder.setTicker(msgString);
             // Use HymnsApp.getResString to get locale string
-            nBuilder.setContentTitle(getString(R.string.app_title_main));
+            nBuilder.setContentTitle(getString(R.string.app_name));
             nBuilder.setContentText(msgString);
 
-            Intent intent = new Intent(getApplicationContext(), OnlineUpdateService.class);
-            intent.setAction(ACTION_UPDATE_AVAILABLE);
-            PendingIntent pending = PendingIntent.getService(this, 0, intent,
+            // Open a foreground activity that runs the check; a notification must not start a service that
+            // starts activities (notification trampoline).
+            PendingIntent pending = PendingIntent.getActivity(this, 0,
+                    UpdateInstallActivity.checkIntent(getApplicationContext()),
                     getPendingIntentFlag(false, true));
             nBuilder.setContentIntent(pending);
             mNotificationMgr.notify(UPDATE_AVAIL_TAG, UPDATE_AVAIL_NOTIFY_ID, nBuilder.build());

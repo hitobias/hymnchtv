@@ -82,3 +82,8 @@ lint/tmp/
 
 # Python bytecode from tools/
 __pycache__/
+
+# Release signing (sub-project Z): points at a keystore kept OUTSIDE the repo
+settings.signing
+# tools/release.sh output
+/dist/

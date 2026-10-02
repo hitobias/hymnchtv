@@ -124,7 +124,6 @@ import timber.log.Timber;
  */
 public class MainActivity extends BaseActivity implements AdapterView.OnItemSelectedListener, LifecycleEventObserver,
         ActivityCompat.OnRequestPermissionsResultCallback {
-    public static String HYMNCHTV_FAQ = "https://cmeng-git.github.io/hymnchtv/faq.html";
     private final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
 
     public static final String ATTR_HYMN_TYPE = "hymn_type";
@@ -273,13 +272,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
                     cl.getLogDialog().show();
                 }
             }, 15000));
-
-            /*
-             * Disable importUrlAssetFile for on start; rely on updateServiceImpl instead.
-             * Likely the DB has already been updated when user is prompt to update apk.
-             * See MediaConfig#URL_IMPORT_VERSION value setting.
-             */
-            // MediaConfig.importUrlAssetFile();
         }
 
         // 儿童诗歌
@@ -929,7 +921,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             return true;
         }
         else if (itemId == R.id.online_help) {
-            About.hymnUrlAccess(this, HYMNCHTV_FAQ);
+            startActivity(new Intent(this, org.cog.hymnchtv.about.HelpActivity.class));
             return true;
         }
         else if (itemId == R.id.about) {

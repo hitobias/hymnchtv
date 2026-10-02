@@ -123,6 +123,20 @@
             android:theme="@android:style/Theme.Holo.Dialog.MinWidth" />
 
         <activity
+            android:name=".about.HelpActivity"
+            android:label="@string/help" />
+
+        <activity
+            android:name=".about.LicensesActivity"
+            android:label="@string/about_licenses_title" />
+
+        <activity
+            android:name=".update.UpdateInstallActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity
             android:name=".utils.DialogActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:theme="@android:style/Theme.Holo.Dialog.MinWidth" />

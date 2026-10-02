@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- In-app help (sub-project Z): plain text only, no links. -->
+<resources>
+    <string name="help_text">Finding a hymn\n• Enter a hymn number and tap the hymnal button to show lyrics and score.\n• Or browse by category, stroke count, pinyin or the English–Chinese index.\n• Content search: type words and tap Search; searching for 他 also finds 祂 automatically.\n\nLyrics page\n• Long-press the page to open the menu.\n• Swipe left or right for the previous or next hymn.\n• Turn the phone sideways for larger lyrics and score; the player hides automatically.\n\nPlaying media\n• Tap Play to start, tap again to pause, and again to resume.\n• Long-press Play while playing to stop; long-press while stopped to choose whether to play continuously.\n\nMedia configuration\n• Add your own audio or video links for each hymn, and export or import them to share with other devices.\n• Media files you download yourself go under Download/hymnal/.\n\nUpdates\n• About → Update checks for a new version. After it downloads, tap the notification to install.</string>
+</resources>

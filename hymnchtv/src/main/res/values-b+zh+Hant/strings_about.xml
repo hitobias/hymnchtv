@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_description">詩歌的歌詞、樂譜瀏覽與播放。歌詞與樂譜內容版權屬台灣福音書房，請勿用於商業用途。</string>
+    <string name="about_licenses_title">開源授權</string>
+    <string name="about_licenses_empty">此版本無法顯示授權清單。</string>
+    <string name="about_license_text_missing">（未附授權全文）</string>
+</resources>

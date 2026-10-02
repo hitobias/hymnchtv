@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GitHub Releases updater (sub-project Z). Own file to avoid merge conflicts in strings.xml. -->
+<resources>
+    <string name="update_new_available">Version %1$s is available (installed: %2$s).</string>
+    <string name="update_up_to_date">Installed version %1$s is up to date.\nLatest release: %2$s.</string>
+    <string name="update_notification_text">New version available: %1$s</string>
+    <string name="update_check_rate_limited">Too many update checks right now. Please try again later.</string>
+    <string name="update_check_network_error">Cannot reach the update server. Check your network connection and try again.</string>
+    <string name="update_check_no_release">No release has been published yet.</string>
+    <string name="update_check_failed">Update check failed. Please try again later.</string>
+    <string name="update_apk_invalid">The downloaded installer failed verification (%1$s) and was deleted.</string>
+    <string name="update_ready_to_install">Hymnal %1$s is ready. Tap to install.</string>
+    <string name="update_downloaded_tap_notification">Download complete. Tap the notification to install.</string>
+    <string name="update_ready_use_about">Download complete. Open About and tap Update to install.</string>
+    <string name="update_install_missing">The downloaded installer is no longer available. Please check for updates again.</string>
+    <string name="update_install_needs_permission">Allow installing unknown apps for Hymnal to update.</string>
+    <string name="update_signer_unverifiable">This Android version could not verify the installer\'s signature, so the update was stopped. Please install the new version manually.</string>
+</resources>

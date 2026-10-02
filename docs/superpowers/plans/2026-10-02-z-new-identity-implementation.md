@@ -3182,7 +3182,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   <?xml version="1.0" encoding="utf-8"?>
   <!-- In-app help (sub-project Z): plain text only, no links. -->
   <resources>
-      <string name="help_text">Finding a hymn\n• Enter a hymn number and tap the hymnal button to show lyrics and score.\n• Or browse by category, stroke count, pinyin or the English–Chinese index.\n• Content search: type words and tap Search; long-press Search to turn 他 into 祂.\n\nLyrics page\n• Long-press the page to open the menu.\n• Swipe left or right for the previous or next hymn.\n• Turn the phone sideways for larger lyrics and score; the player hides automatically.\n\nPlaying media\n• Tap Play to start, tap again to pause, and again to resume.\n• Long-press Play to restart from the beginning.\n\nMedia configuration\n• Add your own audio or video links for each hymn, and export or import them to share with other devices.\n• Media files you download yourself go under Download/hymnal/.\n\nUpdates\n• About → Update checks for a new version. After it downloads, tap the notification to install.</string>
+      <string name="help_text">Finding a hymn\n• Enter a hymn number and tap the hymnal button to show lyrics and score.\n• Or browse by category, stroke count, pinyin or the English–Chinese index.\n• Content search: type words and tap Search; searching for 他 also finds 祂 automatically.\n\nLyrics page\n• Long-press the page to open the menu.\n• Swipe left or right for the previous or next hymn.\n• Turn the phone sideways for larger lyrics and score; the player hides automatically.\n\nPlaying media\n• Tap Play to start, tap again to pause, and again to resume.\n• Long-press Play while playing to stop; long-press while stopped to choose whether to play continuously.\n\nMedia configuration\n• Add your own audio or video links for each hymn, and export or import them to share with other devices.\n• Media files you download yourself go under Download/hymnal/.\n\nUpdates\n• About → Update checks for a new version. After it downloads, tap the notification to install.</string>
   </resources>
   ```
 
@@ -3191,7 +3191,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   ```xml
   <?xml version="1.0" encoding="utf-8"?>
   <resources>
-      <string name="help_text">查找诗歌\n• 输入诗歌编号后按诗歌本按钮，即可显示歌词与乐谱。\n• 也可以从诗歌类别、笔画索引、拼音索引或英中对照查找。\n• 内容搜索：输入字词后按“内容搜索”；长按可把“他”转成“祂”。\n\n歌词页\n• 长按页面开启选单。\n• 左右滑动切换上一首或下一首。\n• 手机横放时，歌词与乐谱放大，播放器自动隐藏。\n\n媒体播放\n• 按播放键开始，再按一次暂停，再按一次从暂停处继续。\n• 长按播放键从头播放。\n\n媒体配置\n• 可为每首诗歌加入自定义的影音链接，并导出或导入，与其他设备分享。\n• 自行下载的媒体文件放在 Download/hymnal/ 底下。\n\n更新\n• “关于”→“更新”可检查新版本；下载完成后点通知即可安装。</string>
+      <string name="help_text">查找诗歌\n• 输入诗歌编号后按诗歌本按钮，即可显示歌词与乐谱。\n• 也可以从诗歌类别、笔画索引、拼音索引或英中对照查找。\n• 内容搜索：输入字词后按“内容搜索”；搜索“他”时也会一并找到“祂”。\n\n歌词页\n• 长按页面打开菜单。\n• 左右滑动切换上一首或下一首。\n• 手机横放时，歌词与乐谱放大，播放器自动隐藏。\n\n媒体播放\n• 按播放键开始，再按一次暂停，再按一次从暂停处继续。\n• 播放中长按播放键可停止；停止时长按，可选择是否连续自动播放。\n\n媒体配置\n• 可为每首诗歌加入自定义的音视频链接，并导出或导入，与其他设备分享。\n• 自行下载的媒体文件放在 Download/hymnal/ 底下。\n\n更新\n• “关于”→“更新”可检查新版本；下载完成后点通知即可安装。</string>
   </resources>
   ```
 
@@ -3200,7 +3200,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   ```xml
   <?xml version="1.0" encoding="utf-8"?>
   <resources>
-      <string name="help_text">查找詩歌\n• 輸入詩歌編號後按詩歌本按鈕，即可顯示歌詞與樂譜。\n• 也可以從詩歌類別、筆畫索引、拼音索引或英中對照查找。\n• 內容搜尋：輸入字詞後按「內容搜尋」；長按可把「他」轉成「祂」。\n\n歌詞頁\n• 長按頁面開啟選單。\n• 左右滑動切換上一首或下一首。\n• 手機橫放時，歌詞與樂譜放大，播放器自動隱藏。\n\n媒體播放\n• 按播放鍵開始，再按一次暫停，再按一次從暫停處繼續。\n• 長按播放鍵從頭播放。\n\n媒體配置\n• 可為每首詩歌加入自訂的影音連結，並匯出或匯入，與其他裝置分享。\n• 自行下載的媒體檔放在 Download/hymnal/ 底下。\n\n更新\n• 「關於」→「更新」可檢查新版本；下載完成後點選通知即可安裝。</string>
+      <string name="help_text">查找詩歌\n• 輸入詩歌編號後按詩歌本按鈕，即可顯示歌詞與樂譜。\n• 也可以從詩歌類別、筆畫索引、拼音索引或英中對照查找。\n• 內容搜尋：輸入字詞後按「內容搜尋」；搜尋「他」時也會一併找到「祂」。\n\n歌詞頁\n• 長按頁面開啟選單。\n• 左右滑動切換上一首或下一首。\n• 手機橫放時，歌詞與樂譜放大，播放器自動隱藏。\n\n媒體播放\n• 按播放鍵開始，再按一次暫停，再按一次從暫停處繼續。\n• 播放中長按播放鍵可停止；停止時長按，可選擇是否連續自動播放。\n\n媒體配置\n• 可為每首詩歌加入自訂的影音連結，並匯出或匯入，與其他裝置分享。\n• 自行下載的媒體檔放在 Download/hymnal/ 底下。\n\n更新\n• 「關於」→「更新」可檢查新版本；下載完成後點選通知即可安裝。</string>
   </resources>
   ```
 
@@ -3921,7 +3921,8 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   keytool -genkeypair -keystore "$tmp/dry.jks" -storepass dryrun123 -keypass dryrun123 -alias dry \
     -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Hymnal Dry Run" >/dev/null 2>&1
   printf 'key.store.password=dryrun123\nkey.store.alias=dry\nkey.alias.password=dryrun123\n' > "$tmp/dry.properties"
-  printf 'keystore=%s\nsecure_properties=%s\n' "$tmp/dry.jks" "$tmp/dry.properties" > settings.signing
+  cert=$(keytool -list -v -keystore "$tmp/dry.jks" -storepass dryrun123 2>/dev/null | sed -nE 's/.*SHA256: *(.*)/\1/p' | tr -d ':' | tr 'A-F' 'a-f')
+  printf 'keystore=%s\nsecure_properties=%s\nexpectedCertSha256=%s\n' "$tmp/dry.jks" "$tmp/dry.properties" "$cert" > settings.signing
   echo "settings.signing" >> .git/info/exclude; echo "/dist/" >> .git/info/exclude
   git status --porcelain
   tools/release.sh 2.9.2 --dry-run; echo "exit=$?"
@@ -3929,7 +3930,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   ```
 
   Expected:
-  - `git status --porcelain` 沒有輸出（暫時用 `.git/info/exclude` 排除；正式的 `.gitignore` 由 Task 12 加入）。
+  - `git status --porcelain` 沒有輸出：腳本要求工作樹（含未追蹤檔案）乾淨，否則中止（暫時用 `.git/info/exclude` 排除；正式的 `.gitignore` 由 Task 12 加入）。
   - 輸出包含 `Signer #1 certificate DN: CN=Hymnal Dry Run`，接著是上述 badging mismatch，`exit=1`。
 
 - [ ] **Step 5：Commit**
@@ -4371,7 +4372,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
 
   在 api34 與 api24 上跑 `./gradlew --console=plain :hymnchtv:connectedDebugAndroidTest`（模擬器啟動方式見 Task 13 Step 1）。
 
-  再重做一次發佈腳本的試跑：照 Task 11 Step 4 的指令，但不需要 `.git/info/exclude` 那一行，並把 `tools/release.sh 2.9.2 --dry-run` 換成 `tools/release.sh 1.0.0 --dry-run`；這次 badging 必須通過（`com.ziontkec.hymnal 100000 1.0.0`），`dist/v1.0.0/` 內有 `hymnal-1.0.0.apk` 與 `.sha256`。用完刪除 `settings.signing`（測試金鑰）與 `dist/`。
+  再重做一次發佈腳本的試跑：照 Task 11 Step 4 的指令（包含用 `keytool -list -v` 取出拋棄式金鑰的 SHA-256、正規化後寫成 `expectedCertSha256`；執行前 `git status --porcelain` 必須沒有輸出），但不需要 `.git/info/exclude` 那一行，並把 `tools/release.sh 2.9.2 --dry-run` 換成 `tools/release.sh 1.0.0 --dry-run`；這次 badging 必須通過（`com.ziontkec.hymnal 100000 1.0.0`），`dist/v1.0.0/` 內有 `hymnal-1.0.0.apk` 與 `.sha256`。用完刪除 `settings.signing`（測試金鑰）與 `dist/`。
 
   Expected:
   - `BUILD SUCCESSFUL`；`IdentityGuardTest` 3 個測試全部通過（Step 2 失敗的那個，現在通過了）。
@@ -4659,6 +4660,13 @@ keytool -genkeypair -v -keystore ~/keys/hymnal/hymnal-release.jks -alias hymnal 
 printf 'keystore=%s\nsecure_properties=%s\n' ~/keys/hymnal/hymnal-release.jks ~/keys/hymnal/hymnal-release.properties > settings.signing
 ```
 
+接著由使用者本人取得憑證的 SHA-256 指紋，**自己**把它加進 `settings.signing`（`keytool` 會互動式詢問密碼，代理不得代填）。這個欄位是 `tools/release.sh` 的簽章釘選：APK 的簽章憑證必須和它完全一致（含 `--resume`），缺少或不符就中止：
+
+```bash
+keytool -list -v -keystore ~/keys/hymnal/hymnal-release.jks -alias hymnal | grep 'SHA256:'
+printf 'expectedCertSha256=%s\n' '<上一步印出的 64 位十六進位，冒號可留可去>' >> settings.signing
+```
+
 代理只能使用 Gradle 既有的 `settings.signing` 機制，**不得讀取、印出或詢問密碼**，也不得把金鑰或 `settings.signing` 加入版控。
 
 - [ ] **Step 1：確認前置條件與狀態**
@@ -4666,11 +4674,12 @@ printf 'keystore=%s\nsecure_properties=%s\n' ~/keys/hymnal/hymnal-release.jks ~/
   ```bash
   test -f settings.signing && echo signing-config-present
   git check-ignore -q settings.signing && echo ignored
+  grep -qE '^expectedCertSha256=[0-9A-Fa-f:]{64,95}$' settings.signing && echo cert-pin-present   # 只檢查有沒有，不要印出檔案內容
   git status --porcelain
   grep -nE 'versionCode|versionName' hymnchtv/build.gradle
   ```
 
-  Expected: `signing-config-present`、`ignored`；工作區乾淨；`versionCode 100000`、`versionName "1.0.0"`。缺少 `settings.signing` 時，停下來請使用者完成前置條件。
+  Expected: `signing-config-present`、`ignored`、`cert-pin-present`；工作區（含未追蹤檔案）乾淨；`versionCode 100000`、`versionName "1.0.0"`。缺少 `settings.signing` 時，停下來請使用者完成前置條件。
 
 - [ ] **Step 2：建置並驗證（`--dry-run`，不建立 tag，也不發佈）**
 

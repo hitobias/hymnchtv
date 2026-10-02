@@ -1,0 +1,8 @@
+{
+  "uniqueId": "org.byvoid:opencc-data",
+  "artifactVersion": "1.4.2",
+  "name": "OpenCC (build-time data generation)",
+  "description": "Traditional Chinese lyrics data were generated at build time with OpenCC. OpenCC itself is not bundled in this app.",
+  "developers": [],
+  "licenses": ["Apache-2.0"]
+}
