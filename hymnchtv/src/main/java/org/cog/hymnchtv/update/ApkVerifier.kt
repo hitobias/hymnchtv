@@ -30,13 +30,20 @@ object ApkVerifier {
             Timber.w("Update %s verification: %s", release.tag, ApkCheck.STAGING_FAILED)
             return Result(ApkCheck.STAGING_FAILED, null)
         }
-        val check = ApkTrust.check(
+        val part = staged.first
+        var check = ApkTrust.check(
             release.version, expectedSha256, staged.second,
-            SigningCerts.installedApp(context), SigningCerts.archive(context, staged.first),
+            SigningCerts.installedApp(context), SigningCerts.archive(context, part),
         )
-        if (check != ApkCheck.OK && !staged.first.delete()) Timber.w("Cannot delete rejected %s", staged.first)
+        var verified: File? = null
+        if (check == ApkCheck.OK) {
+            // Only a fully verified file ever gets the final name that staged() and the installer look for.
+            val finalFile = File(part.parentFile, release.apkName)
+            if (part.renameTo(finalFile)) verified = finalFile else check = ApkCheck.STAGING_FAILED
+        }
+        if (verified == null && !part.delete()) Timber.w("Cannot delete rejected %s", part)
         Timber.i("Update %s verification: %s", release.tag, check)
-        return Result(check, staged.first.takeIf { check == ApkCheck.OK })
+        return Result(check, verified)
     }
 
     /**
@@ -48,7 +55,7 @@ object ApkVerifier {
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val old = dir.listFiles() ?: return null
         if (old.any { !it.delete() }) return null // keep at most one staged update
-        val staged = File(dir, release.apkName)
+        val staged = File(dir, partName(release.apkName))
         return try {
             val sha = copyHashing(downloaded, staged)
             if (staged.length() != downloaded.length() || staged.length() == 0L) {
@@ -62,6 +69,28 @@ object ApkVerifier {
             staged.delete()
             null
         }
+    }
+
+    /** Unverified downloads live under this name (still ending in .apk so the package parser accepts it). */
+    @JvmStatic
+    fun partName(apkName: String): String = "$apkName.part.apk"
+
+    /** SHA-256 (lower-case hex) of [file], read in full. Used to re-check a staged apk right before installing. */
+    @JvmStatic
+    @WorkerThread
+    fun sha256Of(file: File): String? = try {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        digest.digest().joinToString("") { "%02x".format(it) }
+    } catch (e: IOException) {
+        null
     }
 
     /** A previously verified apk for [release], if it is still staged. */

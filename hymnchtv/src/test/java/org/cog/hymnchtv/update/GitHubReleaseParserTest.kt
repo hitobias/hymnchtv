@@ -96,6 +96,8 @@ class GitHubReleaseParserTest {
             "https://evil.example/$apk",
             "https://github.com/someone-else/hymnchtv/releases/download/v1.1.0/$apk",
             "${prefix}v1.1.0/../../../evil/$apk",
+            "${prefix}v1.1.0/%2e%2e/%2E%2e/evil/$apk",
+            "${prefix}v1.1.0/%68ymnal-1.1.0.apk",
         ).forEach { url ->
             assertThat(reasonOf(mutated { asset(apk).put("browser_download_url", url) })).contains(apk)
         }

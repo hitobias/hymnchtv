@@ -67,7 +67,7 @@ object GitHubReleaseParser {
         val url = obj.stringOrNull("browser_download_url") ?: return null
         val state = obj.stringOrNull("state")
         val uploaded = state == null || state == "uploaded"
-        val ownedByRepo = url.startsWith(downloadPrefix) && url.endsWith("/$name") && ".." !in url
+        val ownedByRepo = url.startsWith(downloadPrefix) && url.endsWith("/$name") && '%' !in url && ".." !in url
         return if (uploaded && ownedByRepo) Asset(name, url, obj.optLong("size", 0L), obj.stringOrNull("digest")) else null
     }
 

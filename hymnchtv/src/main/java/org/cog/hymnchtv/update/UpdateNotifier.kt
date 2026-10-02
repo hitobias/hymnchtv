@@ -20,13 +20,13 @@ object UpdateNotifier {
     /** @return false when notifications are not permitted, so the caller can fall back to a toast. */
     @JvmStatic
     @SuppressLint("MissingPermission")
-    fun showReady(context: Context, apkName: String, versionName: String): Boolean {
+    fun showReady(context: Context, apkName: String, versionName: String, sha256: String): Boolean {
         val permitted = Build.VERSION.SDK_INT < 33 ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         val manager = NotificationManagerCompat.from(context)
         if (!permitted || !manager.areNotificationsEnabled()) return false
         val pending = PendingIntent.getActivity(
-            context, 0, UpdateInstallActivity.intent(context, apkName),
+            context, 0, UpdateInstallActivity.intent(context, apkName, sha256),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(context, NotificationHelper.DEFAULT_GROUP)

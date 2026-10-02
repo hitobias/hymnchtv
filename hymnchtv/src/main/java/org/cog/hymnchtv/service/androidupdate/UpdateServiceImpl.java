@@ -75,11 +75,21 @@ public class UpdateServiceImpl {
     private static UpdateServiceImpl mInstance = null;
 
     private GitHubReleaseClient releaseClient = null;
-    private volatile ReleaseInfo latestRelease = null;
-    private volatile String expectedSha256 = null;
+    private volatile Offer latestOffer = null;
     private volatile String currentVersion = null;
     private DownloadReceiver downloadReceiver = null;
     private SharedPreferences store;
+
+    /** A release together with the SHA-256 published for it; always replaced as one unit. */
+    private static final class Offer {
+        final ReleaseInfo release;
+        final String sha256;
+
+        Offer(ReleaseInfo release, String sha256) {
+            this.release = release;
+            this.sha256 = sha256;
+        }
+    }
 
     public static synchronized UpdateServiceImpl getInstance() {
         if (mInstance == null) {
@@ -95,7 +105,13 @@ public class UpdateServiceImpl {
         UpdateCheckResult result = fetchLatest();
         ReleaseInfo release = result.getRelease();
         if (result instanceof UpdateCheckResult.Available && release != null) {
-            offerUpdate(release);
+            Offer offer = latestOffer;
+            if (offer != null && offer.release == release && offer.sha256 != null) {
+                offerUpdate(offer);
+            }
+            else {
+                HymnsApp.showToastMessage(R.string.update_check_failed);
+            }
         }
         else if (result instanceof UpdateCheckResult.UpToDate && release != null) {
             DialogActivity.showDialog(HymnsApp.getGlobalContext(), R.string.app_update_none,
@@ -126,7 +142,8 @@ public class UpdateServiceImpl {
      * @return notification text for the latest release; valid after {@link #isLatestVersion()} returned false.
      */
     public String getLatestVersion() {
-        ReleaseInfo release = latestRelease;
+        Offer offer = latestOffer;
+        ReleaseInfo release = (offer == null) ? null : offer.release;
         return HymnsApp.getResString(R.string.update_notification_text,
                 (release == null) ? "" : release.getVersionName());
     }
@@ -146,19 +163,19 @@ public class UpdateServiceImpl {
                 result = new UpdateCheckResult.Failed("missing or inconsistent " + release.getApkName() + ".sha256");
             }
         }
-        latestRelease = release;
-        expectedSha256 = sha;
+        latestOffer = (release == null) ? null : new Offer(release, sha);
         MainActivity.mHasUpdate = result instanceof UpdateCheckResult.Available;
         Timber.i("Update check: installed %s -> %s %s", currentVersion, result.getClass().getSimpleName(),
                 (release == null) ? "" : release.getTag());
         return result;
     }
 
-    private void offerUpdate(ReleaseInfo release) {
+    private void offerUpdate(Offer offer) {
+        ReleaseInfo release = offer.release;
         Context context = HymnsApp.getGlobalContext();
         if (ApkVerifier.staged(context, release) != null) {
             // Verified earlier and still waiting: the user asked for it, the app is in the foreground.
-            context.startActivity(UpdateInstallActivity.intent(context, release.getApkName()));
+            context.startActivity(UpdateInstallActivity.intent(context, release.getApkName(), offer.sha256));
             return;
         }
         if (isDownloadRunning()) {
@@ -176,7 +193,7 @@ public class UpdateServiceImpl {
                 new DialogActivity.DialogListener() {
                     @Override
                     public boolean onConfirmClicked(DialogActivity dialog) {
-                        downloadApk(release);
+                        downloadApk(offer);
                         return true;
                     }
 
@@ -199,7 +216,8 @@ public class UpdateServiceImpl {
     /**
      * Schedules the apk download into the app-specific Download directory (no storage permission needed).
      */
-    private void downloadApk(ReleaseInfo release) {
+    private void downloadApk(Offer offer) {
+        ReleaseInfo release = offer.release;
         Context context = HymnsApp.getGlobalContext();
         File target = expectedDownloadFile(release);
         if (target == null) {
@@ -213,7 +231,7 @@ public class UpdateServiceImpl {
             HymnsApp.showToastMessage(R.string.download_failed);
             return;
         }
-        registerDownloadReceiver(release, expectedSha256);
+        registerDownloadReceiver(release, offer.sha256);
 
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(release.getApkUrl()));
         request.setTitle(release.getApkName());
@@ -227,7 +245,8 @@ public class UpdateServiceImpl {
         unregisterDownloadReceiver();
         downloadReceiver = new DownloadReceiver(release, sha256);
         // DownloadManager broadcasts from another process, so the receiver must be exported. A forged broadcast
-        // only triggers verification of our own download, which fails closed.
+        // can only carry an id; onReceive ignores any id that is not our latest enqueued download. Spoofing our
+        // own id at best starts verification early, which fails closed: denial of service only, never an install.
         ContextCompat.registerReceiver(HymnsApp.getGlobalContext(), downloadReceiver,
                 new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_EXPORTED);
     }
@@ -261,7 +280,7 @@ public class UpdateServiceImpl {
             else if (result.getCheck() != ApkCheck.OK) {
                 HymnsApp.showToastMessage(R.string.update_apk_invalid, result.getCheck().name());
             }
-            else if (!UpdateNotifier.showReady(context, release.getApkName(), release.getVersionName())) {
+            else if (!UpdateNotifier.showReady(context, release.getApkName(), release.getVersionName(), sha256)) {
                 HymnsApp.showToastMessage(R.string.update_ready_use_about);
             }
             else {

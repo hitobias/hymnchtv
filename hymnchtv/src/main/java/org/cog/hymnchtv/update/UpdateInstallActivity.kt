@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.widget.Toast
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.persistance.FileBackend
+import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl
 import timber.log.Timber
 import java.io.File
 
@@ -21,6 +22,8 @@ import java.io.File
  */
 class UpdateInstallActivity : Activity() {
     private var askedForUnknownSources = false
+    private var working = false
+    private var verifiedApk: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,12 +37,52 @@ class UpdateInstallActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (working) return
+        if (intent.getBooleanExtra(EXTRA_CHECK_ONLY, false)) {
+            runUpdateCheck()
+            return
+        }
+        verifiedApk?.let { proceed(it); return }
         val apk = stagedApk()
-        if (apk == null) {
+        val expectedSha = intent.getStringExtra(EXTRA_SHA256)
+        if (apk == null || expectedSha == null) {
             toast(R.string.update_install_missing)
             finish()
             return
         }
+        // Re-hash right before installing: the file must still be exactly what was verified.
+        working = true
+        Thread({
+            val actual = ApkVerifier.sha256Of(apk)
+            runOnUiThread {
+                working = false
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (actual != null && actual.equals(expectedSha, ignoreCase = true)) {
+                    verifiedApk = apk
+                    proceed(apk)
+                } else {
+                    Timber.w("Staged apk changed after verification; deleting")
+                    apk.delete()
+                    toast(R.string.update_install_missing)
+                    finish()
+                }
+            }
+        }, "hymnal-apk-recheck").start()
+    }
+
+    /** Tapped from the "new version" notification: run the check from a foreground activity, not from a service. */
+    private fun runUpdateCheck() {
+        working = true
+        Thread({
+            try {
+                UpdateServiceImpl.getInstance().checkForUpdates()
+            } finally {
+                runOnUiThread { finish() }
+            }
+        }, "hymnal-update-check").start()
+    }
+
+    private fun proceed(apk: File) {
         val canRequest = Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()
         when (InstallGate.nextStep(Build.VERSION.SDK_INT, canRequest)) {
             InstallStep.ALLOW_UNKNOWN_SOURCES -> {
@@ -84,13 +127,23 @@ class UpdateInstallActivity : Activity() {
 
     companion object {
         const val EXTRA_APK_NAME = "apk_name"
+        const val EXTRA_SHA256 = "apk_sha256"
+        const val EXTRA_CHECK_ONLY = "check_only"
         private const val STATE_ASKED = "asked_unknown_sources"
         private const val APK_MIME_TYPE = "application/vnd.android.package-archive"
 
         @JvmStatic
-        fun intent(context: Context, apkName: String): Intent =
+        fun intent(context: Context, apkName: String, sha256: String): Intent =
             Intent(context, UpdateInstallActivity::class.java)
                 .putExtra(EXTRA_APK_NAME, apkName)
+                .putExtra(EXTRA_SHA256, sha256)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        /** Intent for the "new version available" notification: opens this activity, which then runs the check. */
+        @JvmStatic
+        fun checkIntent(context: Context): Intent =
+            Intent(context, UpdateInstallActivity::class.java)
+                .putExtra(EXTRA_CHECK_ONLY, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 }
