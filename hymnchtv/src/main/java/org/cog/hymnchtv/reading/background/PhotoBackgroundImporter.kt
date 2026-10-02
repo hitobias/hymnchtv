@@ -72,9 +72,12 @@ object PhotoBackgroundImporter {
             val bitmap = decode(context, uri, metrics.widthPixels, metrics.heightPixels)
             val upright = try {
                 applyTransform(bitmap, orientationTransform(readOrientation(context, uri)))
-            } finally {
-                if (!bitmap.isRecycled) bitmap.recycle()
+            } catch (e: Throwable) {
+                bitmap.recycle()
+                throw e
             }
+            // applyTransform hands back the source itself when no rotation is needed: only a copy may be recycled here
+            if (shouldRecycleSource(bitmap, upright)) bitmap.recycle()
             try {
                 temp.parentFile?.mkdirs()
                 temp.outputStream().use { check(upright.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)) { "JPEG encode failed" } }
@@ -83,16 +86,17 @@ object PhotoBackgroundImporter {
             }
             check(temp.renameTo(photoFileIn(filesDir))) { "Cannot move ${temp.path} into place" }
             true
-        } catch (e: IOException) {
-            fail(temp, e)
-        } catch (e: SecurityException) {
-            fail(temp, e)
-        } catch (e: IllegalStateException) {
-            fail(temp, e)
         } catch (e: OutOfMemoryError) {
+            fail(temp, e)
+        } catch (e: Exception) {
+            // IOException, SecurityException, provider or createBitmap RuntimeExceptions: never crash the worker
             fail(temp, e)
         }
     }
+
+    /** True when [result] is a new bitmap, so [source] is no longer needed; false when they are the same object. */
+    @JvmStatic
+    fun shouldRecycleSource(source: Any, result: Any): Boolean = source !== result
 
     private fun fail(temp: File, e: Throwable): Boolean {
         Timber.w(e, "Background photo import failed")

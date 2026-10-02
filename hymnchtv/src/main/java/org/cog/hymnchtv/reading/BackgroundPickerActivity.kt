@@ -68,10 +68,15 @@ class BackgroundPickerActivity : BaseActivity() {
     }
 
     private fun importPhoto(uri: Uri) {
+        // The callback may arrive after this Activity was recreated: the slot pref is written regardless, the UI only if alive
+        val appPrefs = applicationContext.getSharedPreferences(MainActivity.PREF_SETTINGS, MODE_PRIVATE)
+        val slotKey = slot.prefKey
         PhotoBackgroundImporter.importAsync(this, uri) { ok ->
+            if (ok) appPrefs.edit().putString(slotKey, BackgroundPolicy.prefValue(BackgroundChoice.Photo)).apply()
             if (isFinishing || isDestroyed) return@importAsync
             if (ok) {
-                choose(BackgroundChoice.Photo)
+                setResult(RESULT_OK)
+                finish()
             } else {
                 Toast.makeText(this, R.string.bg_photo_import_failed, Toast.LENGTH_LONG).show()
             }

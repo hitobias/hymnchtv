@@ -29,4 +29,11 @@ class PhotoBackgroundImporterTest {
         assertThat(t(ExifInterface.ORIENTATION_TRANSVERSE)).isEqualTo(PhotoBackgroundImporter.Transform(270, true))
         assertThat(t(99).isIdentity).isTrue()
     }
+
+    @Test
+    fun sourceIsRecycledOnlyWhenTheTransformMadeACopy() {
+        val same = Any()
+        assertThat(PhotoBackgroundImporter.shouldRecycleSource(same, same)).isFalse()
+        assertThat(PhotoBackgroundImporter.shouldRecycleSource(same, Any())).isTrue()
+    }
 }

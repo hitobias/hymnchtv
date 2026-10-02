@@ -27,11 +27,12 @@ class PhotoBackgroundImporterTest {
     private fun source(name: String, write: (File) -> Unit): Uri = Uri.fromFile(File(ctx.cacheDir, name).also(write))
 
     @Test
-    fun importWritesADecodableJpegAndLeavesNoTempFile() {
+    fun importWithNormalOrientationWritesADecodableJpegAndLeavesNoTempFile() {
         val uri = source("import_src.png") { f ->
             val bmp = Bitmap.createBitmap(300, 200, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
             f.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
+        // A PNG has no EXIF tag: the NORMAL orientation path returns the decoded bitmap itself and must not recycle it early
         assertThat(PhotoBackgroundImporter.import(ctx, uri)).isTrue()
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(stored.path, bounds)
