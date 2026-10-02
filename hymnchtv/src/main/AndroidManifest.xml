@@ -103,8 +103,6 @@
 
         <activity android:name=".ContentSearch" />
 
-        <activity android:name=".HymnToc" />
-
         <activity
             android:name=".mediaconfig.MediaConfig"
             android:label="@string/media_config" />

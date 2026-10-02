@@ -93,7 +93,7 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class ContentView extends Fragment implements ZoomTextView.ZoomTextListener, View.OnClickListener,
-        View.OnLongClickListener, LyricsEnglishRecord.EnglishLyricsListener {
+        LyricsEnglishRecord.EnglishLyricsListener {
     public static String SCORE_DB_DIR = "lyrics_db_score/";
     public static String SCORE_BB_DIR = "lyrics_bb_score/";
     public static String SCORE_ER_DIR = "lyrics_er_score/";
@@ -191,11 +191,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         btn_ts = mConvertView.findViewById(R.id.button_ts);
         btn_ts.setOnClickListener(this);
-        btn_ts.setOnLongClickListener(this);
 
         btn_english = mConvertView.findViewById(R.id.button_english);
         btn_english.setOnClickListener(this);
-        btn_english.setOnLongClickListener(this);
 
         for (int id : new int[]{R.id.btn_score_color, R.id.btn_font_dec, R.id.btn_font_inc, R.id.btn_share,
                 R.id.btn_lyrics_media, R.id.btn_next, R.id.btn_more}) {
@@ -204,7 +202,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         btn_mode = mConvertView.findViewById(R.id.button_mode);
         btn_mode.setOnClickListener(this);
-        btn_mode.setOnLongClickListener(this);
 
         lyricsView = mConvertView.findViewById(R.id.lyricsView);
         lyricsSimplify = mConvertView.findViewById(R.id.lyrics_simplified);
@@ -318,30 +315,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             mContentHandler.displayModeOverride = currentDisplayMode().next();
             applyDisplayMode(true);
         }
-    }
-
-    @Override
-    public boolean onLongClick(View v) {
-        int id = v.getId();
-        if (id == R.id.button_ts || id == R.id.button_mode) {
-            mContentHandler.openReadingSettings();
-            return true;
-        }
-        else if (id == R.id.button_english) {
-            if (View.VISIBLE == lyricsEnglish.getVisibility()) {
-                mContentHandler.initWebView(ContentHandler.UrlType.englishLyrics);
-            }
-            else {
-                HymnsApp.showToastMessage("Reinit English lyrics");
-                reinitEnglishLyrics();
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private void reinitEnglishLyrics() {
-        MainActivity.showContent(mContentHandler, mContentHandler.mHymnType, mContentHandler.getHymnNo(), false, mHymnNoEng);
     }
 
     /**

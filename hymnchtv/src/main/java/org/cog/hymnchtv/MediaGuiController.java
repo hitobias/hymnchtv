@@ -89,7 +89,7 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class MediaGuiController extends Fragment implements AdapterView.OnItemSelectedListener,
-        SeekBar.OnSeekBarChangeListener, RadioGroup.OnCheckedChangeListener, View.OnClickListener, View.OnLongClickListener {
+        SeekBar.OnSeekBarChangeListener, RadioGroup.OnCheckedChangeListener, View.OnClickListener {
     /**
      * The state of a player where playback is stopped
      */
@@ -229,24 +229,19 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
         playbackPlay = convertView.findViewById(R.id.playback_play);
         playbackPlay.setOnClickListener(this);
-        playbackPlay.setOnLongClickListener(this);
 
         mPlayerAnimate = (AnimationDrawable) playbackPlay.getBackground();
         Button mBtnHymnSearch = convertView.findViewById(R.id.btn_hymnSearch);
         // mBtnHymnSearch.setOnTouchListener(touchListener);
         mBtnHymnSearch.setOnClickListener(this);
-        mBtnHymnSearch.setOnLongClickListener(this);
 
         mHymnTypesGroup = convertView.findViewById(R.id.hymnsGroup);
         mBtnMedia = convertView.findViewById(R.id.btn_media);
-        mBtnMedia.setOnLongClickListener(this);
 
         mBtnJiaoChang = convertView.findViewById(R.id.btn_jiaochang);
         mBtnJiaoChang.setOnClickListener(this);
-        mBtnJiaoChang.setOnLongClickListener(this);
 
         mBtnChangShi = convertView.findViewById(R.id.btn_changshi);
-        mBtnChangShi.setOnLongClickListener(this);
 
         mBtnBanZhou = convertView.findViewById(R.id.btn_banzhou);
         return convertView;
@@ -499,45 +494,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         }
     }
 
-    @Override
-    public boolean onLongClick(View v) {
-        int id = v.getId();
-        if (id == R.id.playback_play) {
-            if (playerState == STATE_STOP) {
-                if (mMediaType != MediaType.HYMN_JIAOCHANG) {
-                    confirmAutoStream();
-                }
-                else {
-                    HymnsApp.showToastMessage(R.string.auto_stream_unsupported,
-                            mContentHandler.hymnType2Text(requireContext()), MediaType.mediaType2Text(requireContext(), mMediaType));
-                }
-            }
-            else {
-                mContentHandler.setAutoStream(false);
-                stopPlay();
-            }
-            return true;
-        }
-        else if (id == R.id.btn_hymnSearch) {
-            mContentHandler.initWebView(ContentHandler.UrlType.hymnGoogleSearch);
-            return true;
-        }
-        else if (id == R.id.btn_media) {
-            mContentHandler.initWebView(ContentHandler.UrlType.hymnQqSearch);
-            return true;
-        }
-        else if (id == R.id.btn_jiaochang) {
-            mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
-            return true;
-        }
-        else if (id == R.id.btn_changshi) {
-            mContentHandler.showBibleToolHymnal();
-            return true;
-        }
-        return false;
-    }
-
-    /** The visible auto-play check box: the same as a long press on the play button (confirm, then start). */
+    /** The visible auto-play check box (confirm, then start); replaces the old long press on the play button. */
     private void onAutoStreamClick() {
         if (!cbAutoStream.isChecked()) {
             mContentHandler.setAutoStream(false);
