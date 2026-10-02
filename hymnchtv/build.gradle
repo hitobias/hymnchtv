@@ -37,6 +37,20 @@ android {
             debuggable = true
             minifyEnabled = false
         }
+
+        // Startup measurements only (plan B.3-1): release configuration, not debuggable, debug-signed so it installs anywhere.
+        benchmark {
+            initWith release
+            signingConfig = signingConfigs.debug
+            debuggable = false
+            matchingFallbacks = ['release']
+        }
+    }
+    // The benchmark build type has no sources of its own: reuse release's (TimberLogImpl lives in src/debug and src/release only).
+    sourceSets {
+        benchmark {
+            java.srcDir 'src/release/java'
+        }
     }
     buildFeatures {
         buildConfig = true
