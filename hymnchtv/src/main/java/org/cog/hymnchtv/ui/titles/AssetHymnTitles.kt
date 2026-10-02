@@ -2,6 +2,8 @@ package org.cog.hymnchtv.ui.titles
 
 import android.content.Context
 import org.cog.hymnchtv.MainActivity
+import org.cog.hymnchtv.lyrics.HantVariant
+import org.cog.hymnchtv.lyrics.LyricsAssets
 import org.cog.hymnchtv.toc.YbCrossRef
 import timber.log.Timber
 import java.io.IOException
@@ -17,11 +19,14 @@ import java.io.IOException
 class AssetHymnTitles(
     private val reader: (String) -> String?,
     private val ybTable: () -> Map<Int, String> = { YbCrossRef.TABLE },
+    /** Show titles in Traditional Chinese (the generated lyrics_*_text_hant_* assets); null for Simplified. */
+    private val variant: HantVariant? = null,
 ) : HymnTitleSource {
 
     override fun lookup(hymnType: String, hymnNo: Int): String? {
         val path = lyricsPath(hymnType, hymnNo) ?: return null
-        return titleOf(reader(path) ?: return null)
+        val text = variant?.let { LyricsAssets.hantPath(path, it) }?.let(reader) ?: reader(path) ?: return null
+        return titleOf(text)
     }
 
     private fun lyricsPath(hymnType: String, hymnNo: Int): String? {
@@ -76,7 +81,11 @@ class AssetHymnTitles(
         private fun typeOfPrefix(prefix: String): String? = PREFIXES.entries.firstOrNull { it.value == prefix }?.key
 
         @JvmStatic
-        fun from(context: Context): AssetHymnTitles {
+        fun from(context: Context): AssetHymnTitles = from(context, null)
+
+        /** Titles in the script of [variant] (null: Simplified). */
+        @JvmStatic
+        fun from(context: Context, variant: HantVariant?): AssetHymnTitles {
             val assets = context.applicationContext.assets
             return AssetHymnTitles(reader = { path ->
                 try {
@@ -85,7 +94,7 @@ class AssetHymnTitles(
                     Timber.v("No lyrics asset %s: %s", path, e.message)
                     null
                 }
-            })
+            }, variant = variant)
         }
     }
 }

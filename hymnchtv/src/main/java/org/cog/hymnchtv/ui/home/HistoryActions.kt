@@ -4,6 +4,7 @@ import android.content.Context
 import org.cog.hymnchtv.concurrent.AppExecutors
 import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.hymnhistory.HistoryRecord
+import org.cog.hymnchtv.lyrics.LyricsScript
 import org.cog.hymnchtv.persistance.DatabaseBackend
 
 /** History reads and writes; the database is never touched on the main thread, results come back on it. */
@@ -12,7 +13,9 @@ object HistoryActions {
     fun load(context: Context, onResult: (List<HistoryRecord>) -> Unit) {
         val appContext = context.applicationContext
         AppExecutors.io("history-load") {
-            val records = DatabaseBackend.getInstance(appContext).historyRecords
+            // Stored titles are Simplified; show them in the script the reader chose for lyrics
+            val variant = LyricsScript.hantVariant(appContext)
+            val records = DatabaseBackend.getInstance(appContext).historyRecords.map { it.inScript(variant) }
             AppExecutors.MAIN.post { onResult(records) }
         }
     }

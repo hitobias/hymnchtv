@@ -19,6 +19,7 @@ import org.cog.hymnchtv.ui.picker.HymnPickerViews
 import org.cog.hymnchtv.ui.picker.PickerHost
 import org.cog.hymnchtv.ui.picker.PickerMode
 import org.cog.hymnchtv.ui.picker.PickerState
+import org.cog.hymnchtv.lyrics.LyricsScript
 import org.cog.hymnchtv.ui.titles.AssetHymnTitles
 import org.cog.hymnchtv.ui.titles.HymnTitleSource
 
@@ -85,7 +86,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     }
 
     private fun currentTitleSource(): HymnTitleSource =
-        titleSource ?: AssetHymnTitles.from(requireContext()).also { titleSource = it }
+        // The script follows the reader's lyrics-language setting, which can change in settings between two lookups
+        titleSource ?: AssetHymnTitles.from(requireContext(), LyricsScript.hantVariant(requireContext()))
 
     // ---- PickerHost ----
 

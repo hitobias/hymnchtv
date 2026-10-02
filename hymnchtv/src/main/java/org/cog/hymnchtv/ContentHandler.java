@@ -95,7 +95,10 @@ import java.util.function.Consumer;
 
 import org.apache.http.util.EncodingUtils;
 import org.apache.http.util.TextUtils;
+import org.cog.hymnchtv.lyrics.HantVariant;
+import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.lyrics.LyricsLang;
+import org.cog.hymnchtv.lyrics.LyricsScript;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
@@ -804,7 +807,9 @@ public class ContentHandler extends BaseActivity {
         // the DB and file lookups run on AppExecutors.io, a result for a hymn the user has left is dropped.
         final String hymnType = mHymnType;
         final int hymnNo = mHymnNo;
-        final String hymnInfo = mHymnInfo;
+        // Shown in the reader's lyrics script; mHymnInfo stays Simplified because file names and searches derive from it
+        final HantVariant variant = LyricsScript.hantVariant(this);
+        final String hymnInfo = (variant == null) ? mHymnInfo : getHymnInfo(variant);
         AppExecutors.ioThenMain("hymn-media-state", this, () -> getHymnMediaState(hymnType, hymnNo), isAvailable -> {
             if (hymnNo == mHymnNo && hymnType.equals(mHymnType)) {
                 mMediaGuiController.initHymnInfo(hymnInfo, isAvailable);
@@ -1390,6 +1395,14 @@ public class ContentHandler extends BaseActivity {
      * @return the hymn info for display
      */
     public String getHymnInfo() {
+        return getHymnInfo(null);
+    }
+
+    /**
+     * The hymn info for the player title bar; the title is read from the Traditional Chinese lyrics of [variant]
+     * (null: Simplified). Only the Simplified info may be used to build media file names and search phrases.
+     */
+    private String getHymnInfo(HantVariant variant) {
         String fileName = "";
         String hymnTitle = "";
         String hymnInfo = "";
@@ -1429,6 +1442,13 @@ public class ContentHandler extends BaseActivity {
         case HYMN_DB:
             fileName = LYRICS_DB_DIR + "db" + mHymnNo + ".txt";
             break;
+        }
+
+        if (variant != null) {
+            String hantPath = LyricsAssets.hantPath(fileName, variant);
+            if (hantPath != null) {
+                fileName = hantPath;
+            }
         }
 
         try {
@@ -1493,7 +1513,9 @@ public class ContentHandler extends BaseActivity {
             break;
         }
 
-        mHymnSearch = res.getString(resId, mHymnNo, lyricsPhrase);
+        if (variant == null) {
+            mHymnSearch = res.getString(resId, mHymnNo, lyricsPhrase);
+        }
         hymnInfo = res.getString(resId, mHymnNo, hymnTitle);
         return hymnInfo;
     }

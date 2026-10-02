@@ -13,6 +13,8 @@ import org.cog.hymnchtv.HymnToc
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.concurrent.AppExecutors
+import org.cog.hymnchtv.lyrics.HantVariant
+import org.cog.hymnchtv.lyrics.LyricsScript
 import org.cog.hymnchtv.ui.home.HomePrefs
 
 /** TOC tab: pick a hymn book and a kind of index, browse the tree, tap a hymn to open its lyrics. */
@@ -23,8 +25,11 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
     private var views: Views? = null
     private var loadRequest = 0
 
+    /** The script the list on screen was requested in; a change in the reading settings reloads it on return. */
+    private var requestedVariant: HantVariant? = null
+
     /** Finished tables by (book, index kind); a table never changes while the app runs. */
-    private val cache = HashMap<Pair<String, String>, Map<String, List<String>>>()
+    private val cache = HashMap<Triple<String, String, HantVariant?>, Map<String, List<String>>>()
 
     private class Views(root: View) {
         val books: ChipGroup = root.findViewById(R.id.toc_books)
@@ -99,6 +104,11 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
         load()
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (views != null && LyricsScript.hantVariant(requireContext()) != requestedVariant) load()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_BOOK, hymnType)
@@ -113,7 +123,10 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
     private fun load() {
         val v = views ?: return
         val request = ++loadRequest
-        val key = hymnType to tocPage
+        val variant = LyricsScript.hantVariant(requireContext())
+        requestedVariant = variant
+        // A finished table is only reused in the script it was built for
+        val key = Triple(hymnType, tocPage, variant)
 
         // The English cross-reference does not exist for these books (the numbers are the same in both languages)
         if (tocPage == HymnToc.TOC_ENGLISH && (hymnType == MainActivity.HYMN_ER || hymnType == MainActivity.HYMN_XB)) {
@@ -126,10 +139,10 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
         v.list.visibility = View.GONE
         v.empty.visibility = View.GONE
         val appContext = requireContext().applicationContext
-        val (type, page) = key
+        val (type, page, _) = key
         // Building the category tables reads every lyrics file of the book: keep it off the main thread
         AppExecutors.io("toc-build") {
-            val toc = TocBuilder.build(appContext, type, page)
+            val toc = TocBuilder.build(appContext, type, page, variant)
             AppExecutors.MAIN.post {
                 cache[key] = toc
                 // A newer selection supersedes this result (it is still cached for next time)
