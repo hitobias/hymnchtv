@@ -23,7 +23,9 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.TestPermissions
 import org.cog.hymnchtv.reading.background.BackgroundPolicy
 import org.cog.hymnchtv.reading.background.BackgroundSlot
+import org.cog.hymnchtv.reading.background.MainScreenColors
 import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
+import org.cog.hymnchtv.reading.background.Wcag
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -71,6 +73,22 @@ class PhotoBackdropTest {
         val ref = AtomicReference<T>()
         onActivity { ref.set(block(it)) }
         return ref.get()
+    }
+
+    @Test
+    fun mainScreenEntryAndSearchTextAreReadableOnThePanel() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                assertPanel(it.findViewById<TextView>(R.id.tv_entry), "tv_entry")
+                assertPanel(it.findViewById<TextView>(R.id.tv_search), "tv_search")
+                assertPanel(it.findViewById<View>(R.id.keypadArea), "keypadArea")
+                for (id in listOf(R.id.tv_entry, R.id.tv_search, R.id.n1)) {
+                    val color = it.findViewById<TextView>(id).currentTextColor
+                    assertThat(Wcag.contrast(color, BackgroundPolicy.PHOTO_PALETTE.paperColor))
+                        .isAtLeast(MainScreenColors.MIN_TEXT_CONTRAST)
+                }
+            }
+        }
     }
 
     @Test

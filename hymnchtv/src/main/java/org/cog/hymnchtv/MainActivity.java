@@ -22,6 +22,8 @@ import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_BB_DUMMY;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_MAX;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_YB_NO_MAX;
 
+import android.content.res.ColorStateList;
+import android.graphics.drawable.Drawable;
 import android.Manifest;
 import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
@@ -58,6 +60,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.ViewSwitcher;
 
+import androidx.core.view.ViewCompat;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult;
@@ -92,8 +95,10 @@ import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.reading.ReadingPrefKeys;
 import org.cog.hymnchtv.reading.ReadingSettingsActivity;
 import org.cog.hymnchtv.reading.background.BackgroundDrawables;
+import org.cog.hymnchtv.reading.background.BackgroundPolicy;
 import org.cog.hymnchtv.reading.background.BackgroundPrefs;
 import org.cog.hymnchtv.reading.background.BackgroundSlot;
+import org.cog.hymnchtv.reading.background.MainScreenColors;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
@@ -215,6 +220,10 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
 
     // Default to a valid COLOR just in case (see initUserSettings()).
     private int mFontColor = Color.BLACK;
+
+    // Palette of the main background actually on screen, and the search box's stock underline background
+    private ReadingPalette mPalette = BackgroundPolicy.PHOTO_PALETTE;
+    private Drawable mSearchDefaultBg;
 
     private String sNumber = "";
     private String mTocPage;
@@ -1013,7 +1022,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         mTocSpinnerItem.setGravity(Gravity.CENTER);
         mTocSpinnerItem.setTypeface(null, Typeface.BOLD);
         mTocSpinnerItem.setTextSize(mFsDelta);
-        mTocSpinnerItem.setTextColor(mFontColor);
+        mTocSpinnerItem.setTextColor(effectiveFontColor());
     }
 
     /**
@@ -1224,10 +1233,29 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      */
     private void applyMainBackground() {
         ReadingPalette palette = BackgroundPrefs.applyTo(findViewById(R.id.mainBackground), mSharedPref, BackgroundSlot.MAIN);
+        mPalette = palette;
         TextView hint = findViewById(R.id.tv_hint);
         hint.setTextColor(palette.getAccentColor());
-        // Photo backgrounds: the hint sits on the same contrast-tested panel as the lyrics (null otherwise)
+        // Photo backgrounds: hint, entry, search box and keys sit on the same contrast-tested panel as the lyrics
+        // (the backdrop is null otherwise)
         hint.setBackground(BackgroundDrawables.backdrop(this, palette));
+        findViewById(R.id.tv_entry).setBackground(BackgroundDrawables.backdrop(this, palette));
+        findViewById(R.id.keypadArea).setBackground(BackgroundDrawables.backdrop(this, palette));
+        findViewById(R.id.actionArea).setBackground(BackgroundDrawables.backdrop(this, palette));
+
+        EditText search = findViewById(R.id.tv_search);
+        if (mSearchDefaultBg == null) {
+            mSearchDefaultBg = search.getBackground();
+        }
+        Drawable searchPanel = BackgroundDrawables.backdrop(this, palette);
+        search.setBackground(searchPanel != null ? searchPanel : mSearchDefaultBg);
+    }
+
+    /**
+     * The font colour to draw on the main screen: the user's choice if readable on the background, else the palette's text.
+     */
+    private int effectiveFontColor() {
+        return MainScreenColors.textColor(mFontColor, mPalette);
     }
 
     /**
@@ -1283,12 +1311,17 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             mEditor.apply();
         }
 
-        // set hint text alpha to 40%
-        mEntry.setHintTextColor(color & 0x66FFFFFF);
+        // mFontColor is the user's choice; what is drawn must also be readable on the current background
+        color = effectiveFontColor();
+
+        mEntry.setHintTextColor(MainScreenColors.hintColor(color));
         mEntry.setTextColor(color);
 
-        tv_Search.setHintTextColor(color & 0x66FFFFFF);
+        tv_Search.setHintTextColor(MainScreenColors.hintColor(color));
         tv_Search.setTextColor(color);
+        // the underline follows the text colour; the photo-mode panel must keep its own colour
+        ViewCompat.setBackgroundTintList(tv_Search,
+                mPalette.getBackdropColor() == 0 ? ColorStateList.valueOf(color) : null);
 
         btn_n0.setTextColor(color);
         btn_n1.setTextColor(color);
@@ -1334,6 +1367,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         // Back from the reading settings: the main background (or its photo dim/blur) may have changed
         if (result.getResultCode() == Activity.RESULT_OK) {
             applyMainBackground();
+            setFontColor(mFontColor, false);
         }
     });
 
