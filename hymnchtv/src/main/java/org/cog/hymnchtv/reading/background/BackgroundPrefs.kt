@@ -22,16 +22,31 @@ object BackgroundPrefs {
         runCatching { prefs.getString(slot.prefKey, null) }.getOrNull(), slot, isDarkTheme(), photoFile(prefs) != null,
     )
 
+    /** What [applyWithTokens] put on screen: the choice really shown, its reading palette and the UI tokens derived from it. */
+    data class Applied(val choice: BackgroundChoice, val palette: ReadingPalette, val tokens: UiTokens)
+
+    /**
+     * Like [applyTo], and also derives the slot's [UiTokens] from the background actually shown (a photo that cannot be
+     * decoded falls back to a preset, and the tokens follow it). Each slot builds its own tokens.
+     */
+    @JvmStatic
+    fun applyWithTokens(target: ImageView, prefs: SharedPreferences, slot: BackgroundSlot): Applied {
+        val applied = applyChoice(target, prefs, slot)
+        return Applied(applied, BackgroundPolicy.palette(applied), UiTokens.from(BackgroundPolicy.tokenInput(applied)))
+    }
+
     /** Shows the slot's background in [target] and returns the palette matching what is actually shown. */
     @JvmStatic
-    fun applyTo(target: ImageView, prefs: SharedPreferences, slot: BackgroundSlot): ReadingPalette {
+    fun applyTo(target: ImageView, prefs: SharedPreferences, slot: BackgroundSlot): ReadingPalette =
+        BackgroundPolicy.palette(applyChoice(target, prefs, slot))
+
+    private fun applyChoice(target: ImageView, prefs: SharedPreferences, slot: BackgroundSlot): BackgroundChoice {
         val photo = photoFile(prefs)
         val choice = BackgroundPolicy.resolve(
             runCatching { prefs.getString(slot.prefKey, null) }.getOrNull(), slot, isDarkTheme(), photo != null,
         )
-        val applied = BackgroundApplier.apply(
+        return BackgroundApplier.apply(
             target, choice, prefs, photo, BackgroundPolicy.defaultFor(slot, isDarkTheme()),
         )
-        return BackgroundPolicy.palette(applied)
     }
 }
