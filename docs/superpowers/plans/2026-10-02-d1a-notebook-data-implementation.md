@@ -30,6 +30,11 @@
   - Task 8–13 完整更正：`RoomBackupStore`／測試／物件圖改用 `HymnchtvDatabase`（`Notebook.get` 取 `HymnchtvDatabase.getInstance(app)`，不另建資料庫）；備份規則與 `BackupRulesTest` 改為 `hymnchtv.db` ＋ `-wal`／`-shm`；備份範圍擴大為整個統一 DB（媒體連結、歷史、英文歌詞、筆記本）；E2E 的應用程式 ID 改為 `com.ziontkec.hymnal`。
   - Task 11 加 Auto Backup 25 MB 配額風險與實測資料。
   - dev-notes：中間三表組建（Room 統一計畫合併後、本遷移完成前）留下的 `hymnchtv.db`（含 `-wal`／`-shm`）schema 與現在不同，開發／測試裝置在安裝遷移後的組建前必須 `adb uninstall com.ziontkec.hymnal`（或 `adb shell pm clear com.ziontkec.hymnal`）；不要把 `hymnchtv.db` 加進啟動刪檔清單。`org.cog.hymnchtv` 現在只是 namespace，應用程式 ID 是 `com.ziontkec.hymnal`。
+- rev 8（2026-10-02，依 Codex 對 Task 10、12 的複審）：
+  - Task 10 `BackupServiceTest.exportBytes()` 改成一般 suspend 函式，不在非 suspend 的 `also {}` 中呼叫 suspend `exportTo()`（原寫法無法編譯）。
+  - Task 12 `NotebookAsync` 建構子新增 `workDispatcher`（production 用 `Dispatchers.IO`）：repository 工作（含 `RoomSingLogRepository.create()` 同步呼叫的 `deviceId()`）不再跑在主執行緒，結果仍在 callback dispatcher 回呼；`NotebookAsyncTest` 與 `Notebook.get()` 同步更新。
+  - Task 13 busy Auto Backup E2E 的 `integrity()` 也驗證舊三表（`hymnHistoryDao().listNewestFirst()` 含 `LEGACY_HISTORY`）。
+  - AVD 實際名稱是 `api34b`／`api24b`（原寫 `api34nb`／`api24nb`），全文更正。
 - rev 7（2026-10-02，依 Codex／code-reviewer 對 D-1a Task 8–13 的審查）：
   - 分支策略：實際只有 `feat/notebook-data`（worktree `/Users/hitobias/orca/hymnchtv-d1a`），Task 0–7 已線性完成在其上；Task 8–13 全部在同一條分支上線性進行，刪除 Task 12 的三個 lane merge 與「三 lane 已 commit」前置，Task 8–11 的 lane 前置與「Lane C 只編譯」改寫；Task 0–7 的 lane 歷史片段只加註記不改寫。
   - E2E：不再斷言還原後 `-wal`／`-shm` 存在（暫態檔），改為驗證主 DB 已還原且至少一筆舊表（`hymn_history`）與一筆 notebook 資料正確；sidecar 只記錄。
@@ -65,9 +70,9 @@
 - **模擬器（重要）**：另一個代理正在這台電腦上用模擬器做驗證。
   - D-1a 的 instrumented test 會安裝並覆蓋 `com.ziontkec.hymnal`，Task 13 還會刻意解除安裝。
   - 依社群文件，AGP 的 connected test 跑完後會解除安裝 APK。AGP 9.3.3 的實際行為在 Task 0 Step 7 記錄，不要預設任一種結果。
-  - 所以 D-1a 一律使用**專用的 AVD**：`api34nb`（port 5580）和 `api24nb`（port 5582）。所有 adb／gradle 指令前都要先 `export ANDROID_SERIAL=emulator-5580`（或 5582）。
+  - 所以 D-1a 一律使用**專用的 AVD**：`api34b`（port 5580）和 `api24b`（port 5582）。所有 adb／gradle 指令前都要先 `export ANDROID_SERIAL=emulator-5580`（或 5582）。
 - **Instrumented test 的分工**：
-  - 只有 Lane 0 和 Lane A 可以在 lane 內跑 `connectedDebugAndroidTest`，而且要輪流使用 `api34nb`：Lane A 開始後，Lane 0 就不再使用它，直到合併。
+  - 只有 Lane 0 和 Lane A 可以在 lane 內跑 `connectedDebugAndroidTest`，而且要輪流使用 `api34b`：Lane A 開始後，Lane 0 就不再使用它，直到合併。
   - Lane B、C 在 lane 內只跑 JVM 測試，並用 `assembleDebugAndroidTest` 確認 androidTest 能編譯。它們的 instrumented test 由協調者在 Task 12 Step 1 合併後統一跑。
 - **每個 task 完成都要跑**：`./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug :hymnchtv:assembleDebugAndroidTest --console=plain`，全部通過才 commit。
 - **計畫和程式碼對不上就停下來**：特別是 Task 0 的 spike，任何一步的輸出和 Expected 不同，都要停下來回報，不要自己換版本（Task 0 Step 5 表格裡列出的退路除外）。
@@ -97,7 +102,7 @@
   - `BackupDocuments`
   - `Notebook`：建立物件圖，並擁有 app 層級的 scope。
   - `NotebookAsync`：給 Java 呼叫的 callback 包裝。
-- 執行緒：Kotlin 端用 coroutines，Room 的 `suspend` DAO 會自己切到背景執行緒。Java 端透過 `NotebookAsync` 取得「主執行緒回呼＋可取消」的 API。
+- 執行緒：Kotlin 端用 coroutines，Room 的 `suspend` DAO 會自己切到背景執行緒。Java 端透過 `NotebookAsync` 取得「主執行緒回呼＋可取消」的 API（repository 工作在 `Dispatchers.IO` 執行，只有回呼回到主執行緒）。
 
 **Tech Stack:** Android（minSdk 24、compileSdk 37、AGP 9.3.3 內建 Kotlin＝KGP 2.2.10、Gradle 9.7.1、Java 11）、Room 2.8.5、KSP 2.3.12、kotlinx-coroutines 1.11.0（退路 1.10.2）、`org.json`（Android 內建；JVM 測試用 `org.json:json`，實際沿用 master 的 20250517，rev 7 更正）、JUnit 4.13.2、Truth 1.4.5、AndroidX Test（runner 1.7.0、ext-junit 1.3.0）。
 
@@ -680,12 +685,12 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 - [ ] **Step 7：建立 D-1a 專用模擬器，並記錄 AGP 實際的解除安裝行為**
 
   ```bash
-  echo no | avdmanager create avd -n api34nb -k "system-images;android-34;google_apis;arm64-v8a"
-  echo no | avdmanager create avd -n api24nb -k "system-images;android-24;google_apis;arm64-v8a"
-  /opt/homebrew/share/android-commandlinetools/emulator/emulator -avd api34nb -port 5580 -no-snapshot-save &
+  echo no | avdmanager create avd -n api34b -k "system-images;android-34;google_apis;arm64-v8a"
+  echo no | avdmanager create avd -n api24b -k "system-images;android-24;google_apis;arm64-v8a"
+  /opt/homebrew/share/android-commandlinetools/emulator/emulator -avd api34b -port 5580 -no-snapshot-save &
   export ANDROID_SERIAL=emulator-5580
   adb wait-for-device && adb shell getprop sys.boot_completed      # repeat until it prints 1
-  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34nb && echo "device OK"
+  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34b && echo "device OK"
   ./gradlew :hymnchtv:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=org.cog.hymnchtv.ResourceLocaleResolutionTest --console=plain
   adb shell pm list packages | grep -c 'org.cog.hymnchtv'
   ```
@@ -1987,11 +1992,11 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
   Expected: BUILD SUCCESSFUL；7 個 index 各印出 `1`；`updatedBy` 印出 `5`；最後一行是 `[('index_playlist_item_playlistId_position', True)]`。
 
-- [ ] **Step 7：在 `api34nb` 上跑 DAO 測試和編號比對測試**
+- [ ] **Step 7：在 `api34b` 上跑 DAO 測試和編號比對測試**
 
   ```bash
   export ANDROID_SERIAL=emulator-5580
-  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34nb && \
+  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34b && \
   ./gradlew :hymnchtv:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=org.cog.hymnchtv.notebook --console=plain
   ```
 
@@ -2625,7 +2630,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 > 已由 Room 統一計畫 Task 6(a) 遷移：本 Task 內的 `NotebookDatabase`／`notebook.db`／`TRUNCATE` 為歷史片段，現況為 `HymnchtvDatabase`（`hymnchtv.db`、WAL）。
 
-**前置條件：** Task 3 已 commit。在 worktree `feat/d1a-notebook-data-lane-a` 中進行。這條 lane 獨占 `api34nb`（`ANDROID_SERIAL=emulator-5580`）。
+**前置條件：** Task 3 已 commit。在 worktree `feat/d1a-notebook-data-lane-a` 中進行。這條 lane 獨占 `api34b`（`ANDROID_SERIAL=emulator-5580`）。
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/notebook/repo/room/RoomIds.kt`、`RoomFavoriteRepository.kt`、`RoomSingLogRepository.kt`、`RoomNoteRepository.kt`、`RoomPlaylistRepository.kt`
@@ -3504,11 +3509,11 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   }
   ```
 
-- [ ] **Step 3：在 `api34nb` 跑測試，確認通過**
+- [ ] **Step 3：在 `api34b` 跑測試，確認通過**
 
   ```bash
   export ANDROID_SERIAL=emulator-5580
-  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34nb && \
+  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34b && \
   ./gradlew :hymnchtv:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=org.cog.hymnchtv.notebook --console=plain
   ```
 
@@ -5390,9 +5395,11 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
       private fun TestScope.service(store: BackupStore, maxBytes: Int = BackupService.DEFAULT_MAX_BYTES) =
           BackupService(store, clock, "2.9.2", UnconfinedTestDispatcher(testScheduler), maxBytes)
 
-      private suspend fun BackupService.exportBytes(): ByteArray =
-          ByteArrayOutputStream().also { assertThat(exportTo(it)).isInstanceOf(ExportResult.Success::class.java) }
-              .toByteArray()
+      private suspend fun BackupService.exportBytes(): ByteArray {
+          val out = ByteArrayOutputStream()
+          assertThat(exportTo(out)).isInstanceOf(ExportResult.Success::class.java)
+          return out.toByteArray()
+      }
 
       private fun assertSameRows(actual: NotebookTables, expected: NotebookTables) {
           assertThat(actual.favorites).containsExactlyElementsIn(expected.favorites)
@@ -6109,7 +6116,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   test "$(git branch --show-current)" = feat/notebook-data
   ./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug --console=plain
   export ANDROID_SERIAL=emulator-5580
-  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34nb && ./gradlew :hymnchtv:connectedDebugAndroidTest --console=plain
+  test "$(adb emu avd name | head -1 | tr -d '\r')" = api34b && ./gradlew :hymnchtv:connectedDebugAndroidTest --console=plain
   ```
 
   Expected:
@@ -6248,7 +6255,9 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           val prefs = FakeNotebookPrefs()
           val tracker = SingTracker(singLogs, prefs, clock, scope.backgroundScope, zone = { TimeZone.getTimeZone("UTC") })
           val async = NotebookAsync(
-              favorites, singLogs, prefs, tracker, UnusedBackupIo, UnconfinedTestDispatcher(scope.testScheduler),
+              favorites, singLogs, prefs, tracker, UnusedBackupIo,
+              callbackDispatcher = UnconfinedTestDispatcher(scope.testScheduler),
+              workDispatcher = UnconfinedTestDispatcher(scope.testScheduler),
           )
       }
 
@@ -6375,6 +6384,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   import kotlinx.coroutines.CoroutineScope
   import kotlinx.coroutines.SupervisorJob
   import kotlinx.coroutines.launch
+  import kotlinx.coroutines.withContext
   import org.cog.hymnchtv.notebook.backup.BackupIo
   import org.cog.hymnchtv.notebook.backup.ExportResult
   import org.cog.hymnchtv.notebook.backup.ImportResult
@@ -6410,6 +6420,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
   /**
    * Callback API for Java callers (ContentHandler, MainActivity in the UI wave).
+   * Repository work runs on [workDispatcher] (Dispatchers.IO in production; e.g. RoomSingLogRepository.create()
+   * calls device.deviceId(), which may commit SharedPreferences once, so it must never run on the main thread).
    * Every callback runs on [callbackDispatcher] (the main thread in production) and is never invoked after
    * cancel(); activities cancel their calls in onDestroy so no result reaches a destroyed view.
    */
@@ -6420,6 +6432,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
       private val tracker: SingTracker,
       private val backupIo: BackupIo,
       callbackDispatcher: CoroutineDispatcher,
+      private val workDispatcher: CoroutineDispatcher,
   ) {
       private val scope = CoroutineScope(SupervisorJob() + callbackDispatcher)
 
@@ -6497,7 +6510,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
       private fun <T> call(callback: NotebookCallback<T>, block: suspend () -> T): Cancellable {
           val job = scope.launch {
               val outcome: Outcome<T> = try {
-                  Outcome.Ok(block())
+                  Outcome.Ok(withContext(workDispatcher) { block() })
               } catch (e: CancellationException) {
                   throw e
               } catch (e: Exception) {
@@ -6585,7 +6598,9 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           val tracker = SingTracker(singLogs, prefs, clock, appScope)
           val backup = BackupService(RoomBackupStore(db), clock, BuildConfig.VERSION_NAME)
           val async = NotebookAsync(
-              favorites, singLogs, prefs, tracker, UriBackupIo(app.contentResolver, backup), Dispatchers.Main.immediate,
+              favorites, singLogs, prefs, tracker, UriBackupIo(app.contentResolver, backup),
+              callbackDispatcher = Dispatchers.Main.immediate,
+              workDispatcher = Dispatchers.IO,
           )
           return NotebookGraph(
               database = db,
@@ -6631,7 +6646,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
 **破壞性步驟（Step 3～5）的規則：**
 - 會解除安裝 app、切換 backup transport，所以**必須明確 opt-in**。
-- 協調者先確認 `api34nb`／`api24nb` 沒有其他代理在使用，並取得使用者同意，才能設定 `D1A_ALLOW_DESTRUCTIVE`。
+- 協調者先確認 `api34b`／`api24b` 沒有其他代理在使用，並取得使用者同意，才能設定 `D1A_ALLOW_DESTRUCTIVE`。
 - 腳本會先確認目標 serial 對應的 AVD 名稱正確，才執行任何動作。
 
 - [ ] **Step 1：寫 E2E 測試**
@@ -6779,6 +6794,8 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
           assertThat(check).isEqualTo("ok")
           assertThat(tables().singLogs.size).isAtLeast(3)
           assertThat(graph.favorites.findAll()).hasSize(2)
+          val history = withContext(Dispatchers.IO) { graph.database.hymnHistoryDao().listNewestFirst() }
+          assertThat(history).contains(LEGACY_HISTORY)
       }
 
       private companion object {
@@ -6812,7 +6829,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   ```bash
   ./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug :hymnchtv:lintDebug --console=plain
   for k in MissingTranslation ExtraTranslation HardcodedText; do printf "%s: " $k; grep -c "\[$k\]" hymnchtv/build/reports/lint-results-debug.txt; done
-  for pair in emulator-5580:api34nb emulator-5582:api24nb; do
+  for pair in emulator-5580:api34b emulator-5582:api24b; do
     serial=${pair%%:*}; avd=${pair##*:}
     test "$(adb -s $serial emu avd name | head -1 | tr -d '\r')" = "$avd" || { echo "ABORT: $serial is not $avd"; break; }
     ANDROID_SERIAL=$serial ./gradlew :hymnchtv:connectedDebugAndroidTest --console=plain
@@ -6832,7 +6849,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   # Usage (from the repo root): D1A_ALLOW_DESTRUCTIVE=<avd> d1a-e2e.sh <serial> <avd> <saf|autobackup|busy>
   set -euo pipefail
   SERIAL=$1; AVD=$2; SCENARIO=$3
-  case "$AVD" in api34nb|api24nb) ;; *) echo "ABORT: only the D-1a AVDs api34nb/api24nb are allowed"; exit 2;; esac
+  case "$AVD" in api34b|api24b) ;; *) echo "ABORT: only the D-1a AVDs api34b/api24b are allowed"; exit 2;; esac
   [ "${D1A_ALLOW_DESTRUCTIVE:-}" = "$AVD" ] || { echo "ABORT: set D1A_ALLOW_DESTRUCTIVE=$AVD to confirm"; exit 2; }
   ACTUAL=$(adb -s "$SERIAL" emu avd name | head -1 | tr -d '\r')
   [ "$ACTUAL" = "$AVD" ] || { echo "ABORT: $SERIAL is '$ACTUAL', not $AVD"; exit 2; }
@@ -6935,13 +6952,13 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
   - 從本文複製時，要去掉清單的兩格縮排，讓 heredoc 的結束標記 `SH` 和內層的 `PY` 位於行首；否則 heredoc 不會結束。
   - 建立後先跑 `bash -n /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh` 檢查語法。
 
-  Expected: 腳本建立完成，`bash -n` 沒有輸出。**下一步之前**，先向協調者／使用者確認 `api34nb`、`api24nb` 沒有其他代理在使用，並取得同意。
+  Expected: 腳本建立完成，`bash -n` 沒有輸出。**下一步之前**，先向協調者／使用者確認 `api34b`、`api24b` 沒有其他代理在使用，並取得同意。
 
 - [ ] **Step 4：SAF 路徑：匯出 → 解除安裝 → 重新安裝 → 匯入（破壞性，需 opt-in）**
 
   ```bash
-  D1A_ALLOW_DESTRUCTIVE=api34nb /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5580 api34nb saf
-  D1A_ALLOW_DESTRUCTIVE=api24nb /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5582 api24nb saf
+  D1A_ALLOW_DESTRUCTIVE=api34b /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5580 api34b saf
+  D1A_ALLOW_DESTRUCTIVE=api24b /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5582 api24b saf
   ```
 
   Expected:
@@ -6952,9 +6969,9 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 - [ ] **Step 5：自動備份，以及「寫入中觸發備份」（破壞性，需 opt-in）**
 
   ```bash
-  D1A_ALLOW_DESTRUCTIVE=api34nb /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5580 api34nb autobackup
-  D1A_ALLOW_DESTRUCTIVE=api24nb /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5582 api24nb autobackup
-  D1A_ALLOW_DESTRUCTIVE=api34nb /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5580 api34nb busy
+  D1A_ALLOW_DESTRUCTIVE=api34b /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5580 api34b autobackup
+  D1A_ALLOW_DESTRUCTIVE=api24b /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5582 api24b autobackup
+  D1A_ALLOW_DESTRUCTIVE=api34b /private/tmp/claude-501/d1a-e2e/d1a-e2e.sh emulator-5580 api34b busy
   ```
 
   Expected:
