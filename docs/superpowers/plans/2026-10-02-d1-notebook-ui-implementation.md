@@ -27,6 +27,7 @@
 
 **執行規則：**
 - **每條 lane 只改自己「檔案範圍」裏的檔案。** 需要改範圍外的檔案時停下來回報。這是平行執行不衝突的前提。
+- **行尾（EOL，rev 5）**：階段 4 會改到下列 **CRLF** 檔：`ContentHandler.java`、`res/layout/content_main.xml`、`res/layout/content_lyrics.xml`、`AndroidManifest.xml`（W1，加 `NotebookActivity`）；**LF** 檔：`ContentView.java`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`、`ui/**` Kotlin、新檔。以 `git ls-files --eol <file>` 確認；改 CRLF 檔用 bytes／`perl -pi -e` 只換目標行並自行帶 `\r\n`，改完 `git diff --stat` 與 `git diff --ignore-cr-at-eol --stat` 的行數必須相同、`git ls-files --eol` 仍是 `w/crlf`（細節同 C 計畫「H 系列通則 §2」）。
 - **D-1a 的 API 一律照用，不改簽名。** 本計畫對 D-1a 檔案唯一的修改，是在 `HymnchtvDatabase.kt` 加一行 DAO 存取函式（Task 1），而且 schema（`hymnchtv/schemas/.../1.json`）必須完全不變，由 Task 1 Step 6 檢查。
 - **模擬器**：沿用 D-1a 的專用 AVD：`api34nb`（`emulator-5580`）和 `api24nb`（`emulator-5582`）。所有 adb／gradle 指令前先 `export ANDROID_SERIAL=…`，並用 `adb emu avd name` 確認名稱。另一個代理可能正在用 `api24`／`api34`，**不要碰它們**。
   - 階段 0 的 Lane 0 可以在 `api34nb` 跑 instrumented test（Task 1）。
@@ -295,7 +296,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 | 3 | W1 | W1a → W1b → W1c | `notebook/ui/NotebookActivity.kt`、`notebook/ui/home/`、`notebook/ui/favorites/FavoritesFragment.kt`、`notebook/ui/log/{SingLogFragment,SingLogAdapter}.kt`、`notebook/ui/notes/{NotesFragment,NoteAdapter}.kt`、`notebook/ui/review/{StatsFragment,HeatmapView,UnsungListFragment}.kt`、`res/layout/nb_{activity,home,row_log,row_log_header,row_note,stats,unsung}.xml`、`res/menu/nb_*.xml`、`AndroidManifest.xml` | W0 已 commit |
 | 3 | W2 | W2a → W2b → W2c | `notebook/ui/playlist/{PlaylistsFragment,PlaylistDetailFragment,PlaylistItemAdapter,AddToPlaylistDialogFragment,PlaylistNameDialogFragment,OccasionPickerDialogFragment}.kt`、`notebook/ui/notes/NoteEditorFragment.kt`、`notebook/ui/hymn/HymnNotebookFragment.kt`、`notebook/ui/settings/NotebookSettingsFragment.kt`、`res/layout/nb_{playlist_detail,row_playlist,row_playlist_item,note_editor,hymn_page}.xml`、`res/xml/nb_preferences.xml` | W0 已 commit |
 | 3 | W3 | W3a | `notebook/ui/bar/{HymnNotebookBarFragment,NotebookBarHost}.kt`、`res/layout/nb_hymn_bar.xml` | W0 已 commit |
-| 4 | 0 | I1 → I2 → I3 → V1 → R1 | `ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`、`MainActivity.java`、`res/menu/menu_main.xml`（pre-C 模式）或 C 的對應檔案（C 模式）、`androidTest/.../notebook/ui/*Test.kt` | **G4**：階段 3 全部合併，並依 C 的狀態選模式（見下） |
+| 4 | 0 | I1 → I2 → I3 → V1 → R1 | `ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`、C 的對應檔案（`ui/picker/HymnPickerController.kt`、`ui/home/HistoryFragment.kt`、`ui/host/UiFlags.kt`、`ui/myhymns/MyHymnsFragment.kt`；rev 5：pre-C 檔案 `MainActivity.java`／`menu_main.xml` 作廢）、`androidTest/.../notebook/ui/*Test.kt` | **G4**：階段 3 全部合併，**且 C 的 G5（1.1.0）已完成並 rebase**（見下） |
 
 （`java/...` 或 `notebook/...` = `hymnchtv/src/main/java/org/cog/hymnchtv/...`；`test/...` = `hymnchtv/src/test/java/org/cog/hymnchtv`；`androidTest/...` = `hymnchtv/src/androidTest/java/org/cog/hymnchtv`；`sharedTest/...` = `hymnchtv/src/sharedTest/java/org/cog/hymnchtv`；`res/` 在 `hymnchtv/src/main/` 底下。）
 
@@ -304,20 +305,13 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 - **G1**：Lane 0 的 Task 0～2 都已 commit，`testDebugUnitTest` 全綠，`api34nb` 上 `RoomNotebookQueriesContractTest` 全綠。
 - **G2**：M、P、S、T 四條 lane 合併，協調者在 `api34nb` 跑 `org.cog.hymnchtv.notebook.ui.titles` 套件。
 - **G3**：V1、V2、V3 合併；JVM 測試全綠。
-- **G4（相對於 C）**：（rev 5：C 已於 1.0.0 合併進 master，**一律選 C 模式**；下列判斷僅供核對。**rev 5 新增硬前置：階段 4 的 I1～I3 必須在 C 的 G5〔1.1.0：H3＋H4＋F2 已合併，含 `HymnPickerController`、`HistoryFragment`、`HymnRef`〕之後開始，並先 `git rebase origin/master`**——I2 依賴這些類別，C 1.0.0 單獨不夠。若 C 的 H5〔1.1 之後，關卡 G6〕已先完成，才可使用 H5 介面；H5 未做時，I1 維持 `btn_next → nextInPlaylistOrNextHymn → scrollNextHymn()`，**不得引用 H5**。階段 0～3 都是新檔案，不受此限。）協調者先執行下列指令，判斷 C 的狀態，再問使用者選哪個模式：
+- **G4（階段 4 前置；rev 5 重寫）**：**D-1 UI 排在 1.1.0 之後**。階段 0～3 都是新檔案，不受此限、可先做。**階段 4（I1～I3、V1、R1）必須在 C 的 G5（1.1.0：H3＋H4＋F2 已合併進 `master`，含 `HymnPickerController`、`HistoryFragment`、`HymnRef`、`UiFlags`）之後開始，並先 `git fetch origin && git rebase origin/master`。** 一律使用 **C 模式**（C 已於 1.0.0 合併；pre-C 模式與「等待」分支作廢，不再詢問使用者選模式）。C 的 H5（歌詞頁跳轉，1.1 之後，關卡 G6）**僅在它已先合併時才整合**（見 rev 5 比對結果的 C-14）；H5 未做時 I1 維持 `btn_next → nextInPlaylistOrNextHymn → scrollNextHymn()`，**不得引用 H5**。前置檢查：
 
   ```bash
   git fetch origin
-  ls docs/superpowers/plans/ | grep -i 'c-modern-ui' || echo "C plan: none"
-  git log origin/master --oneline --grep='material3\|feat(c)\|C lane' | head -5
-  grep -n "Theme.Material3\|com.google.android.material" hymnchtv/build.gradle hymnchtv/src/main/res/values/theme.xml
+  grep -n 'NOTEBOOK_UI_ENABLED' hymnchtv/src/main/java/org/cog/hymnchtv/ui/host/UiFlags.kt      # 預期存在且為 false
+  ls hymnchtv/src/main/java/org/cog/hymnchtv/ui/picker/HymnPickerController.kt hymnchtv/src/main/java/org/cog/hymnchtv/ui/home/HistoryFragment.kt hymnchtv/src/main/java/org/cog/hymnchtv/hymn/HymnRef.kt   # 預期都存在（C 的 G5）
   ```
-
-  | C 的狀態 | 模式 | 說明 |
-  |---|---|---|
-  | C 已合併進 `master`（或本分支的基底） | **C 模式（建議預設）** | 先 `git rebase origin/master`，依「依賴 C 的介面」把筆記本放進 C 的槽位（C-1、C-5、C-9）。Task I1、I2 改的是 C 的對應檔案 |
-  | C 尚未開工，且使用者決定 D-1 先發 | **pre-C 模式** | Task I1、I2 照本文改舊版面；C 之後依對帳清單搬移 |
-  | C 正在進行中 | **等待** | 階段 0～3 都是新檔案，可以先合併進 `feat/d1-notebook-ui` 並保持 rebase；階段 4 等 C 合併後用 C 模式。**不要和 C 同時改 `ContentHandler`／`content_main.xml`／`MainActivity`** |
 
 ---
 
@@ -8230,8 +8224,8 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 - [ ] **Step 1：`HymnNotebookBarTest`（C-10 接點）**
 
   在既有 C smoke 流程上斷言筆記本列（codex rev 3 #11，斷言**可觀察結果**，不碰門檻設定——D-1a 無此 pref/API）：
-  - 開歌詞頁 → 斷言 `@id/notebookBar` 顯示，且其「唱詩摘要」文字非預設「從未唱」（代表 `showHymn` 已把初始詩歌送進 bar）。
-  - 翻頁 → 斷言摘要對應新詩歌（代表 `onPageSelected` → `showHymn` 生效）。
+  - 先在 instrumentation 執行緒（不在 `onActivity` 內）經 `Notebook.get(...)` 為某首詩寫入一筆唱詩紀錄；開歌詞頁 → 斷言 `@id/notebookBar` 顯示，且摘要含該紀錄的資訊（代表初始 `showHymn` 已把該首送進 bar）；沒有紀錄的詩歌摘要為 `nb_bar_never`（預設）。
+  - 翻頁到另一首（已預先寫入不同的紀錄）→ 斷言摘要換成新詩歌的內容（代表 `onPageSelected` → `showHymn` 生效）。
   - **自動記錄的時序邏輯已由 JVM 的 `HymnBarViewModelTest` 覆蓋**，instrumented 只驗證接線（初始摘要 + 翻頁摘要），不重複測 2 分鐘計時器。
   `AccessibilityChecks` 開啟。
 

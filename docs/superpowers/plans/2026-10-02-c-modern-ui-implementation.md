@@ -1152,7 +1152,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
   }
   ```
 
-  **本 Step 先實作 `HymnNumberRules` 的最小 API**（`fuOffset(book)`、`storedOf(book, number, isFu)`、`isValid`、`storedNumbers(book)`、`displayNumbers(book, isFu)`；Step 2 再補 `canAppendDigit`、`canAppendEnglishDigit`、`alsoValidIn` 與完整測試），`HymnRefTest` 才能編譯與通過。
+  **本 Step 先實作 `HymnNumberRules` 的最小 API**（`const val YB_NO_MAX = 275`、`fuOffset(book)`（DB→`HymnNumbering.DB_NO_MAX`、YB→`YB_NO_MAX`）、`storedOf(book, number, isFu)`、`isValid`、`storedNumbers(book)`、`displayNumbers(book, isFu)`；Step 2 再補 `canAppendDigit`、`canAppendEnglishDigit`、`alsoValidIn` 與完整測試），`HymnRefTest` 才能編譯與通過。
 
   實作 `hymn/HymnSource.kt`（七來源；`prefValue` 沿用 `LastHymnType` 的值＋新值 `"english"`；`fromPref(null/未知)＝DB`；`supportsFu` 只有 DB、YB）與 `hymn/HymnRef.kt`：`data class HymnRef(val book: String, val storedNo: Int)`，`isFu`/`displayNo` 依 `HymnNumberRules.fuOffset(book)`（DB＝780、YB＝275）推導，`isValid = HymnNumbering.isValid(book, storedNo)`，`fromEntry(book, number, isFu): HymnRef?` 呼叫 `HymnNumberRules.storedOf`。`HymnRef` 是首頁輸入、開啟、歷史**顯示**與重開（H5 的跳轉堆疊）的**唯一**換算點；媒體層（`MediaRecord`、`media_record.isFu`、匯入匯出格式、`MediaConfig` 驗證）**一個字都不改**。
 
@@ -1172,8 +1172,8 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
           }
       }
       @Test fun gapsAndMissingNumbers() {
-          assertThat(HymnNumberRules.isValid(HymnTypes.BB, 38, false)).isTrue()
-          assertThat(HymnNumberRules.isValid(HymnTypes.BB, 39, false)).isFalse()    // 38–100 缺號
+          assertThat(HymnNumberRules.isValid(HymnTypes.BB, 37, false)).isTrue()     // `BB_LIMITS[0]=38`：38–100（含）缺號
+          assertThat(HymnNumberRules.isValid(HymnTypes.BB, 38, false)).isFalse()
           assertThat(HymnNumberRules.isValid(HymnTypes.ER, 17, false)).isTrue()
           assertThat(HymnNumberRules.isValid(HymnTypes.ER, 18, false)).isFalse()
           assertThat(HymnNumberRules.isValid(HymnTypes.XB, 168, false)).isFalse()   // 新歌 168–170
@@ -1190,7 +1190,8 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
       }
       @Test fun digitKeysFollowRealCompletions() {
           assertThat(can(HymnTypes.BB, "3", 9)).isFalse()      // 39 缺號；390–399 在 350–400 缺號內
-          assertThat(can(HymnTypes.BB, "3", 8)).isTrue()
+          assertThat(can(HymnTypes.BB, "3", 7)).isTrue()      // 37 有
+          assertThat(can(HymnTypes.BB, "3", 8)).isFalse()     // 38 缺號、380–389 在 350–400 缺號內
           assertThat(can(HymnTypes.BB, "100", 1)).isTrue()     // 1001 有
           assertThat(can(HymnTypes.BB, "100", 0)).isFalse()    // 1000 缺號、無 5 位數
           assertThat(can(HymnTypes.XB, "16", 8)).isFalse()
@@ -1210,7 +1211,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
   }
   ```
 
-  另寫 `HymnNumberRulesAssetTest.kt`（讀 `hymnchtv.assetsDir`）：對 `db/bb/xb/xg/er`，`storedNumbers(book)` **等於** `lyrics_<p>_text/*.txt` 的號碼集合（逐號有效性與資產一致；青年只斷言 1..277，因其歌詞多半在別本）；另斷言 `YB_NO_MAX（275）== HymnNoValidate.HYMN_YB_NO_MAX`（編譯期常數，JVM 可讀）。**若資產與規則不一致，先回報再決定改規則或資產，不要悄悄調整。**
+  另寫 `HymnNumberRulesAssetTest.kt`（讀 `hymnchtv.assetsDir`）：對 `db/bb/xb/xg/er`，`storedNumbers(book)` **等於** `lyrics_<p>_text/*.txt` 的號碼集合（逐號有效性與資產一致；青年只斷言 1..277，因其歌詞多半在別本）；另斷言 `HymnNumberRules.YB_NO_MAX（275）== HymnNoValidate.HYMN_YB_NO_MAX`（編譯期常數，JVM 可讀；`HymnNumbering` 只有 `YB_NO_TMAX=277`，所以 275 由 `HymnNumberRules` 以 `const val YB_NO_MAX = 275` 自己定義，並由這個測試與 `HymnNoValidate` 對照）。**若資產與規則不一致，先回報再決定改規則或資產，不要悄悄調整。**
 
   補完 `HymnNumberRules`（Step 1 已有 `fuOffset`、`storedOf`、`isValid`、`storedNumbers`、`displayNumbers`）：`fuOffset(book)`（DB→`HymnNumbering.DB_NO_MAX`、YB→275）；`storedOf(book, number, isFu): Int?`（非附：`number in 1..(fuOffset ?: ∞)` 且 `HymnNumbering.isValid`；附：`number>=1` 且 `isValid(book, offset+number)`）；`isValid` ＝ `storedOf != null`；`storedNumbers(book)`（`1..max` 過濾 `HymnNumbering.isValid`，快取）；`displayNumbers(book, isFu)`；`canAppendDigit(book, prefix, isFu, digit)`：`next = prefix + digit`，長度 ≤ 4、不以 0 開頭，且 `displayNumbers(book,isFu)` 中存在以 `next` 為十進位前綴的號碼；`canAppendEnglishDigit(prefix, digit, englishNumbers)` 同規則但資料是英文號集合；`alsoValidIn(number, isFu, except): List<HymnSource>`（依 `HymnSource` 宣告順序、排除 `except` 與英文）。
 
@@ -1349,6 +1350,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 13：新測試（instrumented）**
 
+  - **非同步與資料庫規則**：歷史寫入是 `AppExecutors.io` 的非同步工作；測試用 `FragmentHost.eventually { … }` 輪詢（逾時 3 秒），**輪詢條件在 instrumentation 執行緒呼叫 `DatabaseBackend`**（不在 `scenario.onActivity`／主執行緒 lambda 內），確認後才回 UI 斷言。
   - `HymnPickerTest`：①來源鈕單選且 `isChecked` 暴露（兩群組互斥：點 `bs_yb` 後 `bs_db.isChecked==false`）；②記住來源（含 `bs_english`，重啟 `ActivityScenario` 後仍選取）；③補充本 `3` 後 `9` 鍵停用且 `stateDescription` 是 `c_key_unavailable`；④補充本 `4`、`0` → `tv_entry` 含「無第 40 首」、`btn_open` 停用、`also_in_group` 有「大本」chip，點它→來源切到大本、數字保留、預覽變有效；⑤大本「附」`3` → 預覽「附 3」；點 `bs_bb` → 退出附模式、顯示「此本無附」；⑥英文 `1` → 預覽對應詩；英文無對照 → `btn_open` 停用；有雙目標的英文號 → 候選 chip 可切換；⑦`btn_open` 開歌詞頁，**歷史多一筆且青年附 276 顯示「青年 附1」、重開同一首**（`HistoryRecord.isFu` 欄位仍為 0）；⑧`btn_toc` 在中文來源開目錄分頁並預選 `(該本, 類別)`，英文來源預選 `(大本, 英中對照)`（`TocSelectTest`）；⑨旋轉後數字與來源保留；⑩無障礙：`previewArea` 的 `accessibilityLiveRegion` ＝ polite，來源鈕有 checked 狀態，焦點順序（`accessibilityTraversalBefore` 或視圖順序）：搜尋→來源→預覽→鍵盤→開啟→最近→更多。
   - `HistoryFragmentTest`／`OverlayNavigationTest`：`btn_recent_more` 開 overlay、返回鍵關 overlay 回首頁；overlay 開啟時點底部導覽分頁 → overlay 先被關閉；旋轉後 overlay 仍在；滑動刪除、可見刪除鈕、長按確認；歷史最多顯示 8 個 chip、順序最新優先。
   - `HomeLayoutTest`：`assumeTrue(screenHeightDp >= 720)`（G4 在 360×720 跑）→ 首頁在不捲動下 `tv_search` 到 `btn_open` 全部 `getGlobalVisibleRect` 可見；另一個測試（任何尺寸）斷言所有可點元件（`n0–n11`、`bs_*`、`btn_toc`、`btn_open`、`tv_search`、chip）高度 ≥ 48dp；**320×640 與字級 1.3 允許捲動，但不得小於 48dp**。
@@ -1521,7 +1523,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 - [ ] **Step 5：測試（instrumented）與效能**
 
   - `SearchFragmentTest`（`FragmentHost` 或經 `MainActivity` 點 `tv_search`）：①輸入「祂的計劃」→ 列表出現、第一筆是大本 1，`tv_search_status` 顯示「找到 N 首」；②點結果開歌詞頁且是該本該號（青年附 276 的結果開 `HYMN_YB` 276）；③`scope_current`／`scope_all` 切換：BB 範圍只出 BB；英文來源進入時沒有 `scope_current`；④搜「的」→ 列表 200 筆且狀態是 `c_search_status_more`；⑤空查詢顯示提示；⑥旋轉後結果仍在；⑦返回鍵關閉搜尋頁回首頁；⑧搜尋進行中離開頁面不崩潰（`onDestroyView` 取消）。
-  - `SearchPerfTest`（`api24b` 跑）：`scope=All`、查一個不存在的字串，量整體時間並 `Log` 輸出，**軟性門檻 ≤ 10 秒**（舊 `ContentSearch` 同樣逐檔掃全部；若超過先量測舊實作作為基準再決定，不要悄悄放寬）；同時 `Debug.getNativeHeapAllocatedSize`／`Runtime` 記憶體不應隨結果數線性暴增（結果只存 `SearchResult`，不存全文）。
+  - `SearchPerfTest`（`api24b` 與 `api34b` 都跑）：`scope=All`、查一個不存在的字串，**硬斷言**整體時間 ≤ 10 秒（`api24b`）／≤ 5 秒（`api34b`），並 `Log` 實測值貼進 PR；超過時**先最佳化**（例如改用 `AssetManager.openFd`／並行讀檔、避免 `readText` 整檔配置）再重測，**不得放寬門檻**；同時 `Debug.getNativeHeapAllocatedSize`／`Runtime` 記憶體不應隨結果數線性暴增（結果只存 `SearchResult`，不存全文）。
 
 - [ ] **Step 6：驗收與 Commit**
 
@@ -1541,7 +1543,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 **F1 實際狀態（7985e0c0 實測，F2 以此為準）：** `res/menu/menu_content.xml` **已刪除**（`res/menu/` 只剩 `menu_bottom_nav.xml`、`menu_lyrics_more.xml`）；`AndroidManifest.xml` **已沒有** `HymnToc` 的 `<activity>`；但 `HymnToc.java`（CRLF，328 行）仍在，且仍是 `ContentHandler`（靜態 import `category_bb/db/er/xb`、`hymnCategory*`）、`TocBuilder.kt`、`TocFragment.kt`、`AssetHymnTitles.kt`、`HymnNoCh2EngXRef.java`（`TOC_BB/DB/XG`）的常數來源——它的 **Activity 外殼是死碼**（沒有任何 `startActivity`）。
 
-**Files：** Modify `mediaconfig/MediaConfig.java`（LF）、`ContentHandler.java`（**CRLF**）、`utils/HymnNoCh2EngXRef.java`（**CRLF**，把 `import static …HymnToc.TOC_BB/TOC_DB/TOC_XG` 改成 `import static org.cog.hymnchtv.ui.toc.TocConstants.TOC_BB` 等；`TocConstants` 為 Kotlin `object`，`const val`／`@JvmField` 可被 Java 以靜態欄位引用）、`ui/toc/TocBuilder.kt`、`TocFragment.kt`、`ui/titles/AssetHymnTitles.kt`、`res/layout/media_config.xml`＋`layout-land/media_config.xml`（CRLF）、`media_player_audio_ui.xml`（LF）、`content_lyrics.xml`（CRLF）、`ui/theme/EdgeToEdge.kt`；Create `ui/toc/TocConstants.kt`、`androidTest/.../ui/{EllipsisAudit,TruncationAuditTest}.kt`；Delete `HymnToc.java`（CRLF）、`HymnTocExpandableListAdapter.java`、`res/layout/hymn_toc*.xml`。
+**Files：** Modify `mediaconfig/MediaConfig.java`（LF）、`ContentHandler.java`（**CRLF**）、`utils/HymnNoCh2EngXRef.java`（**CRLF**，把 `import static …HymnToc.TOC_BB/TOC_DB/TOC_XG` 改成 `import static org.cog.hymnchtv.ui.toc.TocConstants.TOC_BB` 等；`TocConstants` 為 Kotlin `object`，`const val`／`@JvmField` 可被 Java 以靜態欄位引用）、`ui/toc/TocBuilder.kt`、`TocFragment.kt`、`ui/titles/AssetHymnTitles.kt`、**`androidTest/.../ui/toc/TocFragmentTest.kt`**（第 17、103、104 行 import 並使用 `HymnToc.TOC_CATEGORY`／`hymnCategoryBb`，改為 `TocConstants`）、`res/layout/media_config.xml`＋`layout-land/media_config.xml`（CRLF）、`media_player_audio_ui.xml`（LF）、`content_lyrics.xml`（CRLF）、`ui/theme/EdgeToEdge.kt`；Create `ui/toc/TocConstants.kt`、`androidTest/.../ui/{EllipsisAudit,TruncationAuditTest}.kt`；Delete `HymnToc.java`（CRLF）、`HymnTocExpandableListAdapter.java`、`res/layout/hymn_toc*.xml`。
 
 - [ ] **Step 0：基線與盤點**
 
@@ -1572,14 +1574,14 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 2：移除 `MediaConfig` 的 `button_NQ`、`button_import` 長按（已決定）**
 
-  `mediaconfig/MediaConfig.java`（LF，1546 行）：刪除 `btnNQ.setOnLongClickListener(this)`、`findViewById(R.id.button_import).setOnLongClickListener(this)`、`onLongClick` 中 `button_NQ`（`downloadNQRecord(Mode.QQ_LINK)`）與 `button_import`（`importMediaRecords(ASSET_URL_IMPORT_FILE)`）兩個分支；`View.OnLongClickListener` 若再無其他使用者就從 `implements` 移除並刪空的 `onLongClick`。逐一確認：`Mode.QQ_LINK`、`ASSET_URL_IMPORT_FILE`（內建 `assets/url_import.txt`）、`downloadNQRecord` 是否因此成為死碼（有其他呼叫者就保留）。**產品確認（見回報）**：移除後「匯入內建連結（`url_import.txt`）」與「QQ 連結模式」失去入口；預設照使用者決定移除、不另加按鈕。既有 `UrlImportTest` 測的是公開的 `importUrlRecords(...)`（資料層），**不需修改**；`importMediaRecords(...)` 是 private，不要為測試暴露它。若 `MediaConfigRecordsListTest` 等有以長按觸發的案例，改為斷言「按鈕沒有 `OnLongClickListener`（`view.hasOnLongClickListeners()==false`）」。
+  `mediaconfig/MediaConfig.java`（LF，1546 行）：刪除 `btnNQ.setOnLongClickListener(this)`、`findViewById(R.id.button_import).setOnLongClickListener(this)`、`onLongClick` 中 `button_NQ`（`downloadNQRecord(Mode.QQ_LINK)`）與 `button_import`（`importMediaRecords(ASSET_URL_IMPORT_FILE)`）兩個分支；`View.OnLongClickListener` 若再無其他使用者就從 `implements` 移除並刪空的 `onLongClick`。逐一確認：`Mode.QQ_LINK`、`ASSET_URL_IMPORT_FILE`（內建 `assets/url_import.txt`）、`downloadNQRecord` 是否因此成為死碼（有其他呼叫者就保留）。**產品確認（見回報）**：移除後「匯入內建連結（`url_import.txt`）」與「QQ 連結模式」失去入口；預設照使用者決定移除、不另加按鈕。既有 `UrlImportTest` 測的是公開的 `importUrlRecords(...)`（資料層），**不需修改**；`importMediaRecords(...)` 是 private，不要為測試暴露它。若 `MediaConfigRecordsListTest` 等有以長按觸發的案例，改為在 instrumented 測試對 `button_NQ`／`button_import` 執行 `performLongClick()` 並斷言回傳 `false`、且沒有啟動匯入／下載的副作用（`urlImportRunning` 仍為 false、沒有新的 `DownloadManager` job）；**不要使用不存在的 `View.hasOnLongClickListeners()`**。
   `media_config.xml`（CRLF）若有為長按寫的提示文字／`contentDescription`，一併移除。
 
 - [ ] **Step 3：清死碼**
 
   - `ContentHandler.java`（**CRLF**，小段替換）：從 `enum UrlType` 刪除 `hymnGoogleSearch`、`hymnQqSearch`，並刪 `initWebView` 內對應的兩個 `case`；`mHymnSearch` 仍被 `hymnYoutubeSearch` 使用，**保留**；刪除後不再使用的 `QQRecord` import 一併清；`grep` 確認沒有其他引用（`MediaGuiController.onClick` 只用 `hymnYoutubeSearch`／`hymnNotionSearch`／`hymnBibleTool`）。
   - `HymnToc.java`（**CRLF**）：新增 `ui/toc/TocConstants.kt`（`object TocConstants`，`@JvmField`／`const val` 放 `TOC_TITLE/CATEGORY/STROKE/PINYIN/ENGLISH`、`TOC_ER/XB/XG/YB/BB/DB`、`category_*`、`hymnCategory*`、`hymnTocPage`），把 Step 0 grep 出的所有使用者（`ContentHandler`、`TocBuilder`、`TocFragment`、`AssetHymnTitles`、`HymnNoCh2EngXRef`）改指向它；確認 `HymnToc` 的 `tocToPinyin`／`tocToStroke`／`stroke` 靜態表是否被 `TocBuilder` 重用（若是，一併搬進 `ui/toc/`）；**刪除 `HymnToc.java`**、`HymnTocExpandableListAdapter.java`、`res/layout/hymn_toc.xml`、`hymn_toc_list_group.xml`、`hymn_toc_list_item.xml`（各自 `grep` 零引用後）；`TocBuilderTest`（fixtures 比對）必須維持綠——**測試失敗修實作不改測試**。`HymnNoCh2EngXRef.java`、`ContentHandler.java` 為 CRLF，只換 import／引用行（bytes 改法，通則 §2）。
-  - 驗證：`grep -rn 'HymnToc' hymnchtv/src` 無結果（註解例外）；`assembleDebug`／`lint` 無新警告。
+  - 驗證：`grep -rn 'HymnToc' hymnchtv/src`（**含 `src/test` 與 `src/androidTest`**）無結果（註解例外）；`assembleDebug`／`lint` 無新警告。
 
 - [ ] **Step 4：320dp 小螢幕截字改善**
 
@@ -1656,7 +1658,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 - [ ] **Step 3：純函式（TDD；`nav/`，JVM）**
 
   - `YbRefs(table: Map<Int, String> = YbCrossRef.TABLE).resolve(ref: HymnRef): HymnRef`：非青年或沒有對照 → 原 `ref`；有對照（如 `"bb876"`）→ `HymnRef(MainActivity.getHymnType(...)的等價, 876)`（以兩字母前綴對應 `HymnTypes`，不呼叫 `MainActivity`）。測試用合成表與真實 `YbCrossRef` 資產各一。
-  - `HymnSequence.next(ref): HymnRef?`：以 `HymnNumberRules.storedNumbers(book)` 的下一個號碼（跳過缺號，如 XG 34、BB 38→101）；末尾回 null；`HymnRef(BB, 2000)`（無中文對照的 dummy）回 null。**注意：這是「播放序列」，不等於 pager 頁序（pager 含 XG 34 這種空頁）**；`scrollNextHymn()` 仍依 pager 頁序。測試：BB 38→101、ER 17→101、XB 167→171、DB 780→781（附 1 緊接在後；與 pager 一致）、YB 275→276、末號→null。
+  - `HymnSequence.next(ref): HymnRef?`：以 `HymnNumberRules.storedNumbers(book)` 的下一個號碼（跳過缺號，如 XG 34、BB 37→101）；末尾回 null；`HymnRef(BB, 2000)`（無中文對照的 dummy）回 null。**注意：這是「播放序列」，不等於 pager 頁序（pager 含 XG 34 這種空頁）**；`scrollNextHymn()` 仍依 pager 頁序。測試：BB 37→101、ER 17→101、XB 167→171、DB 780→781（附 1 緊接在後；與 pager 一致）、YB 275→276、末號→null。
   - `MediaLinks`：`titleFromInfo(info)`（`getHymnTitle()` 的演算法：`split(":\\s|？|（")[1]`、去標點 `[，、‘’！：；。？]`、去類別前綴）、`bibleToolUrl(ref, title): String?`（`getHymnUri` 的 `switch`：ER／XB／XG／YB／BB／DB 六支，含 `category_*` 查表與 DB 附 `DF` 前綴、`DB_Links` 例外）、`changshiDownloadLink(ref, title): String?`、`mediaDir(book, mediaType)`。`MediaLinksTest` 讀 Step 2 的 fixture，逐行斷言 `bibleToolUrl(HymnRef, titleFromInfo(info)) == uri`；另對各本 `changshiDownloadLink` 以手寫期望值（讀舊碼 `String.format` 得出）各斷言一筆。
 
 - [ ] **Step 4：`ContentHandler`／`MediaGuiController` 改吃 `HymnRef`（CRLF 檔只做替換，不整檔重排）**
