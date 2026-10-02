@@ -120,7 +120,7 @@
         <activity
             android:name=".About"
             android:label="@string/about"
-            android:theme="@android:style/Theme.Holo.Dialog.MinWidth" />
+            android:theme="@style/AppTheme.Dialog" />
 
         <activity
             android:name=".about.HelpActivity"
@@ -139,7 +139,7 @@
         <activity
             android:name=".utils.DialogActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
-            android:theme="@android:style/Theme.Holo.Dialog.MinWidth" />
+            android:theme="@style/AppTheme.Dialog" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

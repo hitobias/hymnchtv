@@ -27,4 +27,13 @@
         <item name="listItemRow">@style/RowList.Dark</item>
         <item name="listItemRadio">@style/RadioListItem.Dark</item>
     </style>
+
+    <!-- Dialog-style screens (About, DialogActivity); must stay AppCompat-based, BaseActivity no longer forces a theme -->
+    <style name="AppTheme.Dialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/color_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/color_accent</item>
+        <item name="listItemRow">@style/RowList.Light</item>
+        <item name="listItemRadio">@style/RadioListItem.Light</item>
+    </style>
 </resources>
