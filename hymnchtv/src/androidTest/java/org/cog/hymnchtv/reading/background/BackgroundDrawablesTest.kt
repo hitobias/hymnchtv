@@ -10,7 +10,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
-import org.cog.hymnchtv.MainActivity
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,8 +77,16 @@ class BackgroundDrawablesTest {
     }
 
     @Test
-    fun photoPrefKeyIsTheWallpaperKey() {
-        // BackgroundPrefs.photoFile reads the file name WallPaperUtil writes
-        assertThat(MainActivity.PREF_WALLPAPER).isEqualTo("WallPaper")
+    fun photoFileIsTheImporterPath() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val stored = PhotoBackgroundImporter.photoFileIn(ctx.filesDir)
+        stored.parentFile?.mkdirs()
+        stored.writeBytes(ByteArray(1))
+        try {
+            assertThat(BackgroundPrefs.photoFile(prefs)).isEqualTo(stored)
+        } finally {
+            stored.delete()
+        }
+        assertThat(BackgroundPrefs.photoFile(prefs)).isNull()
     }
 }

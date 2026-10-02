@@ -27,6 +27,7 @@
     <string name="pref_keep_screen_on">Keep the screen on while reading</string>
     <string name="bg_photo">Your photo</string>
     <string name="bg_picker_sample">Holy, holy, holy</string>
+    <string name="bg_photo_import_failed">Could not use that photo. Your previous background is unchanged.</string>
     <string name="bg_selected_mark" translatable="false">✓</string>
     <string name="about_font_credit">The lyrics font HymnalKai is derived from LXGW WenKai and licensed under the SIL Open Font License 1.1. Tap to read the licence.</string>
     <string name="font_license_title">Font licence</string>

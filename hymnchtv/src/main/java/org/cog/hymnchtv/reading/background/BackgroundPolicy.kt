@@ -31,7 +31,7 @@ sealed interface BackgroundChoice {
 }
 
 object BackgroundPolicy {
-    /** Stored value meaning "the user's own photo" (its file name is in MainActivity.PREF_WALLPAPER). */
+    /** Stored value meaning "the user's own photo" (the file is PhotoBackgroundImporter.photoFileIn). */
     const val PHOTO = "photo"
 
     @JvmField
