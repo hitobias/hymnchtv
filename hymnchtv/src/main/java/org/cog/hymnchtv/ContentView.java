@@ -48,6 +48,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import java.io.BufferedReader;
@@ -468,8 +469,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             String traditional = loadTraditional(resFName, lyrics);
             mMeterKeySimplified = LyricsMeta.parseMeterKey(Arrays.asList(lyrics.split("\n", -1)));
             mMeterKeyTraditional = LyricsMeta.parseMeterKey(Arrays.asList(traditional.split("\n", -1)));
-            lyricsSimplify.setText(LyricsMeta.removeMeterLine(lyrics));
-            lyricsTraditional.setText(LyricsMeta.removeMeterLine(traditional));
+            // Red on light backgrounds; on dark ones (and photos) red cannot reach AA contrast, so the accent colour
+            int verseColor = mPalette.isDark() ? mPalette.getAccentColor()
+                    : ContextCompat.getColor(mContentHandler, R.color.c_verse_red);
+            lyricsSimplify.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(lyrics), verseColor));
+            lyricsTraditional.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(traditional), verseColor));
         }
         mHasLyricsText = DisplayModePolicy.hasLyricsText(lyrics);
 

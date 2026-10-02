@@ -414,7 +414,7 @@ public class ContentHandler extends BaseActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        mAutoStream = false;
+        setAutoStream(false);
     }
 
     public void showPlayerUi(boolean show) {
@@ -518,7 +518,7 @@ public class ContentHandler extends BaseActivity {
             // For audio player
             else if (mMediaGuiController.isPlaying()) {
                 mMediaGuiController.stopPlay();
-                mAutoStream = false;
+                setAutoStream(false);
                 Timber.e("mMediaGuiController.stopPlay()");
             }
             // Leave Home press handerling to android system.
@@ -766,6 +766,14 @@ public class ContentHandler extends BaseActivity {
 
     public void setAutoStream(boolean autoStream) {
         mAutoStream = autoStream;
+        // keep the visible auto-play check box in step with this state
+        if (mMediaGuiController != null) {
+            mMediaGuiController.setAutoStreamChecked(autoStream);
+        }
+    }
+
+    public boolean isAutoStream() {
+        return mAutoStream;
     }
 
     // Media file playback ended or file download error
@@ -785,7 +793,7 @@ public class ContentHandler extends BaseActivity {
         else {
             HymnsApp.showToastMessage(statusText);
             mMediaGuiController.playbackPlay.setImageResource(R.drawable.ic_play_stop);
-            mAutoStream = false;
+            setAutoStream(false);
         }
     }
 

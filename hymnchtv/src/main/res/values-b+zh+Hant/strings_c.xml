@@ -24,4 +24,5 @@
     <string name="c_lyrics_share">分享</string>
     <string name="c_lyrics_media">媒體</string>
     <string name="c_lyrics_more">更多</string>
+    <string name="c_auto_stream">連播</string>
 </resources>

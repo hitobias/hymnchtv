@@ -6,6 +6,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.widget.CheckBox
 import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -154,6 +157,34 @@ class LyricsTopBarTest {
             val slot = scenario.read { it.findViewById<android.view.ViewGroup>(R.id.notebookBar) }
             assertThat(slot.visibility).isEqualTo(View.GONE)
             assertThat(slot.childCount).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun verseNumbersAreColouredAndBold() {
+        launch(MainActivity.HYMN_XB, 1).use { scenario ->
+            val text = scenario.read { page(it)!!.findViewById<TextView>(R.id.lyrics_simplified).text }
+            assertThat(text).isInstanceOf(Spanned::class.java)
+            val spans = (text as Spanned).getSpans(0, text.length, ForegroundColorSpan::class.java)
+            assertThat(spans).isNotEmpty()
+            val ranges = LyricsMeta.verseMarkerRanges(text.toString())
+            assertThat(spans.size).isEqualTo(ranges.size)
+            ranges.forEach { r ->
+                assertThat(text.getSpans(r.first, r.last + 1, ForegroundColorSpan::class.java)).hasLength(1)
+            }
+        }
+    }
+
+    @Test
+    fun autoPlayCheckBoxFollowsTheAutoStreamState() {
+        launch().use { scenario ->
+            onView(withId(R.id.playback_auto_stream)).check(matches(isDisplayed()))
+            val box = scenario.read { it.findViewById<CheckBox>(R.id.playback_auto_stream) }
+            assertThat(box.isChecked).isFalse()
+            scenario.onActivity { it.setAutoStream(true) }
+            assertThat(scenario.read { it.findViewById<CheckBox>(R.id.playback_auto_stream).isChecked }).isTrue()
+            scenario.onActivity { it.setAutoStream(false) }
+            assertThat(scenario.read { it.findViewById<CheckBox>(R.id.playback_auto_stream).isChecked }).isFalse()
         }
     }
 }

@@ -61,4 +61,34 @@ class LyricsMetaTest {
         count("lyrics_db_text") { k, n -> k > n * 0.9 }
         count("lyrics_bb_text") { k, n -> k > n * 0.9 }
     }
+
+    @Test
+    fun verseMarkersAreNumeralLinesAfterTheTitle() {
+        val text = "130\n赞美主\n\n一\n神在爱里。\n（副）\n神是爱。\n十二\n3\n第二节\n一，二"
+        val marked = LyricsMeta.verseMarkerRanges(text).map { text.substring(it.first, it.last + 1) }
+        assertThat(marked).containsExactly("一", "（副）", "十二", "3", "第二节").inOrder()
+    }
+
+    @Test
+    fun hymnNumberAndTitleLinesAreNeverMarked() {
+        assertThat(LyricsMeta.verseMarkerRanges("1\n一\n\n二\n")).hasSize(1)
+        assertThat(LyricsMeta.verseMarkerRanges("")).isEmpty()
+    }
+
+    @Test
+    fun verseMarkersInRealLyricsAreNeverMistakenForText() {
+        val assets = File(checkNotNull(System.getProperty("hymnchtv.assetsDir")))
+        val files = File(assets, "lyrics_xb_text").listFiles { f -> f.name.endsWith(".txt") }!!
+        files.forEach { f ->
+            val text = f.readText().replace("\r\n", "\n")
+            LyricsMeta.verseMarkerRanges(text).forEach { r ->
+                val marker = text.substring(r.first, r.last + 1)
+                assertThat(marker.length).isAtMost(8)
+                assertThat(text.lines().any { it.trim() == marker }).isTrue()
+            }
+        }
+        // nearly every XB hymn has numbered verses (the few single-verse hymns have none)
+        val unnumbered = files.count { LyricsMeta.verseMarkerRanges(it.readText().replace("\r\n", "\n")).isEmpty() }
+        assertThat(unnumbered).isLessThan(files.size / 10)
+    }
 }

@@ -20,6 +20,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:fadingEdgeLength="24dp"
+            android:requiresFadingEdge="horizontal"
             android:scrollbars="none">
 
             <LinearLayout
@@ -197,7 +199,7 @@
                     android:minHeight="48dp"
                     android:layout_weight="1"
                     android:text="@string/lyrics_chinese_traditional"
-                    android:textSize="22sp" />
+                    android:textSize="16sp" />
 
                 <Button
                     android:id="@+id/button_english"
@@ -207,7 +209,7 @@
                     android:layout_marginStart="4dp"
                     android:layout_weight="1"
                     android:text="@string/lyrics_chinese_english"
-                    android:textSize="22sp" />
+                    android:textSize="16sp" />
 
                 <Button
                     android:id="@+id/button_mode"
@@ -217,7 +219,7 @@
                     android:layout_marginStart="4dp"
                     android:layout_weight="1"
                     android:text="@string/display_mode_both"
-                    android:textSize="18sp" />
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <!-- Key and time signature from the lyrics header (LyricsMeta); hidden when the file has none -->
