@@ -35,6 +35,7 @@
   - Task 12 `NotebookAsync` 建構子新增 `workDispatcher`（production 用 `Dispatchers.IO`）：repository 工作（含 `RoomSingLogRepository.create()` 同步呼叫的 `deviceId()`）不再跑在主執行緒，結果仍在 callback dispatcher 回呼；`NotebookAsyncTest` 與 `Notebook.get()` 同步更新。
   - Task 13 busy Auto Backup E2E 的 `integrity()` 也驗證舊三表（`hymnHistoryDao().listNewestFirst()` 含 `LEGACY_HISTORY`）。
   - Task 13 SAF 驗收預期改為 `export OK 1.0.0`（`BuildConfig.VERSION_NAME`）。Codex 第 3 輪提出的 P1（`flow.collect` import）判定為誤報：`FlowCollector` 自 coroutines 1.6 起是 `fun interface`，`tracker.recorded.collect { }` 可直接編譯，以 Task 12 實際編譯驗證。
+  - Task 8 `BackupCodecTest.maliciousIdsAreSkipped`：`testUuid(1)` 全是數字，`.uppercase()` 後仍是合法 canonical UUID，實作正確接受它，測試必然失敗；改用含十六進位字母的 `testUuid(0xab)`（實作不變）。
   - AVD 實際名稱是 `api34b`／`api24b`（原寫 `api34nb`／`api24nb`），全文更正。
 - rev 7（2026-10-02，依 Codex／code-reviewer 對 D-1a Task 8–13 的審查）：
   - 分支策略：實際只有 `feat/notebook-data`（worktree `/Users/hitobias/orca/hymnchtv-d1a`），Task 0–7 已線性完成在其上；Task 8–13 全部在同一條分支上線性進行，刪除 Task 12 的三個 lane merge 與「三 lane 已 commit」前置，Task 8–11 的 lane 前置與「Lane C 只編譯」改寫；Task 0–7 的 lane 歷史片段只加註記不改寫。
@@ -4551,7 +4552,7 @@ D-1a 只修改下列三個既有檔案，其他都是新增的檔案：
 
       @Test
       fun maliciousIdsAreSkipped() {
-          val ids = listOf(testUuid(1).uppercase(), "1-1-1-1-1", "../../etc/passwd", "", "x".repeat(300))
+          val ids = listOf(testUuid(0xab).uppercase(), "1-1-1-1-1", "../../etc/passwd", "", "x".repeat(300))
           val logs = ids.map { logJson(id = it) } + logJson(id = testUuid(2), playlistId = "\"nope\"")
           val decoded = decodeOk(doc("singLogs" to logs.joinToString(",", "[", "]")))
           assertThat(decoded.snapshot.tables.singLogs).isEmpty()
