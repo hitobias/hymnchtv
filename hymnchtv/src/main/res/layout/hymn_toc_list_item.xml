@@ -23,7 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="联于他死与复活"/>
+            tools:text="联于他死与复活"/>
 
     </LinearLayout>
 

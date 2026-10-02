@@ -1,0 +1,33 @@
+# key<TAB>full zh-Hant value (real newlines written as <NL>). Applied by gen_zh_hant.sh after opencc s2twp.
+# Every entry overrides the s2twp output; see docs/superpowers/plans/2026-10-02-zh-hant-terms.md for reasons.
+media_type	媒體類型
+nq_download_proceed	執行 %1$s 詩歌連結下載 (%2$s)？\n過程需要一些時間。進程將在後臺進行，您可以繼續使用應用程式。
+error_invalid_mimetype_download	此應用不支援下載 MIME 類型：\'%s\'
+hymn_info_media_none	對不起！此項目前沒有播放檔案
+hymn_info_sp_none	您選擇的項目，沒有附歌
+app_version_invalid	下載的檔案包含不匹配的版本代碼：實際 = %1$s (%2$s)
+app_version_current	您目前安裝版本;\n編號和代碼：%1$s-%2$s 是最新的。\n線上可用版本：%3$s-%4$s。
+app_version_new_available	可下載新%1$s;\n編號和代碼：%2$s-%3$s。\n目前安裝的版本：%4$s-%5$s。
+file_access_no_permission	您沒有足夠的權限儲存或開啟檔案。請檢查您的讀取權限，然後重試
+file_open_no_application	詩歌本找不到與此檔案類型關聯的應用程式
+permission_request	權限請求
+permission_settings	安卓權限設定
+permission_notifications_request	通知權限請求
+permission_notifications_required	在您授予權限請求之前，來自詩歌本的通知將被停用
+permission_storage_required	詩歌本需要儲存權限才能操作。
+permission_app_rational	%1$s 被拒絕。詩歌本可能會出錯，直到您在 [App info | Permissions] 授予權限
+download_timeout_timer	下載無回應逾時倒數: %1$02d秒
+web_scrap_timeout	網站內容抓取逾時錯誤：%1$s
+web_scrap_callback_received	網站抓取回呼已收到。
+send_logs_title	透過電子郵件報告詩歌本錯誤
+share_file_missing	提醒：您正在分享一個沒有實際媒體內容的網址：%1$s！
+help_online	線上說明
+home	首頁
+sbg5	淺棕色
+app_libraries	詩歌本程式使用以下第三方函式庫： %1$s
+send_logs_info	您提供的以下資訊可以幫助開發人員解決問題：<NL>        \n\n1.在問題發生之前您做的最後一件事是什麼？<NL>        \n\n\n2.您看到的問題是什麼，如果有的話，還包括螢幕截圖？<NL>        \n\n\n3.您能否或如何重現問題？
+wallpaperUser	使用者定義桌布
+lyrics_text_size_limits	已達到文字最小或最大的限制值。
+hint_hymn_lyrics_online	歌詞文字為空。請線上檢視\'教唱\'詩歌詞文字。
+content_about	關於本詩歌軟體:<NL>        &lt;br/>應用程式中使用的所有媒體內容：歌詞和歌曲文字等，版權歸臺灣福音書房所有。<NL>        &lt;br/>首先謝謝網路上的弟兄破碎提供詩歌的源材料。此詩歌本應用程式，原版由&lt;a href="http://shulami02.net/bbs">書拉密女小站&lt;/a>個人開發;<NL>        &lt;br/>&lt;br/>近日由新作者，全程式重寫改進，並新增新功能。如果有發現出錯或建議，請到<NL>        &lt;a href="https://github.com/cmeng-git/hymnchtv/issues">此網址&lt;/a>提出意見。<NL>        &lt;br/>&lt;br/>新增詩歌資源材料來自網路:<NL>        &lt;br/>http://www.lshymn.net/<NL>        &lt;br/>https://www.hymnal.net/<NL>        &lt;br/>&lt;br/>萬事互相效力為要叫愛祂的人得益處！正如神白白的恩典，所以請不要用做商業用途。<NL>        &lt;br/>技術有限希望對弟兄姐妹有用！
+S2TW	繁中（台灣）

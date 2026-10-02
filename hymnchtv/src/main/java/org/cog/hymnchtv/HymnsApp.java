@@ -16,8 +16,6 @@
  */
 package org.cog.hymnchtv;
 
-import static org.cog.hymnchtv.MainActivity.PREF_LOCALE;
-import static org.cog.hymnchtv.MainActivity.PREF_SETTINGS;
 
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -26,7 +24,6 @@ import android.app.DownloadManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Point;
@@ -57,7 +54,7 @@ import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
 import org.cog.hymnchtv.service.androidupdate.OnlineUpdateService;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
-import org.cog.hymnchtv.utils.LocaleHelper;
+import org.cog.hymnchtv.locale.LocaleStore;
 
 import timber.log.Timber;
 
@@ -146,22 +143,11 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     }
 
     /**
-     * setLocale for Application class to work properly with PBContext class.
+     * Apply the UI language: wrapped only on API < 33 for an explicit choice (API 33+ uses the framework).
      */
     @Override
     protected void attachBaseContext(Context base) {
-        mInstance = base;
-        String language;
-        SharedPreferences sharePref = base.getSharedPreferences(PREF_SETTINGS, 0);
-        language = sharePref.getString(PREF_LOCALE, LocaleHelper.LocaleChinese);
-
-//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-//            SharedPreferences sharePref = base.getSharedPreferences(PREF_SETTINGS, 0);
-//            language = sharePref.getString(PREF_LOCALE, LocaleHelper.LocaleChinese);
-//        } else {
-//            language = LocaleHelper.getAppLanguage();
-//        }
-        mInstance = LocaleHelper.setLocale(base, language);
+        mInstance = LocaleStore.wrap(base);
         super.attachBaseContext(mInstance);
     }
 

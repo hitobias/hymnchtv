@@ -28,11 +28,14 @@ import android.widget.RadioGroup;
 
 import androidx.activity.OnBackPressedCallback;
 
-import com.zqc.opencc.android.lib.ConversionType;
+import java.util.Locale;
 
 import org.cog.hymnchtv.BaseActivity;
 import org.cog.hymnchtv.ContentView;
 import org.cog.hymnchtv.R;
+import org.cog.hymnchtv.lyrics.HantVariant;
+import org.cog.hymnchtv.lyrics.LyricsLang;
+import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 
 /**
  * The class allows user to define the final S2T conversion type.
@@ -41,8 +44,10 @@ import org.cog.hymnchtv.R;
  */
 public class ChineseS2TSelection extends BaseActivity implements View.OnClickListener, RadioGroup.OnCheckedChangeListener {
     private SharedPreferences mSharedPref;
-    private ConversionType mConversionType;
-    private boolean mHasChanges = false;
+    private HantVariant mVariant;
+    private LyricsLang mLyricsLang;
+    private HantVariant mInitialVariant;
+    private LyricsLang mInitialLyricsLang;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,13 +55,28 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         setTitle(R.string.app_title_main);
 
         mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
-        String cType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, ConversionType.S2T.toString());
-        // mConversionType = Enum.valueOf(ConversionType.class, cType);
-        checkRadioButton(cType);
+        Locale uiLocale = getResources().getConfiguration().getLocales().get(0);
+        String rawType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, null);
+        mVariant = LyricsLanguagePolicy.parseVariant(rawType, uiLocale);
+        if (rawType != null && !LyricsLanguagePolicy.isCanonical(rawType)) {
+            // Self-heal a corrupted value so other readers never see it again
+            mSharedPref.edit().putString(ContentView.PREF_CONVERSION_TYPE, mVariant.getPrefValue()).apply();
+        }
+        checkVariantButton(mVariant);
+        if (!LyricsLanguagePolicy.HK_VARIANT_ENABLED) {
+            // Only one Traditional variant is offered, so the whole chooser is hidden
+            findViewById(R.id.variantTitle).setVisibility(View.GONE);
+            findViewById(R.id.radioGroupVar).setVisibility(View.GONE);
+        }
 
-        // Only enable OnCheckedChangeListener only after checkRadioButton()
-        RadioGroup radioGroup = findViewById(R.id.radioGroupVar);
-        radioGroup.setOnCheckedChangeListener(this);
+        mLyricsLang = LyricsLang.fromPref(mSharedPref.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null));
+        mInitialVariant = mVariant;
+        mInitialLyricsLang = mLyricsLang;
+        checkLyricsLangButton(mLyricsLang);
+
+        // Only enable OnCheckedChangeListener after the initial check states are set
+        ((RadioGroup) findViewById(R.id.radioGroupVar)).setOnCheckedChangeListener(this);
+        ((RadioGroup) findViewById(R.id.radioGroupLyricsDefault)).setOnCheckedChangeListener(this);
 
         findViewById(R.id.btnCancel).setOnClickListener(this);
         findViewById(R.id.btnOk).setOnClickListener(this);
@@ -67,66 +87,67 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.btnOk) {
-            updateS2TSelection(mHasChanges);
+            updateS2TSelection(hasChanges());
         }
         else if (id == R.id.btnCancel) {
             checkUnsavedChanges();
         }
     }
 
-    /**
-     * Select the radio button corresponding to the given cType
-     *
-     * @param cType Enum type as string for matching
-     */
-    private void checkRadioButton(String cType) {
-        switch (cType) {
-            case "S2T":
-                ((RadioButton) findViewById(R.id.radioButtonS2T)).setChecked(true);
-                break;
+    private void checkVariantButton(HantVariant variant) {
+        int id = (variant == HantVariant.HK) ? R.id.radioButtonS2HK : R.id.radioButtonS2TW;
+        ((RadioButton) findViewById(id)).setChecked(true);
+    }
 
-            case "S2HK":
-                ((RadioButton) findViewById(R.id.radioButtonS2HK)).setChecked(true);
+    private void checkLyricsLangButton(LyricsLang lang) {
+        int id;
+        switch (lang) {
+            case SIMPLIFIED:
+                id = R.id.radioLyricsSimplified;
                 break;
-
-            case "S2TW":
-                ((RadioButton) findViewById(R.id.radioButtonS2TW)).setChecked(true);
+            case TRADITIONAL:
+                id = R.id.radioLyricsTraditional;
                 break;
-
-            case "S2TWP":
-                ((RadioButton) findViewById(R.id.radioButtonS2TWP)).setChecked(true);
+            default:
+                id = R.id.radioLyricsFollowUi;
                 break;
         }
+        ((RadioButton) findViewById(id)).setChecked(true);
     }
 
     @Override
     public void onCheckedChanged(RadioGroup group, int checkedId) {
-        RadioButton rb = group.findViewById(checkedId);
-        mHasChanges = true;
-
-        if (null != rb) {
-            if (checkedId == R.id.radioButtonS2T) {
-                mConversionType = ConversionType.S2T;
+        if (group.findViewById(checkedId) == null) {
+            return;
+        }
+        if (group.getId() == R.id.radioGroupLyricsDefault) {
+            if (checkedId == R.id.radioLyricsSimplified) {
+                mLyricsLang = LyricsLang.SIMPLIFIED;
             }
-            else if (checkedId == R.id.radioButtonS2HK) {
-                mConversionType = ConversionType.S2HK;
+            else if (checkedId == R.id.radioLyricsTraditional) {
+                mLyricsLang = LyricsLang.TRADITIONAL;
             }
-            else if (checkedId == R.id.radioButtonS2TW) {
-                mConversionType = ConversionType.S2TW;
+            else {
+                mLyricsLang = LyricsLang.FOLLOW_UI;
             }
-            else if (checkedId == R.id.radioButtonS2TWP) {
-                mConversionType = ConversionType.S2TWP;
-            }
+        }
+        else {
+            mVariant = (checkedId == R.id.radioButtonS2HK) ? HantVariant.HK : HantVariant.TW;
         }
     }
 
+    private boolean hasChanges() {
+        return mVariant != mInitialVariant || mLyricsLang != mInitialLyricsLang;
+    }
+
     /**
-     * Save the user defined ConversionType setting.
+     * Save the user defined conversion type setting.
      */
     private void updateS2TSelection(boolean hasChanges) {
         if (hasChanges) {
             SharedPreferences.Editor editor = mSharedPref.edit();
-            editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.toString());
+            editor.putString(ContentView.PREF_CONVERSION_TYPE, mVariant.getPrefValue());
+            editor.putString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, mLyricsLang.name());
             editor.apply();
         }
 
@@ -134,7 +155,6 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         result.putExtra(ContentView.EXTR_KEY_HAS_CHANGES, hasChanges);
         setResult(Activity.RESULT_OK, result);
 
-        mHasChanges = false;
         finish();
     }
 
@@ -142,7 +162,7 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
      * check for any unsaved changes and alert user before the exit.
      */
     private void checkUnsavedChanges() {
-        if (mHasChanges) {
+        if (hasChanges()) {
             DialogActivity.showConfirmDialog(this,
                     R.string.to_be_added,
                     R.string.unsaved_changes,

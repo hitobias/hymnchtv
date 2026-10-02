@@ -1,4 +1,3 @@
 include ':hymnchtv'
 include ':android-youtube-player:core'
-include ':lib-opencc-android'
 rootProject.name = "hymnchtv"
