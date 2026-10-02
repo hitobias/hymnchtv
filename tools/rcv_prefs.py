@@ -39,8 +39,8 @@ BIGRAM_STORE_MIN = 2
 EDGE = "-"  # no usable neighbour: line edge, punctuation, digits, whitespace
 
 # Manual decisions on an (opencc, rcv) pair: APPLY allows the context-free "never in the RcV" rule above;
-# KEEP blocks every replacement of opencc by rcv.
-APPLY, KEEP = "apply", "keep"
+# KEEP blocks every replacement of opencc by rcv; ALWAYS replaces opencc by rcv everywhere (a user decision).
+APPLY, KEEP, ALWAYS = "apply", "keep", "always"
 
 
 def neighbour(line, i):
@@ -82,7 +82,8 @@ class Prefs:
     right: dict = field(default_factory=dict)  # (s, r) -> {b: n}
     tri: dict = field(default_factory=dict)    # (l, s, r) -> {b: n} (stored only where it changes the bigram decision)
     char: dict = field(default_factory=dict)   # (s, a) -> b
-    pairs: dict = field(default_factory=dict)  # (a, b) -> APPLY | KEEP (manual decisions; default APPLY)
+    pairs: dict = field(default_factory=dict)  # (a, b) -> APPLY | KEEP | ALWAYS (manual decisions)
+    always: dict = field(default_factory=dict)  # a -> b for the ALWAYS pairs
 
 
 def bigram_sides(prefs, s, l, r):
@@ -114,6 +115,9 @@ def decide(prefs, s, l, r, a):
     how: 'tri' / 'bi' / 'char' (RcV evidence picked char), 'keep' (evidence blocked by a manual KEEP pair),
     'none' (s is contested but there is no evidence: OpenCC stays), '' (s is not contested).
     """
+    always = prefs.always.get(a)
+    if always is not None:
+        return always, "always"
     if s not in prefs.uni:
         return a, ""
     choice, how = None, "none"
@@ -284,7 +288,7 @@ def format_char_table(prefs, per_a_counts):
 
 def parse_tables(word_lines, char_lines, pair_lines=()):
     """Inverse of the formatters plus the manual pairs table (opencc<TAB>rcv<TAB>apply|keep<TAB>note)."""
-    uni, weak, left, right, tri, char, pairs = {}, {}, {}, {}, {}, {}, {}
+    uni, weak, left, right, tri, char, pairs, always = {}, {}, {}, {}, {}, {}, {}, {}
     for n, line in enumerate(word_lines, 1):
         if not line.strip() or line.startswith("#"):
             continue
@@ -305,10 +309,14 @@ def parse_tables(word_lines, char_lines, pair_lines=()):
         if not line.strip() or line.startswith("#"):
             continue
         a, b, decision, _ = _cols(line, 4, n)
-        if decision not in (APPLY, KEEP):
-            raise ValueError(f"pairs line {n}: decision must be {APPLY} or {KEEP}")
+        if decision not in (APPLY, KEEP, ALWAYS):
+            raise ValueError(f"pairs line {n}: decision must be {APPLY}, {KEEP} or {ALWAYS}")
+        if decision == ALWAYS and a in always:
+            raise ValueError(f"pairs line {n}: {a} already has an {ALWAYS} pair")
         pairs[(a, b)] = decision
-    return Prefs(uni=uni, weak=weak, left=left, right=right, tri=tri, char=char, pairs=pairs)
+        if decision == ALWAYS:
+            always[a] = b
+    return Prefs(uni=uni, weak=weak, left=left, right=right, tri=tri, char=char, pairs=pairs, always=always)
 
 
 def _cols(line, count, n):

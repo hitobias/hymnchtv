@@ -1,11 +1,13 @@
 # Manual decisions on Recovery Version substitutions (tools/rcv_prefs.py).
-# Format: opencc<TAB>rcv<TAB>apply|keep<TAB>note
+# Format: opencc<TAB>rcv<TAB>apply|keep|always<TAB>note
 #   apply = OpenCC wrote a char the RcV never uses for that simplified char: replace it everywhere (glyph variants
 #           only; reviewed 2026-10-02 against the lyrics where the rule fires)
 #   keep  = never replace the OpenCC char with this RcV char
+#   always = replace the OpenCC char everywhere, with or without RcV evidence (user decision)
 # Not listed: context rows and char rules apply; the "never in the RcV" rule does not (云 in 所云 is not 雲).
 嚐	嘗	apply	RcV 嘗 36, 嚐 0 (嚐到, 嚐嚐)
 睏	困	apply	RcV 困 210, 睏 0 (困迫, 困倦)
 捱	挨	apply	RcV 挨 73, 捱 0 (難挨, 挨餓)
 齣	出	apply	OpenCC error 齣處 -> 出處
 癒	愈	apply	RcV 愈 21, 癒 0 (痊愈)
+贊	讚	always	user decision 2026-10-02: 全部用讚 (lyrics only have 感贊; no 贊成/贊助)

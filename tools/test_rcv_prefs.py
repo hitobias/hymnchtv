@@ -152,6 +152,13 @@ class BuildPrefsTest(unittest.TestCase):
                          (p.uni, p.weak, p.left, p.right, p.tri, p.char))
         self.assertEqual(back.pairs, {("裡", "裏"): rp.KEEP})
 
+    def test_always_pair_replaces_everywhere(self):
+        p = rp.parse_tables([], [], ["贊\t讚\talways\tuser decision"])
+        self.assertEqual(rp.decide(p, "赞", "感", "-", "贊"), ("讚", "always"))  # even without RcV evidence
+        self.assertEqual(rp.apply_line(p, "感赞", "感贊")[0], "感讚")
+        with self.assertRaises(ValueError):
+            rp.parse_tables([], [], ["贊\t讚\talways\t", "贊\t賛\talways\t"])
+
     def test_bad_rows_are_rejected(self):
         with self.assertRaises(ValueError):
             rp.parse_tables(["X\t里\t-\t-\t裏:1"], [])
