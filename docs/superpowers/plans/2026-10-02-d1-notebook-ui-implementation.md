@@ -7697,6 +7697,9 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   ```kotlin
   // NotebookIntents.kt 補充：
   const val EXTRA_SCREEN = "nb.screen"
+  const val EXTRA_HYMN_TYPE = "nb.hymn_type"   // 原語型別，不用 HymnKey（HymnKey 非 Parcelable/Serializable，codex rev 3 #4）
+  const val EXTRA_HYMN_NO = "nb.hymn_no"
+  const val EXTRA_NOTE_ID = "nb.note_id"
   const val SCREEN_FAVORITES = "favorites"; const val SCREEN_SING_LOG = "sing_log"
   const val SCREEN_NOTES = "notes"; const val SCREEN_REVIEW = "review"
   const val SCREEN_PLAYLISTS = "playlists"; const val SCREEN_PLAYLIST = "playlist"
@@ -7704,6 +7707,10 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
   fun screen(context: Context, screen: String, extras: (Intent) -> Intent = { it }): Intent =
       extras(notebook(context).putExtra(EXTRA_SCREEN, screen))
+
+  /** Encode a HymnKey as two primitive extras. */
+  private fun putHymn(i: Intent, key: HymnKey): Intent =
+      i.putExtra(EXTRA_HYMN_TYPE, key.hymnType).putExtra(EXTRA_HYMN_NO, key.hymnNo)
 
   /** Default navigator for hosts that don't implement NotebookNavigator (pre-C, or C's empty container). */
   class NotebookIntentsNavigator(private val activity: FragmentActivity) : NotebookNavigator {
@@ -7716,16 +7723,16 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
       override fun openPlaylist(playlistId: String) =
           activity.startActivity(screen(activity, SCREEN_PLAYLIST) { it.putExtra(EXTRA_PLAYLIST_ID, playlistId) })
       override fun openHymn(key: HymnKey) =
-          activity.startActivity(screen(activity, SCREEN_HYMN) { it.putExtra(NotebookIntents.EXTRA_HYMN, key) })
+          activity.startActivity(screen(activity, SCREEN_HYMN) { putHymn(it, key) })
       override fun openNoteEditor(noteId: String?, hymn: HymnKey?) =
           activity.startActivity(screen(activity, SCREEN_NOTES) { it ->
-              noteId?.let { n -> it.putExtra(NotebookIntents.EXTRA_NOTE_ID, n) }
-              hymn?.let { h -> it.putExtra(NotebookIntents.EXTRA_HYMN, h) }; it
+              noteId?.let { n -> it.putExtra(EXTRA_NOTE_ID, n) }
+              hymn?.let { h -> putHymn(it, h) }; it
           })
   }
   ```
 
-  （`EXTRA_HYMN`、`EXTRA_NOTE_ID` 是 `HymnKey`/noteId 的 extra key，`NotebookActivity` 讀它們選起始畫面。`NotebookActivity` 的 `onCreate` 讀 `EXTRA_SCREEN` 決定首個 Fragment，預設 `NotebookHomeFragment`。）
+  （`NotebookActivity` 的 `onCreate` 讀 `EXTRA_SCREEN` 決定首個 Fragment，預設 `NotebookHomeFragment`；讀 `EXTRA_HYMN_TYPE`/`EXTRA_HYMN_NO` 用 `HymnKey.ofOrNull` 重建。）
 
 - [ ] **Step 4：寫共用元件 `common/*`**
 
@@ -7790,7 +7797,17 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 - [ ] **Step 2：`NotebookHomeFragment`（我的詩歌首頁）**
 
-  `notebook/ui/home/NotebookHomeFragment.kt`：`Fragment`，入口卡片清單——「收藏」「唱詩紀錄」「筆記」「回顧」「歌單」「設定」，各卡片 `onClick` 呼叫 `navigator.openXxx()`。`navigator` 從 `requireActivity()` 取（`NotebookNavigator`），或用 `NotebookIntentsNavigator`（預設，開 `NotebookActivity` 子畫面）——**C 模式下由 C 的宿主提供 `NotebookNavigator`**（C-1）。
+  `notebook/ui/home/NotebookHomeFragment.kt`：`Fragment`，入口卡片清單——「收藏」「唱詩紀錄」「筆記」「回顧」「歌單」「設定」，各卡片 `onClick` 呼叫 `navigator.openXxx()`。`navigator` 的解析順序（codex rev 3 #3，C 模式下 `NotebookNavigator` 由 **parentFragment** 提供，不是 `requireActivity()`）：
+
+  ```kotlin
+  private val navigator: NotebookNavigator by lazy {
+      (parentFragment as? NotebookNavigator)
+          ?: (requireActivity() as? NotebookNavigator)
+          ?: NotebookIntentsNavigator(requireActivity())
+  }
+  ```
+
+  **C 模式下 C 的 `MyHymnsFragment` 實作 `NotebookNavigator`**（I2），`NotebookHomeFragment` 是其 child，用 `parentFragment` 找到它（C-1）。pre-C 模式用 `NotebookActivity`（實作 `NotebookNavigator`）。
 
   `res/layout/nb_home.xml`：`RecyclerView`（`GridLayoutManager` span 2）或 `GridLayout`，卡片 `minHeight="72dp"`（U12）。
 
@@ -7975,15 +7992,20 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 - [ ] **Step 2：`HymnNotebookBarFragment`（筆記本列，U6）**
 
-  `notebook/ui/bar/HymnNotebookBarFragment.kt`：`Fragment`，建 VM 用：
+  `notebook/ui/bar/HymnNotebookBarFragment.kt`：`Fragment`，建 VM 用（`viewModels {}` 的 lambda 必須回傳 `ViewModelProvider.Factory`，codex rev 3）：
 
   ```kotlin
   private val vm: HymnBarViewModel by viewModels {
-      HymnBarViewModel(NotebookUi.get(requireContext().applicationContext), TitleScripts.current(requireContext()))
+      object : ViewModelProvider.Factory {
+          @Suppress("UNCHECKED_CAST")
+          override fun <T : ViewModel> create(modelClass: Class<T>): T =
+              HymnBarViewModel(
+                  NotebookUi.get(requireContext().applicationContext),
+                  TitleScripts.current(requireContext()),
+              ) as T
+      }
   }
   ```
-
-  （`HymnBarViewModel` 沒有 Factory，直接建構；`viewModels {}` 的 lambda 提供實例。若需要支援 process death，再加一個接受 `NotebookUiDeps`+`TitleScript` 的 `ViewModelProvider.Factory`，但 1.0 先直接建構。）
 
   `onViewCreated`：
   - collect `HymnBarViewModel.state` → 綁定 `nb_hymn_bar.xml`：☆ `CheckBox`（收藏，`contentDescription`「收藏，已勾選」）、唱詩摘要（`nb_bar_summary`，點擊 → `startActivity(NotebookIntents.notebook(requireContext())` 帶 hymn extra 開 `HymnNotebookFragment`）、「筆記 N／寫筆記」（`nb_bar_notes`）、「加入歌單」（`nb_bar_add_playlist`）、自動記錄提示（`nb_bar_auto_record`，`accessibilityLiveRegion="polite"`）、歌單列（`nb_bar_playlist_strip`）。
@@ -8012,7 +8034,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 ### Task I1：`ContentHandler` 接筆記本列與自動記錄
 
 **Files:**
-- Modify: `ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`
+- Modify: `ContentHandler.java`、`res/layout/content_main.xml`、`ContentView.java`、`res/layout/content_lyrics.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`
 - Modify: `notebook/ui/bar/HymnNotebookBarFragment.kt`（如需）
 
 - [ ] **Step 1：`content_main.xml` 加筆記本列容器（單一宿主，codex C-5）**
@@ -8044,7 +8066,8 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   mNotebookBar = (HymnNotebookBarFragment) getSupportFragmentManager().findFragmentById(R.id.notebookBar);
   if (mNotebookBar == null) {
       mNotebookBar = new HymnNotebookBarFragment();
-      getSupportFragmentManager().beginTransaction().replace(R.id.notebookBar, mNotebookBar).commit();
+      // commitNow() 同步 attach，使後續的初始 showHymn 能安全呼叫（codex rev 3 #2）
+      getSupportFragmentManager().beginTransaction().replace(R.id.notebookBar, mNotebookBar).commitNow();
   }
 
   // OnPageChangeCallback.onPageSelected 裏，更新完 mHymnNo 後呼叫：
@@ -8161,10 +8184,10 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 - [ ] **Step 1：`HymnNotebookBarTest`（C-10 接點）**
 
-  在既有 C smoke 流程上斷言筆記本列（codex rev 3 #11，斷言**可觀察結果**，不是「方法被呼叫」）：
+  在既有 C smoke 流程上斷言筆記本列（codex rev 3 #11，斷言**可觀察結果**，不碰門檻設定——D-1a 無此 pref/API）：
   - 開歌詞頁 → 斷言 `@id/notebookBar` 顯示，且其「唱詩摘要」文字非預設「從未唱」（代表 `showHymn` 已把初始詩歌送進 bar）。
-  - 停留超過自動記錄門檻（測試用 `NotebookPrefsDataStore` 把門檻塞成 1 秒，或用 `SingTrackerPort` 的 fake tracker 直接 `emit`）→ 斷言自動記錄提示（`nb_bar_auto_record`）出現。
   - 翻頁 → 斷言摘要對應新詩歌（代表 `onPageSelected` → `showHymn` 生效）。
+  - **自動記錄的時序邏輯已由 JVM 的 `HymnBarViewModelTest` 覆蓋**，instrumented 只驗證接線（初始摘要 + 翻頁摘要），不重複測 2 分鐘計時器。
   `AccessibilityChecks` 開啟。
 
 - [ ] **Step 2：`NotebookActivityTest` / `NotebookFlowsTest`**
@@ -8177,7 +8200,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 - [ ] **Step 4：`NotebookThemeTest`**
 
-  斷言 `NotebookActivity` 用 `Theme_Hymnchtv_Notebook_Light/Dark`（`ThemeHelper`），顏色來自主題屬性。
+  斷言 `NotebookActivity` 用**單一 DayNight 主題**（rev 3 C-4：`Theme.Hymnchtv.Notebook` parent 接 C 的 `AppTheme`，不再是 Light/Dark 兩套；`NotebookThemes.forApp` 改回傳單一 DayNight），顏色來自主題屬性。
 
 - [ ] **Step 5：在 `api34nb`/`api24nb` 跑 + Commit**
 
