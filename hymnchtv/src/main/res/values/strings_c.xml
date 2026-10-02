@@ -13,4 +13,5 @@
     <string name="c_cat_sing_log">Singing log</string>
     <string name="c_cat_backup">Backup</string>
     <string name="c_check_update">Check for updates</string>
+    <string name="c_myhymns_placeholder">My hymns will be available in a later update.</string>
 </resources>

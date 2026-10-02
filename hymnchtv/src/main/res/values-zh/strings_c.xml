@@ -13,4 +13,5 @@
     <string name="c_cat_sing_log">唱诗记录</string>
     <string name="c_cat_backup">备份</string>
     <string name="c_check_update">检查更新</string>
+    <string name="c_myhymns_placeholder">我的诗歌将在后续更新中提供。</string>
 </resources>
