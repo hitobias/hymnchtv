@@ -78,7 +78,7 @@ class HistoryFragmentTest {
             FragmentHost.eventually {
                 scenario.onActivity { a -> assertThat((a.findViewById<RecyclerView>(R.id.history_list).adapter as HistoryAdapter).currentList.filterIsInstance<HistoryItem.Row>()).hasSize(2) }
             }
-            onView(allOf(withId(R.id.b_delete_in_list), isDisplayed())).perform(click())
+            onView(allOf(withId(R.id.b_delete_in_list), androidx.test.espresso.matcher.ViewMatchers.hasSibling(withText(containsString("標題2"))))).perform(click())
             FragmentHost.eventually { assertThat(DatabaseBackend.getInstance(ctx).historyRecords).hasSize(1) }
         }
     }
