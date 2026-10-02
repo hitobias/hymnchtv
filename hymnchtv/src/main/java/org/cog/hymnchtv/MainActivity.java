@@ -628,11 +628,12 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * @param engNo optional english hymn no to show if present
      */
     public static void showContent(Context ctx, String hymnType, int hymnNo, boolean autoPlay, Integer... engNo) {
-        // Save the user selection into history record
-        boolean isFu = MediaRecord.isFu(hymnType, hymnNo);
-        HistoryRecord historyRecord = new HistoryRecord(hymnType, hymnNo, isFu);
+        // Save the user selection into history record; the title lookup reads assets, so both run off the main thread
         if (HYMN_BB_DUMMY != hymnNo) {
-            DatabaseBackend.getInstance(ctx).storeHymnHistory(historyRecord);
+            boolean isFu = MediaRecord.isFu(hymnType, hymnNo);
+            Context appContext = ctx.getApplicationContext();
+            AppExecutors.io("store-history", () -> DatabaseBackend.getInstance(appContext)
+                    .storeHymnHistory(new HistoryRecord(hymnType, hymnNo, isFu)));
         }
 
         Intent intent = new Intent(ctx, ContentHandler.class);
