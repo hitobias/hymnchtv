@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools"
-    tools:ignore="MissingTranslation ExtraTranslation">
+<resources>
     <string name="app_name">诗歌</string>
     <string name="app_title_main">书拉密女-诗歌本</string>
 
@@ -18,15 +17,15 @@
     <string name="copyright">Copyright@2020, Eng Chong Meng
         &lt;br/>&lt;a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0&lt;/a>
         &lt;br/>All rights reserved.</string>
-    <string name="db_export">数库导出</string>
-    <string name="db_import"><u>数库导入</u></string>
+    <string name="db_export">数据库导出</string>
+    <string name="db_import"><u>数据库导入</u></string>
     <string name="db_import_file">数据库导入文件</string>
     <string name="db_import_proceed">开始将文件: \'%1$s\' 内容（%2$s），导入数据库媒体记录</string>
-    <string name="db_import_record">数库导入共 %1$d (%2$d) 首诗歌</string>
+    <string name="db_import_record">数据库导入共 %1$d (%2$d) 首诗歌</string>
     <string name="db_import_start">开始将文件内容导入数据库媒体记录…</string>
     <string name="db_import_NQ"><u>NQ&#x2B07;</u></string>
     <string name="db_file_missing">请提供媒体内容真实路径！</string>
-    <string name="db_list">数库列项</string>
+    <string name="db_list">数据库列项</string>
     <string name="db_no_overwrite">保留现有记录</string>
     <string name="db_overwrite">覆盖现有记录</string>
     <string name="db_overwrite_media">是否覆盖数据库中的现有媒体记录？</string>
@@ -342,7 +341,7 @@
         &lt;br/>应用程序中使用的所有媒体内容：歌词和歌曲文本等，版权归台湾福音书房所有。
         &lt;br/>首先谢谢网络上的弟兄破碎提供诗歌的源材料。此诗歌本应用程序，原版由&lt;a href="http://shulami02.net/bbs">书拉密女小站&lt;/a>个人开发;
         &lt;br/>&lt;br/>近日由新作者，全程序重写改进，并添加新功能。如果有发现出错或建议，请到
-        &lt;a href="https://github。com/cmeng-git/hymnchtv/issues">此网址&lt;/a>提出意见。
+        &lt;a href="https://github.com/cmeng-git/hymnchtv/issues">此网址&lt;/a>提出意见。
         &lt;br/>&lt;br/>新增诗歌资源材料来自网络:
         &lt;br/>http://www.lshymn.net/
         &lt;br/>https://www.hymnal.net/
@@ -350,7 +349,7 @@
         &lt;br/>技术有限希望对弟兄姐妹有用！</string>
 
     <string name="content_help">歌词显示屏幕说明:
-        &lt;br/>\u25AA 长按屏慕启动诗歌主菜单。
+        &lt;br/>\u25AA 长按屏幕启动诗歌主菜单。
         &lt;br/>\u25AA 播放按钮点一下，开始播放媒体档。
         &lt;br/>\u25AA 再次点播放按钮，播放就会暂停。
         &lt;br/>\u25AA 再次点播放按钮，从暂停位置继续播放。

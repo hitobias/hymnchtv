@@ -20,14 +20,14 @@ class ResourceLocaleResolutionTest {
 
     @Test
     fun simplifiedChineseLocales() {
-        listOf("zh-CN", "zh-SG", "zh-Hans").forEach {
+        listOf("zh-CN", "zh-SG", "zh-Hans", "zh-Hans-CN", "zh").forEach {
             assertThat(localeSystemString(it)).isEqualTo("跟随系统")
         }
     }
 
     @Test
     fun traditionalChineseLocales() {
-        listOf("zh-TW", "zh-HK", "zh-MO", "zh-Hant").forEach {
+        listOf("zh-TW", "zh-HK", "zh-MO", "zh-Hant", "zh-Hant-TW").forEach {
             assertThat(localeSystemString(it)).isEqualTo("跟隨系統")
         }
     }
