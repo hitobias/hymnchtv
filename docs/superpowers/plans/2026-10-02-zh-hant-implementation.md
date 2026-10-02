@@ -1,0 +1,2080 @@
+# 子項目 A：介面繁中＋歌詞預設語言 實作計畫
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 這個子項目要做到下列幾件事：
+- 介面新增繁體中文。第一次安裝時跟隨系統語言；Android 13 以上和系統設定的「App 語言」頁共用同一份設定。
+- 歌詞可以設定預設語言：跟隨介面、簡體或繁體。
+- 搜尋時輸入特殊字元不再當機。
+- 看歌詞時螢幕不會自動關閉。
+
+**Architecture:**
+- 判斷規則都寫成 Kotlin 純函式（`locale/`、`lyrics/`、`search/`），用 JVM 單元測試，採 TDD。
+- 和 Android 打交道的部分集中在兩個薄薄的 Kotlin 類別：`LocaleStore`、`PrefsMigrator`。
+- 既有的 Java Activity 只改呼叫點。
+- 預設資源（`values/`）改成英文，簡中搬到 `values-zh/`，繁中放在 `values-b+zh+Hant/`。
+- 語言的唯一真實來源依 API 等級而定：API 33 以上是 framework 的 per-app locale，API 33 以下是 `PREF_LOCALE`。
+
+**Tech Stack:** Android（minSdk 24、compileSdk 37、AGP 9.3.3 內建 Kotlin）、Java 11 與 Kotlin 混用、JUnit 4.13.2、Truth 1.4.5、AndroidX Test（runner 1.7.0、ext-junit 1.3.0）、OpenCC CLI（只用來產生字串初稿）。
+
+**規格來源:** `docs/superpowers/plans/2026-10-02-hymnchtv-modernization-plan.md` 的「子項目 A」（rev 4）。
+
+**分支:** `feat/zh-hant`（已建立）。
+
+**Commit 規則:**
+- 使用 conventional commits。
+- 每個 commit 訊息的結尾加上：
+
+  ```
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  ```
+
+**和 spec 不同的地方（刻意的取捨）:**
+- **A.2 第 7 點「Activity 重建後保留狀態」不寫 instrumented test**：
+  - `MainActivity` 首次啟動會跳出權限要求和 changelog 對話框，`ContentHandler` 又依賴有版權的 assets，repo 裡只有樣本。這兩點都會讓 `ActivityScenario.recreate()` 測試很不穩定。
+  - 改成 Task 15 的手動驗證：開啟開發者選項「不保留活動」，再加上 API 34 切換語言。
+- **Java 裡寫死的中文只處理純顯示用途的 2 處**：`ContentHandler.java:1214`、`UpdateServiceImpl.java:156`。
+  - 其他寫死的中文（`HymnToc` 的目錄分類、`MediaType`、`MediaConfig`、`NotionRecord`、`QQRecord`、筆畫表）同時被拿來做資料比對或解析，改動會破壞功能，所以不在 A 的範圍內。
+  - 這些字串的繁體顯示，留給 spec 的 A-opt-2 或子項目 C 處理。
+  - 英文介面原本就刻意保留中文的詩歌本名稱（例如 `hymn_title_db`），維持不變。
+
+---
+
+## 檔案結構
+
+**新增（Kotlin，純邏輯，有 JVM 單元測試）：**
+
+| 檔案 | 職責 |
+|---|---|
+| `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleRules.kt` | 判斷 `Locale` 是否為繁中、簡中 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/locale/AppLanguage.kt` | 介面語言的 enum，以及和 pref 值、framework tag、`Locale` 之間的互相轉換 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleMigration.kt` | 決定遷移後的語言（純函式） |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLang.kt` | 歌詞預設語言的 enum |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicy.kt` | 決定歌詞顯示簡或繁、轉換標準的預設值與解析 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsMigration.kt` | 遷移舊的 `PREF_SIMPLIFY` 與 `PREF_CONVERSION_TYPE`（純函式） |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/search/SearchPattern.kt` | 把使用者的搜尋字串安全地轉成 `Pattern` |
+
+**新增（Kotlin，Android 邊界，靠手動和 instrumented test 驗證）：**
+
+| 檔案 | 職責 |
+|---|---|
+| `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleStore.kt` | 依 API 等級讀寫介面語言；API 33 以下負責包裝 context |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/locale/PrefsMigrator.kt` | 執行兩項遷移並寫入旗標；API 33 以上把語言推送給 framework |
+
+**測試：**
+- `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleRulesTest.kt`
+- `hymnchtv/src/test/java/org/cog/hymnchtv/locale/AppLanguageTest.kt`
+- `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleMigrationTest.kt`
+- `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicyTest.kt`
+- `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsMigrationTest.kt`
+- `hymnchtv/src/test/java/org/cog/hymnchtv/search/SearchPatternTest.kt`
+- `hymnchtv/src/androidTest/java/org/cog/hymnchtv/ResourceLocaleResolutionTest.kt`
+
+**修改：**
+
+| 檔案 | 修改內容 |
+|---|---|
+| `hymnchtv/build.gradle` | 加入測試依賴 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/HymnsApp.java` | `attachBaseContext`、`onCreate` |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/BaseActivity.java` | `attachBaseContext` |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java` | 選單、`setAppLocale`、`initLanguage`、狀態保存 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/ContentView.java` | 歌詞的簡繁判斷 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/ContentHandler.java` | 歌詞 override、螢幕常亮、狀態保存、寫死的字串 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/ContentSearch.java` | 改用 `SearchPattern` |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/utils/ChineseS2TSelection.java` | 新增歌詞預設語言，處理非法值 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/service/androidupdate/UpdateServiceImpl.java:156` | 寫死的字串 |
+| `hymnchtv/src/main/res/menu/menu_main.xml` | 語言子選單、歌詞語言入口 |
+| `hymnchtv/src/main/res/layout/chinese_t2s_selection.xml` | 新增歌詞預設語言的 RadioGroup |
+| `hymnchtv/src/main/res/layout/hymn_toc_list_item.xml`、`hymn_toc_list_group.xml` | 範例文字改成 `tools:text` |
+
+**資源搬移與新增：**
+- `res/values/strings.xml`（簡中）移到 `res/values-zh/strings.xml`
+- `res/values-en/strings.xml`（英文）移到 `res/values/strings.xml`，`values-en/` 目錄刪除
+- 新增 `res/values-b+zh+Hant/strings.xml`
+- 新增 `res/resources.properties`
+- 刪除 `res/xml/locale_config.xml`（manifest 沒有引用它）
+
+**刪除：**
+- `hymnchtv/src/main/java/org/cog/hymnchtv/utils/LocaleHelper.java`
+
+---
+
+### Task 0：準備環境與記錄基準
+
+**Files:** 無
+
+- [ ] **Step 1：安裝 OpenCC CLI**
+
+  Run: `brew install opencc && opencc --version`
+  Expected: 印出版本號。
+
+- [ ] **Step 2：準備兩台模擬器（API 24、API 34）**
+
+  ```bash
+  sdkmanager "system-images;android-24;google_apis;x86_64" "system-images;android-34;google_apis;arm64-v8a"
+  avdmanager create avd -n api24 -k "system-images;android-24;google_apis;x86_64"
+  avdmanager create avd -n api34 -k "system-images;android-34;google_apis;arm64-v8a"
+  ```
+
+  Expected: `emulator -list-avds` 列出 `api24` 和 `api34`。
+
+  在 Apple Silicon 上，API 24 沒有 arm64 映像，x86_64 映像也可能跑不起來。這時改用一台 Android 7 的實機，並在 PR 描述中註明。
+
+- [ ] **Step 3：記錄基準 build**
+
+  Run: `./gradlew :hymnchtv:assembleDebug :hymnchtv:lintDebug`
+  Expected: BUILD SUCCESSFUL。
+
+  把 lint 報告中 `MissingTranslation`、`ExtraTranslation`、`HardcodedText` 三項的數量記下來，作為之後比對的基準。
+
+- [ ] **Step 4：備份一份 v2.9.2 的 APK，供升級測試使用**
+
+  ```bash
+  git stash -u 2>/dev/null; git worktree add ../hymnchtv-v292 5e559b1
+  (cd ../hymnchtv-v292 && ./gradlew :hymnchtv:assembleDebug)
+  cp ../hymnchtv-v292/hymnchtv/build/outputs/apk/debug/*.apk /tmp/hymnchtv-v292-debug.apk
+  ```
+
+  Expected: `/tmp/hymnchtv-v292-debug.apk` 存在。
+
+---
+
+### Task 1：建立測試基礎設施
+
+**Files:**
+- Modify: `hymnchtv/build.gradle`（`dependencies {` 區塊的最後）
+- Create: `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleRulesTest.kt`
+
+- [ ] **Step 1：在 `hymnchtv/build.gradle` 的 `dependencies { ... }` 區塊結尾，`implementation 'org.jsoup:jsoup:1.23.2'` 的下一行加入以下依賴**
+
+  ```groovy
+      testImplementation 'junit:junit:4.13.2'
+      testImplementation 'com.google.truth:truth:1.4.5'
+
+      androidTestImplementation 'androidx.test:runner:1.7.0'
+      androidTestImplementation 'androidx.test:core:1.7.0'
+      androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+      androidTestImplementation 'com.google.truth:truth:1.4.5'
+  ```
+
+- [ ] **Step 2：寫第一個會失敗的測試** `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleRulesTest.kt`
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+  import java.util.Locale
+
+  class LocaleRulesTest {
+      private fun t(tag: String) = Locale.forLanguageTag(tag)
+
+      @Test
+      fun traditionalByRegion() {
+          listOf("zh-TW", "zh-HK", "zh-MO").forEach {
+              assertThat(LocaleRules.isTraditional(t(it))).isTrue()
+          }
+      }
+
+      @Test
+      fun traditionalByScript() {
+          listOf("zh-Hant", "zh-Hant-CN").forEach {
+              assertThat(LocaleRules.isTraditional(t(it))).isTrue()
+          }
+      }
+
+      @Test
+      fun simplified() {
+          listOf("zh-CN", "zh-SG", "zh", "zh-Hans-TW").forEach {
+              assertThat(LocaleRules.isTraditional(t(it))).isFalse()
+          }
+      }
+
+      @Test
+      fun nonChineseIsNeverTraditional() {
+          listOf("en-US", "ja-JP", "fr").forEach {
+              assertThat(LocaleRules.isTraditional(t(it))).isFalse()
+          }
+      }
+
+      @Test
+      fun isChinese() {
+          assertThat(LocaleRules.isChinese(t("zh-TW"))).isTrue()
+          assertThat(LocaleRules.isChinese(t("en"))).isFalse()
+      }
+  }
+  ```
+
+- [ ] **Step 3：執行測試，確認它失敗**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.LocaleRulesTest'`
+  Expected: 編譯失敗，訊息為 `Unresolved reference 'LocaleRules'`。這同時證明 `src/test` 的 Kotlin 有被編譯。
+
+- [ ] **Step 4：寫最小實作** `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleRules.kt`
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  import java.util.Locale
+
+  /** Pure rules for classifying a [Locale]; no Android dependency. */
+  object LocaleRules {
+      private val TRADITIONAL_REGIONS = setOf("TW", "HK", "MO")
+
+      @JvmStatic
+      fun isChinese(locale: Locale): Boolean = locale.language == "zh"
+
+      /** An explicit script wins over region: zh-Hans-TW is simplified, zh-Hant-CN is traditional. */
+      @JvmStatic
+      fun isTraditional(locale: Locale): Boolean {
+          if (!isChinese(locale)) return false
+          if (locale.script.isNotEmpty()) return locale.script == "Hant"
+          return locale.country in TRADITIONAL_REGIONS
+      }
+  }
+  ```
+
+- [ ] **Step 5：執行測試，確認它通過**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.LocaleRulesTest'`
+  Expected: BUILD SUCCESSFUL，5 個測試全部通過。
+
+- [ ] **Step 6：Commit**
+
+  ```bash
+  git add hymnchtv/build.gradle hymnchtv/src/test hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleRules.kt
+  git commit -m "test: add JVM test infrastructure and LocaleRules"
+  ```
+
+---
+
+### Task 2：AppLanguage
+
+**Files:**
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/locale/AppLanguage.kt`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/locale/AppLanguageTest.kt`
+
+- [ ] **Step 1：寫會失敗的測試**
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+  import java.util.Locale
+
+  class AppLanguageTest {
+      @Test
+      fun fromPrefAcceptsCurrentAndLegacyValues() {
+          assertThat(AppLanguage.fromPref("system")).isEqualTo(AppLanguage.SYSTEM)
+          assertThat(AppLanguage.fromPref("zh-Hans-CN")).isEqualTo(AppLanguage.ZH_HANS)
+          assertThat(AppLanguage.fromPref("zh-Hant-TW")).isEqualTo(AppLanguage.ZH_HANT)
+          assertThat(AppLanguage.fromPref("en-US")).isEqualTo(AppLanguage.EN)
+      }
+
+      @Test
+      fun fromPrefReturnsNullForMissingOrIllegal() {
+          listOf(null, "", "  ", "ja-JP", "garbage").forEach {
+              assertThat(AppLanguage.fromPref(it)).isNull()
+          }
+      }
+
+      @Test
+      fun prefValueRoundTrips() {
+          AppLanguage.values().forEach {
+              assertThat(AppLanguage.fromPref(it.prefValue)).isEqualTo(it)
+          }
+      }
+
+      @Test
+      fun fromFrameworkTagsEmptyIsSystem() {
+          assertThat(AppLanguage.fromFrameworkTags(emptyList())).isEqualTo(AppLanguage.SYSTEM)
+      }
+
+      @Test
+      fun fromFrameworkTagsMapsChineseVariants() {
+          listOf("zh-TW", "zh-HK", "zh-MO", "zh-Hant-TW").forEach {
+              assertThat(AppLanguage.fromFrameworkTags(listOf(it))).isEqualTo(AppLanguage.ZH_HANT)
+          }
+          listOf("zh-CN", "zh-Hans-CN", "zh").forEach {
+              assertThat(AppLanguage.fromFrameworkTags(listOf(it))).isEqualTo(AppLanguage.ZH_HANS)
+          }
+      }
+
+      @Test
+      fun fromFrameworkTagsUsesFirstAndFallsBackToEnglish() {
+          assertThat(AppLanguage.fromFrameworkTags(listOf("en-GB", "zh-TW"))).isEqualTo(AppLanguage.EN)
+          assertThat(AppLanguage.fromFrameworkTags(listOf("ja-JP"))).isEqualTo(AppLanguage.EN)
+      }
+
+      @Test
+      fun toLocale() {
+          assertThat(AppLanguage.SYSTEM.toLocale()).isNull()
+          assertThat(AppLanguage.ZH_HANT.toLocale()).isEqualTo(Locale.forLanguageTag("zh-Hant-TW"))
+      }
+  }
+  ```
+
+- [ ] **Step 2：執行測試，確認它失敗**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.AppLanguageTest'`
+  Expected: 編譯失敗，訊息為 `Unresolved reference 'AppLanguage'`。
+
+- [ ] **Step 3：實作**
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  import java.util.Locale
+
+  /**
+   * UI language choice. [tag] is the BCP-47 tag applied to resources; null means follow the system.
+   * [prefValue] is what is persisted in PREF_LOCALE (API < 33); legacy values "zh-Hans-CN"/"en-US" are unchanged.
+   */
+  enum class AppLanguage(val tag: String?) {
+      SYSTEM(null), ZH_HANS("zh-Hans-CN"), ZH_HANT("zh-Hant-TW"), EN("en-US");
+
+      val prefValue: String get() = tag ?: SYSTEM_PREF_VALUE
+
+      fun toLocale(): Locale? = tag?.let(Locale::forLanguageTag)
+
+      companion object {
+          private const val SYSTEM_PREF_VALUE = "system"
+
+          /** Never throws: null, blank or unknown values return null so callers pick the fallback. */
+          @JvmStatic
+          fun fromPref(value: String?): AppLanguage? {
+              if (value.isNullOrBlank()) return null
+              return values().firstOrNull { it.prefValue == value }
+          }
+
+          /** Maps the framework per-app locale list (API 33+); unsupported languages display as English. */
+          @JvmStatic
+          fun fromFrameworkTags(tags: List<String>): AppLanguage {
+              val first = tags.firstOrNull() ?: return SYSTEM
+              val locale = Locale.forLanguageTag(first)
+              return when {
+                  LocaleRules.isTraditional(locale) -> ZH_HANT
+                  LocaleRules.isChinese(locale) -> ZH_HANS
+                  else -> EN
+              }
+          }
+      }
+  }
+  ```
+
+- [ ] **Step 4：執行測試，確認它通過**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.AppLanguageTest'`
+  Expected: 7 個測試全部通過。
+
+- [ ] **Step 5：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/locale/AppLanguage.kt hymnchtv/src/test/java/org/cog/hymnchtv/locale/AppLanguageTest.kt
+  git commit -m "feat: add AppLanguage model with pref and framework tag mapping"
+  ```
+
+---
+
+### Task 3：LocaleMigration（純函式）
+
+**Files:**
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleMigration.kt`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleMigrationTest.kt`
+
+- [ ] **Step 1：寫會失敗的測試**
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+
+  class LocaleMigrationTest {
+      @Test
+      fun keepsExplicitStoredChoice() {
+          assertThat(LocaleMigration.target("en-US", isUpgrade = true)).isEqualTo(AppLanguage.EN)
+          assertThat(LocaleMigration.target("zh-Hans-CN", isUpgrade = false)).isEqualTo(AppLanguage.ZH_HANS)
+      }
+
+      @Test
+      fun illegalStoredValueFallsBackToLegacyDefault() {
+          assertThat(LocaleMigration.target("garbage", isUpgrade = true)).isEqualTo(AppLanguage.ZH_HANS)
+      }
+
+      @Test
+      fun emptyStoredValueMeantSystemInOldLocaleHelper() {
+          assertThat(LocaleMigration.target("", isUpgrade = true)).isEqualTo(AppLanguage.SYSTEM)
+      }
+
+      @Test
+      fun missingValueOnUpgradeKeepsOldSimplifiedDefault() {
+          assertThat(LocaleMigration.target(null, isUpgrade = true)).isEqualTo(AppLanguage.ZH_HANS)
+      }
+
+      @Test
+      fun missingValueOnFreshInstallFollowsSystem() {
+          assertThat(LocaleMigration.target(null, isUpgrade = false)).isEqualTo(AppLanguage.SYSTEM)
+      }
+  }
+  ```
+
+- [ ] **Step 2：執行測試，確認它失敗**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.LocaleMigrationTest'`
+  Expected: 編譯失敗，訊息為 `Unresolved reference 'LocaleMigration'`。
+
+- [ ] **Step 3：實作**
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  /** One-time migration of PREF_LOCALE (key [KEY]); see plan A.1.3. */
+  object LocaleMigration {
+      const val KEY = "migr.locale.v1"
+
+      /**
+       * @param stored raw PREF_LOCALE value, null if absent
+       * @param isUpgrade true when the app was updated from an older version (firstInstallTime != lastUpdateTime)
+       */
+      @JvmStatic
+      fun target(stored: String?, isUpgrade: Boolean): AppLanguage = when {
+          stored == null -> if (isUpgrade) AppLanguage.ZH_HANS else AppLanguage.SYSTEM
+          stored.isEmpty() -> AppLanguage.SYSTEM
+          else -> AppLanguage.fromPref(stored) ?: AppLanguage.ZH_HANS
+      }
+  }
+  ```
+
+- [ ] **Step 4：執行測試，確認它通過**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.locale.LocaleMigrationTest'`
+  Expected: 5 個測試全部通過。
+
+- [ ] **Step 5：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleMigration.kt hymnchtv/src/test/java/org/cog/hymnchtv/locale/LocaleMigrationTest.kt
+  git commit -m "feat: add locale preference migration rules"
+  ```
+
+---
+
+### Task 4：LyricsLang 與 LyricsLanguagePolicy
+
+**Files:**
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLang.kt`
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicy.kt`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicyTest.kt`
+
+- [ ] **Step 1：寫會失敗的測試**
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  import com.google.common.truth.Truth.assertThat
+  import com.zqc.opencc.android.lib.ConversionType
+  import org.junit.Test
+  import java.util.Locale
+
+  class LyricsLanguagePolicyTest {
+      private val hans = Locale.forLanguageTag("zh-Hans-CN")
+      private val hantTw = Locale.forLanguageTag("zh-Hant-TW")
+      private val hantHk = Locale.forLanguageTag("zh-Hant-HK")
+      private val en = Locale.forLanguageTag("en-US")
+
+      @Test
+      fun lyricsLangFromPrefIsTotal() {
+          assertThat(LyricsLang.fromPref("TRADITIONAL")).isEqualTo(LyricsLang.TRADITIONAL)
+          assertThat(LyricsLang.fromPref("SIMPLIFIED")).isEqualTo(LyricsLang.SIMPLIFIED)
+          listOf(null, "", "bogus", "traditional").forEach {
+              assertThat(LyricsLang.fromPref(it)).isEqualTo(LyricsLang.FOLLOW_UI)
+          }
+      }
+
+      @Test
+      fun explicitChoiceIgnoresUi() {
+          listOf(hans, hantTw, en).forEach {
+              assertThat(LyricsLanguagePolicy.resolveShowTraditional(LyricsLang.TRADITIONAL, it)).isTrue()
+              assertThat(LyricsLanguagePolicy.resolveShowTraditional(LyricsLang.SIMPLIFIED, it)).isFalse()
+          }
+      }
+
+      @Test
+      fun followUi() {
+          assertThat(LyricsLanguagePolicy.resolveShowTraditional(LyricsLang.FOLLOW_UI, hantTw)).isTrue()
+          assertThat(LyricsLanguagePolicy.resolveShowTraditional(LyricsLang.FOLLOW_UI, hantHk)).isTrue()
+          assertThat(LyricsLanguagePolicy.resolveShowTraditional(LyricsLang.FOLLOW_UI, hans)).isFalse()
+          assertThat(LyricsLanguagePolicy.resolveShowTraditional(LyricsLang.FOLLOW_UI, en)).isFalse()
+      }
+
+      @Test
+      fun defaultConversion() {
+          assertThat(LyricsLanguagePolicy.defaultConversion(hantHk)).isEqualTo(ConversionType.S2HK)
+          assertThat(LyricsLanguagePolicy.defaultConversion(Locale.forLanguageTag("zh-MO"))).isEqualTo(ConversionType.S2HK)
+          assertThat(LyricsLanguagePolicy.defaultConversion(hantTw)).isEqualTo(ConversionType.S2TW)
+          assertThat(LyricsLanguagePolicy.defaultConversion(hans)).isEqualTo(ConversionType.S2TW)
+          assertThat(LyricsLanguagePolicy.defaultConversion(en)).isEqualTo(ConversionType.S2TW)
+      }
+
+      @Test
+      fun parseConversionAcceptsOnlySelectableTypes() {
+          listOf("S2T", "S2HK", "S2TW", "S2TWP").forEach {
+              assertThat(LyricsLanguagePolicy.parseConversion(it, hans).name).isEqualTo(it)
+              assertThat(LyricsLanguagePolicy.isValidConversion(it)).isTrue()
+          }
+      }
+
+      @Test
+      fun parseConversionFallsBackWithoutThrowing() {
+          listOf(null, "", "T2S", "s2t", "bogus").forEach {
+              assertThat(LyricsLanguagePolicy.parseConversion(it, hantHk)).isEqualTo(ConversionType.S2HK)
+              assertThat(LyricsLanguagePolicy.isValidConversion(it)).isFalse()
+          }
+      }
+  }
+  ```
+
+- [ ] **Step 2：執行測試，確認它失敗**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsLanguagePolicyTest'`
+  Expected: 編譯失敗，訊息為 `Unresolved reference 'LyricsLang'`。
+
+- [ ] **Step 3：實作 `LyricsLang.kt`**
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  /** Default lyrics script; persisted by [name] under LyricsLanguagePolicy.PREF_LYRICS_DEFAULT. */
+  enum class LyricsLang {
+      FOLLOW_UI, SIMPLIFIED, TRADITIONAL;
+
+      companion object {
+          /** Never throws; unknown values mean FOLLOW_UI. */
+          @JvmStatic
+          fun fromPref(value: String?): LyricsLang = values().firstOrNull { it.name == value } ?: FOLLOW_UI
+      }
+  }
+  ```
+
+- [ ] **Step 4：實作 `LyricsLanguagePolicy.kt`**
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  import com.zqc.opencc.android.lib.ConversionType
+  import org.cog.hymnchtv.locale.LocaleRules
+  import java.util.Locale
+
+  object LyricsLanguagePolicy {
+      const val PREF_LYRICS_DEFAULT = "LyricsDefaultLang"
+
+      private val HK_REGIONS = setOf("HK", "MO")
+
+      /** The S2x types offered in ChineseS2TSelection; anything else stored in prefs is treated as invalid. */
+      private val SELECTABLE = listOf(ConversionType.S2T, ConversionType.S2HK, ConversionType.S2TW, ConversionType.S2TWP)
+
+      @JvmStatic
+      fun resolveShowTraditional(pref: LyricsLang, uiLocale: Locale): Boolean = when (pref) {
+          LyricsLang.SIMPLIFIED -> false
+          LyricsLang.TRADITIONAL -> true
+          LyricsLang.FOLLOW_UI -> LocaleRules.isTraditional(uiLocale)
+      }
+
+      /** S2TW converts glyphs only, so hymn wording is never rewritten; S2HK for Hong Kong / Macau users. */
+      @JvmStatic
+      fun defaultConversion(uiLocale: Locale): ConversionType =
+          if (LocaleRules.isChinese(uiLocale) && uiLocale.country in HK_REGIONS) ConversionType.S2HK else ConversionType.S2TW
+
+      @JvmStatic
+      fun isValidConversion(value: String?): Boolean = SELECTABLE.any { it.name == value }
+
+      /** Never throws; invalid or missing values fall back to [defaultConversion]. */
+      @JvmStatic
+      fun parseConversion(value: String?, uiLocale: Locale): ConversionType =
+          SELECTABLE.firstOrNull { it.name == value } ?: defaultConversion(uiLocale)
+  }
+  ```
+
+- [ ] **Step 5：執行測試，確認它通過**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsLanguagePolicyTest'`
+  Expected: 6 個測試全部通過。
+
+- [ ] **Step 6：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/lyrics hymnchtv/src/test/java/org/cog/hymnchtv/lyrics
+  git commit -m "feat: add lyrics default language policy"
+  ```
+
+---
+
+### Task 5：LyricsMigration（純函式）
+
+**Files:**
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsMigration.kt`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsMigrationTest.kt`
+
+- [ ] **Step 1：寫會失敗的測試**
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+
+  class LyricsMigrationTest {
+      @Test
+      fun userWhoChoseTraditionalKeepsIt() {
+          assertThat(LyricsMigration.plan(simplify = false, conversionType = "S2TW").defaultLang)
+              .isEqualTo(LyricsLang.TRADITIONAL)
+      }
+
+      @Test
+      fun simplifiedOrUnsetBecomesFollowUi() {
+          assertThat(LyricsMigration.plan(true, null).defaultLang).isEqualTo(LyricsLang.FOLLOW_UI)
+          assertThat(LyricsMigration.plan(null, null).defaultLang).isEqualTo(LyricsLang.FOLLOW_UI)
+      }
+
+      @Test
+      fun dropsOnlyInvalidConversionType() {
+          assertThat(LyricsMigration.plan(null, "bogus").dropConversionType).isTrue()
+          assertThat(LyricsMigration.plan(null, "T2S").dropConversionType).isTrue()
+          assertThat(LyricsMigration.plan(null, "S2HK").dropConversionType).isFalse()
+          assertThat(LyricsMigration.plan(null, null).dropConversionType).isFalse()
+      }
+  }
+  ```
+
+- [ ] **Step 2：執行測試，確認它失敗**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsMigrationTest'`
+  Expected: 編譯失敗，訊息為 `Unresolved reference 'LyricsMigration'`。
+
+- [ ] **Step 3：實作**
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  /** One-time migration of the legacy lyrics prefs (key [KEY]); see plan A.1.5. */
+  object LyricsMigration {
+      const val KEY = "migr.lyrics.v1"
+
+      data class Result(val defaultLang: LyricsLang, val dropConversionType: Boolean)
+
+      /**
+       * @param simplify legacy PREF_SIMPLIFY value, null if absent
+       * @param conversionType raw PREF_CONVERSION_TYPE value, null if absent
+       */
+      @JvmStatic
+      fun plan(simplify: Boolean?, conversionType: String?): Result = Result(
+          defaultLang = if (simplify == false) LyricsLang.TRADITIONAL else LyricsLang.FOLLOW_UI,
+          dropConversionType = conversionType != null && !LyricsLanguagePolicy.isValidConversion(conversionType),
+      )
+  }
+  ```
+
+- [ ] **Step 4：執行測試，確認它通過**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsMigrationTest'`
+  Expected: 3 個測試全部通過。
+
+- [ ] **Step 5：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsMigration.kt hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsMigrationTest.kt
+  git commit -m "feat: add lyrics preference migration rules"
+  ```
+
+---
+
+### Task 6：SearchPattern
+
+**Files:**
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/search/SearchPattern.kt`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/search/SearchPatternTest.kt`
+
+- [ ] **Step 1：寫會失敗的測試**
+
+  ```kotlin
+  package org.cog.hymnchtv.search
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+
+  class SearchPatternTest {
+      private fun finds(query: String, text: String) = SearchPattern.build(query)!!.matcher(text).find()
+
+      @Test
+      fun blankQueryReturnsNull() {
+          listOf("", "   ", "\t\n").forEach { assertThat(SearchPattern.build(it)).isNull() }
+      }
+
+      @Test
+      fun regexMetaCharactersAreLiteralAndNeverThrow() {
+          listOf("(", "[", "*", "\\", "\\E", "a|b", "?", "+", "{2}", "^$", ".").forEach {
+              assertThat(finds(it, "xx${it}yy")).isTrue()
+          }
+          assertThat(finds(".", "abc")).isFalse()
+      }
+
+      @Test
+      fun heMatchesBothHeAndHim() {
+          assertThat(finds("他", "祂")).isTrue()
+          assertThat(finds("他", "他")).isTrue()
+          assertThat(finds("跟随他", "跟随祂走")).isTrue()
+          assertThat(finds("他爱他", "祂爱他")).isTrue()
+          assertThat(finds("他", "|")).isFalse()
+      }
+
+      @Test
+      fun himOnlyMatchesHim() {
+          assertThat(finds("祂", "祂")).isTrue()
+          assertThat(finds("祂", "他")).isFalse()
+      }
+
+      @Test
+      fun heAtEdgesWithMetaCharacters() {
+          assertThat(finds("他(", "祂(")).isTrue()
+          assertThat(finds("(他", "(祂")).isTrue()
+      }
+
+      @Test
+      fun innerSpacesKeptOuterTrimmed() {
+          assertThat(finds("  主 耶稣  ", "主 耶稣")).isTrue()
+          assertThat(finds("主 耶稣", "主耶稣")).isFalse()
+      }
+
+      @Test
+      fun surrogatePairs() {
+          assertThat(finds("𠀀他", "𠀀祂")).isTrue()
+          assertThat(finds("🙏", "a🙏b")).isTrue()
+      }
+  }
+  ```
+
+- [ ] **Step 2：執行測試，確認它失敗**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.search.SearchPatternTest'`
+  Expected: 編譯失敗，訊息為 `Unresolved reference 'SearchPattern'`。
+
+- [ ] **Step 3：實作**
+
+  ```kotlin
+  package org.cog.hymnchtv.search
+
+  import java.util.regex.Pattern
+
+  /**
+   * Builds a literal search pattern from user input. Only "他" is widened to also match "祂";
+   * every other character, including regex meta characters, is matched literally.
+   */
+  object SearchPattern {
+      private const val HE = "他"
+      private const val HE_OR_HIM = "[祂他]"
+
+      /** @return null when the query is blank; never throws PatternSyntaxException. */
+      @JvmStatic
+      fun build(query: String?): Pattern? {
+          val q = query?.trim().orEmpty()
+          if (q.isEmpty()) return null
+          // Quote each segment separately; quoting the whole string first would also quote HE_OR_HIM.
+          val regex = q.split(HE).joinToString(HE_OR_HIM) { if (it.isEmpty()) "" else Pattern.quote(it) }
+          return Pattern.compile(regex)
+      }
+  }
+  ```
+
+- [ ] **Step 4：執行測試，確認它通過**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.search.SearchPatternTest'`
+  Expected: 7 個測試全部通過。
+
+- [ ] **Step 5：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/search hymnchtv/src/test/java/org/cog/hymnchtv/search
+  git commit -m "feat: add literal search pattern builder"
+  ```
+
+---
+
+### Task 7：資源目錄調整（預設改為英文）
+
+**Files:**
+- Move: `res/values/strings.xml` → `res/values-zh/strings.xml`
+- Move: `res/values-en/strings.xml` → `res/values/strings.xml`
+- Create: `hymnchtv/src/main/res/resources.properties`
+- Delete: `hymnchtv/src/main/res/xml/locale_config.xml`
+
+這個 task 只搬檔和調整語言相關的字串，**不改任何 Java 程式碼**，所以要獨立成一個 commit。
+
+- [ ] **Step 1：搬移檔案（保留 git 歷史）**
+
+  ```bash
+  cd hymnchtv/src/main/res
+  mkdir -p values-zh
+  git mv values/strings.xml values-zh/strings.xml
+  git mv values-en/strings.xml values/strings.xml
+  rmdir values-en
+  git rm xml/locale_config.xml
+  cd -
+  ```
+
+  `values/array.xml`（播放速度等數值）不需要翻譯，保持原位。目前 `values` 和 `values-en` 的 key 集合完全相同，已經比對過，沒有任何一邊缺 key。
+
+- [ ] **Step 2：新增 `hymnchtv/src/main/res/resources.properties`**
+
+  ```properties
+  unqualifiedResLocale=en-US
+  ```
+
+- [ ] **Step 3：修改預設語言檔 `res/values/strings.xml`（英文）**
+
+  第 3～4 行：
+
+  ```xml
+      <!--string name="app_name">Hymnch</string // Fix app label in Chinese-->
+      <string name="app_name">诗歌本</string>
+  ```
+
+  改成：
+
+  ```xml
+      <string name="app_name">Hymnal</string>
+  ```
+
+  `locale_menu`、`locale_chinese`、`locale_english` 這 3 行（約第 322～324 行）：
+
+  ```xml
+      <string name="locale_menu">Language</string>
+      <string name="locale_chinese">中文(简体)</string>
+      <string name="locale_english">English</string>
+  ```
+
+  改成下面這段。語言名稱一律用該語言自己的寫法，標示為 `translatable="false"`：
+
+  ```xml
+      <string name="locale_menu">Language</string>
+      <string name="locale_system">Follow system</string>
+      <string name="locale_chinese" translatable="false">简体中文</string>
+      <string name="locale_chinese_hant" translatable="false">繁體中文</string>
+      <string name="locale_english" translatable="false">English</string>
+      <string name="lyrics_language_menu">Lyrics language</string>
+      <string name="lyrics_default_title">Default lyrics language</string>
+      <string name="lyrics_follow_ui">Follow app language</string>
+      <string name="lyrics_simplified">Simplified Chinese</string>
+      <string name="lyrics_traditional">Traditional Chinese</string>
+      <string name="hymn_no_chinese_lyrics">English #%1$d: this English hymn has no matching Chinese lyrics</string>
+      <string name="update_none">No updates</string>
+  ```
+
+- [ ] **Step 4：修改簡中檔 `res/values-zh/strings.xml`**
+
+  第 4 行 `<string name="app_name">诗歌本</string>` 改成 `<string name="app_name">诗歌</string>`。
+
+  第 299～301 行：
+
+  ```xml
+      <string name="locale_menu">应用界面语言</string>
+      <string name="locale_chinese">中文(简体)</string>
+      <string name="locale_english">English</string>
+  ```
+
+  改成下面這段。標示 `translatable="false"` 的字串只能放在預設的 `values/`，所以這裡要刪掉 `locale_chinese` 和 `locale_english`：
+
+  ```xml
+      <string name="locale_menu">应用界面语言</string>
+      <string name="locale_system">跟随系统</string>
+      <string name="lyrics_language_menu">歌词语言</string>
+      <string name="lyrics_default_title">歌词默认语言</string>
+      <string name="lyrics_follow_ui">跟随界面语言</string>
+      <string name="lyrics_simplified">简体</string>
+      <string name="lyrics_traditional">繁体</string>
+      <string name="hymn_no_chinese_lyrics">英文 #%1$d: 这首英文诗歌没有匹配的中文歌词</string>
+      <string name="update_none">无更新</string>
+  ```
+
+- [ ] **Step 5：Build 並檢查產生的 locale config**
+
+  Run: `./gradlew :hymnchtv:assembleDebug && find hymnchtv/build -name '*locale_config*' -path '*res*' | head -3`
+  Expected: BUILD SUCCESSFUL，而且找到產生出來的 `_generated_res_locale_config.xml`（或名稱相近的檔案）。
+
+  用 `cat` 查看內容，裡面應該要有 `en-US` 和 `zh`。如果 build 報錯說 `resources.properties` 和手寫的 locale config 衝突，代表 Step 1 的刪除沒有生效，回頭確認。
+
+- [ ] **Step 6：Lint 檢查翻譯**
+
+  Run: `./gradlew :hymnchtv:lintDebug`，然後執行：
+
+  ```bash
+  grep -E 'MissingTranslation|ExtraTranslation' hymnchtv/build/reports/lint-results-debug.txt | wc -l
+  ```
+
+  Expected: 數量小於或等於 Task 0 記錄的基準值。
+
+- [ ] **Step 7：在 API 34 模擬器上把系統語言設為簡中，跑一次冒煙測試**
+
+  Run: `./gradlew :hymnchtv:installDebug`
+
+  確認主頁、目錄、搜尋、歌詞頁仍然是簡中，而且字串和 v2.9.2 相同。這時語言切換的程式碼還沒改，只是確認資源搬移沒有造成字串遺失。
+
+- [ ] **Step 8：Commit**
+
+  ```bash
+  git add -A hymnchtv/src/main/res
+  git commit -m "refactor: make English the default resource locale, move Simplified Chinese to values-zh"
+  ```
+
+---
+
+### Task 8：繁中字串與資源解析測試
+
+**Files:**
+- Create: `hymnchtv/src/main/res/values-b+zh+Hant/strings.xml`
+- Create: `tools/gen_zh_hant.sh`
+- Create: `hymnchtv/src/androidTest/java/org/cog/hymnchtv/ResourceLocaleResolutionTest.kt`
+
+- [ ] **Step 1：先寫會失敗的 instrumented test**
+
+  ```kotlin
+  package org.cog.hymnchtv
+
+  import android.content.res.Configuration
+  import android.os.LocaleList
+  import androidx.test.ext.junit.runners.AndroidJUnit4
+  import androidx.test.platform.app.InstrumentationRegistry
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+  import org.junit.runner.RunWith
+
+  /** Verifies values / values-zh / values-b+zh+Hant are picked as designed (plan A.1.8). Run on API 24 and 34. */
+  @RunWith(AndroidJUnit4::class)
+  class ResourceLocaleResolutionTest {
+      private fun localeSystemString(tag: String): String {
+          val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+          val config = Configuration(ctx.resources.configuration)
+          config.setLocales(LocaleList.forLanguageTags(tag))
+          return ctx.createConfigurationContext(config).getString(R.string.locale_system)
+      }
+
+      @Test
+      fun simplifiedChineseLocales() {
+          listOf("zh-CN", "zh-SG", "zh-Hans").forEach {
+              assertThat(localeSystemString(it)).isEqualTo("跟随系统")
+          }
+      }
+
+      @Test
+      fun traditionalChineseLocales() {
+          listOf("zh-TW", "zh-HK", "zh-MO", "zh-Hant").forEach {
+              assertThat(localeSystemString(it)).isEqualTo("跟隨系統")
+          }
+      }
+
+      @Test
+      fun otherLocalesFallBackToEnglish() {
+          listOf("en-US", "ja-JP", "fr-FR").forEach {
+              assertThat(localeSystemString(it)).isEqualTo("Follow system")
+          }
+      }
+  }
+  ```
+
+- [ ] **Step 2：在 API 34 上執行，確認繁中測試失敗**
+
+  Run: `./gradlew :hymnchtv:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=org.cog.hymnchtv.ResourceLocaleResolutionTest`
+  Expected: `traditionalChineseLocales` 失敗，實際值是 `跟随系统`（因為還沒有繁中資源）；其他兩項通過。
+
+- [ ] **Step 3：新增產生腳本 `tools/gen_zh_hant.sh`**
+
+  ```bash
+  #!/usr/bin/env bash
+  # Regenerate the zh-Hant UI strings draft from Simplified Chinese. Output MUST be reviewed by hand.
+  set -euo pipefail
+  ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+  SRC="$ROOT/hymnchtv/src/main/res/values-zh/strings.xml"
+  DST_DIR="$ROOT/hymnchtv/src/main/res/values-b+zh+Hant"
+  command -v opencc >/dev/null || { echo "opencc not found: brew install opencc" >&2; exit 1; }
+  mkdir -p "$DST_DIR"
+  opencc -c s2twp.json -i "$SRC" -o "$DST_DIR/strings.xml"
+  echo "Draft written to $DST_DIR/strings.xml - review every changed term before committing."
+  ```
+
+  Run: `chmod +x tools/gen_zh_hant.sh && tools/gen_zh_hant.sh`
+  Expected: 產生 `values-b+zh+Hant/strings.xml`。
+
+- [ ] **Step 4：人工校對並固定用語**
+
+  1. `app_name` 改成 `<string name="app_name">詩歌</string>`。
+  2. 確認 `locale_system` 是 `跟隨系統`。
+  3. 列出 s2twp 做了詞彙替換（不只是字形轉換）的地方：
+
+     ```bash
+     diff <(opencc -c s2t.json -i hymnchtv/src/main/res/values-zh/strings.xml) hymnchtv/src/main/res/values-b+zh+Hant/strings.xml
+     ```
+
+     逐條判斷是否符合教會的慣用語。**以下詩歌本名稱必須維持原名，不能被替換**：
+     - 大本詩歌
+     - 補充本
+     - 新歌頌詠
+     - 新詩歌本
+     - 青年詩歌
+     - 兒童詩歌
+     - 教唱
+     - 唱詩
+     - 伴奏
+
+     如果被替換了，就改回 s2t 的結果。
+  4. 確認所有 `%1$d`、`\'`、`&#…;` 這類格式碼和跳脫字元都完整保留：
+
+     ```bash
+     diff <(grep -o '%[0-9]\$[sd]' hymnchtv/src/main/res/values-zh/strings.xml | sort) <(grep -o '%[0-9]\$[sd]' hymnchtv/src/main/res/values-b+zh+Hant/strings.xml | sort)
+     ```
+
+     Expected: 沒有任何輸出。
+  5. 把校對清單（原文 → s2t → 最終採用的寫法）存成 `docs/superpowers/plans/2026-10-02-zh-hant-terms.md`，在 PR 中請使用者確認。
+
+- [ ] **Step 5：在 API 34 和 API 24 上執行 instrumented test，確認通過**
+
+  Run（兩台模擬器各跑一次）：`./gradlew :hymnchtv:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=org.cog.hymnchtv.ResourceLocaleResolutionTest`
+  Expected: 3 個測試全部通過。
+
+  如果 API 24 上 zh-HK 或 zh-MO 落到 `values-zh`，就另外加 `values-zh-rHK/strings.xml` 和 `values-zh-rMO/strings.xml`，內容複製 `values-b+zh+Hant` 的版本，並在 `tools/gen_zh_hant.sh` 結尾加上 `cp` 指令，然後重跑測試。
+
+- [ ] **Step 6：Commit**
+
+  ```bash
+  git add tools/gen_zh_hant.sh hymnchtv/src/main/res/values-b+zh+Hant hymnchtv/src/androidTest docs/superpowers/plans/2026-10-02-zh-hant-terms.md
+  git commit -m "feat: add Traditional Chinese UI strings and resource resolution test"
+  ```
+
+---
+
+### Task 9：LocaleStore、PrefsMigrator，以及 HymnsApp／BaseActivity 的整合
+
+**Files:**
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleStore.kt`
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/locale/PrefsMigrator.kt`
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/HymnsApp.java:100-166`
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/BaseActivity.java:36-47`
+- Delete: `hymnchtv/src/main/java/org/cog/hymnchtv/utils/LocaleHelper.java`
+
+這個 task 的程式碼都在 Android 邊界，所以不寫 JVM 測試。判斷規則已經在 Task 2、3、5 測過，這裡由 Task 15 的手動測試驗證。
+
+- [ ] **Step 1：新增 `LocaleStore.kt`**
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  import android.app.LocaleManager
+  import android.content.Context
+  import android.content.SharedPreferences
+  import android.content.res.Configuration
+  import android.os.Build
+  import android.os.LocaleList
+  import androidx.annotation.RequiresApi
+
+  /**
+   * Single source of truth for the UI language, chosen per API level (plan A.1.2):
+   * API 33+ uses the framework per-app locale (shared with Settings > App languages);
+   * API < 33 uses PREF_LOCALE and a wrapped context.
+   */
+  object LocaleStore {
+      /** Same values as MainActivity.PREF_SETTINGS / PREF_LOCALE; duplicated to keep this class Android-light. */
+      const val PREF_SETTINGS = "Settings"
+      const val PREF_LOCALE = "Locale"
+
+      @JvmStatic
+      fun prefs(context: Context): SharedPreferences = context.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+
+      @JvmStatic
+      fun current(context: Context): AppLanguage =
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+              AppLanguage.fromFrameworkTags(frameworkTags(context))
+          } else {
+              AppLanguage.fromPref(prefs(context).getString(PREF_LOCALE, null)) ?: AppLanguage.SYSTEM
+          }
+
+      /** @return true when the caller must restart the process to apply it (API < 33 only). */
+      @JvmStatic
+      fun set(context: Context, language: AppLanguage): Boolean {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+              setFramework(context, language)
+              return false
+          }
+          prefs(context).edit().putString(PREF_LOCALE, language.prefValue).commit()
+          return true
+      }
+
+      /** API 33+: never wrap, the framework applies the locale. API < 33: wrap only for an explicit choice. */
+      @JvmStatic
+      fun wrap(base: Context): Context {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return base
+          val locale = current(base).toLocale() ?: return base
+          val config = Configuration(base.resources.configuration)
+          config.setLocale(locale)
+          config.setLayoutDirection(locale)
+          return base.createConfigurationContext(config)
+      }
+
+      @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+      @JvmStatic
+      fun frameworkTags(context: Context): List<String> {
+          val locales = context.getSystemService(LocaleManager::class.java).applicationLocales
+          return (0 until locales.size()).map { locales[it].toLanguageTag() }
+      }
+
+      @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+      private fun setFramework(context: Context, language: AppLanguage) {
+          val locales = language.tag?.let { LocaleList.forLanguageTags(it) } ?: LocaleList.getEmptyLocaleList()
+          context.getSystemService(LocaleManager::class.java).applicationLocales = locales
+      }
+  }
+  ```
+
+- [ ] **Step 2：新增 `PrefsMigrator.kt`**
+
+  ```kotlin
+  package org.cog.hymnchtv.locale
+
+  import android.content.Context
+  import android.content.pm.PackageManager
+  import android.os.Build
+  import org.cog.hymnchtv.ContentView
+  import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy
+  import org.cog.hymnchtv.lyrics.LyricsMigration
+  import timber.log.Timber
+
+  /** Runs each one-time preference migration exactly once, each guarded by its own key (plan A.1.3). */
+  object PrefsMigrator {
+      private const val KEY_LOCALE_FRAMEWORK_PUSH = "migr.locale.v1.framework"
+
+      /** Must run in HymnsApp.attachBaseContext before LocaleStore.wrap(); needs only prefs + PackageManager. */
+      @JvmStatic
+      fun migrate(context: Context) {
+          val prefs = LocaleStore.prefs(context)
+          if (!prefs.getBoolean(LocaleMigration.KEY, false)) {
+              val target = LocaleMigration.target(prefs.getString(LocaleStore.PREF_LOCALE, null), isUpgrade(context))
+              prefs.edit()
+                  .putString(LocaleStore.PREF_LOCALE, target.prefValue)
+                  .putBoolean(LocaleMigration.KEY, true)
+                  .commit()
+          }
+          if (!prefs.getBoolean(LyricsMigration.KEY, false)) {
+              val simplify = if (prefs.contains(ContentView.PREF_SIMPLIFY)) prefs.getBoolean(ContentView.PREF_SIMPLIFY, true) else null
+              val result = LyricsMigration.plan(simplify, prefs.getString(ContentView.PREF_CONVERSION_TYPE, null))
+              val editor = prefs.edit().putString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, result.defaultLang.name)
+              if (result.dropConversionType) editor.remove(ContentView.PREF_CONVERSION_TYPE)
+              editor.putBoolean(LyricsMigration.KEY, true).commit()
+          }
+      }
+
+      /** API 33+ only, from HymnsApp.onCreate: hand the migrated choice to the framework once, never overriding it. */
+      @JvmStatic
+      fun pushLocaleToFramework(context: Context) {
+          if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+          val prefs = LocaleStore.prefs(context)
+          if (prefs.getBoolean(KEY_LOCALE_FRAMEWORK_PUSH, false)) return
+          val target = AppLanguage.fromPref(prefs.getString(LocaleStore.PREF_LOCALE, null)) ?: AppLanguage.SYSTEM
+          if (target != AppLanguage.SYSTEM && LocaleStore.frameworkTags(context).isEmpty()) {
+              LocaleStore.set(context, target)
+          }
+          prefs.edit().putBoolean(KEY_LOCALE_FRAMEWORK_PUSH, true).commit()
+      }
+
+      private fun isUpgrade(context: Context): Boolean = try {
+          val info = context.packageManager.getPackageInfo(context.packageName, 0)
+          info.firstInstallTime != info.lastUpdateTime
+      } catch (e: PackageManager.NameNotFoundException) {
+          Timber.w(e, "Cannot read own package info; treating as fresh install")
+          false
+      }
+  }
+  ```
+
+- [ ] **Step 3：修改 `HymnsApp.attachBaseContext`（`HymnsApp.java:151-166`）**
+
+  整個方法換成：
+
+  ```java
+      /**
+       * Run preference migrations first, then apply the UI language: wrapped only on API < 33 for an explicit choice.
+       */
+      @Override
+      protected void attachBaseContext(Context base) {
+          PrefsMigrator.migrate(base);
+          mInstance = LocaleStore.wrap(base);
+          super.attachBaseContext(mInstance);
+      }
+  ```
+
+  import 的調整：
+  - 刪除 `import org.cog.hymnchtv.utils.LocaleHelper;`、`import static org.cog.hymnchtv.MainActivity.PREF_LOCALE;`
+  - 如果 `SharedPreferences` 和 `PREF_SETTINGS` 不再被使用，也一起刪除。
+  - 新增 `import org.cog.hymnchtv.locale.LocaleStore;`、`import org.cog.hymnchtv.locale.PrefsMigrator;`
+
+- [ ] **Step 4：修改 `HymnsApp.onCreate`，在 `super.onCreate();`（第 124 行）之後加一行**
+
+  ```java
+          PrefsMigrator.pushLocaleToFramework(this);
+  ```
+
+- [ ] **Step 5：修改 `BaseActivity.attachBaseContext`（`BaseActivity.java:36-47`）**
+
+  ```java
+      /**
+       * Override AppCompatActivity#attachBaseContext() to support Locale setting; re-evaluated on every recreation.
+       */
+      @Override
+      protected void attachBaseContext(Context base) {
+          super.attachBaseContext(LocaleStore.wrap(base));
+      }
+  ```
+
+  import 改成 `import org.cog.hymnchtv.locale.LocaleStore;`，並刪除 `LocaleHelper` 的 import。
+
+- [ ] **Step 6：刪除 LocaleHelper**
+
+  Run: `git rm hymnchtv/src/main/java/org/cog/hymnchtv/utils/LocaleHelper.java`
+
+  `MainActivity` 還在引用它，會在 Task 10 一起修掉。這一步之後先不要 build，直接進行 Task 10，兩個 task 合併成一個 commit。
+
+---
+
+### Task 10：MainActivity 的選單、語言切換與狀態保存
+
+**Files:**
+- Modify: `hymnchtv/src/main/res/menu/menu_main.xml`（`appLanguage` 和 `appLocale` 兩個 item）
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java`（第 806-818、1055-1078、1233-1238 行，`onCreate`）
+
+- [ ] **Step 1：修改 `menu_main.xml`**
+
+  把下面這段：
+
+  ```xml
+      <item
+          android:id="@+id/appLanguage"
+          android:title="@string/locale_menu" />
+      <item
+          android:id="@+id/appLocale"
+          android:title="@string/locale_menu">
+          <menu>
+              <item
+                  android:id="@+id/localeChinese"
+                  android:title="@string/locale_chinese" />
+              <item
+                  android:id="@+id/localeEnglish"
+                  android:title="@string/locale_english" />
+          </menu>
+      </item>
+  ```
+
+  換成：
+
+  ```xml
+      <item
+          android:id="@+id/appLocale"
+          android:title="@string/locale_menu">
+          <menu>
+              <group android:checkableBehavior="single">
+                  <item
+                      android:id="@+id/localeSystem"
+                      android:title="@string/locale_system" />
+                  <item
+                      android:id="@+id/localeChinese"
+                      android:title="@string/locale_chinese" />
+                  <item
+                      android:id="@+id/localeChineseHant"
+                      android:title="@string/locale_chinese_hant" />
+                  <item
+                      android:id="@+id/localeEnglish"
+                      android:title="@string/locale_english" />
+              </group>
+          </menu>
+      </item>
+      <item
+          android:id="@+id/lyricsLanguage"
+          android:title="@string/lyrics_language_menu" />
+  ```
+
+- [ ] **Step 2：修改 `onOptionsItemSelected`（約第 806-818 行）**
+
+  把下面這段：
+
+  ```java
+          else if (itemId == R.id.appLanguage) {
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                  setLanguage();
+              }
+              return true;
+          }
+          else if (itemId == R.id.localeChinese) {
+              setAppLocale(LocaleHelper.LocaleChinese);
+              return true;
+          }
+          else if (itemId == R.id.localeEnglish) {
+              setAppLocale(LocaleHelper.LocaleEnglish);
+              return true;
+  ```
+
+  換成（原本接在後面的 `// === Set font size ===` 註解和 `}` 保持不動）：
+
+  ```java
+          else if (itemId == R.id.localeSystem) {
+              setAppLocale(AppLanguage.SYSTEM);
+              return true;
+          }
+          else if (itemId == R.id.localeChinese) {
+              setAppLocale(AppLanguage.ZH_HANS);
+              return true;
+          }
+          else if (itemId == R.id.localeChineseHant) {
+              setAppLocale(AppLanguage.ZH_HANT);
+              return true;
+          }
+          else if (itemId == R.id.lyricsLanguage) {
+              startActivity(new Intent(this, ChineseS2TSelection.class));
+              return true;
+          }
+          else if (itemId == R.id.localeEnglish) {
+              setAppLocale(AppLanguage.EN);
+              return true;
+  ```
+
+- [ ] **Step 3：改寫 `initLanguage`，並刪除 `setLanguage`（第 1055-1078 行）**
+
+  把 `initLanguage(Menu menu)` 整個方法，以及它下面的 `setLanguage()` 方法（連同上面的 `@RequiresApi` annotation，如果有的話），換成：
+
+  ```java
+      /**
+       * Check the menu item of the current UI language; called on every menu creation so it follows recreation.
+       */
+      private void initLanguage(Menu menu) {
+          int checkedId;
+          switch (LocaleStore.current(this)) {
+              case ZH_HANS:
+                  checkedId = R.id.localeChinese;
+                  break;
+              case ZH_HANT:
+                  checkedId = R.id.localeChineseHant;
+                  break;
+              case EN:
+                  checkedId = R.id.localeEnglish;
+                  break;
+              default:
+                  checkedId = R.id.localeSystem;
+                  break;
+          }
+          MenuItem item = menu.findItem(checkedId);
+          if (item != null) {
+              item.setChecked(true);
+          }
+      }
+  ```
+
+- [ ] **Step 4：改寫 `setAppLocale`（第 1233-1238 行）**
+
+  ```java
+      private void setAppLocale(AppLanguage language) {
+          if (language == LocaleStore.current(this)) {
+              return;
+          }
+          // API 33+: framework applies it and recreates activities; API < 33: restart to re-wrap HymnsApp context
+          if (LocaleStore.set(this, language)) {
+              doRestart();
+          }
+      }
+  ```
+
+- [ ] **Step 5：保存主頁輸入到一半的編號**
+
+  在 `onResume()` 方法之前新增：
+
+  ```java
+      private static final String STATE_NUMBER = "state_number";
+      private static final String STATE_IS_FU = "state_is_fu";
+
+      @Override
+      protected void onSaveInstanceState(@NonNull Bundle outState) {
+          super.onSaveInstanceState(outState);
+          outState.putString(STATE_NUMBER, sNumber);
+          outState.putBoolean(STATE_IS_FU, isFu);
+      }
+  ```
+
+  在 `onCreate` 中 `initButton();` 這一行之後插入：
+
+  ```java
+          if (savedInstanceState != null) {
+              sNumber = savedInstanceState.getString(STATE_NUMBER, "");
+              isFu = savedInstanceState.getBoolean(STATE_IS_FU, false);
+              mEntry.setText(sNumber);
+          }
+  ```
+
+  注意：`onResume` 會把 `autoClear` 設成 true，所以還原後的編號會照常顯示，也可以直接按詩歌本按鈕開啟；但如果使用者接著按數字鍵，就會從頭重新輸入。這和目前「從其他畫面返回主頁」的行為一致，屬於預期行為。
+
+- [ ] **Step 6：整理 import**
+
+  - 刪除 `import org.cog.hymnchtv.utils.LocaleHelper;`。
+  - 新增：
+
+    ```java
+    import org.cog.hymnchtv.locale.AppLanguage;
+    import org.cog.hymnchtv.locale.LocaleStore;
+    import org.cog.hymnchtv.utils.ChineseS2TSelection;
+    ```
+
+  - 如果已經 import 過 `ChineseS2TSelection`，就不要重複加。
+  - 如果 `Settings`（`android.provider.Settings`）不再被使用，就刪掉它的 import；用 `grep -n 'Settings\.' MainActivity.java` 確認。
+
+- [ ] **Step 7：Build 並執行全部單元測試**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug`
+  Expected: BUILD SUCCESSFUL。
+
+  用 `grep -rn LocaleHelper hymnchtv/src` 確認，應該沒有任何輸出。
+
+- [ ] **Step 8：快速手動驗證（API 34）**
+
+  1. 安裝後從選單切換到「繁體中文」，介面要立刻變成繁中（Activity 會重建），而且選單上打勾的是「繁體中文」。
+  2. 到「設定 → 應用程式 → 詩歌 → 語言」，顯示的應該是繁體中文。
+  3. 在系統設定頁改成 English，回到 app 後是英文介面，選單打勾的是 English。
+
+- [ ] **Step 9：Commit（包含 Task 9 和 Task 10）**
+
+  ```bash
+  git add -A hymnchtv/src/main/java hymnchtv/src/main/res/menu/menu_main.xml
+  git commit -m "feat: per-API locale source of truth with zh-Hant and system language page support"
+  ```
+
+---
+
+### Task 11：ChineseS2TSelection 新增歌詞預設語言並處理非法值
+
+**Files:**
+- Modify: `hymnchtv/src/main/res/layout/chinese_t2s_selection.xml`（在第 8 行 `<TextView`（STD 標題）之前插入）
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/utils/ChineseS2TSelection.java`
+
+- [ ] **Step 1：在 layout 中加入歌詞預設語言區塊**
+
+  插在原本 `android:text="@string/STD"` 那個 `TextView` 之前：
+
+  ```xml
+      <TextView
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginBottom="5dp"
+          android:textStyle="bold"
+          android:textSize="20sp"
+          android:text="@string/lyrics_default_title" />
+
+      <RadioGroup
+          android:id="@+id/radioGroupLyricsDefault"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="10dp"
+          android:layout_marginBottom="20dp">
+
+          <RadioButton
+              android:id="@+id/radioLyricsFollowUi"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/lyrics_follow_ui" />
+
+          <RadioButton
+              android:id="@+id/radioLyricsSimplified"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/lyrics_simplified" />
+
+          <RadioButton
+              android:id="@+id/radioLyricsTraditional"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/lyrics_traditional" />
+      </RadioGroup>
+  ```
+
+  同時刪掉 `radioButtonS2T` 上的 `android:checked="true"`，改由程式碼決定要勾選哪一個。
+
+- [ ] **Step 2：修改 `ChineseS2TSelection.java`**
+
+  新增欄位（放在 `mConversionType` 下面）：
+
+  ```java
+      private LyricsLang mLyricsLang;
+  ```
+
+  `onCreate` 中第 52-59 行，原本是：
+
+  ```java
+          mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
+          String cType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, ConversionType.S2T.toString());
+          // mConversionType = Enum.valueOf(ConversionType.class, cType);
+          checkRadioButton(cType);
+
+          // Only enable OnCheckedChangeListener only after checkRadioButton()
+          RadioGroup radioGroup = findViewById(R.id.radioGroupVar);
+          radioGroup.setOnCheckedChangeListener(this);
+  ```
+
+  換成：
+
+  ```java
+          mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
+          Locale uiLocale = getResources().getConfiguration().getLocales().get(0);
+          String rawType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, null);
+          mConversionType = LyricsLanguagePolicy.parseConversion(rawType, uiLocale);
+          if (rawType != null && !LyricsLanguagePolicy.isValidConversion(rawType)) {
+              // Self-heal a corrupted value so other readers never see it again
+              mSharedPref.edit().putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.name()).apply();
+          }
+          checkRadioButton(mConversionType);
+
+          mLyricsLang = LyricsLang.fromPref(mSharedPref.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null));
+          checkLyricsLangButton(mLyricsLang);
+
+          // Only enable OnCheckedChangeListener after the initial check states are set
+          ((RadioGroup) findViewById(R.id.radioGroupVar)).setOnCheckedChangeListener(this);
+          ((RadioGroup) findViewById(R.id.radioGroupLyricsDefault)).setOnCheckedChangeListener(this);
+  ```
+
+  整個 `checkRadioButton(String cType)` 方法換成下面兩個方法：
+
+  ```java
+      private void checkRadioButton(ConversionType type) {
+          int id;
+          switch (type) {
+              case S2HK:
+                  id = R.id.radioButtonS2HK;
+                  break;
+              case S2TW:
+                  id = R.id.radioButtonS2TW;
+                  break;
+              case S2TWP:
+                  id = R.id.radioButtonS2TWP;
+                  break;
+              default:
+                  id = R.id.radioButtonS2T;
+                  break;
+          }
+          ((RadioButton) findViewById(id)).setChecked(true);
+      }
+
+      private void checkLyricsLangButton(LyricsLang lang) {
+          int id;
+          switch (lang) {
+              case SIMPLIFIED:
+                  id = R.id.radioLyricsSimplified;
+                  break;
+              case TRADITIONAL:
+                  id = R.id.radioLyricsTraditional;
+                  break;
+              default:
+                  id = R.id.radioLyricsFollowUi;
+                  break;
+          }
+          ((RadioButton) findViewById(id)).setChecked(true);
+      }
+  ```
+
+  `onCheckedChanged` 中 `if (null != rb) {` 區塊的開頭插入下面這段，處理歌詞預設語言的 RadioGroup：
+
+  ```java
+              if (group.getId() == R.id.radioGroupLyricsDefault) {
+                  if (checkedId == R.id.radioLyricsSimplified) {
+                      mLyricsLang = LyricsLang.SIMPLIFIED;
+                  }
+                  else if (checkedId == R.id.radioLyricsTraditional) {
+                      mLyricsLang = LyricsLang.TRADITIONAL;
+                  }
+                  else {
+                      mLyricsLang = LyricsLang.FOLLOW_UI;
+                  }
+                  return;
+              }
+  ```
+
+  `updateS2TSelection` 中原本的：
+
+  ```java
+              editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.toString());
+  ```
+
+  換成：
+
+  ```java
+              editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.name());
+              editor.putString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, mLyricsLang.name());
+  ```
+
+  新增 import：
+
+  ```java
+  import java.util.Locale;
+  import org.cog.hymnchtv.lyrics.LyricsLang;
+  import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+  ```
+
+- [ ] **Step 3：Build**
+
+  Run: `./gradlew :hymnchtv:assembleDebug`
+  Expected: BUILD SUCCESSFUL。
+
+- [ ] **Step 4：手動驗證非法值不會當機**
+
+  ```bash
+  adb shell am force-stop org.cog.hymnchtv
+  adb shell "run-as org.cog.hymnchtv sed -i 's#<string name=\"ConversionType\">[^<]*#<string name=\"ConversionType\">BOGUS#' shared_prefs/Settings.xml"
+  ```
+
+  `ConversionType` 這個 key 如果還不存在，先在 app 裡選一次轉換標準，再執行上面的指令。
+
+  接著從主選單開啟「歌詞語言」：畫面要正常顯示，而且勾選的是預設的轉換標準（簡中介面是 S2TW）。用 `run-as ... cat shared_prefs/Settings.xml` 確認，`ConversionType` 應該已經被修正成合法值。
+
+- [ ] **Step 5：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/res/layout/chinese_t2s_selection.xml hymnchtv/src/main/java/org/cog/hymnchtv/utils/ChineseS2TSelection.java
+  git commit -m "feat: add default lyrics language setting and self-heal invalid conversion type"
+  ```
+
+---
+
+### Task 12：歌詞頁接上新規則，加上螢幕常亮與狀態保存
+
+**Files:**
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/ContentHandler.java`（欄位區、第 229-313 行、第 1214 行）
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/ContentView.java`（第 105、124、188-189、207 之後、250-260、563、600-604 行）
+
+- [ ] **Step 1：在 `ContentHandler` 加入歌詞 override 欄位與狀態 key**
+
+  加在欄位區，緊接在 `private LinearLayout mWebView;`（第 227 行）之後：
+
+  ```java
+      /** Per-session lyrics script chosen with button_ts; null = use the default from LyricsLanguagePolicy. */
+      public Boolean lyricsViewOverride = null;
+
+      private static final String STATE_PAGE = "state_page";
+      private static final String STATE_LYRICS_OVERRIDE = "state_lyrics_override"; // -1 none, 0 simplified, 1 traditional
+  ```
+
+- [ ] **Step 2：在 `ContentHandler.onCreate` 還原狀態**
+
+  在第 230 行 `super.onCreate(savedInstanceState);` **之前**插入。這個時間點早於 Fragment 重建：
+
+  ```java
+          if (savedInstanceState != null) {
+              int saved = savedInstanceState.getInt(STATE_LYRICS_OVERRIDE, -1);
+              lyricsViewOverride = (saved == -1) ? null : (saved == 1);
+          }
+  ```
+
+  把第 297-302 行：
+
+  ```java
+          if (hymnIdx != -1)
+              mPager.setCurrentItem(hymnIdx, false);
+          else
+              mPager.setCurrentItem(mHymnNo, false);
+  ```
+
+  換成：
+
+  ```java
+          if (savedInstanceState != null && savedInstanceState.containsKey(STATE_PAGE))
+              mPager.setCurrentItem(savedInstanceState.getInt(STATE_PAGE), false);
+          else if (hymnIdx != -1)
+              mPager.setCurrentItem(hymnIdx, false);
+          else
+              mPager.setCurrentItem(mHymnNo, false);
+  ```
+
+- [ ] **Step 3：新增 `onSaveInstanceState`，並在 `onResume`／`onPause` 處理螢幕常亮**
+
+  `onResume` 改成：
+
+  ```java
+      @Override
+      protected void onResume() {
+          super.onResume();
+          onUserLeaveHint = false;
+          showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait);
+          // Keep the screen on while lyrics/score are shown (plan A.1.7); window-level so pager changes never drop it
+          getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+      }
+
+      @Override
+      protected void onPause() {
+          getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+          super.onPause();
+      }
+
+      @Override
+      protected void onSaveInstanceState(@NonNull Bundle outState) {
+          super.onSaveInstanceState(outState);
+          outState.putInt(STATE_PAGE, mPager.getCurrentItem());
+          outState.putInt(STATE_LYRICS_OVERRIDE, lyricsViewOverride == null ? -1 : (lyricsViewOverride ? 1 : 0));
+      }
+  ```
+
+  如果還沒有 import，就加上 `import android.view.WindowManager;` 和 `import androidx.annotation.NonNull;`。
+
+- [ ] **Step 4：把寫死的字串移到資源檔（`ContentHandler.java:1214`）**
+
+  ```java
+              return String.format(Locale.CHINA, "英文 #%d: 这首英文诗歌没有匹配的中文歌词", mHymnNoEng);
+  ```
+
+  改成：
+
+  ```java
+              return getString(R.string.hymn_no_chinese_lyrics, mHymnNoEng);
+  ```
+
+- [ ] **Step 5：修改 `ContentView`**
+
+  (a) 刪除欄位 `private boolean isSimplify;`（第 124 行）。
+
+  (b) 第 105 行 `PREF_SIMPLIFY` 的上方加上註解：
+
+  ```java
+      /** Legacy: read only by PrefsMigrator (migr.lyrics.v1); replaced by LyricsLanguagePolicy.PREF_LYRICS_DEFAULT. */
+  ```
+
+  (c) 第 188-189 行：
+
+  ```java
+          isSimplify = mSharedPref.getBoolean(PREF_SIMPLIFY, true);
+          mConversionType = ConversionType.valueOf(mSharedPref.getString(PREF_CONVERSION_TYPE, ConversionType.S2T.toString()));
+  ```
+
+  換成：
+
+  ```java
+          mConversionType = LyricsLanguagePolicy.parseConversion(mSharedPref.getString(PREF_CONVERSION_TYPE, null), uiLocale());
+  ```
+
+  (d) 在 `onResume()` 裡，`registerForContextMenu(lyricsView);` 之後加上：
+
+  ```java
+          // ViewPager2 only resumes the visible page: re-apply a button_ts toggle made on another page
+          if (!hasEnglishLyrics) {
+              toggleLyricsView();
+          }
+  ```
+
+  (e) `onClick` 裡原本的：
+
+  ```java
+              if (!hasEnglishLyrics) {
+                  isSimplify = !isSimplify;
+                  mEditor.putBoolean(PREF_SIMPLIFY, isSimplify);
+                  mEditor.apply();
+              }
+  ```
+
+  換成：
+
+  ```java
+              if (!hasEnglishLyrics) {
+                  // Session-only toggle; the persisted default is set in ChineseS2TSelection
+                  mContentHandler.lyricsViewOverride = !isShowTraditional();
+              }
+  ```
+
+  (f) `toggleLyricsView()` 裡的 `if (isSimplify) {` 改成 `if (!isShowTraditional()) {`。
+
+  (g) `mStartForResult` 裡原本的：
+
+  ```java
+                  if (!isSimplify && hasChanges) {
+                      mConversionType = ConversionType.valueOf(mSharedPref.getString(PREF_CONVERSION_TYPE, ConversionType.S2T.toString()));
+                      toggleLyricsView();
+                  }
+  ```
+
+  換成：
+
+  ```java
+                  if (hasChanges) {
+                      // New default and/or conversion standard: drop the session toggle and rebuild all pages
+                      mContentHandler.lyricsViewOverride = null;
+                      mContentHandler.recreate();
+                  }
+  ```
+
+  (h) 在 `toggleLyricsView()` 方法之後新增兩個輔助方法：
+
+  ```java
+      private boolean isShowTraditional() {
+          Boolean override = mContentHandler.lyricsViewOverride;
+          if (override != null) {
+              return override;
+          }
+          LyricsLang pref = LyricsLang.fromPref(mSharedPref.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null));
+          return LyricsLanguagePolicy.resolveShowTraditional(pref, uiLocale());
+      }
+
+      private Locale uiLocale() {
+          return mContentHandler.getResources().getConfiguration().getLocales().get(0);
+      }
+  ```
+
+  (i) 新增 import：
+
+  ```java
+  import java.util.Locale;
+  import org.cog.hymnchtv.lyrics.LyricsLang;
+  import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+  ```
+
+  已經 import 過的就不要重複加。
+
+- [ ] **Step 6：Build 並執行全部單元測試**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug`
+  Expected: BUILD SUCCESSFUL。
+
+  用 `grep -n 'isSimplify' hymnchtv/src/main/java/org/cog/hymnchtv/ContentView.java` 確認，應該沒有任何輸出。
+
+- [ ] **Step 7：手動驗證**
+
+  在 API 34、介面為繁中的情況下操作：
+  1. 開啟大本 1，歌詞應該是繁體。
+  2. 按「簡／繁」切成簡體，左右翻頁，其他頁面也要維持簡體。
+  3. 返回主頁再重新開啟，歌詞應該回到繁體。
+  4. 停在歌詞頁不動，超過系統的螢幕逾時時間，螢幕不能熄滅。
+  5. 回到主頁後，螢幕要恢復正常的逾時行為。
+
+- [ ] **Step 8：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/ContentHandler.java hymnchtv/src/main/java/org/cog/hymnchtv/ContentView.java
+  git commit -m "feat: lyrics follow default language with session toggle, keep screen on, preserve page on recreate"
+  ```
+
+---
+
+### Task 13：搜尋改用 SearchPattern，並處理剩下的寫死字串
+
+**Files:**
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/ContentSearch.java:93-97, 110-244, 305-322`
+- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/service/androidupdate/UpdateServiceImpl.java:156`
+- Modify: `hymnchtv/src/main/res/layout/hymn_toc_list_item.xml:26`、`hymn_toc_list_group.xml:23`
+
+- [ ] **Step 1：在 `ContentSearch.onCreate` 建立 pattern**
+
+  第 95-97 行：
+
+  ```java
+          String searchString = getIntent().getExtras().getString(ATTR_SEARCH);
+          if (TextUtils.isEmpty((searchString)))
+              return;
+  ```
+
+  換成：
+
+  ```java
+          String searchString = getIntent().getExtras().getString(ATTR_SEARCH);
+          Pattern searchPattern = SearchPattern.build(searchString);
+          if (searchPattern == null) {
+              HymnsApp.showToastMessage(R.string.error_search_empty);
+              finish();
+              return;
+          }
+  ```
+
+- [ ] **Step 2：替換 6 個呼叫點，並修改方法簽名**
+
+  Run:
+
+  ```bash
+  sed -i '' 's/getMatchResult(fname, searchString)/getMatchResult(fname, searchPattern)/' hymnchtv/src/main/java/org/cog/hymnchtv/ContentSearch.java
+  grep -c 'getMatchResult(fname, searchPattern)' hymnchtv/src/main/java/org/cog/hymnchtv/ContentSearch.java
+  ```
+
+  Expected: `6`。
+
+  把 `getMatchResult` 的簽名和 javadoc 改成：
+
+  ```java
+       * @param pattern the literal search pattern built by SearchPattern (compiled once per search)
+       ...
+      private String getMatchResult(String fName, Pattern pattern) {
+  ```
+
+  然後刪除第 321 行 `Pattern pattern = Pattern.compile(sString.replace("他", "[祂|他]"));`。
+
+  新增 import `import org.cog.hymnchtv.search.SearchPattern;`。如果 `TextUtils` 不再被使用，就刪掉它的 import。
+
+- [ ] **Step 3：處理 `UpdateServiceImpl.java:156`**
+
+  ```java
+                  String historyText = "&#9210; 无更新";
+  ```
+
+  改成：
+
+  ```java
+                  String historyText = "&#9210; " + context.getString(R.string.update_none);
+  ```
+
+  同一個方法前面幾行已經有 `Context context = HymnsApp.getInstance();`，可以直接用。
+
+- [ ] **Step 4：layout 的範例文字改成 `tools:text`**
+
+  `HymnTocExpandableListAdapter.java` 第 68 行和第 103 行一定會呼叫 `setText`，已經確認過。
+
+  - `hymn_toc_list_item.xml:26`：把 `android:text="联于他死与复活"` 改成 `tools:text="联于他死与复活"`。
+  - `hymn_toc_list_group.xml:23`：把 `android:text="得救的证实与快乐"` 改成 `tools:text="得救的证实与快乐"`。
+  - 如果根元素還沒有 `xmlns:tools="http://schemas.android.com/tools"`，就加上。
+
+- [ ] **Step 5：Build 並執行全部單元測試**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug`
+  Expected: BUILD SUCCESSFUL。
+
+- [ ] **Step 6：手動驗證搜尋**
+
+  分別搜尋以下內容：
+  - `(`、`[`、`*`：都不能當機，正常顯示「沒有結果」或結果清單。
+  - 「跟随他」：要能找到含「祂」的歌詞。
+  - 繁體「恩典」：要能找到結果，因為查詢字串會先轉成簡體。
+
+- [ ] **Step 7：Commit**
+
+  ```bash
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/ContentSearch.java hymnchtv/src/main/java/org/cog/hymnchtv/service/androidupdate/UpdateServiceImpl.java hymnchtv/src/main/res/layout/hymn_toc_list_item.xml hymnchtv/src/main/res/layout/hymn_toc_list_group.xml
+  git commit -m "fix: treat search input literally and move remaining UI strings to resources"
+  ```
+
+---
+
+### Task 14：補上 Task 13 新增字串的繁中翻譯
+
+**Files:**
+- Modify: `hymnchtv/src/main/res/values-b+zh+Hant/strings.xml`
+
+Task 8 產生繁中初稿時，Task 7 新增的字串已經在 `values-zh` 裡，所以已經被一起轉換。這個 task 只做確認。
+
+- [ ] **Step 1：確認以下 key 都存在，而且值正確**
+
+  Run:
+
+  ```bash
+  grep -E 'name="(locale_system|lyrics_language_menu|lyrics_default_title|lyrics_follow_ui|lyrics_simplified|lyrics_traditional|hymn_no_chinese_lyrics|update_none|app_name)"' hymnchtv/src/main/res/values-b+zh+Hant/strings.xml
+  ```
+
+  Expected: 9 行，值依序為：
+
+  | key | 值 |
+  |---|---|
+  | `app_name` | 詩歌 |
+  | `locale_system` | 跟隨系統 |
+  | `lyrics_language_menu` | 歌詞語言 |
+  | `lyrics_default_title` | 歌詞預設語言 |
+  | `lyrics_follow_ui` | 跟隨介面語言 |
+  | `lyrics_simplified` | 簡體 |
+  | `lyrics_traditional` | 繁體 |
+  | `hymn_no_chinese_lyrics` | 英文 #%1$d: 這首英文詩歌沒有對應的中文歌詞 |
+  | `update_none` | 無更新 |
+
+  不符合的就手動修正。
+
+- [ ] **Step 2：確認繁中檔裡沒有不該出現的 key**
+
+  繁中檔不能含有 `locale_chinese`、`locale_chinese_hant`、`locale_english`，因為它們是 `translatable="false"`。
+
+  Run: `grep -cE 'name="locale_(chinese|chinese_hant|english)"' hymnchtv/src/main/res/values-b+zh+Hant/strings.xml`
+  Expected: `0`。
+
+- [ ] **Step 3：Lint**
+
+  Run: `./gradlew :hymnchtv:lintDebug`，然後執行：
+
+  ```bash
+  grep -E 'MissingTranslation|ExtraTranslation|HardcodedText' hymnchtv/build/reports/lint-results-debug.txt | wc -l
+  ```
+
+  Expected: 小於或等於 Task 0 記錄的基準值。
+
+- [ ] **Step 4：Commit（如果有修改）**
+
+  ```bash
+  git add hymnchtv/src/main/res/values-b+zh+Hant/strings.xml
+  git commit -m "fix: finalize zh-Hant strings for new UI entries"
+  ```
+
+---
+
+### Task 15：完整驗證（spec A.3）與審查
+
+**Files:** 無程式碼變更。驗證結果記錄在 PR 描述中。
+
+- [ ] **Step 1：自動化檢查**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug :hymnchtv:lintDebug`
+  Expected: 全部通過，lint 的翻譯類警告不能比基準值多。
+
+  再分別在兩台模擬器上執行 `./gradlew :hymnchtv:connectedDebugAndroidTest`，在 API 24 和 API 34 上都要全部通過。
+
+- [ ] **Step 2：全新安裝的語言（API 24、API 34 各跑一次）**
+
+  每一種系統語言都先執行 `adb uninstall org.cog.hymnchtv`，再 `./gradlew :hymnchtv:installDebug` 重新安裝。
+
+  | 系統語言 | 預期的介面 |
+  |---|---|
+  | zh-TW | 繁中 |
+  | zh-HK | 繁中 |
+  | zh-CN | 簡中 |
+  | en-US | 英文 |
+  | ja-JP | 英文 |
+
+  同時確認選單上打勾的是「跟隨系統」。
+
+- [ ] **Step 3：升級路徑**
+
+  1. `adb uninstall org.cog.hymnchtv && adb install /tmp/hymnchtv-v292-debug.apk`，開啟一次，什麼設定都不改，然後 `./gradlew :hymnchtv:installDebug`。
+     預期：介面是簡中，選單打勾的是「简体中文」。在 API 34 上，系統設定頁也顯示簡體中文。
+  2. 重新安裝 v2.9.2，在選單選 English 後升級。
+     預期：介面是英文。在 API 34 上，系統設定頁顯示 English，而且第一次啟動不會出現重啟迴圈（`adb logcat` 裡同一個 pid 只會出現一次 `ActivityThread` 的 start）。
+  3. 重新安裝 v2.9.2，在歌詞頁把簡繁按鈕切到「繁」後升級。
+     預期：歌詞預設是繁體，「歌詞語言」畫面勾選的是「繁體」。
+
+- [ ] **Step 4：切換語言**
+
+  - 在兩個 API 等級上，從 app 內選單依序切換四種語言，每次切換後確認介面和選單的打勾都正確。
+  - 在 API 34 上，從系統設定頁切換語言。
+  - 在 API 34 上，把系統設定頁改回「系統預設」，app 選單應該打勾「跟隨系統」。
+  - 切換語言後開啟英文歌詞（WebView），確認介面語言沒有被重設。
+
+- [ ] **Step 5：重建後狀態要保留**
+
+  開啟開發者選項的「不保留活動」，然後：
+  - 在主頁輸入「12」，切換到其他 app 再回來，「12」仍然在。
+  - 在歌詞頁翻到第 5 頁，按過「簡／繁」按鈕後，切換到其他 app 再回來，頁面和簡繁狀態都要保留。
+
+  在 API 34 上，於歌詞頁停留時從系統設定頁改語言，回到 app 後仍然停在同一頁。
+
+  驗證完後關閉「不保留活動」。
+
+- [ ] **Step 6：歌詞、搜尋、螢幕常亮**
+
+  依照 Task 12 Step 7、Task 13 Step 6、Task 11 Step 4 的步驟，在 API 24 上各跑一次。
+
+- [ ] **Step 7：審查**
+
+  - 用 `superpowers:requesting-code-review` 或 code-reviewer agent 審查 `git diff master...feat/zh-hant`。
+  - 用 `/codex review` 做第二份獨立審查。
+  - 有 P1 就修正，並重跑 Step 1。
+
+- [ ] **Step 8：準備 PR**
+
+  PR 描述要包含：
+  - Step 2～6 的結果表格
+  - 繁中用語校對清單（`docs/superpowers/plans/2026-10-02-zh-hant-terms.md`），請使用者確認
+  - 已知限制：清除資料後，app 會被視為升級而顯示簡中
