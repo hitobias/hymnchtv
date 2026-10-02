@@ -91,6 +91,14 @@ android {
         buildTypes.release.signingConfig = signingConfigs.release
     }
 
+    // Contract tests shared by the JVM fakes (test) and the Room implementations (androidTest)
+    sourceSets {
+        test.java.srcDir 'src/sharedTest/java'
+        androidTest.java.srcDir 'src/sharedTest/java'
+        test.kotlin.srcDir 'src/sharedTest/java'
+        androidTest.kotlin.srcDir 'src/sharedTest/java'
+    }
+
     testOptions {
         unitTests.all {
             it.systemProperty 'hymnchtv.assetsDir', file('src/main/assets').absolutePath
@@ -169,8 +177,11 @@ dependencies {
     implementation 'androidx.room:room-ktx:2.8.5'
     ksp 'androidx.room:room-compiler:2.8.5'
 
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
+
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'com.google.truth:truth:1.4.5'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
     // Real org.json for JVM unit tests (android.jar only ships stubs); the app uses the platform copy.
     testImplementation 'org.json:json:20250517'
 
