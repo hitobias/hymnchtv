@@ -35,7 +35,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -54,7 +53,6 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -91,8 +89,12 @@ import org.cog.hymnchtv.logutils.LogUploadServiceImpl;
 import org.cog.hymnchtv.mediaconfig.MediaConfig;
 import org.cog.hymnchtv.mediaconfig.MediaRecord;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
-import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.reading.ReadingPrefKeys;
+import org.cog.hymnchtv.reading.ReadingSettingsActivity;
+import org.cog.hymnchtv.reading.background.BackgroundDrawables;
 import org.cog.hymnchtv.reading.background.BackgroundPrefs;
+import org.cog.hymnchtv.reading.background.BackgroundSlot;
+import org.cog.hymnchtv.reading.background.ReadingPalette;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
@@ -100,7 +102,6 @@ import org.cog.hymnchtv.utils.DialogActivity;
 import org.cog.hymnchtv.utils.HymnNoValidate;
 import org.cog.hymnchtv.locale.AppLanguage;
 import org.cog.hymnchtv.locale.LocaleStore;
-import org.cog.hymnchtv.utils.ChineseS2TSelection;
 import org.cog.hymnchtv.utils.MySwipeListAdapter;
 import org.cog.hymnchtv.utils.ThemeHelper;
 import org.cog.hymnchtv.utils.ThemeHelper.Theme;
@@ -137,14 +138,12 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     public static final String HYMN_XG = "hymn_xg";
     public static final String HYMN_YB = "hymn_yb";
 
-    public static final String PREF_MENU_SHOW = "MenuShow";
+    public static final String PREF_MENU_SHOW = ReadingPrefKeys.MENU_SHOW;
     public static final String PREF_SETTINGS = "Settings";
-    public static final String PREF_BACKGROUND = "Background";
     public static final String PREF_TEXT_COLOR = "TextColor";
     public static final String PREF_TEXT_SIZE = "TextSize";
     public static final String PREF_THEME = "Theme";
     public static final String PREF_LOCALE = "Locale";
-    public static final String PREF_WALLPAPER = "WallPaper";
 
     public static final String PREF_MEDIA_HYMN = "MediaHymn";
     private static final String mTocECFile = "lyrics_toc/toc_all_eng2ch.txt";
@@ -203,8 +202,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     private TextView mEntry;
     private EditText tv_Search;
 
-    private LinearLayout background;
-
     private SharedPreferences mSharedPref;
     private SharedPreferences.Editor mEditor;
 
@@ -224,9 +221,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
 
     private static MainActivity mInstance;
 
-    // Available background wall papers
-    public static int[] bgResId = {R.drawable.bg0, R.drawable.bg1, R.drawable.bg2, R.drawable.bg3, R.drawable.bg4, R.drawable.bg5,
-            R.drawable.bg20, R.drawable.bg21, R.drawable.bg22, R.drawable.bg23, R.drawable.bg24, R.drawable.bg25};
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public void onCreate(Bundle savedInstanceState) {
@@ -235,7 +229,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
         mEditor = mSharedPref.edit();
 
-        String theme = mSharedPref.getString(PREF_THEME, Theme.DARK.toString());
+        String theme = mSharedPref.getString(PREF_THEME, ThemeHelper.DEFAULT_THEME.toString());
         setAppTheme(theme, false);
 
         super.onCreate(savedInstanceState);
@@ -834,8 +828,8 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             setAppLocale(AppLanguage.ZH_HANT);
             return true;
         }
-        else if (itemId == R.id.lyricsLanguage) {
-            startActivity(new Intent(this, ChineseS2TSelection.class));
+        else if (itemId == R.id.readingSettings) {
+            mStartForResult.launch(new Intent(this, ReadingSettingsActivity.class));
             return true;
         }
         else if (itemId == R.id.localeEnglish) {
@@ -909,55 +903,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             return true;
 
         }
-        // === Set background color ===
-        else if (itemId == R.id.sbg1) {
-            setBgColor(0, R.drawable.bg0);
-            return true;
-        }
-        else if (itemId == R.id.sbg2) {
-            setBgColor(1, R.drawable.bg1);
-            return true;
-        }
-        else if (itemId == R.id.sbg3) {
-            setBgColor(2, R.drawable.bg2);
-            return true;
-        }
-        else if (itemId == R.id.sbg4) {
-            setBgColor(3, R.drawable.bg3);
-            return true;
-        }
-        else if (itemId == R.id.sbg5) {
-            setBgColor(4, R.drawable.bg4);
-            return true;
-        }
-        else if (itemId == R.id.sbg6) {
-            setBgColor(5, R.drawable.bg5);
-            return true;
-        }
-        else if (itemId == R.id.sbg7) {
-            setBgColor(6, R.drawable.bg20);
-            return true;
-        }
-        else if (itemId == R.id.sbg8) {
-            setBgColor(7, R.drawable.bg21);
-            return true;
-        }
-        else if (itemId == R.id.sbg9) {
-            setBgColor(8, R.drawable.bg22);
-            return true;
-        }
-        else if (itemId == R.id.sbg10) {
-            setBgColor(9, R.drawable.bg23);
-            return true;
-        }
-        else if (itemId == R.id.sbg11) {
-            setBgColor(10, R.drawable.bg24);
-            return true;
-        }
-        else if (itemId == R.id.sbg12) {
-            setBgColor(11, R.drawable.bg25);
-            return true;
-        }
         else if (itemId == R.id.sn_convert) {
             // HymnIdx2NoConvert.validateIdx2NoConversion(HYMN_ER, HYMN_ER_INDEX_MAX);
             // HymnNo2IdxConvert.validateNo2IdxConversion(HYMN_DB, HYMN_DB_NO_TMAX);
@@ -995,7 +940,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * Bind all the button to its resource id
      */
     private void initButton() {
-        background = findViewById(R.id.viewMain);
         mEntry = findViewById(R.id.tv_entry);
 
         mEntry.setOnClickListener(view -> {
@@ -1054,7 +998,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * Retrieve all the user preference settings and initialize the UI accordingly
      */
     private void initUserSettings() {
-        setWallpaper();
+        applyMainBackground();
 
         mFontSize = mSharedPref.getInt(PREF_TEXT_SIZE, FONT_SIZE_DEFAULT);
         mFontColor = mSharedPref.getInt(PREF_TEXT_COLOR, ContextCompat.getColor(this, R.color.grey900));
@@ -1277,21 +1221,14 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     }
 
     /**
-     * Init the main UI wallpaper with one of the predefined image in drawable or user own if bgResId == -1
+     * Show the main-screen background chosen in the reading settings (plan A2) and colour the hint to match.
      */
-    private void setWallpaper() {
-        mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
-        int bgResId = mSharedPref.getInt(PREF_BACKGROUND, 5);
-        if (bgResId != -1) {
-            background.setBackgroundResource(MainActivity.bgResId[bgResId]);
-        }
-        else {
-            File wpFile = BackgroundPrefs.photoFile(mSharedPref);
-            if ((wpFile != null) && wpFile.exists()) {
-                Drawable drawable = Drawable.createFromPath(wpFile.getAbsolutePath());
-                background.setBackground(drawable);
-            }
-        }
+    private void applyMainBackground() {
+        ReadingPalette palette = BackgroundPrefs.applyTo(findViewById(R.id.mainBackground), mSharedPref, BackgroundSlot.MAIN);
+        TextView hint = findViewById(R.id.tv_hint);
+        hint.setTextColor(palette.getAccentColor());
+        // Photo backgrounds: the hint sits on the same contrast-tested panel as the lyrics (null otherwise)
+        hint.setBackground(BackgroundDrawables.backdrop(this, palette));
     }
 
     /**
@@ -1381,18 +1318,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     }
 
     /**
-     * Set the main UI background wall paper
-     *
-     * @param bgMode the selected background wall paper
-     * @param resId the android drawable resource Id for the selected wall paper
-     */
-    private void setBgColor(int bgMode, int resId) {
-        mEditor.putInt(PREF_BACKGROUND, bgMode);
-        mEditor.apply();
-        background.setBackgroundResource(resId);
-    }
-
-    /**
      * Update both the hymnType and hymnNo for share auto-fill
      *
      * @param hymnType Update HymnType as given
@@ -1407,15 +1332,9 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * standard ActivityResultContract#StartActivityForResult
      */
     ActivityResultLauncher<Intent> mStartForResult = registerForActivityResult(new StartActivityForResult(), result -> {
+        // Back from the reading settings: the main background (or its photo dim/blur) may have changed
         if (result.getResultCode() == Activity.RESULT_OK) {
-            Intent intent = result.getData();
-            Uri uri = (intent == null) ? null : intent.getData();
-            if (uri == null) {
-                Timber.d("No image data selected: %s", intent);
-            }
-            else {
-                setWallpaper();
-            }
+            applyMainBackground();
         }
     });
 

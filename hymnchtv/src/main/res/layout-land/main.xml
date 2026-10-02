@@ -1,10 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<!-- Reading-settings background (plan A2); its own view so a photo can be blurred without blurring the keys -->
+<ImageView
+    android:id="@+id/mainBackground"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:importantForAccessibility="no"
+    android:scaleType="centerCrop" />
+
+<LinearLayout
     android:id="@+id/viewMain"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg0"
     android:baselineAligned="false"
     android:orientation="horizontal"
     android:padding="5dp">
@@ -21,6 +32,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:maxLines="2"
+            android:id="@+id/tv_hint"
             android:text="@string/hint_hymn_ui"
             android:textColor="@color/red800"
             android:textStyle="bold" />
@@ -240,3 +252,4 @@
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
+</FrameLayout>
