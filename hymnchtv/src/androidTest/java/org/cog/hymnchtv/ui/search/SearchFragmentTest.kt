@@ -94,7 +94,7 @@ class SearchFragmentTest {
         assertThat(bbOnly.map { it.ref.book }.distinct()).containsExactly(HymnTypes.BB)
         onView(withId(R.id.scope_all)).perform(click())
         FragmentHost.eventually(timeoutMs = 60_000) {
-            scenario.onActivity { a -> assertThat(results(a).map { it.ref.book }.distinct().size).isGreaterThan(1) }
+            scenario.onActivity { a -> assertThat(results(a).map { it.ref.book }).contains(HymnTypes.DB) }
         }
     }
 

@@ -8,7 +8,6 @@ import android.view.View
 import androidx.core.view.ViewCompat
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
-import com.google.android.material.color.MaterialColors
 import org.cog.hymnchtv.HymnToc
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.concurrent.AppExecutors
@@ -192,7 +191,7 @@ class HymnPickerController(
         views.fu.isEnabled = state.source.supportsFu
         ViewCompat.setStateDescription(views.fu, if (state.source.supportsFu) null else context.getString(R.string.c_notice_no_fu))
         views.fu.contentDescription = context.getString(R.string.c_key_fu_desc)
-        val tint = if (state.isFu) MaterialColors.getColor(views.fu, com.google.android.material.R.attr.colorSecondaryContainer) else Color.TRANSPARENT
+        val tint = if (state.isFu) androidx.core.graphics.ColorUtils.setAlphaComponent(views.fu.currentTextColor, FU_ACTIVE_ALPHA) else Color.TRANSPARENT
         views.fu.backgroundTintList = ColorStateList.valueOf(tint)
     }
 
@@ -268,7 +267,7 @@ class HymnPickerController(
                 this.text = text
                 minHeight = (MIN_TOUCH_DP * resources.displayMetrics.density).toInt()
                 setOnClickListener { action() }
-            }
+            }.also(views::styleChip)
             views.alsoIn.addView(chip)
         }
         views.alsoScroll.visibility = View.VISIBLE
@@ -289,5 +288,6 @@ class HymnPickerController(
     private companion object {
         const val GROUP_1_SIZE = 4
         const val MIN_TOUCH_DP = 48
+        const val FU_ACTIVE_ALPHA = 0x2E
     }
 }
