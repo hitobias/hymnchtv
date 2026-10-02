@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Sub-project C: modern UI -->
+    <string name="c_nav_home">Home</string>
+    <string name="c_nav_toc">Contents</string>
+    <string name="c_nav_my_hymns">My hymns</string>
+    <string name="c_nav_settings">Settings</string>
     <string name="c_add_playlist">+ Playlist</string>
     <string name="c_next_hymn">Next</string>
     <string name="c_history_delete">Delete from history</string>

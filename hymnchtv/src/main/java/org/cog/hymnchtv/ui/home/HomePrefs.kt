@@ -3,10 +3,10 @@ package org.cog.hymnchtv.ui.home
 import android.content.SharedPreferences
 import org.cog.hymnchtv.MainActivity
 
-/** Home-screen preferences (file [MainActivity.PREF_SETTINGS]); the settings tab writes them, the home tab reads them. */
+/** Home-screen preferences (file [MainActivity.PREF_SETTINGS]; the key names are the ones the old main screen used); the settings tab writes them, the home tab reads them. */
 object HomePrefs {
-    const val TEXT_SIZE = MainActivity.PREF_TEXT_SIZE
-    const val TEXT_COLOR = MainActivity.PREF_TEXT_COLOR
+    const val TEXT_SIZE = "TextSize"
+    const val TEXT_COLOR = "TextColor"
 
     /** The hymn book selected last, so the home tab opens with it highlighted (direction C). */
     const val LAST_HYMN_TYPE = "LastHymnType"

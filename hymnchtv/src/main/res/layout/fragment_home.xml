@@ -433,7 +433,7 @@
                     android:text="@string/c_add_playlist"
                     android:textSize="20sp" />
 
-                <!-- C-6: declared now, wired and shown by the host task (HOST1) -->
+                <!-- C-6: opens the hymn after the typed one in the selected book; D-1 later wires the playlist -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_next"
                     style="@style/Widget.Material3.Button.TonalButton"
@@ -442,8 +442,7 @@
                     android:layout_weight="1"
                     android:minHeight="48dp"
                     android:text="@string/c_next_hymn"
-                    android:textSize="20sp"
-                    android:visibility="gone" />
+                    android:textSize="20sp" />
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

@@ -34,4 +34,26 @@ class HomeEntryTest {
         assertThat(HomeEntry.hymnNo("附", HYMN_DB)).isNull()
         assertThat(HomeEntry.hymnNo("1x", HYMN_DB)).isNull()
     }
+
+    @Test
+    fun nextAdvancesTheTypedNumber() {
+        assertThat(HomeEntry.next("12")).isEqualTo("13")
+        assertThat(HomeEntry.next("9")).isEqualTo("10")
+    }
+
+    @Test
+    fun nextOfAnEmptyEntryIsOne() {
+        assertThat(HomeEntry.next("")).isEqualTo("1")
+    }
+
+    @Test
+    fun nextKeepsTheFuPrefix() {
+        assertThat(HomeEntry.next("附3")).isEqualTo("附4")
+        assertThat(HomeEntry.next("附")).isEqualTo("附1")
+    }
+
+    @Test
+    fun nextOfGarbageIsNull() {
+        assertThat(HomeEntry.next("1x")).isNull()
+    }
 }

@@ -20,4 +20,12 @@ object HomeEntry {
             else -> null
         }
     }
+
+    /** The entry for the hymn after the typed one ("12" -> "13", "附3" -> "附4", "" -> "1"); null when the entry is malformed. */
+    fun next(entry: String): String? {
+        val prefix = if (entry.startsWith(FU)) FU else ""
+        val digits = entry.removePrefix(FU)
+        val no = if (digits.isEmpty()) 0 else digits.toIntOrNull()?.takeIf { it >= 0 } ?: return null
+        return prefix + (no + 1)
+    }
 }

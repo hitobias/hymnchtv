@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Sub-project C: modern UI -->
+    <string name="c_nav_home">首頁</string>
+    <string name="c_nav_toc">目錄</string>
+    <string name="c_nav_my_hymns">我的詩歌</string>
+    <string name="c_nav_settings">設定</string>
     <string name="c_add_playlist">＋歌單</string>
     <string name="c_next_hymn">下一首</string>
     <string name="c_history_delete">從歷史移除</string>

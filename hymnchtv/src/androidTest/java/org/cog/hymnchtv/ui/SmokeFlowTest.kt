@@ -5,6 +5,7 @@ import android.os.ParcelFileDescriptor
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.action.ViewActions.swipeLeft
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
@@ -32,7 +33,8 @@ class SmokeFlowTest {
         }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             onView(withId(R.id.n1)).perform(click())
-            onView(withId(R.id.bs_db)).perform(click())
+            // the home tab scrolls: the toolbar and bottom navigation leave little room on a small screen
+            onView(withId(R.id.bs_db)).perform(scrollTo(), click())
             onView(withId(R.id.viewPager)).check(matches(isDisplayed()))
             onView(withId(R.id.viewPager)).perform(swipeLeft())
             onView(withId(R.id.viewPager)).check(matches(isDisplayed()))

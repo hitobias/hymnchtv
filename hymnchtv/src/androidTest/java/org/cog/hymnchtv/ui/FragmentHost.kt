@@ -12,7 +12,7 @@ import org.cog.hymnchtv.TestPermissions
 
 /**
  * Shows a tab fragment on its own inside the app's existing [AppCompatActivity] (the real theme and resources),
- * because the tab host (HOST1) does not exist yet. The activity's old content is removed so ids are unambiguous.
+ * without the tab host around it. The activity's content is removed so ids are unambiguous.
  */
 object FragmentHost {
     /** MainActivity requests media permissions at launch; the dialog would take focus from the activity (as in SmokeFlowTest). */
@@ -29,6 +29,10 @@ object FragmentHost {
     }
 
     fun <F : Fragment> show(activity: AppCompatActivity, fragment: F): F {
+        // MainActivity's tab host already added its fragments; drop them before their container goes away
+        activity.supportFragmentManager.beginTransaction()
+            .apply { activity.supportFragmentManager.fragments.forEach { remove(it) } }
+            .commitNowAllowingStateLoss()
         val content = activity.findViewById<ViewGroup>(android.R.id.content)
         content.removeAllViews()
         val container = FragmentContainerView(activity).apply { id = View.generateViewId() }

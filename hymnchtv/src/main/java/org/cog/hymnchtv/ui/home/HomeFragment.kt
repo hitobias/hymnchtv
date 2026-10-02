@@ -30,8 +30,8 @@ import java.util.Locale
 
 /**
  * Home tab: number keypad, the six hymn books (the last used one highlighted), live title of the typed number,
- * recent history and the "+ playlist" button. Self-contained: it opens lyrics through the static
- * [MainActivity.showContent]; the old MainActivity keypad stays until the host migration.
+ * recent history and the "+ playlist" / "next" buttons. It opens lyrics through the static [MainActivity.showContent];
+ * the host ([org.cog.hymnchtv.ui.host.MainHost]) owns the system-bar insets and calls [onBackPressed].
  */
 class HomeFragment : Fragment(R.layout.fragment_home) {
     private val vm: HomeViewModel by viewModels()
@@ -70,12 +70,21 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         super.onResume()
         // The next key press starts a new number; settings may also have changed meanwhile
         vm.autoClear = true
-        views?.let { v ->
-            val result = appearance?.apply(prefs)
-            historyAdapter.textColor = result?.textColor
-            highlightBook(v)
-        }
+        refreshAppearance()
         refreshPreview()
+    }
+
+    /** The host hides this tab instead of pausing it; settings changed meanwhile must show when it comes back. */
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) refreshAppearance()
+    }
+
+    private fun refreshAppearance() {
+        val v = views ?: return
+        val result = appearance?.apply(prefs)
+        historyAdapter.textColor = result?.textColor
+        highlightBook(v)
     }
 
     override fun onDestroyView() {
@@ -142,9 +151,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             true
         }
         v.searchButton.setOnClickListener { onSearch(v) }
-        // C-7: wired by sub-project D-1; btn_next is shown and wired by the host (HOST1)
+        // C-7: wired by sub-project D-1
         v.addPlaylist.setOnClickListener { }
-        v.next.setOnClickListener { }
+        v.next.setOnClickListener { onNext(v) }
     }
 
     private fun onHymnBookClicked(v: HomeViews, hymnType: String, altSelect: Boolean) {
@@ -173,6 +182,18 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             }
             else -> vm.autoClear = true
         }
+    }
+
+    /** The hymn after the typed one in the selected book; the entry only moves on when that hymn exists. */
+    private fun onNext(v: HomeViews) {
+        val entry = HomeEntry.next(v.entry.text.toString()) ?: return
+        val hymnNo = HomeEntry.hymnNo(entry, vm.hymnType) ?: return
+        val valid = HymnNoValidate.validateHymnNo(vm.hymnType, hymnNo, entry.startsWith(HomeEntry.FU))
+        if (valid == -1) return
+        vm.isFu = entry.startsWith(HomeEntry.FU)
+        setNumber(v, entry)
+        MainActivity.setHymnTypeNo(vm.hymnType, hymnNo)
+        openHymn(vm.hymnType, valid)
     }
 
     private fun selectBook(v: HomeViews, hymnType: String) {
