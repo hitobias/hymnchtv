@@ -4,4 +4,5 @@
     <string name="c_add_playlist">+ Playlist</string>
     <string name="c_next_hymn">Next</string>
     <string name="c_history_delete">Delete from history</string>
+    <string name="c_toc_empty">No entries</string>
 </resources>
