@@ -445,6 +445,21 @@ Codex 的 P1 指出，C 目前**還不是可執行的計畫**。開工前必須�
 - **分階段計畫**：每個階段都要能單獨回退。
 - **視覺方向**：準備 2～3 個 mockup，讓使用者選擇。
 
+**視覺方向（使用者決策，2026-10-02，採用混合建議）**：設計稿見 https://claude.ai/artifact/JxKzrjhQfgJpyjywury5Ja
+- **整體架構用方向 A（Material 3 標準）**：
+  - 底部導覽四個分頁：首頁、目錄、我的詩歌、設定。
+  - 使用標準 Material 3 元件，支援動態取色，畫面延伸到系統列。
+  - 設定頁用標準的偏好設定清單。
+- **歌詞頁用方向 B（詩本紙本）的版式**：
+  - 文楷字體、宣紙白背景、紅色節數。
+  - 標題下方印出拍號和調號，預設字級 24sp。
+  - 簡中／繁中、譜詞的切換按鈕沿用 A 的樣式。
+- **首頁輸入號碼加上方向 C（聚會速記）的行為**：
+  - 輸入號碼時即時顯示詩歌標題。
+  - 詩歌本按鈕放大。
+  - 加入「＋歌單」按鈕。
+  - 歌詞頁加上「下一首」，聚會中依歌單連續翻頁，不必回到首頁。
+
 初步方向（尚未定案）：
 
 - **設計系統**：Material 3 搭配 DayNight 主題；Android 12 以上支援動態取色，品牌色作為 fallback；畫面延伸到系統列（edge-to-edge）。
@@ -512,6 +527,21 @@ Codex 的 P1 指出，C 目前**還不是可執行的計畫**。開工前必須�
 詩歌的識別方式沿用「類別＋編號＋是否附錄」。
 
 **入口**：在 C 的底部導覽完成之前，按鈕先放在歌詞頁（☆ 收藏、唱過幾次、📝 筆記），另外加一個「我的詩歌」畫面；C 完成後再移到「我的」分頁。
+
+## 子項目 Z：新身分發佈（使用者決策，2026-10-02）
+
+- **applicationId**：`com.ziontkec.hymnal`。程式碼的 package／namespace 維持 `org.cog.hymnchtv`，不做大規模搬移；只改 applicationId，以及所有由它衍生的值，例如 FileProvider authority、通知頻道、`Download/hymnchtv` 目錄名稱（是否改名在設計時決定）。
+- **發佈管道**：**只用 GitHub Releases，不上架 Google Play**。
+  - App 內的「檢查更新」改成讀取 GitHub Releases 的最新版資訊，下載 APK 安裝。原本指向原作者 cmeng-git 的 `version.properties` 或 URL 全部移除。
+  - 不經過 Play，所以拿不到雲端預先編譯的 profile。B 的 Baseline Profile（`profileinstaller`）因此對舊手機的冷啟動特別重要。
+  - 簽章金鑰由使用者自行保管，不放進 repo（`settings.signing` 機制已存在）。
+- **About 頁**：不顯示任何個人資料（作者、聯絡方式等）。只顯示：
+  - App 名稱與版本
+  - 開源授權聲明（原專案 Apache-2.0、LXGW WenKai／Klee 的 OFL 1.1、資料由 OpenCC 產生的說明）
+  - 第三方程式庫清單
+
+  原作者的版權聲明依 Apache-2.0 的要求保留在授權頁（屬於授權義務，不是個資）。
+- **更新來源**：GitHub repo `hitobias/hymnchtv`，也就是目前 clone 的 origin，是 cmeng-git/hymnchtv 的 fork。使用 `https://api.github.com/repos/hitobias/hymnchtv/releases/latest`，下載 release 附件裡的 APK。
 
 ## 子項目 S：帳號與同步（大綱，使用者決策：先只存本機，之後再加）
 
