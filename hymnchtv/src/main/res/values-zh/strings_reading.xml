@@ -27,8 +27,6 @@
     <string name="bg_photo">自定义照片</string>
     <string name="bg_picker_sample">圣哉，圣哉，圣哉</string>
     <string name="bg_photo_import_failed">无法使用该照片，原来的背景没有改变。</string>
-    <string name="about_font_credit">歌词字体 HymnalKai 衍生自 LXGW WenKai（霞鹜文楷），采用 SIL Open Font License 1.1 授权。点此阅读授权全文。</string>
-    <string name="font_license_title">字体授权</string>
 
     <string name="bg_name_xuan">宣纸白</string>
     <string name="bg_name_linen">亚麻灰</string>
