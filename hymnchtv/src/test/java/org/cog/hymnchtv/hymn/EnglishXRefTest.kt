@@ -57,8 +57,13 @@ class EnglishXRefTest {
     }
 
     @Test fun numbersCountEqualsDistinctEnglishNumbersInTheAsset() {
-        // line 729 of the asset ("^ 1099: ... #bb71100~1199") lost its line break; the old lookup could not open it either
-        val distinct = Regex("""(?m)^\^ (\d{4}):.* #(?:db|bb|xg)\d+[ \t]*\r?$""").findAll(realText).map { it.groupValues[1] }.toSet()
+        val distinct = Regex("""(?m)^\^ (\d{4}):""").findAll(realText).map { it.groupValues[1] }.toSet()
         assertThat(EnglishXRef.parse(realText).numbers).hasSize(distinct.size)
+    }
+
+    @Test fun englishNumbersAroundTheOnceBrokenLineParse() {
+        val xref = EnglishXRef.parse(realText)
+        assertThat(xref.candidates(1099)).containsExactly(HymnRef(HymnTypes.BB, 7))
+        assertThat(xref.candidates(1100)).containsExactly(HymnRef(HymnTypes.BB, 9))
     }
 }
