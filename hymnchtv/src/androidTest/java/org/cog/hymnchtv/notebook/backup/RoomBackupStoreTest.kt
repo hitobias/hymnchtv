@@ -77,7 +77,7 @@ class RoomBackupStoreTest {
             playlistItems = listOf(PlaylistItemEntity(id(5), id(3), 0, key, createdAt = 2, updatedAt = 2, updatedBy = device)),
         )
         store.mergeAtomically { local -> BackupMerger.merge(local, incoming).let { Planned(it.changes, Unit) } }
-        assertThat(store.readAll().playlistItems.map { it.id to it.position }).containsExactly(id(4) to 0, id(5) to 1)
+        assertThat(store.readAll().playlistItems.map { it.id to it.position }).containsExactly(id(4) to 1, id(5) to 0) // the newer incoming item wins slot 0; the local item moves
     }
 
     private fun item(n: Int, position: Int, updatedAt: Long = 1) =
