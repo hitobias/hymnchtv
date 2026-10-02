@@ -352,14 +352,14 @@ public class UpdateServiceImpl {
         }
     }
 
-    private SharedPreferences getStore() {
+    private synchronized SharedPreferences getStore() {
         if (store == null) {
             store = HymnsApp.getGlobalContext().getSharedPreferences("store", Context.MODE_PRIVATE);
         }
         return store;
     }
 
-    private void rememberDownloadId(long id) {
+    private synchronized void rememberDownloadId(long id) {
         SharedPreferences store = getStore();
         String storeStr = store.getString(ENTRY_NAME, "");
         storeStr += id + ",";
@@ -385,7 +385,7 @@ public class UpdateServiceImpl {
     /**
      * Removes old downloads.
      */
-    public void removeOldDownloads() {
+    public synchronized void removeOldDownloads() {
         List<Long> apkIds = getOldDownloads();
         DownloadManager downloadManager = HymnsApp.getDownloadManager();
         for (long id : apkIds) {

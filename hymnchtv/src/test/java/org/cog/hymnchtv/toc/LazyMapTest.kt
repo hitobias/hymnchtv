@@ -34,6 +34,31 @@ class LazyMapTest {
         }
     }
 
+    /** Java callers see a java.util.Map: every mutation path must throw, even though the loader returns a mutable map. */
+    @Test
+    fun javaMutationPathsAllThrow() {
+        val map = LazyMap { hashMapOf(1 to "a", 2 to "b") }
+        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN", "UNCHECKED_CAST")
+        val javaMap = map as java.util.Map<Int, String>
+
+        assertThrowsUnsupported { javaMap.clear() }
+        assertThrowsUnsupported { javaMap.remove(1) }
+        assertThrowsUnsupported { javaMap.entrySet().clear() }
+        assertThrowsUnsupported { javaMap.keySet().remove(1) }
+        assertThrowsUnsupported { javaMap.values().clear() }
+        assertThrowsUnsupported { javaMap.entrySet().iterator().next().setValue("x") }
+        assertThat(map).containsExactly(1, "a", 2, "b")
+    }
+
+    private fun assertThrowsUnsupported(block: () -> Unit) {
+        try {
+            block()
+            throw AssertionError("expected UnsupportedOperationException")
+        } catch (expected: UnsupportedOperationException) {
+            // ok
+        }
+    }
+
     /** Many threads hitting a cold map at once: exactly one load, and every thread sees the same contents. */
     @Test
     fun concurrentFirstAccessLoadsOnceAndAgrees() {
