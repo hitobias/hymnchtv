@@ -69,9 +69,12 @@ class LyricsHantAssetsTest {
 
     @Test
     fun manifestMatchesGeneratorInputs() {
-        val inputs = manifest().first
-        assertThat(inputs["tools/gen_lyrics_hant.py"]).isEqualTo(sha1(File(repoRoot, "tools/gen_lyrics_hant.py")))
-        assertThat(inputs["tools/lyrics_hant_overrides.tsv"]).isEqualTo(sha1(File(repoRoot, "tools/lyrics_hant_overrides.tsv")))
+        assertThat(manifest().first).isEqualTo(
+            mapOf(
+                "tools/gen_lyrics_hant.py" to sha1(File(repoRoot, "tools/gen_lyrics_hant.py")),
+                "tools/lyrics_hant_overrides.tsv" to sha1(File(repoRoot, "tools/lyrics_hant_overrides.tsv")),
+            )
+        )
     }
 
     private companion object {
