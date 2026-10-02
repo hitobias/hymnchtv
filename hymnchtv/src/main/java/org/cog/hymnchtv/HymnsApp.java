@@ -51,6 +51,7 @@ import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.impl.timberlog.TimberLogImpl;
 import org.cog.hymnchtv.perf.DebugStrictMode;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
+import org.cog.hymnchtv.persistance.LegacyDatabaseCleanup;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
 import org.cog.hymnchtv.service.androidupdate.OnlineUpdateService;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
@@ -115,10 +116,11 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
         // Must initialize Notification channels before any notification is being issued.
         new NotificationHelper(this);
 
-        // force delete in case system locked during testing
-        // deleteDatabase(DatabaseBackend.DATABASE_NAME);
+        // 1.0 is the first release: delete the files of the superseded databases (no migration), see
+        // LegacyDatabaseCleanup. Off the main thread; the legacy names never collide with the unified database file.
+        AppExecutors.io("legacy-db-cleanup", () -> LegacyDatabaseCleanup.deleteLegacyFiles(this));
 
-        // Trigger the hymnchtv database upgrade or creation if none exist
+        // The Room database itself is opened lazily on the first query.
         DatabaseBackend.getInstance(this);
 
         super.onCreate();
