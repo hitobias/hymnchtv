@@ -25,6 +25,7 @@
 - rev 6（2026-10-02）：依 Codex 第五輪 1 P1 修正（rev 4 的 P1/P2/P3 全數確認已解決）。`DatabaseBackend` 的 API 盤點漏了 B 新增的 `inTransaction`／`runInTransaction`／`storeMediaRecordOrThrow`／`createForTest`，以及測試用的 `close()`、`readableDatabase`／`writableDatabase`／`databaseName`。§2.6 改為明列保留與消失的 API（facade 方法數更正為 12），Task 2 加 Step 2b，Task 5 Step 3 列出要改寫的 6 個既有 instrumented test 與補測。**產品／設計決定（保守）**：`close()` 與 `createForTest` 為測試用保留；原生 `SQLiteDatabase` 存取一律移除。
 - rev 7（2026-10-02）：依 Codex 第六輪 2 P1 + 2 P2 修正（rev 5 的 P1 已確認解決）。①§2.3 以現有 `storeHymnHistory` 為規格寫出完整 prune 演算法（pivot = 第 `excess+10` 筆、嚴格 `<` 刪除、先清除後插入）與 199／200／201／重複鍵／並列測試表，移除「B 已改為」敘述；②WAL 改為 production `build()` 明確設定，並以 `PRAGMA journal_mode` 驗證；③普通 `storeMediaRecord()` 捕捉例外回傳 `-1L`，`OrThrow` 版不捕捉（Task 2 Step 2a）；④schema 路徑統一為 `org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json`。
 - rev 8（2026-10-02）：依 Codex 第七輪 1 P1 + 2 P2 + 1 P3 修正（**修訂後未再送 Codex**：已達 3 輪上限）。①Task 6(a) 加 Step 0 硬性 gate：D-1a worktree 實測不乾淨，有未追蹤的 Task 8 產物（`notebook/backup/`＋測試），§2.9 狀態更正；②`deleteHymnHistory` 明定不含 `isFu`＋回歸測試；③`hymnType` 驗證涵蓋所有以 hymnType 為輸入的 API，並定義各自失敗結果；④Task 1 Step 4 措辭改「明確設定 WAL（非 Room 預設）」。
+- rev 9（2026-10-02）：依 PR #6 審查 P2-1 補齊主執行緒呼叫點清單：§1 表格中 `storeMediaRecord`、`deleteMediaRecord`、`getMediaRecord`、`storeLyricsEng`、`getLyricsEnglish` 被誤標「否」或漏列呼叫端者改正（`getMediaRecords`／`getMediaLinks` 已由 Task 4 移到背景，改標「否」），§2.4 清單由 4 項擴為完整清單，英文歌詞刪除更正為 `ContentHandler` 選單項，新增 1.0 關卡驗證方法（`-PstrictDbThread`）。
 
 ---
 
@@ -44,17 +45,17 @@
 
 | 方法 | 呼叫次數 | 呼叫端 | 主執行緒？ |
 |---|---|---|---|
-| `getMediaRecord(MediaRecord, boolean)` | 8 | `MediaContentHandler`、`NotionRecord`、`QQRecord`、`ContentHandler.getHymnMediaState` | **是**（`getHymnMediaState`） |
-| `storeMediaRecord(MediaRecord)` | 4 | `NotionRecord`、`QQRecord`、`MediaConfig` | 否（B 已移到背景） |
-| `deleteMediaRecord(MediaRecord)` | 3 | `MediaConfig` | 否 |
-| `getMediaRecords(String)` | 1 | `MediaConfig`（匯出） | **是** |
-| `getMediaLinks(String)` | 1 | `MediaConfig`（匯出） | **是** |
+| `getMediaRecord(MediaRecord, boolean)` | 12+ | `MediaContentHandler.getMediaUris`、`NotionRecord`／`QQRecord`（經 `MediaConfig.hasMediaRecord(db, …)`）、`ContentHandler.getHymnMediaState`／`getMediaUrl`、`MediaConfig`（`onCreate`／`checkEntry`／`updateMediaRecord` 經 `hasMediaRecord`、`checkEntry`、刪除對話框 `onConfirmClicked`） | **是**（`getHymnMediaState`、`getMediaUrl`、`getMediaUris`、`MediaConfig` 的 `onCreate`／`checkEntry`／`updateMediaRecord`／刪除對話框）；匯入器為否 |
+| `storeMediaRecord(MediaRecord)` | 4 | `NotionRecord`、`QQRecord`、`MediaConfig.saveMediaRecord` | **是**（`MediaConfig.saveMediaRecord` 在主執行緒同步寫入後立刻 toast）；匯入器為否（B 已移到背景） |
+| `deleteMediaRecord(MediaRecord)` | 3 | `MediaConfig` 刪除對話框 `onConfirmClicked` | **是** |
+| `getMediaRecords(String)` | 1 | `MediaConfig`（記錄清單） | 否（本計畫 Task 4 已移到 `AppExecutors.io`） |
+| `getMediaLinks(String)` | 1 | `MediaConfig`（匯出） | 否（本計畫 Task 4 已移到 `AppExecutors.io`） |
 | `storeHymnHistory(HistoryRecord)` | 1 | `MainActivity.showContent` | 否（B Lane C 已移背景） |
 | `deleteHymnHistory(HistoryRecord)` | 1 | `MainActivity` 歷史列 | **是** |
 | `getHistoryRecords()` | 1 | `MainActivity.initHistoryList` | **是** |
-| `storeLyricsEng(int, String)` | 1 | `LyricsEnglishRecord` | 否 |
-| `deleteLyricsEng(int)` | 1 | `ContentView` 長按 | **是** |
-| `getLyricsEnglish(int)` | 1 | `LyricsEnglishRecord` | 否 |
+| `storeLyricsEng(int, String)` | 1 | `LyricsEnglishRecord.fetchLyrics` 的 WebView 下載回呼 | **是**（WebView 回呼在主執行緒） |
+| `deleteLyricsEng(int)` | 1 | `ContentHandler` 選單項 `lyrcsEnglishDelete` | **是** |
+| `getLyricsEnglish(int)` | 1 | `LyricsEnglishRecord.fetchLyrics`（自 `ContentView`） | **是** |
 | `getHymnUrl(MediaRecord)` | 0 | — | 未使用的 wrapper |
 
 ### 依賴 B 的產出（**B 已合併進 `origin/master`（892167bf），Task 0 仍要驗證實際存在**）
@@ -115,7 +116,7 @@ JVM／instrumented 測試表（皆以相異 timeStamp 為預設，另測並列�
 
 ### 2.4 主執行緒（**本計畫的關鍵取捨**）
 
-Room 預設禁止主執行緒查詢。§1 的表列出 7 個主執行緒呼叫點（歷史讀取／刪除、媒體狀態查詢 ×4、**匯出**、英文歌詞刪除）。
+Room 預設禁止主執行緒查詢。§1 的表列出的主執行緒呼叫點（rev 9 更正後共 11 處，見下方清單；歷史讀取／刪除、媒體狀態查詢 ×4、英文歌詞、`MediaConfig` 編輯與刪除等，另有**匯出**／記錄清單兩處昂貴讀取由本計畫搬走）。
 
 **決策（方案 A，Codex 要求加上強制里程碑）：**
 
@@ -123,9 +124,18 @@ Room 預設禁止主執行緒查詢。§1 的表列出 7 個主執行緒呼叫�
 2. **本計畫就要搬走的昂貴路徑**：`MediaConfig` 的匯出（`getMediaRecords`／`getMediaLinks`，可能很多列）改用 `AppExecutors.io`，畫面用 lifecycle-aware 方式收結果——**這一項不要留給第二波**。
 3. **強制移除里程碑**：寫進 PR 描述與 `DatabaseBackend` 類別 Javadoc 的 TODO；**1.0 發版前**必須清空清單（與 B-4 合併處理）。清單如下：
    - `MainActivity.initHistoryList` → `getHistoryRecords`
-   - `MainActivity` 歷史列刪除 → `deleteHymnHistory`
+   - `MainActivity` 歷史列刪除（`MySwipeListAdapter.remove`）→ `deleteHymnHistory`
    - `ContentHandler.getHymnMediaState` → `getMediaRecord` ×4（= B-4）
-   - `ContentView` 長按刪英文歌詞 → `deleteLyricsEng`
+   - `ContentHandler` 選單項 `lyrcsEnglishDelete` → `deleteLyricsEng`（rev 9 更正：不是 `ContentView` 長按）
+   - `ContentHandler.getMediaUrl`（分享選單）→ `getMediaRecord`
+   - `MediaContentHandler.getMediaUris` → `getMediaRecord`（自 `ContentHandler` 兩處呼叫）
+   - `LyricsEnglishRecord.fetchLyrics` → `getLyricsEnglish`（自 `ContentView`），其 WebView 回呼的 `storeLyricsEng` 亦在主執行緒
+   - `MediaConfig.onCreate`／`checkEntry` → `hasMediaRecord`、`getMediaRecord`
+   - `MediaConfig.updateMediaRecord`（`button_add` onClick）→ `hasMediaRecord`
+   - `MediaConfig.saveMediaRecord` → `storeMediaRecord`
+   - `MediaConfig` 刪除對話框 `onConfirmClicked` → `getMediaRecord`、`deleteMediaRecord`
+   - 匯入器（url／Notion／QQ／`MediaLinksUpdater`）、`MainActivity` 儲存歷史、記錄清單與匯出讀取已在背景執行緒。
+   - **1.0 關卡驗證**：debug 組建以 `./gradlew -PstrictDbThread :hymnchtv:installDebug` 安裝（`BuildConfig.ALLOW_MAIN_THREAD_DB = false`，資料庫不加 `allowMainThreadQueries()`），走完主要流程（開詩、分享、歷史列表與滑動刪除、英文歌詞顯示／刪除、媒體配置的新增／覆寫／刪除／清單／匯出／匯入）不崩潰，才算清空；機制由 `MainThreadQueryGateTest` 涵蓋。清單清空後永久移除 `allowMainThreadQueries()`。
 4. 每個 facade 方法在 **Javadoc**（不是 annotation，`@Deprecated` 不接受字串）標註「應在 `AppExecutors.io` 執行；§2.4 列出的過渡呼叫點例外，1.0 前移除」。
 
 ### 2.4a 單一 instance（rev 5，Codex P2-1）
