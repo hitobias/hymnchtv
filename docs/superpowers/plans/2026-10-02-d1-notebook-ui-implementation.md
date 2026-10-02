@@ -7,6 +7,7 @@
 - rev 2（2026-10-02）：C 的計畫已定稿（commit `9e3e4c39`，Codex 0 P1）。逐條比對「依賴 C 的介面」，結論見該節下方的「rev 2 比對結果」。主要調整：C-1（C 不實作 `NotebookNavigator`，由 D-1 接）、C-3（品牌色 `#09354d`，非 `#9C2B23`）、C-4（DayNight 已確認）、C-5（選項 a 已定，單一宿主 `@id/notebookBar`）、C-6/C-7（接 C 的 `@id/btn_next`／`@id/btn_add_playlist`）、C-11（C 直接綁 LXGW WenKai，D-1 取消子集管線）。
 - rev 3（2026-10-02）：**補完 Phase 3（W0、W1a–W1c、W2a–W2c、W3a）與 Phase 4（I1、I2、I3、V1、R1）**，原 rev 1 停在 `<!-- CONTINUE -->`。並依 Codex 對 D-1 UI 的審查（10 P1）修：①I1 明確定義 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 三接點；②I1 的播放完成只記「成功」路徑，失敗/錯誤不記；③`queryDao()` 加進 D-1a 的契約（在 `NotebookDatabase` 加一行，非 schema 變更）；④C-8 簽名差異（C 同步 vs D-1 `suspend titlesFor`）以「各自擁有、不共用」收尾；⑤notebookBar 版型在 `content_main.xml` 明確約束。
 - rev 4（2026-10-02，依 Room 統一計畫 `2026-10-02-room-unification.md` rev 5～9）：資料庫統一為 `HymnchtvDatabase`（`hymnchtv.db`，v1，8 個 entity），整份計畫凡引用 `NotebookDatabase`／`notebook.db` 之處改為 `HymnchtvDatabase`（`persistance/room/HymnchtvDatabase.kt`）；schema 路徑改為 `hymnchtv/schemas/org.cog.hymnchtv.persistance.room.HymnchtvDatabase/1.json`。`queryDao()` 一行加在 `HymnchtvDatabase`，schema 仍不變。
+- rev 5（2026-10-02，依 C 的 1.1 規劃與使用者的 1.1.0 範圍決定）：**D-1 筆記本介面延後，不進 1.1.0**（1.1.0 = 主執行緒查詢清除 + D-1a 資料層〔PR #11〕+ C 的 H3／H4／F2；`UiFlags.NOTEBOOK_UI_ENABLED` 維持 `false`）。C 的 1.0.0 已併入 master、1.1 新增 H3（首頁改版）／H4（搜尋）／H5（歌詞頁跳轉，**1.1 之後**）。只修受影響處：①首頁 `btn_next` 已移除（改由歌詞頁 `btn_next` 承擔，**D-1 的「下一首」維持歌詞頁既有 `btn_next`／`scrollNextHymn()`，不依賴 H5**）；②`HomeFragment` 舊結構（鍵盤／六個詩歌本／`btn_english`／展開歷史清單）已被 `HymnPickerController`＋`hymn_picker.xml` 取代，`btn_add_playlist` 仍存在但可見度由 `PickerChrome`／`UiFlags` 決定；③「更多›」`HistoryFragment` 加「唱詩紀錄」分頁（新 Step 2b）；④`UiFlags` 打開時機＝I2 Step 4（新）；⑤標記 H5 之後要整合的三個點（U8 不同本跳轉、`onPlaybackCompleted` 記 session、「下一首」優先序）。詳見「rev 5 比對結果（1.1 規劃）」。 **Codex 審查（H3／H4／H5／F2 與 D-1 相關修訂）：第 1 輪 P1=3、第 2 輪 P1=4、第 3 輪 P1=3、第 4 輪 P1=0；P2/P3 已修。**
 
 ## 給執行者（Sonnet 5.5）的說明
 
@@ -26,6 +27,7 @@
 
 **執行規則：**
 - **每條 lane 只改自己「檔案範圍」裏的檔案。** 需要改範圍外的檔案時停下來回報。這是平行執行不衝突的前提。
+- **行尾（EOL，rev 5）**：階段 4 會改到下列 **CRLF** 檔：`ContentHandler.java`、`res/layout/content_main.xml`、`res/layout/content_lyrics.xml`、`AndroidManifest.xml`（W1，加 `NotebookActivity`）；**LF** 檔：`ContentView.java`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`、`ui/**` Kotlin、新檔。以 `git ls-files --eol <file>` 確認；改 CRLF 檔用 bytes／`perl -pi -e` 只換目標行並自行帶 `\r\n`，改完 `git diff --stat` 與 `git diff --ignore-cr-at-eol --stat` 的行數必須相同、`git ls-files --eol` 仍是 `w/crlf`（細節同 C 計畫「H 系列通則 §2」）。
 - **D-1a 的 API 一律照用，不改簽名。** 本計畫對 D-1a 檔案唯一的修改，是在 `HymnchtvDatabase.kt` 加一行 DAO 存取函式（Task 1），而且 schema（`hymnchtv/schemas/.../1.json`）必須完全不變，由 Task 1 Step 6 檢查。
 - **模擬器**：沿用 D-1a 的專用 AVD：`api34nb`（`emulator-5580`）和 `api24nb`（`emulator-5582`）。所有 adb／gradle 指令前先 `export ANDROID_SERIAL=…`，並用 `adb emu avd name` 確認名稱。另一個代理可能正在用 `api24`／`api34`，**不要碰它們**。
   - 階段 0 的 Lane 0 可以在 `api34nb` 跑 instrumented test（Task 1）。
@@ -179,7 +181,7 @@ D-1a 的 repository 回傳整張表或單首詩歌的資料，沒有分頁和聚
 - 從歌單開啟歌詞頁時，intent 多帶 `nb.playlistId`、`nb.playlistItem` 兩個 extra（都要是 canonical UUID，否則忽略）。
 - 筆記本列顯示「歌單 2/5 · 下一首：補充 1 開口讚美」：
   - 下一首和目前同一本：直接 `ViewPager2.setCurrentItem`。
-  - 不同本：開新的 `ContentHandler` 並結束目前這個，返回鍵回到歌單，不會疊一堆頁面。
+  - 不同本：開新的 `ContentHandler` 並結束目前這個，返回鍵回到歌單，不會疊一堆頁面。（rev 5：**H5 完成後（1.1 之後）改呼叫 `ContentHandler.navigateTo(HymnRef)` 就地換本**，不重啟 Activity、不中斷背景播放；H5 前維持此做法。）
 - 手動翻頁時，`PlaylistCursor.follow` 決定目前在歌單的哪一項：
   - 翻到的詩歌如果就是目前這項，不變。
   - 否則找之後最近的同一首，再否則找任何同一首。
@@ -262,6 +264,20 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 **合併後的對帳清單（給 C 或 D-1 後合併的那一方）：** C-3 主題 parent（`#09354d`）、C-1 宿主（`NotebookNavigator` 由 D-1 提供）、C-5 選項 a（`@id/notebookBar`）、C-8 擁有權（`HymnTitleSource` 擇一）、C-11 字型（D-1 重用 C 的 LXGW WenKai）。這五項寫進後合併那一方的 PR 描述。
 
+### rev 5 比對結果（2026-10-02，C 1.0.0 已併入 master；C 的 1.1 規劃見 `2026-10-02-c-modern-ui-implementation.md` rev 4）
+
+| # | rev 5 結論 |
+|---|---|
+| 狀態 | C 已合併（6f73d776，1.0.0）→ 本計畫階段 4 **一律 C 模式**（G4 的「pre-C／等待」分支作廢）。D-1a 資料層在 master（`notebook.model`／`data`／`repo`／`record`）。**D-1 UI 排在 1.1.0 之後**；H5 與 D-1 UI 的先後待定。 |
+| C-1 | `MyHymnsFragment` 仍是空槽位，`MainHost` 的「我的詩歌」分頁由 `UiFlags.NOTEBOOK_UI_ENABLED` 控制顯示（1.0／1.1.0 皆 `false`）；I2 Step 1 不變，Step 4（新）打開旗標。 |
+| C-6 | **調整**：首頁的 `btn_next`（輸入號 +1）已由 H3 **移除**（`HomeEntry.next` 與測試一併刪）；「下一首」只剩**歌詞頁** `@id/btn_next`（`ContentView` → `ContentHandler.scrollNextHymn()`）。D-1 的 `nextInPlaylistOrNextHymn()`（I1 Step 4a）**維持不變**。H5（1.1 之後）才加「下一首槽位」與 `PlaybackSession`；優先序為 **槽位 ＞ 歌單 ＞ 同本下一首**。**H5 與 D-1 UI 的先後待定，兩種順序都可執行**：D-1 先 → 現在的 `nextInPlaylistOrNextHymn()` 維持不變，H5 實作時把槽位判斷加在它之前；H5 先 → D-1 實作 `nextInPlaylistOrNextHymn()` 時要先問槽位（呼叫 H5 的槽位 API），再問歌單，最後 `scrollNextHymn()`。 |
+| C-7 | **調整**：`@id/btn_add_playlist` 現在在 `res/layout/hymn_picker.xml`（首頁的可重用 HymnPicker），可見度由 `PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)` 決定；click 由 `HymnPickerController`（`ui/picker/`）設定，**不再是 `HomeFragment.kt`**（`HomeFragment` 縮成薄殼）。「＋歌單」在輸入框有有效號碼時，用 `PickerReducer.target(preview)`（`HymnRef`）取得 `(book, storedNo)`，轉成 `HymnKey.ofOrNull(ref.book, ref.storedNo)`（兩者對附號的編號一致：大本附＝780+n，青年附＝275+n 且 `isFu=false`）；沒有有效號碼時仍用 `AddToPlaylistDialogFragment.show(..., null)`。 |
+| 新 C-12 | **歷史／唱詩紀錄**：H3 的「更多›」開全螢幕 `ui/home/HistoryFragment`（host back stack 疊加），1.1.0 只有「最近開過」。D-1 在 I2 新增 Step 2b：把它改成兩個分頁——「最近開過」（原內容）＋「唱詩紀錄」（`SingLogFragment` 的清單或其簡版）。 |
+| 新 C-13 | **`UiFlags` 打開時機**：D-1 UI 完成時（I2 Step 4），同一個 commit 打開 `NOTEBOOK_UI_ENABLED = true`，並一併驗證：我的詩歌分頁出現且接 `NotebookHomeFragment`、`btn_add_playlist` 出現且可加入歌單、`HistoryFragment` 有唱詩紀錄分頁、歌詞頁 `notebookBar` 顯示、歌詞頁 `btn_next` 走歌單。 |
+| 新 C-14 | **H5 之後的整合點（本計畫現在不做，已在 I1 標註）**：①U8「不同本＝開新 `ContentHandler` 並結束」改呼叫 H5 的 `navigateTo(HymnRef)`（同頁換本，不中斷背景播放）；②`onPlaybackCompleted()` 記錄「唱過」要改記 `PlaybackSession.ref`（正在播放的那首，不是正在看的）；③「下一首」優先序：槽位 ＞ 歌單 ＞ 同本。 |
+| 新 C-15 | `HymnTitleSource` 仍各自擁有；C 另有 `HymnRef`／`HymnNumberRules`（`org.cog.hymnchtv.hymn`，主程式碼重用 `notebook.model.HymnNumbering`）。D-1 的 `HymnKey` 與 `HymnRef` **不合併**；轉換規則見 C-7。 |
+
+
 ---
 
 ## 平行化地圖與合併關卡
@@ -280,7 +296,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 | 3 | W1 | W1a → W1b → W1c | `notebook/ui/NotebookActivity.kt`、`notebook/ui/home/`、`notebook/ui/favorites/FavoritesFragment.kt`、`notebook/ui/log/{SingLogFragment,SingLogAdapter}.kt`、`notebook/ui/notes/{NotesFragment,NoteAdapter}.kt`、`notebook/ui/review/{StatsFragment,HeatmapView,UnsungListFragment}.kt`、`res/layout/nb_{activity,home,row_log,row_log_header,row_note,stats,unsung}.xml`、`res/menu/nb_*.xml`、`AndroidManifest.xml` | W0 已 commit |
 | 3 | W2 | W2a → W2b → W2c | `notebook/ui/playlist/{PlaylistsFragment,PlaylistDetailFragment,PlaylistItemAdapter,AddToPlaylistDialogFragment,PlaylistNameDialogFragment,OccasionPickerDialogFragment}.kt`、`notebook/ui/notes/NoteEditorFragment.kt`、`notebook/ui/hymn/HymnNotebookFragment.kt`、`notebook/ui/settings/NotebookSettingsFragment.kt`、`res/layout/nb_{playlist_detail,row_playlist,row_playlist_item,note_editor,hymn_page}.xml`、`res/xml/nb_preferences.xml` | W0 已 commit |
 | 3 | W3 | W3a | `notebook/ui/bar/{HymnNotebookBarFragment,NotebookBarHost}.kt`、`res/layout/nb_hymn_bar.xml` | W0 已 commit |
-| 4 | 0 | I1 → I2 → I3 → V1 → R1 | `ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`、`MainActivity.java`、`res/menu/menu_main.xml`（pre-C 模式）或 C 的對應檔案（C 模式）、`androidTest/.../notebook/ui/*Test.kt` | **G4**：階段 3 全部合併，並依 C 的狀態選模式（見下） |
+| 4 | 0 | I1 → I2 → I3 → V1 → R1 | `ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`、C 的對應檔案（`ui/picker/HymnPickerController.kt`、`ui/home/HistoryFragment.kt`、`ui/host/UiFlags.kt`、`ui/myhymns/MyHymnsFragment.kt`；rev 5：pre-C 檔案 `MainActivity.java`／`menu_main.xml` 作廢）、`androidTest/.../notebook/ui/*Test.kt` | **G4**：階段 3 全部合併，**且 C 的 G5（1.1.0）已完成並 rebase**（見下） |
 
 （`java/...` 或 `notebook/...` = `hymnchtv/src/main/java/org/cog/hymnchtv/...`；`test/...` = `hymnchtv/src/test/java/org/cog/hymnchtv`；`androidTest/...` = `hymnchtv/src/androidTest/java/org/cog/hymnchtv`；`sharedTest/...` = `hymnchtv/src/sharedTest/java/org/cog/hymnchtv`；`res/` 在 `hymnchtv/src/main/` 底下。）
 
@@ -289,20 +305,13 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 - **G1**：Lane 0 的 Task 0～2 都已 commit，`testDebugUnitTest` 全綠，`api34nb` 上 `RoomNotebookQueriesContractTest` 全綠。
 - **G2**：M、P、S、T 四條 lane 合併，協調者在 `api34nb` 跑 `org.cog.hymnchtv.notebook.ui.titles` 套件。
 - **G3**：V1、V2、V3 合併；JVM 測試全綠。
-- **G4（相對於 C）**：協調者先執行下列指令，判斷 C 的狀態，再問使用者選哪個模式：
+- **G4（階段 4 前置；rev 5 重寫）**：**D-1 UI 排在 1.1.0 之後**。階段 0～3 都是新檔案，不受此限、可先做。**階段 4（I1～I3、V1、R1）必須在 C 的 G5（1.1.0：H3＋H4＋F2 已合併進 `master`，含 `HymnPickerController`、`HistoryFragment`、`HymnRef`、`UiFlags`）之後開始，並先 `git fetch origin && git rebase origin/master`。** 一律使用 **C 模式**（C 已於 1.0.0 合併；pre-C 模式與「等待」分支作廢，不再詢問使用者選模式）。C 的 H5（歌詞頁跳轉，1.1 之後，關卡 G6）**僅在它已先合併時才整合**（見 rev 5 比對結果的 C-14）；H5 未做時 I1 維持 `btn_next → nextInPlaylistOrNextHymn → scrollNextHymn()`，**不得引用 H5**。前置檢查：
 
   ```bash
   git fetch origin
-  ls docs/superpowers/plans/ | grep -i 'c-modern-ui' || echo "C plan: none"
-  git log origin/master --oneline --grep='material3\|feat(c)\|C lane' | head -5
-  grep -n "Theme.Material3\|com.google.android.material" hymnchtv/build.gradle hymnchtv/src/main/res/values/theme.xml
+  grep -n 'NOTEBOOK_UI_ENABLED' hymnchtv/src/main/java/org/cog/hymnchtv/ui/host/UiFlags.kt      # 預期存在且為 false
+  ls hymnchtv/src/main/java/org/cog/hymnchtv/ui/picker/HymnPickerController.kt hymnchtv/src/main/java/org/cog/hymnchtv/ui/home/HistoryFragment.kt hymnchtv/src/main/java/org/cog/hymnchtv/hymn/HymnRef.kt   # 預期都存在（C 的 G5）
   ```
-
-  | C 的狀態 | 模式 | 說明 |
-  |---|---|---|
-  | C 已合併進 `master`（或本分支的基底） | **C 模式（建議預設）** | 先 `git rebase origin/master`，依「依賴 C 的介面」把筆記本放進 C 的槽位（C-1、C-5、C-9）。Task I1、I2 改的是 C 的對應檔案 |
-  | C 尚未開工，且使用者決定 D-1 先發 | **pre-C 模式** | Task I1、I2 照本文改舊版面；C 之後依對帳清單搬移 |
-  | C 正在進行中 | **等待** | 階段 0～3 都是新檔案，可以先合併進 `feat/d1-notebook-ui` 並保持 rebase；階段 4 等 C 合併後用 C 模式。**不要和 C 同時改 `ContentHandler`／`content_main.xml`／`MainActivity`** |
 
 ---
 
@@ -8032,7 +8041,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 ## 階段 4 · Lane 0：整合、測試與收尾
 
-> **G4 前置**：先依「依賴 C 的介面」判斷 C 的狀態，選 C 模式（C 已合併）或 pre-C 模式（C 尚未合併、D-1 先發）。I1/I2 在 C 模式改 C 的對應檔案，pre-C 模式改舊版面。**C-10 三接點 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 由 I1 定義**（codex rev 3）。
+> **G4 前置**：（rev 5）C 已合併 → **C 模式**；且必須等 **C 的 G5（1.1.0：H3＋H4＋F2）** 完成並 rebase（I2 要用 `HymnPickerController`／`HistoryFragment`／`HymnRef`）；pre-C 模式作廢。I1/I2 在 C 模式改 C 的對應檔案，pre-C 模式改舊版面。**C-10 三接點 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 由 I1 定義**（codex rev 3）。
 
 ### Task I1：`ContentHandler` 接筆記本列與自動記錄
 
@@ -8109,6 +8118,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
   - ExoPlayer：`MediaExoPlayerFragment` 的 `onPlaybackStateChanged` 收到 `Player.STATE_ENDED` 時呼叫 `contentHandler.onPlaybackCompleted()`。
   - YouTube：`YoutubePlayerFragment` 的 `onStateChange` 收到 `PlayerConstants.PlayerState.ENDED` 時呼叫。
+  - （rev 5 註：H5 完成後，`onPlaybackCompleted()` 要記錄 `PlaybackSession.ref`——正在播放的那首——而不是 `vm.state.value.key`〔正在看的那首〕；H5 前兩者相同，維持現狀。）
   - **音訊（`AudioBgService`）**：1.0 不接。在 `MediaGuiController` 的 `MpBroadcastReceiver` `case stop:` 加 `// TODO(rev4): audio natural-end`，**不**呼叫 `onPlaybackCompleted()`——寧可漏記也不錯記。`onEndOrError` 的失敗/手動停路徑一律不記。
 
 - [ ] **Step 4：`HymnNotebookBarFragment` 加 `showHymn(key)`／`onMediaCompleted()` 轉接**
@@ -8138,6 +8148,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
   `ContentView` 的 `btn_next` click 呼叫 `mContentHandler.nextInPlaylistOrNextHymn()`（取代 C 預設的直接 `scrollNextHymn()`）。`showHymn(HymnKey)`（NotebookBarHost 實作）負責同本 `setCurrentItem`／不同本 relaunch（U8）。
 
+  - （rev 5 註：C 1.1 的 H5〔1.1 之後〕會把 `btn_next` 改成「槽位 ＞ 歌單 ＞ 同本」並讓 `ContentView` 呼叫 `ContentHandler.onNextPressed()`；**D-1 現在只改 `nextInPlaylistOrNextHymn()` 這一個方法；H5 若在 D-1 之後實作，就在它前面加槽位判斷；H5 若先於 D-1，D-1 實作此方法時先問槽位**。首頁的 `btn_next` 已移除，與本接點無關。）
   - C 模式：改 C 的 `ContentView.java` + `content_lyrics.xml`（`btn_next` click）。
   - pre-C 模式：D-1 在 `content_lyrics.xml` 加 `@id/btn_next`，同上。
 
@@ -8158,7 +8169,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 ### Task I2：接「我的詩歌」入口與 C-7 的「＋歌單」
 
-**Files:** C 模式 Modify C 的 `ui/myhymns/MyHymnsFragment.kt`、`ui/home/HomeFragment.kt`；pre-C 模式 Modify `MainActivity.java`、`res/menu/menu_main.xml`、`res/layout/main.xml`
+**Files:** C 模式 Modify C 的 `ui/myhymns/MyHymnsFragment.kt`、`ui/picker/HymnPickerController.kt`（rev 5：原 `ui/home/HomeFragment.kt`）、`ui/home/HistoryFragment.kt`、`ui/host/UiFlags.kt`；pre-C 模式（rev 5 作廢）Modify `MainActivity.java`、`res/menu/menu_main.xml`、`res/layout/main.xml`
 
 - [ ] **Step 1：C 模式——把 `NotebookHomeFragment` 放進 C 的 `MyHymnsFragment`，並提供 `NotebookNavigator`（C-1）**
 
@@ -8167,31 +8178,43 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
   - `MyHymnsFragment` 實作 `NotebookNavigator`（直接 `fragmentManager` 切換 D-1 的子畫面），或委派給 `NotebookIntentsNavigator`（開 `NotebookActivity` 子畫面）——**兩者擇一，C 計畫的 rev 3 說 C 不實作 `NotebookNavigator`，由 D-1 提供**。
   - C 的 `MaterialToolbar` 標題設 `nb_title`（C-2，用 `MenuProvider` 加「筆記本設定」）。
 
-- [ ] **Step 2：C-7——把 C 的 `@id/btn_add_playlist`（Home）接到 `AddToPlaylistDialogFragment`**
+- [ ] **Step 2：C-7——把 `@id/btn_add_playlist`（首頁 HymnPicker）接到 `AddToPlaylistDialogFragment`**
 
-  C 的 `HomeFragment`（Task H1）的 `@id/btn_add_playlist` 目前 click no-op。D-1 在此把它接上：
+  （rev 5）首頁已由 C 的 H3 改版：`btn_add_playlist` 在 `res/layout/hymn_picker.xml`，由 `HymnPickerController`（`ui/picker/`，`HomeFragment` 只是薄殼）管理；可見度由 `PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)` 決定（`UiFlags` 打開前 `GONE`，**H3 沒有任何 no-op 按鈕**）。D-1 在 `HymnPickerController` 的 HOME 模式把它接上，並在 `PickerHost` 加一個 `onAddToPlaylist(ref: HymnRef?)`（由 `HomeFragment` 實作）：
 
   ```kotlin
-  btn_add_playlist.setOnClickListener {
-      AddToPlaylistDialogFragment.show(childFragmentManager, NotebookResults.KEY_PLAYLIST_CREATED, null /* 無指定詩歌，選詩歌加入 */)
+  // HymnPickerController（mode == HOME）
+  views.addPlaylist.setOnClickListener { host.onAddToPlaylist(PickerReducer.target(currentPreview())) }
+
+  // HomeFragment : PickerHost
+  override fun onAddToPlaylist(ref: HymnRef?) {
+      val key = ref?.let { HymnKey.ofOrNull(it.book, it.storedNo) }   // 兩者附號編號一致（大本 780+n、青年 275+n；青年 isFu 由 HymnKey 推導為 false）
+      AddToPlaylistDialogFragment.show(childFragmentManager, NotebookResults.KEY_PLAYLIST_CREATED, key /* null＝選詩歌加入 */)
   }
   ```
 
-  （C 模式改 C 的 `HomeFragment.kt`；pre-C 模式在 `MainActivity` 的 `main.xml` 加 `@id/btn_add_playlist`，同上接線。）
+  （`HymnRef` 屬 C 的 `org.cog.hymnchtv.hymn`；轉成 `HymnKey` 只在 `HomeFragment` 這一處，`HymnPickerController` 不 import `notebook.*`。pre-C 模式 rev 5 作廢。）
 
-- [ ] **Step 3：pre-C 模式——主選單加「我的詩歌」入口**
+- [ ] **Step 2b：C-12——「更多›」記錄頁加「唱詩紀錄」分頁**
+
+  C 的 H3 `ui/home/HistoryFragment`（全螢幕、host back stack 疊加，1.1.0 只有「最近開過」）改成 `TabLayout`＋`ViewPager2`（或兩個 child Fragment）：「最近開過」＝原 `HistoryAdapter` 清單（保留可見刪除鈕、滑動刪除、長按確認）；「唱詩紀錄」＝ D-1 的 `SingLogFragment`（或其簡版清單，沿用 `NotebookNavigator.openSingLog()`）。toolbar 標題維持 `c_history_title`。測試：兩個分頁都能切換、刪除最近開過不影響唱詩紀錄、`UiFlags` 為 `false` 時**只顯示「最近開過」，沒有分頁列**。
+
+- [ ] **Step 3：pre-C 模式——主選單加「我的詩歌」入口**（rev 5：C 已合併，**略過**）
 
   `menu_main.xml` 加 `<item android:id="@+id/my_hymns" android:title="@string/nb_title" />`；`MainActivity.onOptionsItemSelected` 加分支 → `startActivity(NotebookIntents.notebook(this))`。C 模式略過（入口在底部導覽）。
 
-- [ ] **Step 4：編譯 + Commit**
+- [ ] **Step 4：打開 `UiFlags`（C-13）、編譯、Commit**
+
+  `hymnchtv/src/main/java/org/cog/hymnchtv/ui/host/UiFlags.kt`：`const val NOTEBOOK_UI_ENABLED = true`（KDoc 同步更新）。**這是 D-1 UI 的最後一個 Step**：旗標一打開，「我的詩歌」分頁、首頁「＋歌單」、記錄頁的唱詩紀錄分頁、歌詞頁 `notebookBar` 同時出現，所以 I1、I2 Step 1/2/2b、W 系列都完成並通過測試後才能改。`MainHostTabsTest`／`PickerChromeTest` 裏對旗標 `true` 的組合本來就有測試（C 的 H3 Step 5），這裏補一個 instrumented 檢查：旗標為 `true` 時底部導覽有 4 個分頁、`btn_add_playlist` 可見。
 
   ```bash
   ./gradlew :hymnchtv:assembleDebug --console=plain
-  git add hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java \
-    hymnchtv/src/main/res/menu/menu_main.xml \
-    hymnchtv/src/main/java/org/cog/hymnchtv/ui/myhymns/MyHymnsFragment.kt \
-    hymnchtv/src/main/java/org/cog/hymnchtv/ui/home/HomeFragment.kt
-  git commit -m "feat: wire my-hymns entry and add-to-playlist (C-1/C-7)" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/ui/myhymns/MyHymnsFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/ui/picker/HymnPickerController.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/ui/home/HomeFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/ui/home/HistoryFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/ui/host/UiFlags.kt
+  git commit -m "feat: wire my-hymns entry, add-to-playlist and sing log tab; enable the notebook UI flag (C-1/C-7/C-12/C-13)" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   ```
 
 ### Task I3：instrumented 測試
@@ -8201,8 +8224,8 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 - [ ] **Step 1：`HymnNotebookBarTest`（C-10 接點）**
 
   在既有 C smoke 流程上斷言筆記本列（codex rev 3 #11，斷言**可觀察結果**，不碰門檻設定——D-1a 無此 pref/API）：
-  - 開歌詞頁 → 斷言 `@id/notebookBar` 顯示，且其「唱詩摘要」文字非預設「從未唱」（代表 `showHymn` 已把初始詩歌送進 bar）。
-  - 翻頁 → 斷言摘要對應新詩歌（代表 `onPageSelected` → `showHymn` 生效）。
+  - 先在 instrumentation 執行緒（不在 `onActivity` 內）經 `Notebook.get(...)` 為某首詩寫入一筆唱詩紀錄；開歌詞頁 → 斷言 `@id/notebookBar` 顯示，且摘要含該紀錄的資訊（代表初始 `showHymn` 已把該首送進 bar）；沒有紀錄的詩歌摘要為 `nb_bar_never`（預設）。
+  - 翻頁到另一首（已預先寫入不同的紀錄）→ 斷言摘要換成新詩歌的內容（代表 `onPageSelected` → `showHymn` 生效）。
   - **自動記錄的時序邏輯已由 JVM 的 `HymnBarViewModelTest` 覆蓋**，instrumented 只驗證接線（初始摘要 + 翻頁摘要），不重複測 2 分鐘計時器。
   `AccessibilityChecks` 開啟。
 
