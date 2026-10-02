@@ -24,6 +24,16 @@ class T2sMapTest {
     }
 
     @Test
+    fun recoveryVersionAndTaiwanFormsBothFindSimplifiedLyrics() {
+        val assets = File(checkNotNull(System.getProperty("hymnchtv.assetsDir")))
+        val map = T2sMap.parse(File(assets, "lyrics_t2s_map.txt").readLines())
+        // The lyrics show the Recovery Version's 裏; people type Taiwan's 裡. Search runs on the Simplified text.
+        for (query in listOf("在灵裏", "在靈裡", "在灵里")) {
+            assertThat(SearchPattern.build(query, map)!!.matcher("活在灵里面").find()).isTrue()
+        }
+    }
+
+    @Test
     fun realAssetMapIsConsistentWithSimplifiedSources() {
         val assets = File(checkNotNull(System.getProperty("hymnchtv.assetsDir")))
         val sourceText = assets.listFiles { f -> f.isDirectory && Regex("lyrics_[a-z]+_text").matches(f.name) }!!
