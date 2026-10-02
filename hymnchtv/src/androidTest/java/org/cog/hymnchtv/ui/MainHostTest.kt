@@ -52,12 +52,20 @@ class MainHostTest {
         selectTab(R.id.nav_toc)
         onView(withId(R.id.toc_books)).check(matches(isDisplayed()))
         onView(withId(R.id.tv_entry)).check(matches(not(isDisplayed())))
-        selectTab(R.id.nav_my_hymns)
-        onView(withId(R.id.myHymnsContainer)).check(matches(isDisplayed()))
         selectTab(R.id.nav_settings)
         onView(withText(R.string.c_cat_appearance)).check(matches(isDisplayed()))
         selectTab(R.id.nav_home)
         onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
+    }
+
+    @Test
+    fun myHymnsTabIsNotOfferedWhileTheNotebookUiIsOff() = launch { scenario ->
+        scenario.onActivity { a ->
+            val nav = a.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_nav)
+            val visible = (0 until nav.menu.size()).map { nav.menu.getItem(it) }.filter { it.isVisible }.map { it.itemId }
+            assertThat(visible).containsExactly(R.id.nav_home, R.id.nav_toc, R.id.nav_settings).inOrder()
+            assertThat(a.supportFragmentManager.fragments.none { it is org.cog.hymnchtv.ui.myhymns.MyHymnsFragment }).isTrue()
+        }
     }
 
     @Test

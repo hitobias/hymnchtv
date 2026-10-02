@@ -7,7 +7,9 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.ViewMatchers.Visibility
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -103,8 +105,8 @@ class HomeFragmentTest {
     }
 
     @Test
-    fun addPlaylistButtonIsPresent() = withHome {
-        // below the keypad: the home tab scrolls
-        onView(withId(R.id.btn_add_playlist)).perform(scrollTo()).check(matches(isDisplayed()))
+    fun addPlaylistButtonIsHiddenWhileTheNotebookUiIsOff() = withHome {
+        // 1.0: the button has no function yet (D-1, 1.1)
+        onView(withId(R.id.btn_add_playlist)).check(matches(withEffectiveVisibility(Visibility.GONE)))
     }
 }

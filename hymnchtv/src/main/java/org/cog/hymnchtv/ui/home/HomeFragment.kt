@@ -21,6 +21,7 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.concurrent.AppExecutors
 import org.cog.hymnchtv.hymnhistory.HistoryRecord
 import org.cog.hymnchtv.persistance.DatabaseBackend
+import org.cog.hymnchtv.ui.host.UiFlags
 import org.cog.hymnchtv.ui.titles.AssetHymnTitles
 import org.cog.hymnchtv.ui.titles.HymnTitleSource
 import org.cog.hymnchtv.utils.HymnNoValidate
@@ -151,8 +152,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             true
         }
         v.searchButton.setOnClickListener { onSearch(v) }
-        // C-7: wired by sub-project D-1
-        v.addPlaylist.setOnClickListener { }
+        // C-7: wired by sub-project D-1; hidden until then
+        v.addPlaylist.visibility = if (UiFlags.NOTEBOOK_UI_ENABLED) View.VISIBLE else View.GONE
         v.next.setOnClickListener { onNext(v) }
     }
 

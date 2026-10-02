@@ -11,23 +11,19 @@ import org.cog.hymnchtv.ui.settings.SettingsFragment
 import org.cog.hymnchtv.ui.toc.TocFragment
 
 /**
- * Hosts the four tabs of MainActivity. Tab fragments are created once and then hidden/shown, so every tab keeps its state
+ * Hosts the tabs (home, toc, settings; plus my hymns when [UiFlags.NOTEBOOK_UI_ENABLED]) of MainActivity. Tab fragments are created once and then hidden/shown, so every tab keeps its state
  * while another one is visible. The selected tab is saved by the activity and passed back to [attach].
  */
 class MainHost(activity: FragmentActivity) {
     private val fm = activity.supportFragmentManager
-    private val tabs: Map<Int, () -> Fragment> = linkedMapOf(
-        R.id.nav_home to { HomeFragment() },
-        R.id.nav_toc to { TocFragment() },
-        R.id.nav_my_hymns to { MyHymnsFragment() },
-        R.id.nav_settings to { SettingsFragment() },
-    )
+    private val tabs: Map<Int, () -> Fragment> = tabIds(UiFlags.NOTEBOOK_UI_ENABLED).associateWith(::createTab)
     private var nav: BottomNavigationView? = null
     private var current: Int = R.id.nav_home
 
     /** @param savedTab the tab saved by [onSaveState]; the activity reads it from its savedInstanceState, never from the intent. */
     fun attach(nav: BottomNavigationView, savedTab: Int) {
         this.nav = nav
+        nav.menu.findItem(R.id.nav_my_hymns)?.isVisible = UiFlags.NOTEBOOK_UI_ENABLED
         val tab = if (tabs.containsKey(savedTab)) savedTab else R.id.nav_home
         nav.selectedItemId = tab
         nav.setOnItemSelectedListener { item ->
@@ -71,6 +67,21 @@ class MainHost(activity: FragmentActivity) {
     private fun tag(tabId: Int) = "tab:$tabId"
 
     companion object {
+        /** The tabs shown, in bottom-navigation order. */
+        fun tabIds(notebookEnabled: Boolean): List<Int> = buildList {
+            add(R.id.nav_home)
+            add(R.id.nav_toc)
+            if (notebookEnabled) add(R.id.nav_my_hymns)
+            add(R.id.nav_settings)
+        }
+
+        private fun createTab(tabId: Int): () -> Fragment = when (tabId) {
+            R.id.nav_home -> ({ HomeFragment() })
+            R.id.nav_toc -> ({ TocFragment() })
+            R.id.nav_my_hymns -> ({ MyHymnsFragment() })
+            else -> ({ SettingsFragment() })
+        }
+
         const val EXTRA_TAB = "c_selected_tab"
     }
 }
