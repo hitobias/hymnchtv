@@ -4,14 +4,15 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_marginEnd="8dp"
-    android:background="@drawable/bg_recent_item"
-    android:clickable="true"
+        android:clickable="true"
     android:focusable="true"
     android:gravity="center"
-    android:minHeight="48dp"
+    android:minHeight="52dp"
     android:orientation="vertical"
-    android:paddingHorizontal="12dp"
-    android:paddingVertical="4dp">
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
 
     <TextView
         android:id="@+id/tv_recent_label_item"
@@ -19,7 +20,7 @@
         android:layout_height="wrap_content"
         android:maxLines="1"
         android:textColor="?attr/colorOnSurface"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
@@ -28,5 +29,5 @@
         android:layout_height="wrap_content"
         android:maxLines="1"
         android:textColor="?attr/colorOnSurfaceVariant"
-        android:textSize="12sp" />
+        android:textSize="11sp" />
 </LinearLayout>

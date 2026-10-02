@@ -77,7 +77,7 @@ class MainHostTest {
         onView(withId(R.id.n2)).perform(scrollTo(), click())
         selectTab(R.id.nav_settings)
         selectTab(R.id.nav_home)
-        onView(withId(R.id.tv_entry)).check(matches(withText(org.hamcrest.CoreMatchers.containsString(ctx.getString(R.string.c_label_no, 12)))))
+        onView(withId(R.id.tv_entry)).check(matches(withText(org.hamcrest.CoreMatchers.containsString("12"))))
     }
 
     @Test

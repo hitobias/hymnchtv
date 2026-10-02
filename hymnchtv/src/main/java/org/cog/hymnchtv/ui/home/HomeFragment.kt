@@ -12,6 +12,8 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.hymn.HymnSource
 import org.cog.hymnchtv.hymnhistory.HistoryRecord
+import org.cog.hymnchtv.reading.background.BackgroundPrefs
+import org.cog.hymnchtv.reading.background.BackgroundSlot
 import org.cog.hymnchtv.ui.host.MainNavigator
 import org.cog.hymnchtv.ui.picker.HymnPickerController
 import org.cog.hymnchtv.ui.picker.HymnPickerViewModel
@@ -35,7 +37,9 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     @VisibleForTesting
     var titleSource: HymnTitleSource? = null
 
-    private var appearance: HomeAppearance? = null
+    private var homeColors: HomeColors? = null
+    private var keypadSizer: KeypadSizer? = null
+    private var views: HymnPickerViews? = null
     private var controller: HymnPickerController? = null
     private var recent: RecentChips? = null
 
@@ -50,15 +54,17 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val views = HymnPickerViews(view)
-        appearance = HomeAppearance(requireContext(), views)
+        this.views = views
+        keypadSizer = KeypadSizer(views, view.findViewById(R.id.viewMain)).also { it.attach() }
         recent = RecentChips(views, ::openFromHistory)
-        controller = HymnPickerController(views, this, PickerMode.HOME, vm, prefs, ::currentTitleSource)
+        applyHomeTheme()
+        controller = HymnPickerController(views, this, PickerMode.HOME, vm, prefs, ::currentTitleSource, ::titleIsTraditional)
     }
 
     override fun onResume() {
         super.onResume()
         // The next key press starts a new number; settings and history may also have changed meanwhile
-        refreshAppearance()
+        applyHomeTheme()
         controller?.onResume()
         recent?.reload()
     }
@@ -67,23 +73,39 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         if (!hidden) {
-            refreshAppearance()
+            applyHomeTheme()
             recent?.reload()
         }
     }
 
-    private fun refreshAppearance() {
-        appearance?.apply(prefs)
+    /**
+     * Shows the MAIN slot's background and colours every home element from the UiTokens derived from it (spec 4). The
+     * lyrics page builds its own tokens from the LYRICS slot; the two are never shared.
+     */
+    private fun applyHomeTheme() {
+        val views = views ?: return
+        val background = checkNotNull(views.background) { "the home layout needs its background view" }
+        val applied = BackgroundPrefs.applyWithTokens(background, prefs, BackgroundSlot.MAIN)
+        HomeColors(requireContext(), applied.tokens, applied.choice, applied.palette).also {
+            homeColors = it
+            it.apply(views)
+        }
+        keypadSizer?.update()
     }
 
     override fun onDestroyView() {
         controller?.release()
         recent?.release()
+        keypadSizer?.detach()
         controller = null
         recent = null
-        appearance = null
+        keypadSizer = null
+        homeColors = null
+        views = null
         super.onDestroyView()
     }
+
+    private fun titleIsTraditional(): Boolean = LyricsScript.hantVariant(requireContext()) != null
 
     private fun currentTitleSource(): HymnTitleSource =
         // The script follows the reader's lyrics-language setting, which can change in settings between two lookups

@@ -2,11 +2,10 @@ package org.cog.hymnchtv.ui.picker
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.content.res.ColorStateList
-import android.graphics.Color
+import android.graphics.Typeface
+import android.util.TypedValue
 import android.view.View
 import androidx.core.view.ViewCompat
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import org.cog.hymnchtv.HymnToc
 import org.cog.hymnchtv.R
@@ -42,12 +41,12 @@ class HymnPickerController(
     private val vm: HymnPickerViewModel,
     private val prefs: SharedPreferences,
     private val titleSource: () -> HymnTitleSource,
+    /** Whether titles are shown in Traditional (picks the TC Kai face), see LyricsScript. */
+    private val titleTraditional: () -> Boolean = { false },
     private val xref: () -> EnglishXRef = EnglishXRefStore::current,
 ) {
     private val context: Context = views.root.context
     private val chrome = PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)
-    private val groupOf = views.books.mapValues { (source, _) -> if (source.ordinal < GROUP_1_SIZE) views.group1 else views.group2 }
-    private val sourceOfButton = views.books.entries.associate { (source, button) -> button.id to source }
 
     private var suppress = false
     private var previewRequest = 0
@@ -108,18 +107,14 @@ class HymnPickerController(
     }
 
     private fun bindSources() {
-        val listener = MaterialButtonToggleGroup.OnButtonCheckedListener { _, checkedId, isChecked ->
-            if (suppress) return@OnButtonCheckedListener
-            val source = sourceOfButton[checkedId] ?: return@OnButtonCheckedListener
-            if (isChecked) {
+        // Exactly one source stays chosen: a tap on the chosen one changes nothing (render() restores the check)
+        views.books.forEach { (source, button) ->
+            button.setOnClickListener {
                 vm.selectSource(source)
                 persistSource(source)
+                render()
             }
-            // an unchecked selected button (tap on the chosen one) is restored by render(): exactly one source stays chosen
-            render()
         }
-        views.group1.addOnButtonCheckedListener(listener)
-        views.group2.addOnButtonCheckedListener(listener)
     }
 
     private fun bindActions() {
@@ -164,19 +159,7 @@ class HymnPickerController(
     }
 
     private fun syncSources(source: HymnSource) {
-        suppress = true
-        try {
-            for ((s, button) in views.books) {
-                val group = groupOf.getValue(s)
-                if (s == source) {
-                    if (!button.isChecked) group.check(button.id)
-                } else if (button.isChecked) {
-                    group.uncheck(button.id)
-                }
-            }
-        } finally {
-            suppress = false
-        }
+        for ((s, button) in views.books) button.isChecked = s == source
     }
 
     private fun renderKeys(state: PickerState, xr: EnglishXRef) {
@@ -191,8 +174,7 @@ class HymnPickerController(
         views.fu.isEnabled = state.source.supportsFu
         ViewCompat.setStateDescription(views.fu, if (state.source.supportsFu) null else context.getString(R.string.c_notice_no_fu))
         views.fu.contentDescription = context.getString(R.string.c_key_fu_desc)
-        val tint = if (state.isFu) androidx.core.graphics.ColorUtils.setAlphaComponent(views.fu.currentTextColor, FU_ACTIVE_ALPHA) else Color.TRANSPARENT
-        views.fu.backgroundTintList = ColorStateList.valueOf(tint)
+        views.fu.isSelected = state.isFu
     }
 
     private fun renderPreview(state: PickerState, preview: Preview) {
@@ -200,27 +182,32 @@ class HymnPickerController(
         views.alsoScroll.visibility = View.GONE
         views.alsoIn.removeAllViews()
         views.title.visibility = View.VISIBLE
-        views.title.text = ""
+        views.note.visibility = View.GONE
+        status("")
         when (preview) {
-            Preview.Empty -> views.entry.text = emptyText(state)
+            Preview.Empty -> {
+                book(HymnLabels.longName(context, state.source))
+                views.entry.text = if (state.isFu) context.getString(R.string.nn10) else EMPTY_NUMBER
+                status(context.getString(R.string.c_preview_empty))
+            }
             is Preview.Valid -> {
-                views.entry.text = HymnLabels.headline(context, preview.ref)
+                book(HymnLabels.bookName(context, preview.ref))
+                views.entry.text = HymnLabels.numberText(context, preview.ref)
                 if (state.notice == null) showTitle(request, preview.ref)
             }
             is Preview.Invalid -> {
-                val book = HymnLabels.longName(context, preview.source)
-                views.entry.text = context.getString(
-                    if (preview.isFu) R.string.c_preview_invalid_fu else R.string.c_preview_invalid,
-                    book,
-                    preview.number.toString(),
-                )
+                val bookName = HymnLabels.longName(context, preview.source)
+                book(bookName)
+                views.entry.text = (if (preview.isFu) context.getString(R.string.c_label_fu, preview.number) else preview.number.toString())
+                status(context.getString(if (preview.isFu) R.string.c_preview_invalid_fu else R.string.c_preview_invalid, bookName, preview.number.toString()))
                 showChips(
                     context.getString(R.string.c_preview_also),
                     preview.alsoIn.map { source -> HymnLabels.sourceName(context, source) to { alsoIn(source) } },
                 )
             }
             is Preview.English -> {
-                views.entry.text = context.getString(R.string.c_preview_en_to, preview.englishNo, HymnLabels.headline(context, preview.target))
+                book(HymnLabels.sourceName(context, HymnSource.ENGLISH))
+                views.entry.text = preview.englishNo.toString()
                 val others = preview.candidates.withIndex().filter { it.index != preview.pick }
                 if (others.isEmpty()) {
                     if (state.notice == null) showTitle(request, preview.target)
@@ -230,20 +217,31 @@ class HymnPickerController(
                         others.map { (index, ref) -> HymnLabels.headline(context, ref) to { pickEnglish(index) } },
                     )
                 }
+                views.note.text = HymnLabels.headline(context, preview.target)
+                views.note.visibility = View.VISIBLE
             }
-            is Preview.NoCounterpart -> views.entry.setText(R.string.c_preview_en_none)
+            is Preview.NoCounterpart -> {
+                book(HymnLabels.sourceName(context, HymnSource.ENGLISH))
+                views.entry.text = preview.englishNo.toString()
+                status(context.getString(R.string.c_preview_en_none))
+            }
         }
         if (state.notice == Notice.NO_FU_IN_BOOK && views.alsoScroll.visibility != View.VISIBLE) {
-            views.title.text = context.getString(R.string.c_notice_no_fu)
+            status(context.getString(R.string.c_notice_no_fu))
         }
     }
 
-    private fun emptyText(state: PickerState): String =
-        if (state.isFu) {
-            "${HymnLabels.longName(context, state.source)} ${context.getString(R.string.nn10)}"
-        } else {
-            context.getString(R.string.c_preview_empty)
-        }
+    private fun book(name: String) {
+        views.book.text = name
+        KaiText.applyForUi(views.book, context, bold = false)
+    }
+
+    /** A message (not a hymn title): plain 16sp, so only titles carry the big Kai face. */
+    private fun status(text: String) {
+        views.title.text = text
+        views.title.setTextSize(TypedValue.COMPLEX_UNIT_SP, STATUS_SP)
+        views.title.setTypeface(Typeface.DEFAULT, Typeface.NORMAL)
+    }
 
     private fun showTitle(request: Int, ref: HymnRef) {
         val source = titleSource()
@@ -253,6 +251,8 @@ class HymnPickerController(
             AppExecutors.MAIN.post {
                 if (!released && request == previewRequest && views.alsoScroll.visibility != View.VISIBLE) {
                     views.title.text = title
+                    views.title.setTextSize(TypedValue.COMPLEX_UNIT_SP, TITLE_SP)
+                    KaiText.apply(views.title, titleTraditional(), bold = true)
                 }
             }
         }
@@ -286,8 +286,9 @@ class HymnPickerController(
     }
 
     private companion object {
-        const val GROUP_1_SIZE = 4
         const val MIN_TOUCH_DP = 48
-        const val FU_ACTIVE_ALPHA = 0x2E
+        const val EMPTY_NUMBER = "\u2014"
+        const val TITLE_SP = 20f
+        const val STATUS_SP = 16f
     }
 }

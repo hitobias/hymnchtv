@@ -42,6 +42,8 @@ class HymnPickerTest {
 
     private fun entryShows(text: String) = onView(withId(R.id.tv_entry)).check(matches(withText(containsString(text))))
 
+    private fun noteShows(text: String) = onView(withId(R.id.tv_preview_note)).check(matches(withText(containsString(text))))
+
     private fun view(scenario: androidx.test.core.app.ActivityScenario<MainActivity>, id: Int): View {
         var v: View? = null
         scenario.onActivity { v = it.findViewById(id) }
@@ -96,14 +98,16 @@ class HymnPickerTest {
     @Test fun anInvalidNumberOffersTheOtherBooksWhereItExists() = launch { scenario ->
         pick(R.id.bs_bb)
         type("40")
-        entryShows(ctx.getString(R.string.c_preview_invalid, HymnLabels.longName(ctx, HymnSource.BB), "40"))
+        // the number stays big on the card, the message goes to its right side
+        entryShows("40")
+        onView(withId(R.id.title_preview)).check(matches(withText(ctx.getString(R.string.c_preview_invalid, HymnLabels.longName(ctx, HymnSource.BB), "40"))))
         onView(withId(R.id.btn_open)).check(matches(not(isEnabled())))
         val dbChip = androidx.test.espresso.matcher.ViewMatchers.withText(HymnLabels.sourceName(ctx, HymnSource.DB))
         onView(org.hamcrest.CoreMatchers.allOf(dbChip, androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA(withId(R.id.also_in_group)))).perform(click())
         scenario.onActivity { a ->
             assertThat(a.findViewById<com.google.android.material.button.MaterialButton>(R.id.bs_db).isChecked).isTrue()
         }
-        entryShows(ctx.getString(R.string.c_label_no, 40))
+        entryShows("40")
         onView(withId(R.id.btn_open)).check(matches(isEnabled()))
     }
 
@@ -114,26 +118,27 @@ class HymnPickerTest {
         entryShows(ctx.getString(R.string.c_label_fu, 3))
         pick(R.id.bs_bb)
         FragmentHost.eventually { onView(withId(R.id.title_preview)).check(matches(withText(R.string.c_notice_no_fu))) }
-        entryShows(ctx.getString(R.string.c_label_no, 3))
+        entryShows("3")
     }
 
     @Test fun englishNumberPreviewsItsChineseHymnAndOffersTheOtherCandidate() = launch {
         pick(R.id.bs_english)
         type("1")
-        entryShows(ctx.getString(R.string.c_preview_en_to, 1, HymnLabels.headline(ctx, org.cog.hymnchtv.hymn.HymnRef(HymnTypes.DB, 1))))
+        entryShows("1")
+        noteShows(HymnLabels.headline(ctx, org.cog.hymnchtv.hymn.HymnRef(HymnTypes.DB, 1)))
         onView(withId(R.id.btn_open)).check(matches(isEnabled()))
         // 254 has two Chinese counterparts: BB 401 first, DB 211 offered as a chip
         pick(R.id.n11)
         type("254")
         val other = HymnLabels.headline(ctx, org.cog.hymnchtv.hymn.HymnRef(HymnTypes.DB, 211))
         onView(org.hamcrest.CoreMatchers.allOf(withText(other), androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA(withId(R.id.also_in_group)))).perform(click())
-        entryShows(HymnLabels.headline(ctx, org.cog.hymnchtv.hymn.HymnRef(HymnTypes.DB, 211)))
+        noteShows(HymnLabels.headline(ctx, org.cog.hymnchtv.hymn.HymnRef(HymnTypes.DB, 211)))
     }
 
     @Test fun englishNumberWithoutCounterpartCannotBeOpened() = launch {
         pick(R.id.bs_english)
         type("3")   // 3 is only a prefix of 30..39; no English hymn 3 has a Chinese counterpart
-        entryShows(ctx.getString(R.string.c_preview_en_none))
+        onView(withId(R.id.title_preview)).check(matches(withText(R.string.c_preview_en_none)))
         onView(withId(R.id.btn_open)).check(matches(not(isEnabled())))
     }
 
@@ -176,7 +181,7 @@ class HymnPickerTest {
         pick(R.id.bs_bb)
         type("37")
         scenario.recreate()
-        entryShows(ctx.getString(R.string.c_label_no, 37))
+        entryShows("37")
         scenario.onActivity { a ->
             assertThat(a.findViewById<com.google.android.material.button.MaterialButton>(R.id.bs_bb).isChecked).isTrue()
         }
@@ -210,7 +215,7 @@ class HymnPickerTest {
         pick(R.id.bs_db)
         type("12")
         pick(R.id.n11)
-        entryShows(ctx.getString(R.string.c_label_no, 1))
+        entryShows("1")
     }
 
     @Test fun historyOfAnOldFuRecordStillFormatsAsFu() {
