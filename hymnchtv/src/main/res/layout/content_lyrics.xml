@@ -130,10 +130,15 @@
             android:src="@drawable/ic_lyrics_more" />
     </LinearLayout>
 
-    <ScrollView
+    <!-- Keeps a slightly diagonal scroll from turning the ViewPager2 page; see NestedScrollableHost -->
+    <org.cog.hymnchtv.utils.NestedScrollableHost
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:id="@+id/lyricsView"
@@ -266,4 +271,5 @@
                 tools:ignore="WebViewLayout" />
         </LinearLayout>
     </ScrollView>
+    </org.cog.hymnchtv.utils.NestedScrollableHost>
 </LinearLayout>
