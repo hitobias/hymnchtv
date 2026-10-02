@@ -249,7 +249,7 @@ D-1 UI 計畫「依賴 C 的介面」列了 C-1～C-11；C 這一方承諾如下
 | C-5 | 歌詞頁新版面標題下筆記本列**空容器**；收藏星號頂列（D-1 接 `HymnNotebookBarFragment` 或 render `HymnBarViewModel.state`） | `content_main.xml` 加 `@id/notebookBar` 空容器（Task L3，單一宿主）；C **不** import `HymnBarViewModel` |
 | C-6 | 歌詞頁「下一首」按鈕 | Task L3：按鈕 `@id/btn_next`，C 預設接 `scrollNextHymn()`；D-1 合併後接 `HymnBarViewModel.nextInPlaylist()` |
 | C-7 | 首頁「＋歌單」按鈕 | Task H1：按鈕 `@id/btn_add_playlist`（C 宣告 id，click no-op）；D-1 合併後接 `AddToPlaylistDialogFragment.show(...)` |
-| C-8 | 輸入即時詩名 → `HymnTitleSource`/`AssetHymnTitles` | Task H2；先合併方擁有（C 的 `ui/titles/` 或 D-1 的 `notebook/ui/titles/` 擇一，後合併方重用） |
+| C-8 | 輸入即時詩名 → C 自己的 `ui/titles/HymnTitleSource`（同步 `lookup`） | Task H2；**與 D-1 的 `notebook/ui/domain/HymnTitleSource`（suspend `titlesFor`）是不同 package、不同簽名的各自實作，不共用型別、不衝突** |
 | C-9 | 設定頁「唱詩紀錄」「備份」**類別空位** | Task S1 設定分頁留類別；D-1 合併後把 `nb_preferences.xml` 併入或嵌入 `NotebookSettingsFragment` |
 | C-10 | smoke test 保留接點 | Task 3 基線 + Task F2 核對；保留 `showHymn`/`onPlaybackCompleted`/`NotebookBarHost` |
 | C-11 | 文楷字型 | Task 4 綁入 LXGW WenKai；若與 D-1 的字型任務衝突，不手動合併二進位檔 |
