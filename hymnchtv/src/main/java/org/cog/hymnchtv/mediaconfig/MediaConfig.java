@@ -1071,6 +1071,16 @@ public class MediaConfig extends BaseActivity
         }
     }
 
+    /** Same as {@link #hasMediaRecord(DatabaseBackend, MediaRecord)}, with local files looked up in localMedia. */
+    private static boolean hasMediaRecord(DatabaseBackend db, LocalMediaIndex localMedia, MediaRecord mediaRecord) {
+        return db.getMediaRecord(mediaRecord, false)
+                || localMedia.has(mediaRecord.getHymnType() + mediaDir.get(mediaRecord.getMediaType()), mediaRecord.getHymnNo());
+    }
+
+    private static LocalMediaIndex newLocalMediaIndex() {
+        return new LocalMediaIndex(dir -> FileBackend.getHymnchtvStore(dir, true));
+    }
+
     // =============================== MediaRecord Database Handler ============================
 
     /**
@@ -1178,6 +1188,7 @@ public class MediaConfig extends BaseActivity
     private static ImportResult importLines(DatabaseBackend db, String[] lines, boolean isOverWrite) {
         int imported = 0;
         int total = 0;
+        LocalMediaIndex localMedia = newLocalMediaIndex();
         for (String line : lines) {
             MediaRecord mediaRecord = parseImportLine(line);
             if (mediaRecord == null)
@@ -1186,7 +1197,7 @@ public class MediaConfig extends BaseActivity
             boolean isFu = mediaRecord.isFu();
             int hymnNo = isFu ? (mediaRecord.getHymnNo() - HYMN_DB_NO_MAX) : mediaRecord.getHymnNo();
             int nui = HymnNoValidate.validateHymnNo(mediaRecord.getHymnType(), hymnNo, isFu);
-            if ((nui != -1) && (isOverWrite || !hasMediaRecord(db, mediaRecord))) {
+            if ((nui != -1) && (isOverWrite || !hasMediaRecord(db, localMedia, mediaRecord))) {
                 db.storeMediaRecordOrThrow(mediaRecord); // SQL errors propagate: the whole import rolls back
                 imported++;
             }

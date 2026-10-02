@@ -32,7 +32,12 @@ class ImportPerfTest {
         ctx.deleteDatabase(name)
     }
 
-    /** The pre-B-9a loop: one auto-commit per record, isOverWrite = false. */
+    /**
+     * The pre-B-9a loop: the same dedup as production ([MediaConfig.hasMediaRecord], database **and** local
+     * file), but one auto-commit per record instead of one transaction for the whole file. Both paths must
+     * pay the identical lookup cost, otherwise this compares a database-only loop against a database+disk
+     * one and the batch win looks larger than it is.
+     */
     private fun legacyImport(db: DatabaseBackend, text: String): Int {
         var imported = 0
         for (line in text.split(Regex("\r\n|\n"))) {
@@ -43,7 +48,7 @@ class ImportPerfTest {
             } ?: continue
             val hymnNo = if (record.isFu()) record.hymnNo - HymnNoValidate.HYMN_DB_NO_MAX else record.hymnNo
             val nui = HymnNoValidate.validateHymnNo(record.hymnType, hymnNo, record.isFu())
-            if (nui != -1 && !db.getMediaRecord(record, false) && db.storeMediaRecord(record) != -1L) {
+            if (nui != -1 && !MediaConfig.hasMediaRecord(db, record) && db.storeMediaRecord(record) != -1L) {
                 imported++
             }
         }

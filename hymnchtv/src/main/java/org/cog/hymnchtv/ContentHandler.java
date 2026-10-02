@@ -84,7 +84,6 @@ import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -92,13 +91,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import org.apache.http.util.EncodingUtils;
 import org.apache.http.util.TextUtils;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
+import kotlin.jvm.functions.Function1;
+import org.cog.hymnchtv.mediaconfig.HymnFileName;
 import org.cog.hymnchtv.mediaconfig.MediaConfig;
 import org.cog.hymnchtv.mediaconfig.MediaRecord;
 import org.cog.hymnchtv.mediaconfig.NotionRecord;
@@ -1198,17 +1198,8 @@ public class ContentHandler extends BaseActivity {
     public static boolean isFileExist(String dir, int hymnNo, List<Uri> uriList) {
         File hymnDir = FileBackend.getHymnchtvStore(dir, true);
         if (hymnDir != null) {
-            // Exact word boundary number match e.g. ChHymns-0009.mp3
-            final Pattern patternB = Pattern.compile("\\b0*" + hymnNo + "\\b");
-            // Optional prefix character/zero's, with exact number matching e.g. D609建造.mp3
-            final Pattern patternC = Pattern.compile("\\D0*" + hymnNo + "\\D");
-
-            File[] fileList = hymnDir.listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return patternB.matcher(name).find() || patternC.matcher(name).find();
-                }
-            });
+            final Function1<String, Boolean> matchesHymnNo = HymnFileName.matcher(hymnNo);
+            File[] fileList = hymnDir.listFiles((d, name) -> matchesHymnNo.invoke(name));
 
             if (fileList != null && fileList.length != 0) {
                 if (uriList != null) {
