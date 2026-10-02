@@ -5,4 +5,12 @@
     <string name="c_next_hymn">下一首</string>
     <string name="c_history_delete">從歷史移除</string>
     <string name="c_toc_empty">沒有條目</string>
+    <string name="c_cat_appearance">外觀</string>
+    <string name="c_cat_home">主面版</string>
+    <string name="c_cat_reading">閱讀</string>
+    <string name="c_cat_media">媒體</string>
+    <string name="c_cat_other">其他</string>
+    <string name="c_cat_sing_log">唱詩記錄</string>
+    <string name="c_cat_backup">備份</string>
+    <string name="c_check_update">檢查更新</string>
 </resources>

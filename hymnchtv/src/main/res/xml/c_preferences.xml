@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings tab (sub-project C): everything the old main menu held. Nothing here persists by itself: the fragment shows the
+     effective value and applies a change through its change listener (theme and language also need a recreate/restart). -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/c_cat_appearance">
+
+        <ListPreference
+            app:entries="@array/c_night_modes"
+            app:entryValues="@array/c_night_mode_values"
+            app:iconSpaceReserved="false"
+            app:key="Theme"
+            app:persistent="false"
+            app:title="@string/theme_menu"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:entries="@array/c_locales"
+            app:entryValues="@array/c_locale_values"
+            app:iconSpaceReserved="false"
+            app:key="Locale"
+            app:persistent="false"
+            app:title="@string/locale_menu"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/c_cat_home">
+
+        <SeekBarPreference
+            android:max="50"
+            app:iconSpaceReserved="false"
+            app:key="TextSize"
+            app:min="25"
+            app:persistent="false"
+            app:showSeekBarValue="true"
+            app:title="@string/fontSize" />
+
+        <ListPreference
+            app:entries="@array/c_font_colors"
+            app:entryValues="@array/c_font_color_values"
+            app:iconSpaceReserved="false"
+            app:key="TextColor"
+            app:persistent="false"
+            app:title="@string/fontColor"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/c_cat_reading">
+
+        <!-- Lyrics language, fonts, backgrounds, ...: the reading settings screen (plan A2) -->
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="reading_settings"
+            app:persistent="false"
+            app:title="@string/reading_settings" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/c_cat_media">
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="media_config"
+            app:persistent="false"
+            app:title="@string/media_config" />
+    </PreferenceCategory>
+
+    <!-- C-9: empty slots that sub-project D-1 fills (it makes them visible and adds its preferences) -->
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:isPreferenceVisible="false"
+        app:key="c_cat_sing_log"
+        app:title="@string/c_cat_sing_log" />
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:isPreferenceVisible="false"
+        app:key="c_cat_backup"
+        app:title="@string/c_cat_backup" />
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/c_cat_other">
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="check_update"
+            app:persistent="false"
+            app:title="@string/c_check_update" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="permission_request"
+            app:persistent="false"
+            app:title="@string/permission_settings" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="online_help"
+            app:persistent="false"
+            app:title="@string/help_online" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="about"
+            app:persistent="false"
+            app:title="@string/about" />
+    </PreferenceCategory>
+</PreferenceScreen>

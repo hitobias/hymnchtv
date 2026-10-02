@@ -5,4 +5,12 @@
     <string name="c_next_hymn">Next</string>
     <string name="c_history_delete">Delete from history</string>
     <string name="c_toc_empty">No entries</string>
+    <string name="c_cat_appearance">Appearance</string>
+    <string name="c_cat_home">Home screen</string>
+    <string name="c_cat_reading">Reading</string>
+    <string name="c_cat_media">Media</string>
+    <string name="c_cat_other">More</string>
+    <string name="c_cat_sing_log">Singing log</string>
+    <string name="c_cat_backup">Backup</string>
+    <string name="c_check_update">Check for updates</string>
 </resources>
