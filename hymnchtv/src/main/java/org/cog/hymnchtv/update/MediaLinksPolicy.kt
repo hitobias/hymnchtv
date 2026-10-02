@@ -7,4 +7,11 @@ object MediaLinksPolicy {
 
     @JvmStatic
     fun shouldImport(installedVersion: Int, bundledVersion: Int): Boolean = bundledVersion > installedVersion
+
+    /**
+     * An import that saw no records at all (e.g. a swallowed read error yields total == 0) did not succeed:
+     * keep the stored version so the import is retried on the next start.
+     */
+    @JvmStatic
+    fun shouldRecordVersion(totalRecords: Int): Boolean = totalRecords > 0
 }

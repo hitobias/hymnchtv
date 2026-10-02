@@ -22,7 +22,12 @@ object MediaLinksUpdater {
         val installed = installedVersion(context)
         if (!MediaLinksPolicy.shouldImport(installed, MediaLinksPolicy.BUNDLED_VERSION)) return
         try {
-            context.assets.open(MediaConfig.ASSET_URL_IMPORT_FILE).use { MediaConfig.importUrlRecords(it, false) }
+            val result = context.assets.open(MediaConfig.ASSET_URL_IMPORT_FILE).use { MediaConfig.importUrlRecords(it, false) }
+            if (!MediaLinksPolicy.shouldRecordVersion(result.total)) {
+                // Read errors are swallowed by MediaConfig and surface as an empty result: retry next start.
+                Timber.w("Bundled media links import saw no records; version not recorded")
+                return
+            }
             prefs(context).edit().putInt(MediaConfig.PREF_VERSION_URL, MediaLinksPolicy.BUNDLED_VERSION).apply()
             Timber.i("Imported bundled media links v%s (was %s)", MediaLinksPolicy.BUNDLED_VERSION, installed)
         } catch (e: IOException) {

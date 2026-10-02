@@ -12,4 +12,10 @@ class MediaLinksPolicyTest {
         assertThat(MediaLinksPolicy.shouldImport(2, 1)).isFalse()
         assertThat(MediaLinksPolicy.BUNDLED_VERSION).isAtLeast(1)
     }
+
+    @Test
+    fun emptyImportIsNotRecordedSoItRetries() {
+        assertThat(MediaLinksPolicy.shouldRecordVersion(0)).isFalse()
+        assertThat(MediaLinksPolicy.shouldRecordVersion(1)).isTrue()
+    }
 }
