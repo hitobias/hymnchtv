@@ -10,7 +10,7 @@
 
 **規格來源:** 使用者 2026-10-02 決策「DatabaseBackend 也遷到 Room、單一 DB」。
 
-**前置關卡（rev 5）:** **已全部滿足**：A、A2、B（`perf/b-data-startup`，略過 Lane A，PR #3，merge commit `892167bf`）皆已合併進 `origin/master`。實作分支 `refactor/room-unification` 從 `origin/master` 開（基底 = `origin/master`，Task 0 記錄實際 commit）。
+**前置關卡（rev 5 起）:** **已全部滿足**：A、A2、B（`perf/b-data-startup`，略過 Lane A，PR #3，merge commit `892167bf`）皆已合併進 `origin/master`。實作分支 `refactor/room-unification` 從 `origin/master` 開（基底 = `origin/master`，Task 0 記錄實際 commit）。
 
 ---
 
@@ -22,6 +22,7 @@
 
 - rev 4（2026-10-02）：三項事實變動。①**關卡**：A、A2 已合併進 `origin/master`，唯一剩下的關卡是 B 合併（Task 0／§2.9／§三 同步更新）。②**基底**：`refactor/room-unification` 從 `origin/master`（B 合併後）開，不是 `feat/zh-hant`（Task 0 明寫）。③**D-1a 已部分實作**（`feat/notebook-data`，worktree `hymnchtv-d1a`，Task 0–7 完成，Task 8–13 暫停，基底 efca5c22）並使用獨立的 `NotebookDatabase`：推翻 rev 3「本計畫在 D-1a 實作之前完成、只需修訂 D-1a 計畫」的前提。新時序：B 合併 → 本計畫（`HymnchtvDatabase` v1 只含 3 張舊資料表）→ 合併 → D-1a 分支 rebase 到 master 並**遷移程式碼**（5 個 entity／DAO／converter 併入 `HymnchtvDatabase`、刪除 `NotebookDatabase` 與其 schema、去 TRUNCATE、schema 重生仍為 v1）。Task 1 讓 `HymnchtvDatabase` 提供與 `NotebookDatabase` 同形的工廠（`build(context, fileName = FILE_NAME)`／`inMemory(context)`），遷移才能機械化。Task 6 拆成 (a)～(d)，並重寫 §2.9、§2.1 的 D-1a 列、風險。
 - rev 5（2026-10-02）：依 Codex 第四輪 3 P1 + 4 P2 + 1 P3 修正，並更新事實（**B 已合併進 `origin/master`，892167bf**，關卡已滿足，基底 = `origin/master`）。①**P1-1 建置設定**：Task 1 新增 Step 0（根 `build.gradle` 加 KSP classpath、`hymnchtv/build.gradle` 加 KSP plugin、Room runtime／ktx／compiler、`ksp { room.schemaLocation }`），照 D-1a commit `9d468ecf` 的做法；Task 6(a) rebase 時 D-1a 重複的建置 hunk 收斂到 master 設定，只保留 D-1a 專屬依賴。②**P1-2 schema**：決定最終 schema **維持 version 1**（未發佈、無使用者），本計畫合併後到 D-1a 合併前的三表中間組建**僅限開發、絕不發佈**；Task 6(a) 加「`adb uninstall`／`pm clear`」步驟與 dev-notes，Task 6(d) 加發版關卡檢查（1.json 含 8 個 entity、只有一個 schema 版本）；不把 `hymnchtv.db` 加進啟動刪檔清單；不選 v2 migration 的理由寫入 §2.5。③**P1-3 D-1 UI 計畫**：Task 6(c) 改為完整搜尋取代工作，列出行號。④**P2-1 單一 instance**：`HymnchtvDatabase.getInstance(context)`（process-wide），`DatabaseBackend.getInstance` 與 D-1a `Notebook.get()` 共用（§2.4a）。⑤**P2-2 備份範圍**：決定接受統一 DB 全量 Auto Backup（§2.5），更新 D-1a Task 11／13 修訂項，風險加備份配額。⑥**P2-3**：Task 5 改成檢查無殘留原生 SQLite 初始化碼。⑦**P2-4**：Task 6(b) 改為涵蓋 D-1a Task 10–13 的完整重寫工作（有搜尋清單）；Task 0–7 歷史片段加註記、不重寫。⑧**P3**：Javadoc 措辭改為「應在 `AppExecutors.io` 執行；§2.4 列出的過渡呼叫點例外，1.0 前移除」。
+- rev 6（2026-10-02）：依 Codex 第五輪 1 P1 修正（rev 4 的 P1/P2/P3 全數確認已解決）。`DatabaseBackend` 的 API 盤點漏了 B 新增的 `inTransaction`／`runInTransaction`／`storeMediaRecordOrThrow`／`createForTest`，以及測試用的 `close()`、`readableDatabase`／`writableDatabase`／`databaseName`。§2.6 改為明列保留與消失的 API（facade 方法數更正為 12），Task 2 加 Step 2b，Task 5 Step 3 列出要改寫的 6 個既有 instrumented test 與補測。**產品／設計決定（保守）**：`close()` 與 `createForTest` 為測試用保留；原生 `SQLiteDatabase` 存取一律移除。
 
 ---
 
@@ -138,9 +139,13 @@ Room 預設禁止主執行緒查詢。§1 的表列出 7 個主執行緒呼叫�
 
 ### 2.6 「公開 API 不變」的**準確**範圍（Codex P2）
 
-- **保留**：上述 11 個方法的簽名、回傳型別、`getMediaRecord` 的就地更新行為。
-- **消失**：`SQLiteOpenHelper` 繼承來的 `getWritableDatabase()`／`getReadableDatabase()`／`close()`／`onCreate`／`onUpgrade`。
-- 已確認目前只被 `persistance/migrations/` 使用（那些檔案本計畫會刪）。**Task 5 要再 grep 一次**（含 instrumented test）確認沒有其他使用者。
+- **保留（rev 6 更正）**：§1 表列的 **12 個 facade 方法**（含未使用的 `getHymnUrl`）的簽名、回傳型別、`getMediaRecord` 的就地更新行為；**加上 B 新增的交易／測試 API**（`origin/master` 上實際存在，rev 5 漏列）：
+  - `<T> T inTransaction(Supplier<T>)`、`void runInTransaction(Runnable)`：`MediaConfig`（約 1175 行）、`NotionRecord`（約 505）、`QQRecord`（約 277）的匯入整批 rollback 依賴它。改用 `HymnchtvDatabase.runInTransaction(Callable)`（Room 交易，支援巢狀；body 拋例外 → 整批 rollback，例外原樣往外拋）。
+  - `long storeMediaRecordOrThrow(MediaRecord)`：失敗時拋 `SQLException`（原為 `insertOrThrow`），讓匯入交易在單筆失敗時 rollback。Room 版：DAO 的 `@Insert(REPLACE): Long`，底層例外包成 `SQLException` 往外拋（`@Insert` 本身遇 SQLite 錯誤即拋 `SQLiteException`，它是 `SQLException` 子類，不得吞掉）；回傳 `-1` 也視為失敗而拋。
+  - `static DatabaseBackend createForTest(Context, String name)`：**保留**（instrumented test 大量使用），改為以 `HymnchtvDatabase.build(context, name)` 建立**非單例**的檔案型 facade（不走 `getInstance`）。
+  - `close()`：**測試用保留**，只關閉該 facade 持有的 DB（`DatabaseBackendTransactionTest` 等用它清理）；production 路徑不得呼叫（單例由 process 生命週期管理）。
+- **消失**：`SQLiteOpenHelper` 繼承來的 `getWritableDatabase()`／`getReadableDatabase()`／`getDatabaseName()`／`onCreate`／`onUpgrade`（及 `RealMigrationsHelper`）。原本直接拿 `SQLiteDatabase` 驗證資料列的測試，改用 facade／DAO 驗證（Task 5）。
+- `getWritableDatabase()`／`getReadableDatabase()` 目前在 production 只被 `persistance/migrations/` 使用（那些檔案本計畫會刪）。**Task 5 要再 grep 一次**（含 instrumented test）確認沒有其他使用者。
 
 ### 2.7 `hymnType` 驗證與排序（Codex P2）
 
@@ -235,7 +240,8 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 - Delete: `persistance/migrations/{Migrations,MigrationsHelper,MigrationTo2,MigrationTo3,MigrationTo4,MigrationTo5,Hymn2SnConvert}.java`
 
 - [ ] **Step 1**：不再 extends `SQLiteOpenHelper`；`getInstance(Context)` 回傳持有 `HymnchtvDatabase.getInstance(context)`（§2.4a 單例）的實例，不自行 `build`。
-- [ ] **Step 2**：11 個方法逐一改寫成呼叫 DAO，**簽名與回傳型別不變**，保留 `getMediaRecord` 的就地更新行為；每個方法 Javadoc 標「應在 `AppExecutors.io` 執行；§2.4 列出的過渡呼叫點例外，1.0 前移除」（§2.4）。
+- [ ] **Step 2**：§1 表的 12 個方法逐一改寫成呼叫 DAO，**簽名與回傳型別不變**，保留 `getMediaRecord` 的就地更新行為；每個方法 Javadoc 標「應在 `AppExecutors.io` 執行；§2.4 列出的過渡呼叫點例外，1.0 前移除」（§2.4）。
+- [ ] **Step 2b（rev 6）**：依 §2.6 實作 `inTransaction`／`runInTransaction`（Room 交易）、`storeMediaRecordOrThrow`（失敗拋 `SQLException`）、`createForTest(Context, String)`（非單例檔案型）、測試用 `close()`；呼叫端（`MediaConfig`／`NotionRecord`／`QQRecord`）不改。
 - [ ] **Step 3**：刪 5 個 migration 與其 helper；無 `onUpgrade`。
 - [ ] **Step 4**：`storeHymnHistory` 用 Room 交易版（§2.3），沿用 `HistoryPrune`。
 - [ ] **Step 5**：**建立** `getMediaRecords(hymnType, hymnNo, isFu)`（B 沒提供），以 Room `@Query` 一次查出該首詩歌所有媒體類型。
@@ -258,7 +264,7 @@ B 合併（略過 Lane A；A、A2、B 皆已在 origin/master，892167bf）
 
 - [ ] **Step 1**：為本計畫的 DAO／facade 撰寫 instrumented test（不從 Lane A 移植——Lane A 未合併）。涵蓋 WAL 已開、schema v1 建表。另以 grep 檢查**沒有遺留原生 SQLite 初始化碼**（`execSQL("PRAGMA`、`SQLiteOpenHelper`、`getWritableDatabase`）。
 - [ ] **Step 2**：新增等價測試：每個 facade 方法對 fixture 的輸入／輸出與舊行為一致；補 REPLACE 覆蓋、nullable 欄位、排序 tie-breaker、交易邊界。
-- [ ] **Step 3**：再 grep 一次 `getWritableDatabase`／`getReadableDatabase`／`close()` 的使用者（§2.6）。
+- [ ] **Step 3**：再 grep 一次 `getWritableDatabase`／`getReadableDatabase`／`getDatabaseName`／`close()` 的使用者（§2.6）。**改寫既有 instrumented test**：`DatabaseBackendTransactionTest`、`ImportPerfTest`、`NotionStoreTest`、`QQStoreTest`、`UrlImportJobTest`、`UrlImportTest`（皆用 `createForTest`）——保留 `createForTest`／`close()`／`runInTransaction`／`storeMediaRecordOrThrow`，凡存取原生 `SQLiteDatabase`（`readableDatabase`／`writableDatabase`／`databaseName`）之處改用 facade 查詢驗證；補測：交易內 `storeMediaRecordOrThrow` 失敗 → 整批 rollback、巢狀交易、例外原樣拋出。
 - [ ] **Step 4**：`api34nb`／`api24nb` 跑全部 instrumented test。
 
 ### Task 6：D-1a 程式碼遷移、修訂 D-1a／D-1 UI 計畫、審查、收尾
