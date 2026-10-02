@@ -81,6 +81,23 @@ class ImportPerfTest {
         measure("legacy") { db -> legacyImport(db, content) }
     }
 
+    @Test
+    fun batchSingleTransaction() {
+        val checkName = "perf-check-legacy.db"
+        val checkDb = freshDb(checkName)
+        val expected = try {
+            legacyImport(checkDb, content)
+        } finally {
+            dispose(checkDb, checkName)
+        }
+
+        measure("batch") { db ->
+            val result = MediaConfig.importUrlRecords(db, content, false)
+            assertThat(result.imported).isEqualTo(expected)
+            result.imported
+        }
+    }
+
     private companion object {
         const val TAG = "ImportPerf"
         const val ASSET = "url_import.txt"
