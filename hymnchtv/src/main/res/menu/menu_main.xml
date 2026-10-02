@@ -33,53 +33,8 @@
         </menu>
     </item>
     <item
-        android:id="@+id/lyricsLanguage"
-        android:title="@string/lyrics_language_menu" />
-    <item
-        android:id="@+id/bg"
-        android:title="@string/wall_paper">
-        <menu>
-            <item
-                android:id="@+id/sbguser"
-                android:title="@string/wallpaperUser" />
-            <item
-                android:id="@+id/sbg1"
-                android:title="@string/sbg1" />
-            <item
-                android:id="@+id/sbg2"
-                android:title="@string/sbg2" />
-            <item
-                android:id="@+id/sbg3"
-                android:title="@string/sbg3" />
-            <item
-                android:id="@+id/sbg4"
-                android:title="@string/sbg4" />
-            <item
-                android:id="@+id/sbg5"
-                android:title="@string/sbg5" />
-            <item
-                android:id="@+id/sbg6"
-                android:title="@string/sbg6" />
-            <item
-                android:id="@+id/sbg7"
-                android:title="@string/sbg7" />
-            <item
-                android:id="@+id/sbg8"
-                android:title="@string/sbg8" />
-            <item
-                android:id="@+id/sbg9"
-                android:title="@string/sbg9" />
-            <item
-                android:id="@+id/sbg10"
-                android:title="@string/sbg10" />
-            <item
-                android:id="@+id/sbg11"
-                android:title="@string/sbg11" />
-            <item
-                android:id="@+id/sbg12"
-                android:title="@string/sbg12" />
-        </menu>
-    </item>
+        android:id="@+id/readingSettings"
+        android:title="@string/reading_settings" />
     <item
         android:id="@+id/fontColor"
         android:title="@string/fontColor">
