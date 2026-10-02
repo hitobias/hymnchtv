@@ -21,14 +21,34 @@ import org.junit.After
 import org.junit.Before
 import java.util.concurrent.atomic.AtomicReference
 
+/** Fake clock for the chrome timers; only touched on the main thread (inside onActivity). */
+class ManualChromeTimer : ChromeTimer {
+    private class Task(val at: Long, val action: Runnable)
+    private var now = 0L
+    private val tasks = mutableListOf<Task>()
+    override fun postDelayed(delayMs: Long, action: Runnable): Any = Task(now + delayMs, action).also { tasks += it }
+    override fun cancel(token: Any) { tasks.remove(token) }
+    fun advance(ms: Long) {
+        val end = now + ms
+        while (true) {
+            val next = tasks.filter { it.at <= end }.minByOrNull { it.at } ?: break
+            tasks.remove(next); now = next.at; next.action.run()
+        }
+        now = end
+    }
+}
+
 /** Shared by the lyrics page instrumentation tests: launch, read on the main thread, inject raw touches. */
 abstract class LyricsTestBase {
     val ctx: Context = ApplicationProvider.getApplicationContext()
     val instrumentation = InstrumentationRegistry.getInstrumentation()
+    lateinit var chromeTimer: ManualChromeTimer
     private var mainScenario: ActivityScenario<MainActivity>? = null
 
     @Before
     fun setUpBase() {
+        chromeTimer = ManualChromeTimer()
+        ContentHandler.sChromeTimerForTest = chromeTimer
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             TestPermissions.grantLaunchPermission(ctx.packageName)
             mainScenario = ActivityScenario.launch(MainActivity::class.java)
@@ -37,6 +57,7 @@ abstract class LyricsTestBase {
 
     @After
     fun tearDownBase() {
+        ContentHandler.sChromeTimerForTest = null
         mainScenario?.close()
         mainScenario = null
     }
@@ -94,6 +115,9 @@ abstract class LyricsTestBase {
         host.getLocationOnScreen(loc)
         intArrayOf(loc[0] + (host.width * fx).toInt(), loc[1] + (host.height * fy).toInt())
     }
+
+    /** Moves the fake clock on the main thread. */
+    fun ActivityScenario<ContentHandler>.advance(ms: Long) = onActivity { chromeTimer.advance(ms) }
 
     fun tap(x: Int, y: Int, holdMs: Long = 50) {
         val t0 = SystemClock.uptimeMillis()

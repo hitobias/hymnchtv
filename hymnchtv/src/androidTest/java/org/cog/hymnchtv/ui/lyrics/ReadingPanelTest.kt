@@ -6,11 +6,12 @@ import android.util.TypedValue
 import android.view.View
 import android.widget.TextView
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.GeneralClickAction
-import androidx.test.espresso.action.GeneralLocation
-import androidx.test.espresso.action.Press
-import androidx.test.espresso.action.Tap
+import androidx.test.espresso.UiController
+import androidx.test.espresso.ViewAction
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.swipeRight
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
+import org.hamcrest.Matcher
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -67,6 +68,16 @@ class ReadingPanelTest : LyricsTestBase() {
     private fun lyricsView(s: androidx.test.core.app.ActivityScenario<org.cog.hymnchtv.ContentHandler>) =
         s.read { page(it)!!.findViewById<TextView>(R.id.lyrics_simplified) }
 
+    /** The dots sit in a horizontally scrolling row; the view need not be 90 % on screen to be tapped. */
+    private fun clickDirectly() = object : ViewAction {
+        override fun getConstraints(): Matcher<View> = org.hamcrest.Matchers.any(View::class.java)
+        override fun getDescription() = "performClick"
+        override fun perform(uiController: UiController, view: View) {
+            view.performClick()
+            uiController.loopMainThreadUntilIdle()
+        }
+    }
+
     private fun sp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, ctx.resources.displayMetrics)
 
     @Test
@@ -84,7 +95,7 @@ class ReadingPanelTest : LyricsTestBase() {
             val before = s.read { it.lyricsTokens.surface }
             s.openPanel()
             val preset = BackgroundPreset.DIM_GREY
-            onView(withContentDescription(ctx.getString(org.cog.hymnchtv.reading.background.BackgroundDrawables.nameRes(preset)))).perform(click())
+            onView(withContentDescription(ctx.getString(org.cog.hymnchtv.reading.background.BackgroundDrawables.nameRes(preset)))).perform(clickDirectly())
             instrumentation.waitForIdleSync()
             assertThat(prefs.getString("LyricsBackground", null)).isEqualTo(preset.id)
             assertThat(lyricsView(s).currentTextColor).isEqualTo(preset.textColor)
@@ -99,13 +110,8 @@ class ReadingPanelTest : LyricsTestBase() {
     fun fontSizeAppliesEvenWithAStoredPinchScale() {
         launch().use { s ->
             s.openPanel()
-            onView(withId(R.id.aa_size_slider)).perform(
-                GeneralClickAction(Tap.SINGLE, { v ->
-                    val loc = IntArray(2)
-                    v.getLocationOnScreen(loc)
-                    floatArrayOf(loc[0] + v.width - 2f, loc[1] + v.height / 2f)
-                }, Press.FINGER, 0, 0),
-            )
+            // A drag anywhere on the track moves the thumb to the finger (user change)
+            onView(withId(R.id.aa_size_slider)).perform(swipeRight())
             instrumentation.waitForIdleSync()
             assertThat(ReadingPrefs.fontSize(prefs)).isEqualTo(LyricsFontSize.XLARGE)
             val base = if (HymnsApp.isPortrait) LyricsScale.BASE_SP_PORTRAIT else LyricsScale.BASE_SP_LANDSCAPE
@@ -157,7 +163,7 @@ class ReadingPanelTest : LyricsTestBase() {
     fun panelHoldsTheToolbarsWhileOpen() {
         launch().use { s ->
             s.openPanel()
-            SystemClockSleep.ms(4_500)
+            s.advance(60_000)
             assertThat(s.topBarShown()).isTrue()
         }
     }

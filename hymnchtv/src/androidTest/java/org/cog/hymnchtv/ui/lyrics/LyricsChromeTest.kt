@@ -35,6 +35,8 @@ class LyricsChromeTest : LyricsTestBase() {
         launch().use { s ->
             assertThat(s.topBarShown()).isTrue()
             assertThat(s.buttonBarShown()).isTrue()
+            s.advance(2_999)
+            assertThat(s.topBarShown()).isTrue()
             s.hide()
             assertThat(s.buttonBarShown()).isFalse()
             assertThat(prefs.getBoolean(LyricsChromeHint.PREF_KEY, false)).isTrue()
@@ -44,8 +46,11 @@ class LyricsChromeTest : LyricsTestBase() {
     private fun topBarShownIn(a: org.cog.hymnchtv.ContentHandler) =
         page(a)!!.findViewById<View>(R.id.lyrics_top_bar).visibility == View.VISIBLE
 
-    private fun androidx.test.core.app.ActivityScenario<org.cog.hymnchtv.ContentHandler>.hide() =
+    /** The opening 3 s pass; the fade itself runs for real (150 ms). */
+    private fun androidx.test.core.app.ActivityScenario<org.cog.hymnchtv.ContentHandler>.hide() {
+        advance(3_000)
         await("fade", 6_000) { !topBarShownIn(it) }
+    }
 
     @Test
     fun centreTapShowsAndAnEdgeTapDoesNot() {
@@ -62,7 +67,10 @@ class LyricsChromeTest : LyricsTestBase() {
             assertThat(s.topBarShown()).isTrue()
             assertThat(s.buttonBarShown()).isTrue()
             // and hides again after 4 s without interaction
-            s.await("idle fade", 7_000) { !topBarShownIn(it) }
+            s.advance(3_999)
+            assertThat(s.topBarShown()).isTrue()
+            s.advance(1)
+            s.await("idle fade", 6_000) { !topBarShownIn(it) }
         }
     }
 
@@ -76,17 +84,25 @@ class LyricsChromeTest : LyricsTestBase() {
     }
 
     @Test
-    fun longPressScrollAndSwipeDoNotToggle() {
+    fun longPressDoesNotToggle() {
         launch().use { s ->
             s.hide()
             val c = s.hostPoint(0.5f, 0.5f)
             tap(c[0], c[1], holdMs = 700)
             assertThat(s.topBarShown()).isFalse()
+        }
+    }
+
+    @Test
+    fun scrollAndSwipeDoNotToggle() {
+        launch().use { s ->
+            s.hide()
+            val c = s.hostPoint(0.5f, 0.5f)
             drag(c[0], c[1], 0, -(s.hostPoint(0.5f, 0.5f)[1] / 2))
             assertThat(s.topBarShown()).isFalse()
             val start = s.item()
             val w = s.hostPoint(1f, 0.5f)[0] - s.hostPoint(0f, 0.5f)[0]
-            drag(c[0] + w / 4, c[1], -w / 2, 0)
+            drag(c[0] + w * 2 / 5, c[1], -(w * 17 / 20), 0)   // long enough to pass the half-page mark even after the pager takes over late
             assertThat(s.item()).isEqualTo(start + 1)
             s.awaitPage()
             assertThat(s.topBarShown()).isFalse()
@@ -101,7 +117,7 @@ class LyricsChromeTest : LyricsTestBase() {
             tap(c[0], c[1])   // shown again
             val w = s.hostPoint(1f, 0.5f)[0] - s.hostPoint(0f, 0.5f)[0]
             val start = s.item()
-            drag(c[0] + w / 4, c[1], -w / 2, 0)
+            drag(c[0] + w * 2 / 5, c[1], -(w * 17 / 20), 0)   // long enough to pass the half-page mark even after the pager takes over late
             s.awaitPage()
             assertThat(s.item()).isEqualTo(start + 1)
             assertThat(s.topBarShown()).isTrue()
@@ -121,7 +137,7 @@ class LyricsChromeTest : LyricsTestBase() {
     fun touchExplorationKeepsEverythingShown() {
         launch().use { s ->
             s.onActivity { it.setChromeAlwaysVisible(true) }
-            SystemClockSleep.ms(4_500)
+            s.advance(60_000)
             assertThat(s.topBarShown()).isTrue()
             assertThat(s.buttonBarShown()).isTrue()
             val c = s.hostPoint(0.5f, 0.5f)
@@ -134,16 +150,18 @@ class LyricsChromeTest : LyricsTestBase() {
     fun heldWhileTheOverflowMenuStaysOpenIsRepresentedByTheHold() {
         launch().use { s ->
             s.onActivity { it.setChromeHeld(true) }
-            SystemClockSleep.ms(4_500)
+            s.advance(60_000)
             assertThat(s.topBarShown()).isTrue()
             s.onActivity { it.setChromeHeld(false) }
-            s.hide()
+            s.advance(4_000)
+            s.await("fade", 6_000) { !topBarShownIn(it) }
         }
     }
 
     @Test
     fun lyricsPaddingFollowsTheOverlays() {
         launch().use { s ->
+            s.onActivity { it.setChromeHeld(true) }   // measure while shown, whatever the launch took
             val extra = dp(8)
             // shown
             val top = s.pageView(R.id.lyrics_top_bar).height
@@ -151,7 +169,8 @@ class LyricsChromeTest : LyricsTestBase() {
             assertThat(top).isGreaterThan(0)
             assertThat(s.scroll().paddingTop).isEqualTo(top)
             assertThat(s.scroll().paddingBottom).isEqualTo(bottom + extra)
-            s.hide()
+            s.onActivity { it.setChromeHeld(false) }
+            s.advance(4_000)
             s.await("padding") { page(it)!!.findViewById<android.widget.ScrollView>(R.id.lyrics_scroll).paddingTop == 0 }
             assertThat(s.scroll().paddingBottom).isEqualTo(extra)
         }
@@ -163,13 +182,8 @@ class LyricsChromeTest : LyricsTestBase() {
             val bar = s.pageView(R.id.lyrics_top_bar) as android.view.ViewGroup
             assertThat(bar.childCount).isEqualTo(5)
             val widths = (0 until 5).map { bar.getChildAt(it).width }
-            assertThat(widths.toSet().size).isEqualTo(1)
+            assertThat(widths.max() - widths.min()).isAtMost(1)   // equal weights, at most a pixel of rounding
             (0 until 5).forEach { assertThat(bar.getChildAt(it).height).isAtLeast(dp(48)) }
         }
     }
-}
-
-/** Tiny wrapper so the tests read the same as the real waits they do. */
-internal object SystemClockSleep {
-    fun ms(value: Long) = android.os.SystemClock.sleep(value)
 }

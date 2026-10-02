@@ -264,6 +264,10 @@ public class ContentHandler extends BaseActivity {
     private static final String STATE_DISPLAY_OVERRIDE = "state_display_override"; // DisplayMode name; absent = none
     private static final String STATE_CHROME_VISIBLE = "state_chrome_visible"; // lyrics toolbars shown or faded away
 
+    /** Tests install a manual timer here so the 3 s / 4 s fades do not depend on emulator speed; null in production. */
+    @VisibleForTesting
+    public static org.cog.hymnchtv.ui.lyrics.ChromeTimer sChromeTimerForTest = null;
+
     /** Show/hide state of the lyrics toolbars shared by all pager pages (plan 6c). */
     private LyricsChromeHost mChromeHost;
 
@@ -300,7 +304,8 @@ public class ContentHandler extends BaseActivity {
 
         // Reading settings (plan A2): background first, so pages created below read the matching palette
         sPreference = getSharedPreferences(PREF_SETTINGS, 0);
-        mChromeHost = new LyricsChromeHost(this, sPreference, new org.cog.hymnchtv.ui.lyrics.HandlerChromeTimer());
+        mChromeHost = new LyricsChromeHost(this, sPreference,
+                sChromeTimerForTest != null ? sChromeTimerForTest : new org.cog.hymnchtv.ui.lyrics.HandlerChromeTimer());
         mChromeHost.start(savedInstanceState != null && savedInstanceState.containsKey(STATE_CHROME_VISIBLE)
                 ? savedInstanceState.getBoolean(STATE_CHROME_VISIBLE) : null);
         applyReadingTheme();
