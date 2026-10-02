@@ -202,6 +202,16 @@ public class NotionRecord extends MediaRecord {
     private static volatile int mSaved = 0;
     private static Context mContext;
 
+    /**
+     * Run <tt>report</tt> on the main thread once every page write already handed to the shared
+     * single-threaded IO executor has finished (B-9a). Without the barrier the completion handler
+     * reads <tt>mSaved</tt>/<tt>mfound</tt> while the last pages are still queued, so it reports a
+     * short count and re-enables the button before the data has landed.
+     */
+    private static void afterWritesDrain(Runnable report) {
+        AppExecutors.io("nq-report", () -> uiHandler.post(report));
+    }
+
     // Create a specific MediaRecord for the web url fetch
     public NotionRecord(String hymnType, int hymnNo) {
         super(hymnType, hymnNo, isFu(hymnType, hymnNo), MediaType.HYMN_JIAOCHANG, null, null);
@@ -270,10 +280,12 @@ public class NotionRecord extends MediaRecord {
                 }
                 webList.clear();
             }
-            Timber.d(HymnsApp.getResString(R.string.nq_download_completed, NOTION, mSaved, mfound));
-            showToastMessage(R.string.nq_download_completed, NOTION, mSaved, mfound);
-            mediaConfig.btnNQ.setEnabled(true);
-            mediaConfig.btnNQ.setTextColor(Color.DKGRAY);
+            afterWritesDrain(() -> {
+                Timber.d(HymnsApp.getResString(R.string.nq_download_completed, NOTION, mSaved, mfound));
+                showToastMessage(R.string.nq_download_completed, NOTION, mSaved, mfound);
+                mediaConfig.btnNQ.setEnabled(true);
+                mediaConfig.btnNQ.setTextColor(Color.DKGRAY);
+            });
         }, waitTime * sessionNo + 2);
     }
 
@@ -335,8 +347,10 @@ public class NotionRecord extends MediaRecord {
                 }
             }
             else {
-                Timber.d(HymnsApp.getResString(R.string.nq_download_completed, NOTION, mSaved, mfound));
-                showToastMessage(R.string.nq_download_completed, NOTION, mSaved, mfound);
+                afterWritesDrain(() -> {
+                    Timber.d(HymnsApp.getResString(R.string.nq_download_completed, NOTION, mSaved, mfound));
+                    showToastMessage(R.string.nq_download_completed, NOTION, mSaved, mfound);
+                });
             }
         }, 300000);
     }
@@ -498,7 +512,7 @@ public class NotionRecord extends MediaRecord {
                     continue;
 
                 found++;
-                if (overWrite || !db.getMediaRecord(mRecord, false)) {
+                if (overWrite || !MediaConfig.hasMediaRecord(db, mRecord)) {
                     db.storeMediaRecordOrThrow(mRecord);
                     saved++;
                 }

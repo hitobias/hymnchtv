@@ -1050,10 +1050,20 @@ public class MediaConfig extends BaseActivity
 
     // Check for any existing mediaRecord in DB or as saved local file
     public static boolean hasMediaRecord(MediaRecord mediaRecord) {
+        return hasMediaRecord(mDB, mediaRecord);
+    }
+
+    /**
+     * Check for an existing record of <tt>mediaRecord</tt> in the given <tt>db</tt> or as a saved local file.
+     * Imports receive the database as a parameter (tests pass their own file), so the lookup must follow it;
+     * it must also see local media, otherwise a non-overwrite import would shadow an already-downloaded file
+     * with a remote link, because playback prefers a DB record over file discovery.
+     */
+    public static boolean hasMediaRecord(DatabaseBackend db, MediaRecord mediaRecord) {
         if (mediaRecord == null)
             return false;
 
-        if (mDB.getMediaRecord(mediaRecord, false)) {
+        if (db.getMediaRecord(mediaRecord, false)) {
             return true;
         }
         else {
@@ -1176,7 +1186,7 @@ public class MediaConfig extends BaseActivity
             boolean isFu = mediaRecord.isFu();
             int hymnNo = isFu ? (mediaRecord.getHymnNo() - HYMN_DB_NO_MAX) : mediaRecord.getHymnNo();
             int nui = HymnNoValidate.validateHymnNo(mediaRecord.getHymnType(), hymnNo, isFu);
-            if ((nui != -1) && (isOverWrite || !db.getMediaRecord(mediaRecord, false))) {
+            if ((nui != -1) && (isOverWrite || !hasMediaRecord(db, mediaRecord))) {
                 db.storeMediaRecordOrThrow(mediaRecord); // SQL errors propagate: the whole import rolls back
                 imported++;
             }
@@ -1215,6 +1225,12 @@ public class MediaConfig extends BaseActivity
         }
         catch (IOException e) {
             Timber.w("Asset file not available: %s", e.getMessage());
+        }
+        catch (SQLException e) {
+            // Batch writes now throw instead of logging per record (B-9a); report it here rather than
+            // letting it escape into a background thread with no user-visible failure.
+            Timber.e(e, "URL import failed");
+            HymnsApp.showToastMessage(R.string.add_to_db_failed);
         }
     }
 

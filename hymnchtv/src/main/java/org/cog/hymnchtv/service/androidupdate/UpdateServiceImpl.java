@@ -33,6 +33,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.database.SQLException;
 
 import androidx.core.content.ContextCompat;
 
@@ -507,6 +508,12 @@ public class UpdateServiceImpl {
             }
             catch (IOException e) {
                 Timber.e("%s", e.getMessage());
+            }
+            catch (SQLException e) {
+                // The batch import now throws instead of logging per record (B-9a). Without this the
+                // exception would escape into the update service's background thread with no log and
+                // no user-visible failure; the import itself already rolled back.
+                Timber.e(e, "URL import failed");
             }
         }
     }
