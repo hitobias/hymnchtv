@@ -14,72 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.cog.hymnchtv.service.androidupdate;
 
-import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.os.Build;
-
-import org.cog.hymnchtv.HymnsApp;
+import org.cog.hymnchtv.BuildConfig;
 
 /**
- * Android version service implementation:
- * The current version is parsed from android:versionName attribute of the PackageInfo.
+ * Version of the running app, taken from BuildConfig (no PackageManager lookup, cannot fail).
  *
  * @author Eng Chong Meng
  */
 public class VersionServiceImpl {
-    private static VersionServiceImpl mInstance;
+    private static final VersionServiceImpl INSTANCE = new VersionServiceImpl();
 
-    /**
-     * Current version instance.
-     */
-    private final long CURRENT_VERSION_CODE;
-    private final String CURRENT_VERSION_NAME;
-
-    /**
-     * Creates a new instance of <tt>VersionServiceImpl</tt> and parses the current version from
-     * android:versionName attribute of the PackageInfo.
-     */
     public static VersionServiceImpl getInstance() {
-        if (mInstance == null)
-            mInstance = new VersionServiceImpl();
-        return mInstance;
+        return INSTANCE;
     }
 
-    public VersionServiceImpl() {
-        mInstance = this;
-
-        Context ctx = HymnsApp.getGlobalContext();
-        PackageManager pckgMan = ctx.getPackageManager();
-        try {
-            PackageInfo pckgInfo = pckgMan.getPackageInfo(ctx.getPackageName(), 0);
-            String versionName = pckgInfo.versionName;
-
-            long versionCode;
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P)
-                versionCode = pckgInfo.versionCode;
-            else
-                versionCode = pckgInfo.getLongVersionCode();
-
-            CURRENT_VERSION_NAME = versionName;
-            CURRENT_VERSION_CODE = versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+    private VersionServiceImpl() {
     }
 
-    /**
-     * Get the <tt>Version</tt> of the current running hymnchtv app.
-     *
-     * @return the <tt>Version</tt> of the current running hymntv app.
-     */
     public long getCurrentVersionCode() {
-        return CURRENT_VERSION_CODE;
+        return BuildConfig.VERSION_CODE;
     }
 
     public String getCurrentVersionName() {
-        return CURRENT_VERSION_NAME;
+        return BuildConfig.VERSION_NAME;
     }
 }

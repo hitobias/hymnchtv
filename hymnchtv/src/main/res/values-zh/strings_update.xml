@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_new_available">有新版本 %1$s 可下载（目前安装：%2$s）。</string>
+    <string name="update_up_to_date">目前安装的版本 %1$s 已是最新。\n最新发布：%2$s。</string>
+    <string name="update_notification_text">有新版本：%1$s</string>
+    <string name="update_check_rate_limited">检查更新的次数过多，请稍后再试。</string>
+    <string name="update_check_network_error">无法连接更新服务器，请检查网络后再试。</string>
+    <string name="update_check_no_release">目前尚无发布版本。</string>
+    <string name="update_check_failed">检查更新失败，请稍后再试。</string>
+    <string name="update_apk_invalid">下载的安装包验证失败（%1$s），已删除。</string>
+    <string name="update_ready_to_install">诗歌 %1$s 已下载，点此安装。</string>
+    <string name="update_downloaded_tap_notification">下载完成，请点通知完成安装。</string>
+    <string name="update_ready_use_about">下载完成。请到“关于”按“更新”安装。</string>
+    <string name="update_install_missing">找不到已下载的安装包，请重新检查更新。</string>
+    <string name="update_install_needs_permission">需要允许诗歌“安装未知应用”才能更新。</string>
+    <string name="update_signer_unverifiable">此 Android 版本无法验证安装包的签名，已停止自动更新。请手动下载新版安装。</string>
+</resources>
