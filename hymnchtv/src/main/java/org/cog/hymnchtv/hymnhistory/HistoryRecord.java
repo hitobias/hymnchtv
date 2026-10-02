@@ -43,6 +43,8 @@ import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.MainActivity;
 import org.cog.hymnchtv.R;
 import org.cog.hymnchtv.hymn.HymnRef;
+import org.cog.hymnchtv.lyrics.HantVariant;
+import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.jetbrains.annotations.NotNull;
 
 import timber.log.Timber;
@@ -131,6 +133,24 @@ public class HistoryRecord {
      * @return the hymn title with category stripped off
      */
     private String getHymnInfoFromFile(String hymnType, int hymnNo) {
+        return getHymnInfoFromFile(hymnType, hymnNo, null);
+    }
+
+    /**
+     * This record with its title read from the Traditional Chinese lyrics of [variant], for display. The stored
+     * (Simplified) record is what the database keeps; a missing Traditional file leaves the record unchanged.
+     *
+     * @param variant the Traditional variant to show, or null to keep this record as it is
+     */
+    public HistoryRecord inScript(HantVariant variant) {
+        if (variant == null) {
+            return this;
+        }
+        String title = getHymnInfoFromFile(mHymnType, mHymnNo, variant);
+        return TextUtils.isEmpty(title) ? this : new HistoryRecord(mHymnType, mHymnNo, mIsFu, title, mTimeStamp);
+    }
+
+    private String getHymnInfoFromFile(String hymnType, int hymnNo, HantVariant variant) {
         String fileName = "";
         String hymnTitle = "";
         String lyricsPhrase = "";
@@ -167,6 +187,13 @@ public class HistoryRecord {
             case HYMN_DB:
                 fileName = LYRICS_DB_DIR + "db" + hymnNo + ".txt";
                 break;
+        }
+
+        if (variant != null) {
+            String hantPath = LyricsAssets.hantPath(fileName, variant);
+            if (hantPath != null) {
+                fileName = hantPath;
+            }
         }
 
         try {

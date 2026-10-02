@@ -62,4 +62,30 @@ class AssetHymnTitlesTest {
         assertThat(AssetHymnTitles.titleOf("1")).isNull()
         assertThat(AssetHymnTitles.titleOf("")).isNull()
     }
+
+    private val hantTitles = AssetHymnTitles(
+        reader = { path -> File(assets, path).takeIf { it.isFile }?.readText(Charsets.UTF_8) },
+        ybTable = { YbCrossRef.parse(File(assets, YbCrossRef.ASSET).readText(Charsets.UTF_8)) },
+        variant = org.cog.hymnchtv.lyrics.HantVariant.TW,
+    )
+
+    @Test
+    fun traditionalTitleComesFromTheGeneratedLyrics() {
+        assertThat(hantTitles.lookup(HYMN_DB, 1)).isEqualTo("祂的計劃（英1）")
+    }
+
+    @Test
+    fun traditionalCrossReferenceFollowsTheTargetBook() {
+        assertThat(hantTitles.lookup(HYMN_YB, 1)).isEqualTo(hantTitles.lookup(HYMN_BB, 876))
+        assertThat(hantTitles.lookup(HYMN_YB, 1)).isEqualTo("神就是愛")
+    }
+
+    @Test
+    fun traditionalFallsBackToSimplifiedWhenTheAssetIsMissing() {
+        val onlySimplified = AssetHymnTitles(
+            reader = { path -> if ("_hant_" in path) null else File(assets, path).takeIf { it.isFile }?.readText(Charsets.UTF_8) },
+            variant = org.cog.hymnchtv.lyrics.HantVariant.TW,
+        )
+        assertThat(onlySimplified.lookup(HYMN_DB, 1)).isEqualTo("祂的计划（英1）")
+    }
 }

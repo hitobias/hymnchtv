@@ -40,8 +40,17 @@ def sha1(data: bytes) -> str:
     return hashlib.sha1(data).hexdigest()
 
 
+TOC_DIR = ASSETS / "lyrics_toc"
+
+
 def source_dirs():
-    return sorted(d for d in ASSETS.glob("lyrics_*_text") if d.is_dir())
+    """The per-book lyrics directories plus lyrics_toc (stroke/pinyin indexes, YB table, category names)."""
+    return sorted([d for d in ASSETS.glob("lyrics_*_text") if d.is_dir()] + [TOC_DIR])
+
+
+def is_lyrics(path):
+    """Lyrics files feed the search T2S map; the TOC indexes only reuse their text."""
+    return path.parent != TOC_DIR
 
 
 def source_files():
@@ -150,7 +159,7 @@ def swap_in(new_dir, old_dir):
     names = [T2S_MAP.name, MANIFEST.name]
     moved_aside, moved_in = [], []
     try:
-        for d in sorted(ASSETS.glob("lyrics_*_text_hant_*")) + [ASSETS / n for n in names]:
+        for d in sorted(ASSETS.glob("lyrics_*_text_hant_*")) + sorted(ASSETS.glob("lyrics_toc_hant_*")) + [ASSETS / n for n in names]:
             if d.exists():
                 d.rename(old_dir / d.name)  # stale variants disappear with the rest of old/
                 moved_aside.append(d.name)
@@ -249,7 +258,9 @@ def main():
         decided = apply_review_decisions(preferred[variant], sources, decisions, variant)
         converted[variant] = [apply_overrides(t, variant, rel(src), rules) for src, t in zip(sources, decided)]
     # The search map also keeps OpenCC's own forms (e.g. 裡 next to the RcV's 裏) because that is what people type.
-    t2s_text = build_t2s_map(texts, {**converted, **{f"{v}-opencc": t for v, t in raw.items()}})  # may sys.exit
+    is_l = [is_lyrics(p) for p in sources]
+    pick = lambda items: [x for x, keep in zip(items, is_l) if keep]  # noqa: E731
+    t2s_text = build_t2s_map(pick(texts), {k: pick(v) for k, v in {**converted, **{f"{v}-opencc": t for v, t in raw.items()}}.items()})  # may sys.exit
     outputs = {f"{src.parent.name}_hant_{variant}/{src.name}": text
                for variant in VARIANTS for src, text in zip(sources, converted[variant])}
     publish(outputs, t2s_text, [GENERATOR, OVERRIDES] + RCV_INPUTS)
