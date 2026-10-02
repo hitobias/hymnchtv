@@ -2,12 +2,8 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <item
-        android:id="@+id/alwayshow"
-        android:title="@string/menu_media_ui_default_show" />
-
-    <item
-        android:id="@+id/alwayhide"
-        android:title="@string/menu_media_ui_default_hide" />
+        android:id="@+id/readingSettings"
+        android:title="@string/reading_settings" />
 
     <item
         android:id="@+id/menutoggle"

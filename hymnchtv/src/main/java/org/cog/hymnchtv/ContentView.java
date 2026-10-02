@@ -26,14 +26,12 @@ import static org.cog.hymnchtv.MainActivity.PREF_SETTINGS;
 import static org.cog.hymnchtv.utils.ZoomTextView.STEP_SCALE_FACTOR;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
-import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -47,8 +45,6 @@ import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -57,7 +53,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
+
+import com.bumptech.glide.Glide;
 
 import org.cog.hymnchtv.glide.MyGlideApp;
 import org.cog.hymnchtv.lyrics.HantVariant;
@@ -65,7 +64,17 @@ import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
-import org.cog.hymnchtv.utils.ChineseS2TSelection;
+import org.cog.hymnchtv.reading.DisplayMode;
+import org.cog.hymnchtv.reading.DisplayModePolicy;
+import org.cog.hymnchtv.reading.LyricsFont;
+import org.cog.hymnchtv.reading.LyricsScale;
+import org.cog.hymnchtv.reading.LyricsTypefaces;
+import org.cog.hymnchtv.reading.ReadingPrefKeys;
+import org.cog.hymnchtv.reading.ReadingPrefs;
+import org.cog.hymnchtv.reading.ScorePages;
+import org.cog.hymnchtv.reading.ScoreTintPolicy;
+import org.cog.hymnchtv.reading.background.BackgroundDrawables;
+import org.cog.hymnchtv.reading.background.ReadingPalette;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
 import org.cog.hymnchtv.utils.ZoomTextView;
 import org.jetbrains.annotations.NotNull;
@@ -103,36 +112,47 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public static final String EXTR_KEY_HAS_CHANGES = "hasChanges";
     public final static String PREF_SCORE_COLOR = "ScoreColor";
     public static final String PREF_CONVERSION_TYPE = "ConversionType";
-    public static final String PREF_LYRICS_SCALE_P = "LyricsScaleP";
-    public static final String PREF_LYRICS_SCALE_L = "LyricsScaleL";
+    public static final String PREF_LYRICS_SCALE_P = ReadingPrefKeys.LYRICS_SCALE_P;
+    public static final String PREF_LYRICS_SCALE_L = ReadingPrefKeys.LYRICS_SCALE_L;
     public static final String PREF_LYRICS_ENGLISH_SCALE_P = "LyricsScaleEP";
     public static final String PREF_LYRICS_ENGLISH_SCALE_L = "LyricsScaleEL";
+
+    /** One view per score page: the hymn itself, then suffixes a-d (plan A2: page 5 no longer reuses page 4's view). */
+    private static final int[] SCORE_VIEW_IDS = {R.id.contentView, R.id.contentView_a, R.id.contentView_b,
+            R.id.contentView_c, R.id.contentView_d};
 
     public ContentHandler mContentHandler;
     private LyricsEnglishRecord mLyricsEnglishRecord;
 
+    private Button btn_ts;
     private Button btn_english;
+    private Button btn_mode;
     private View mConvertView;
     private View lyricsView;
+    private View scoreContainer;
     private ZoomTextView lyricsSimplify;
     private ZoomTextView lyricsTraditional;
     private WebView lyricsEnglish;
 
-    private ImageView mContentView = null;
     private Integer mHymnNoEng = null;
     private boolean isErGe;
     private boolean mLyricsLoaded = false;
     private boolean hasEnglishLyrics = false;
+    private boolean mScoreLoaded = false;
+    private boolean mHasLyricsText = false;
 
-    private static final float[] mColorRange = new float[] {0, -0.9f, -0.8f, -0.7f};
+    /** Stored default display mode, read once per onCreateView/onResume. */
+    private DisplayMode mStoredDisplayMode = DisplayMode.SCORE_AND_LYRICS;
+
+    /** Score colour level from the context menu; 0 = automatic (follows the background, see ScoreTintPolicy). */
     private static int mScoreColor = 0;
-    private static ColorFilter mMatrix = null;
 
     private static float lyricsScaleP;
     private static float lyricsScaleL;
     private static float lyricsScaleEP;
     private static float lyricsScaleEL;
 
+    private ReadingPalette mPalette;
     private String mResPrefix;
     private int[] mHymnScoreInfo;
 
@@ -158,15 +178,19 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         mConvertView = inflater.inflate(R.layout.content_lyrics, container, false);
-        mContentView = mConvertView.findViewById(R.id.contentView);
+        scoreContainer = mConvertView.findViewById(R.id.scoreContainer);
 
-        Button btn_ts = mConvertView.findViewById(R.id.button_ts);
+        btn_ts = mConvertView.findViewById(R.id.button_ts);
         btn_ts.setOnClickListener(this);
         btn_ts.setOnLongClickListener(this);
 
         btn_english = mConvertView.findViewById(R.id.button_english);
         btn_english.setOnClickListener(this);
         btn_english.setOnLongClickListener(this);
+
+        btn_mode = mConvertView.findViewById(R.id.button_mode);
+        btn_mode.setOnClickListener(this);
+        btn_mode.setOnLongClickListener(this);
 
         lyricsView = mConvertView.findViewById(R.id.lyricsView);
         lyricsSimplify = mConvertView.findViewById(R.id.lyrics_simplified);
@@ -176,20 +200,22 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsTraditional.registerZoomTextListener(this);
 
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
-        lyricsEnglish.setBackgroundColor(Color.TRANSPARENT);
 
-        lyricsScaleP = mSharedPref.getFloat(PREF_LYRICS_SCALE_P, 1.0f);
-        lyricsScaleL = mSharedPref.getFloat(PREF_LYRICS_SCALE_L, 1.0f);
+        mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
+        mPalette = mContentHandler.getLyricsPalette();
+        applyPaletteAndFont();
+
+        lyricsScaleP = ReadingPrefs.lyricsScale(mSharedPref, true);
+        lyricsScaleL = ReadingPrefs.lyricsScale(mSharedPref, false);
         lyricsScaleEP = mSharedPref.getFloat(PREF_LYRICS_ENGLISH_SCALE_P, 1.0f);
         lyricsScaleEL = mSharedPref.getFloat(PREF_LYRICS_ENGLISH_SCALE_L, 1.0f);
 
         mScoreColor = mSharedPref.getInt(PREF_SCORE_COLOR, 0);
-        mMatrix = (mScoreColor == 0) ? null : getColorMatrix(mColorRange[mScoreColor]);
 
         mLyricsLoaded = false;
         hasEnglishLyrics = false;
-
-        toggleLyricsView();
+        mScoreLoaded = false;
+        mHasLyricsText = false;
 
         Bundle bundle = getArguments();
         if (bundle != null) {
@@ -200,6 +226,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
                 updateHymnContent(lyricsType, lyricsIndex);
             }
         }
+        applyDisplayMode(true);
         return mConvertView;
     }
 
@@ -207,21 +234,20 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public void onResume() {
         super.onResume();
         registerForContextMenu(lyricsView);
-        // ViewPager2 only resumes the visible page: re-apply a button_ts toggle made on another page
-        if (!hasEnglishLyrics) {
-            toggleLyricsView();
-        }
+        mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
         Timber.w("Content View on Resume");
 
         // get the corresponding English lyrics# or null if none
         mHymnNoEng = mContentHandler.getHymnNoEng();
-        btn_english.setVisibility((mHymnNoEng != null) ? View.VISIBLE : View.GONE);
-        if (mContentHandler.mAutoEnglish) {
-            // autoload Enligh lyrics for first entry only.
+        boolean autoEnglish = mContentHandler.mAutoEnglish;
+        if (autoEnglish) {
+            // autoload English lyrics for first entry only.
             mContentHandler.mAutoEnglish = false;
             hasEnglishLyrics = true;
-            toggleLyricsView();
         }
+        // ViewPager2 only resumes the visible page: re-apply toggles (script, display mode) made on another page.
+        // Do not reload English lyrics that are already showing.
+        applyDisplayMode(autoEnglish || !hasEnglishLyrics);
     }
 
     @Override
@@ -248,7 +274,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         int id = v.getId();
         if (id == R.id.button_ts) {
             if (!hasEnglishLyrics) {
-                // Session-only toggle; the persisted default is set in ChineseS2TSelection
+                // Session-only toggle; the persisted default is set in the reading settings
                 mContentHandler.lyricsViewOverride = !isShowTraditional();
             }
             else {
@@ -260,13 +286,18 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             hasEnglishLyrics = !hasEnglishLyrics;
             toggleLyricsView();
         }
+        else if (id == R.id.button_mode) {
+            // Session-only toggle (plan A2); the persisted default is set in the reading settings
+            mContentHandler.displayModeOverride = currentDisplayMode().next();
+            applyDisplayMode(true);
+        }
     }
 
     @Override
     public boolean onLongClick(View v) {
         int id = v.getId();
-        if (id == R.id.button_ts) {
-            mStartForResult.launch(new Intent(mContentHandler, ChineseS2TSelection.class));
+        if (id == R.id.button_ts || id == R.id.button_mode) {
+            mContentHandler.openReadingSettings();
             return true;
         }
         else if (id == R.id.button_english) {
@@ -339,42 +370,39 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             return;
         }
 
-        // Show Hymn Lyric Scores for the selected hymnNo
-        showLyricsScore(mResPrefix, mHymnScoreInfo);
-
-        // Show Hymn Lyric Text for the selected hymnNo
+        // Text first (plan A2): it is a few KB and decides whether "lyrics only" can be honoured
         if (!TextUtils.isEmpty(resFName)) {
             setLyricsTextScale();
             showLyricsChText(resFName);
         }
+
+        // The score images are the expensive part; "lyrics only" skips them until the mode changes
+        if (DisplayModePolicy.effective(currentDisplayMode(), mHasLyricsText).getShowScore()) {
+            showLyricsScore(mResPrefix, mHymnScoreInfo);
+        }
     }
 
-    /**
-     * <a href="https://medium.com/mobile-app-development-publication/android-image-color-change-with-colormatrix-e927d7fb6eb4">
-     * Android Image Color Change With ColorMatrix</a>
-     *
-     * @see ColorMatrix();
-     */
-    // Invert but make background color closer to theme dark with multiplier = -0.9f
-    private static ColorFilter getColorMatrix(float multiplier) {
-        return new ColorMatrixColorFilter(
-                new float[] {
-                        multiplier, .0f, .0f, .0f, 255.0f,  // red
-                        .0f, multiplier, .0f, .0f, 255.0f,  // green
-                        .0f, .0f, multiplier, .0f, 255.0f,  // blue
-                        .0f, .0f, .0f, 1.0f, .0f            // alpha
-                }
-        );
+    /** Score colour for the current manual level and lyrics background (plan A2). */
+    @Nullable
+    private ColorFilter scoreColorFilter() {
+        float[] matrix = ScoreTintPolicy.matrix(ScoreTintPolicy.resolve(mScoreColor, mPalette.isDark(),
+                mPalette.getPaperColor(), mPalette.getTextColor()));
+        return (matrix == null) ? null : new ColorMatrixColorFilter(matrix);
     }
 
     public void toggleScoreColor() {
-        mScoreColor = ++mScoreColor % mColorRange.length;
-        mMatrix = (mScoreColor == 0) ? null : getColorMatrix(mColorRange[mScoreColor]);
+        mScoreColor = (mScoreColor + 1) % ScoreTintPolicy.LEVEL_COUNT;
         mEditor.putInt(PREF_SCORE_COLOR, mScoreColor);
         mEditor.apply();
+        applyScoreFilter();
+    }
 
-        // Update Hymn Lyric Scores for the selected hymnNo with the new color inversion
-        showLyricsScore(mResPrefix, mHymnScoreInfo);
+    private void applyScoreFilter() {
+        ColorFilter filter = scoreColorFilter();
+        for (int id : SCORE_VIEW_IDS) {
+            ImageView view = mConvertView.findViewById(id);
+            view.setColorFilter(filter);
+        }
     }
 
     /**
@@ -385,59 +413,21 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      * @param hymnScoreInfo Contain info for the hymnNo and number of pages of the selected Lyric Scores
      */
     private void showLyricsScore(String resPrefix, int[] hymnScoreInfo) {
-        int pages = hymnScoreInfo[1]; // The number of pages for the current hymn number
-        ImageView contentView;
         Context ctx = getContext();
-
-        mContentView.setColorFilter(mMatrix);
-        String resName = resPrefix + ".png";
-        // Uri resUri = Uri.fromFile(new File("//android_asset/", resName));
-        // MyGlideApp.loadImage(ctx, mContentView, resUri);
-        MyGlideApp.loadImage(ctx, mContentView, resName);
-
-        if (pages > 1) {
-            contentView = mConvertView.findViewById(R.id.contentView_a);
-            contentView.setColorFilter(mMatrix);
-
-            resName = resPrefix + "a.png";
-            // resUri = Uri.fromFile(new File("//android_asset/", resName));
-            MyGlideApp.loadImage(ctx, contentView, resName);
+        ColorFilter filter = scoreColorFilter();
+        List<String> names = ScorePages.fileNames(resPrefix, hymnScoreInfo[1]);
+        for (int i = 0; i < SCORE_VIEW_IDS.length; i++) {
+            ImageView view = mConvertView.findViewById(SCORE_VIEW_IDS[i]);
+            if (i < names.size()) {
+                view.setVisibility(View.VISIBLE);
+                view.setColorFilter(filter);
+                MyGlideApp.loadImage(ctx, view, names.get(i));
+            }
+            else {
+                view.setVisibility(View.GONE);
+            }
         }
-        else {
-            return;
-        }
-
-        if (pages > 2) {
-            contentView = mConvertView.findViewById(R.id.contentView_b);
-            contentView.setColorFilter(mMatrix);
-
-            resName = resPrefix + "b.png";
-            // resUri = Uri.fromFile(new File("//android_asset/", resName));
-            MyGlideApp.loadImage(ctx, contentView, resName);
-        }
-        else {
-            return;
-        }
-
-        if (pages > 3) {
-            contentView = mConvertView.findViewById(R.id.contentView_c);
-            contentView.setColorFilter(mMatrix);
-
-            resName = resPrefix + "c.png";
-            // resUri = Uri.fromFile(new File("//android_asset/", resName));
-            MyGlideApp.loadImage(ctx, contentView, resName);
-        }
-        else {
-            return;
-        }
-
-        if (pages > 4) {
-            contentView.setColorFilter(mMatrix);
-
-            resName = resPrefix + "d.png";
-            // resUri = Uri.fromFile(new File("//android_asset/", resName));
-            MyGlideApp.loadImage(ctx, contentView, resName);
-        }
+        mScoreLoaded = true;
     }
 
     /**
@@ -451,9 +441,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             lyricsSimplify.setText(lyrics);
             lyricsTraditional.setText(loadTraditional(resFName, lyrics));
         }
+        mHasLyricsText = DisplayModePolicy.hasLyricsText(lyrics);
 
-        // Auto launch or hint user to view lyrics text via online JiaoChang if available; er,length > 47
-        if (lyricsSimplify.getText().length() < 40) {
+        // Auto launch or hint user to view lyrics text via online JiaoChang if available; er,length > 47.
+        // Not in "score only": the reader asked not to see lyrics.
+        if (!mHasLyricsText && currentDisplayMode() != DisplayMode.SCORE_ONLY) {
             mContentHandler.selectJC();
         }
     }
@@ -487,6 +479,50 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         }
     }
 
+    /** Text colour, link/selection colours, text backdrop and typeface from the reading settings (plan A2). */
+    private void applyPaletteAndFont() {
+        boolean kai = ReadingPrefs.lyricsFont(mSharedPref) == LyricsFont.KAI;
+        styleLyrics(lyricsSimplify);
+        styleLyrics(lyricsTraditional);
+        applyFont(isShowTraditional());
+        // Photo backgrounds: English lyrics also sit on the contrast-tested panel (PhotoPaletteTest).
+        // The WebView's own colour stays transparent; the panel is the View background (set last, so it wins).
+        lyricsEnglish.setBackgroundColor(Color.TRANSPARENT);
+        lyricsEnglish.setBackground(BackgroundDrawables.backdrop(mContentHandler, mPalette));
+    }
+
+    /**
+     * Font for the script on screen only; never blocks. The other script loads when first shown.
+     * Until the face is ready the system font is used, then it is swapped in on the main thread.
+     */
+    private void applyFont(boolean traditional) {
+        ZoomTextView view = traditional ? lyricsTraditional : lyricsSimplify;
+        if (ReadingPrefs.lyricsFont(mSharedPref) != LyricsFont.KAI) {
+            view.setTypeface(Typeface.DEFAULT);
+            return;
+        }
+        Typeface ready = LyricsTypefaces.peek(traditional);
+        if (ready != null) {
+            view.setTypeface(ready);
+            return;
+        }
+        view.setTypeface(Typeface.DEFAULT);
+        LyricsTypefaces.request(mContentHandler, traditional, face -> {
+            if (isAdded()) {
+                view.setTypeface(face);
+            }
+        });
+    }
+
+    private void styleLyrics(ZoomTextView view) {
+        int accent = mPalette.getAccentColor();
+        view.setTextColor(mPalette.getTextColor());
+        view.setLinkTextColor(accent);
+        view.setHighlightColor((accent & 0x00FFFFFF) | 0x40000000);
+        // null for drawn backgrounds; an 85 % panel for photos
+        view.setBackground(BackgroundDrawables.backdrop(mContentHandler, mPalette));
+    }
+
     /**
      * Update the lyrics text view default size and the stored scale factor
      * Also being used onConfiguration change
@@ -501,13 +537,13 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         final WebSettings webSettings = lyricsEnglish.getSettings();
 
         if (HymnsApp.isPortrait) {
-            lyricsSimplify.scaleTextSize(20, lyricsScaleP);
-            lyricsTraditional.scaleTextSize(20, lyricsScaleP);
+            lyricsSimplify.scaleTextSize(LyricsScale.BASE_SP_PORTRAIT, lyricsScaleP);
+            lyricsTraditional.scaleTextSize(LyricsScale.BASE_SP_PORTRAIT, lyricsScaleP);
             webSettings.setDefaultFontSize((int) (18 * lyricsScaleEP));
         }
         else {
-            lyricsSimplify.scaleTextSize(35, lyricsScaleL);
-            lyricsTraditional.scaleTextSize(35, lyricsScaleL);
+            lyricsSimplify.scaleTextSize(LyricsScale.BASE_SP_LANDSCAPE, lyricsScaleL);
+            lyricsTraditional.scaleTextSize(LyricsScale.BASE_SP_LANDSCAPE, lyricsScaleL);
             webSettings.setDefaultFontSize((int) (26 * lyricsScaleEL));
         }
     }
@@ -562,6 +598,67 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         mEditor.apply();
     }
 
+    /** Stored default, or this session's button_mode choice. */
+    private DisplayMode currentDisplayMode() {
+        return DisplayModePolicy.resolve(mContentHandler.displayModeOverride, mStoredDisplayMode);
+    }
+
+    /**
+     * Show/hide score, buttons and lyrics for the display mode (plan A2).
+     *
+     * @param refreshLyrics false keeps the current lyrics views as they are (avoids re-fetching English lyrics)
+     */
+    private void applyDisplayMode(boolean refreshLyrics) {
+        DisplayMode chosen = currentDisplayMode();
+        DisplayMode shown = DisplayModePolicy.effective(chosen, mHasLyricsText);
+        btn_mode.setText(displayModeLabel(chosen));
+
+        if (shown.getShowScore() && !mScoreLoaded && mResPrefix != null) {
+            showLyricsScore(mResPrefix, mHymnScoreInfo);
+        }
+        else if (!shown.getShowScore() && mScoreLoaded) {
+            releaseScores();
+        }
+        scoreContainer.setVisibility(shown.getShowScore() ? View.VISIBLE : View.GONE);
+
+        btn_ts.setVisibility(shown.getShowLyrics() ? View.VISIBLE : View.GONE);
+        btn_english.setVisibility(shown.getShowLyrics() && mHymnNoEng != null ? View.VISIBLE : View.GONE);
+        if (!shown.getShowLyrics()) {
+            lyricsSimplify.setVisibility(View.GONE);
+            lyricsTraditional.setVisibility(View.GONE);
+            lyricsEnglish.setVisibility(View.GONE);
+        }
+        else if (refreshLyrics || noLyricsViewShown()) {
+            // Also when every lyrics view was hidden by an earlier mode (e.g. English page -> score only -> back)
+            toggleLyricsView();
+        }
+    }
+
+    private boolean noLyricsViewShown() {
+        return lyricsSimplify.getVisibility() != View.VISIBLE && lyricsTraditional.getVisibility() != View.VISIBLE
+                && lyricsEnglish.getVisibility() != View.VISIBLE;
+    }
+
+    /** "Lyrics only": let Glide recycle the score bitmaps; switching back reloads them (Codex P2). */
+    private void releaseScores() {
+        for (int id : SCORE_VIEW_IDS) {
+            ImageView view = mConvertView.findViewById(id);
+            Glide.with(this).clear(view);
+        }
+        mScoreLoaded = false;
+    }
+
+    private static int displayModeLabel(DisplayMode mode) {
+        switch (mode) {
+        case SCORE_ONLY:
+            return R.string.display_mode_score;
+        case LYRICS_ONLY:
+            return R.string.display_mode_lyrics;
+        default:
+            return R.string.display_mode_both;
+        }
+    }
+
     private void toggleLyricsView() {
         lyricsTraditional.setVisibility(View.GONE);
         lyricsSimplify.setVisibility(View.GONE);
@@ -576,12 +673,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             mLyricsEnglishRecord.fetchLyrics(mHymnNoEng, isErGe);
         }
         else {
-            if (!isShowTraditional()) {
-                lyricsSimplify.setVisibility(View.VISIBLE);
-            }
-            else {
-                lyricsTraditional.setVisibility(View.VISIBLE);
-            }
+            boolean traditional = isShowTraditional();
+            applyFont(traditional);
+            (traditional ? lyricsTraditional : lyricsSimplify).setVisibility(View.VISIBLE);
         }
     }
 
@@ -619,21 +713,4 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             }
         });
     }
-
-    /**
-     * standard ActivityResultContract#StartActivityForResult
-     */
-    ActivityResultLauncher<Intent> mStartForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-        if (result.getResultCode() == Activity.RESULT_OK) {
-            Intent intent = result.getData();
-            if (intent != null) {
-                boolean hasChanges = intent.getBooleanExtra(EXTR_KEY_HAS_CHANGES, false);
-                if (hasChanges) {
-                    // New default and/or conversion standard: drop the session toggle and rebuild all pages
-                    mContentHandler.lyricsViewOverride = null;
-                    mContentHandler.recreate();
-                }
-            }
-        }
-    });
 }
