@@ -252,7 +252,9 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         if (savedInstanceState != null) {
             sNumber = savedInstanceState.getString(STATE_NUMBER, "");
             isFu = savedInstanceState.getBoolean(STATE_IS_FU, false);
-            mEntry.setText(sNumber);
+            isToc = savedInstanceState.getBoolean(STATE_IS_TOC, false);
+            autoClear = savedInstanceState.getBoolean(STATE_AUTO_CLEAR, false);
+            mEntry.setText(savedInstanceState.getString(STATE_ENTRY_TEXT, sNumber));
         }
         initUserSettings();
         createYbXTable();
@@ -412,12 +414,18 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
 
     private static final String STATE_NUMBER = "state_number";
     private static final String STATE_IS_FU = "state_is_fu";
+    private static final String STATE_IS_TOC = "state_is_toc";
+    private static final String STATE_AUTO_CLEAR = "state_auto_clear";
+    private static final String STATE_ENTRY_TEXT = "state_entry_text";
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(STATE_NUMBER, sNumber);
         outState.putBoolean(STATE_IS_FU, isFu);
+        outState.putBoolean(STATE_IS_TOC, isToc);
+        outState.putBoolean(STATE_AUTO_CLEAR, autoClear);
+        outState.putString(STATE_ENTRY_TEXT, mEntry.getText().toString());
     }
 
     @Override
@@ -1255,6 +1263,9 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         // API 33+: framework applies it and recreates activities; API < 33: restart to re-wrap HymnsApp context
         if (LocaleStore.set(this, language)) {
             doRestart();
+        }
+        else {
+            invalidateOptionsMenu();
         }
     }
 

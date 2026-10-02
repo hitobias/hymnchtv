@@ -45,9 +45,11 @@ object LocaleStore {
     fun wrap(base: Context): Context {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return base
         val locale = current(base).toLocale() ?: return base
-        val config = Configuration(base.resources.configuration)
-        config.setLocale(locale)
-        config.setLayoutDirection(locale)
+        // Override ONLY the locale; copying base's configuration would freeze orientation/uiMode.
+        val config = Configuration().apply {
+            setLocale(locale)
+            setLayoutDirection(locale)
+        }
         return base.createConfigurationContext(config)
     }
 
