@@ -18,10 +18,18 @@ class VerseColorTest {
         hex.toLong(16).toInt()
     }
 
+    /**
+     * The stops plain and under any ONE overlay at full strength. BackgroundPreset.swatches() also stacks every overlay
+     * layer at full strength on the same pixel, which the vine motif never does; the rasterised check in androidTest
+     * covers the real pixels.
+     */
+    private fun BackgroundPreset.singleOverlaySwatches(): List<Int> =
+        stops + stops.flatMap { s -> overlays.map { Wcag.blend(s, it.color, it.maxAlpha) } }
+
     @Test
     fun readableOnEveryLightPresetSwatch() {
         BackgroundPreset.entries.filterNot { it.isDark }.forEach { preset ->
-            preset.swatches().forEach { swatch ->
+            preset.singleOverlaySwatches().forEach { swatch ->
                 val ratio = Wcag.contrast(red, swatch)
                 assertWithMessage("${preset.id} swatch %08x vs verse red %08x = %.2f".format(swatch, red, ratio))
                     .that(ratio).isAtLeast(4.5)
