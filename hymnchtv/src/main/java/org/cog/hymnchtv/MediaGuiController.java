@@ -502,7 +502,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         else if (mMediaType == MediaType.HYMN_JIAOCHANG) {
             cbAutoStream.setChecked(false);
             HymnsApp.showToastMessage(R.string.auto_stream_unsupported,
-                    mContentHandler.hymnType2Text(), MediaType.mediaType2Text(mMediaType));
+                    mContentHandler.hymnType2Text(requireContext()), MediaType.mediaType2Text(requireContext(), mMediaType));
         }
         else if (playerState == STATE_STOP) {
             // checked again by ContentHandler.setAutoStream once the user confirms
