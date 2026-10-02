@@ -44,7 +44,7 @@ class ReadingSettingsFragment : PreferenceFragmentCompat() {
 
         for (slot in BackgroundSlot.entries) {
             findPreference<Preference>(slot.prefKey)?.setOnPreferenceClickListener {
-                // S2: pickBackground.launch(BackgroundPickerActivity.intent(requireContext(), slot))
+                pickBackground.launch(BackgroundPickerActivity.intent(requireContext(), slot))
                 true
             }
         }

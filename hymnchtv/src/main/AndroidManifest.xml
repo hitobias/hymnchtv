@@ -123,6 +123,8 @@
             android:name=".reading.ReadingSettingsActivity"
             android:label="@string/reading_settings" />
 
+        <activity android:name=".reading.BackgroundPickerActivity" />
+
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
