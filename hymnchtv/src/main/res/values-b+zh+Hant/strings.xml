@@ -5,7 +5,6 @@
 
     <string name="about">關於</string>
     <string name="add">加添</string>
-    <string name="add_renew">新增/更新</string>
     <string name="overwrite">覆蓋</string>
     <string name="add_to_db">已經新增並儲存到資料庫！</string>
     <string name="add_to_db_failed">媒體記錄儲存失敗！</string>
@@ -229,8 +228,6 @@
     <string name="hymn_match_db_sp">大本詩歌: 附歌第 %1$d 首：\n%2$s</string>
     <string name="hymn_match_none">找不到匹配</string>
 
-    <string name="menu_media_ui_default_show">預設顯示播放條</string>
-    <string name="menu_media_ui_default_hide">預設隱藏播放條</string>
     <string name="menu_media_ui_toggle">顯示/隱藏播放條</string>
 
     <string name="nn0">0</string>
@@ -252,7 +249,6 @@
     <string name="play">播放</string>
     <string name="home">首頁</string>
 
-    <string name="wall_paper">主介面桌布</string>
     <string name="fontSize">設定主面版文字大小</string>
     <string name="small">小</string>
     <string name="lager">大</string>
@@ -273,18 +269,6 @@
     <string name="green">綠色</string>
 
     <!-- 背景顏色 -->
-    <string name="sbg1">淺橙色</string>
-    <string name="sbg2">淺藍色</string>
-    <string name="sbg3">綠色</string>
-    <string name="sbg4">水珠藍色</string>
-    <string name="sbg5">淺棕色</string>
-    <string name="sbg6">乳白色</string>
-    <string name="sbg7">花信子</string>
-    <string name="sbg8">磚塊</string>
-    <string name="sbg9">一朵菊花</string>
-    <string name="sbg10">綠葉水珠</string>
-    <string name="sbg11">綠色幽幽</string>
-    <string name="sbg12">薰衣草</string>
 
     <!-- Theme -->
     <string name="theme_menu">應用介面主題</string>
@@ -295,7 +279,6 @@
     <!-- Locale -->
     <string name="locale_menu">應用介面語言</string>
     <string name="locale_system">跟隨系統</string>
-    <string name="lyrics_language_menu">歌詞語言</string>
     <string name="lyrics_default_title">歌詞預設語言</string>
     <string name="lyrics_follow_ui">跟隨介面語言</string>
     <string name="lyrics_simplified">簡中</string>

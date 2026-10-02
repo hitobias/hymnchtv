@@ -53,4 +53,10 @@ class BackgroundResourcesTest {
         assertThat(files).isNotEmpty()
         files.forEach { assertWithMessage(it.path).that(it.length()).isAtMost(5120L) }
     }
+
+    @Test
+    fun legacyJpegWallpapersAreGone() {
+        val legacy = drawableDirs.flatMap { d -> d.listFiles { f -> f.name.matches(Regex("bg\\d+\\.jpg")) }!!.toList() }
+        assertThat(legacy).isEmpty()
+    }
 }

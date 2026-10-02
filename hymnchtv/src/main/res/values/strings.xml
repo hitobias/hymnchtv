@@ -5,7 +5,6 @@
 
     <string name="about">About</string>
     <string name="add">Add</string>
-    <string name="add_renew">Add/Renew</string>
     <string name="overwrite">Overwrite</string>
     <string name="add_to_db">Has been added and saved to the database!</string>
     <string name="add_to_db_failed">Failed to save media record!</string>
@@ -252,8 +251,6 @@
     <string name="hymn_match_db_sp">DaBen: Fu %1$d:\n%2$s</string>
     <string name="hymn_match_none">No match found</string>
 
-    <string name="menu_media_ui_default_show">Default Show Payback UI</string>
-    <string name="menu_media_ui_default_hide">Default Hide Playback UI</string>
     <string name="menu_media_ui_toggle">Toggle on/off Playback UI</string>
 
     <string name="nn0">0</string>
@@ -275,7 +272,6 @@
     <string name="play">play</string>
     <string name="home">home</string>
 
-    <string name="wall_paper">Wallpaper</string>
     <string name="fontSize">Font Size</string>
     <string name="small">Small</string>
     <string name="lager">Big</string>
@@ -296,18 +292,6 @@
     <string name="green">Green</string>
 
     <!--  background color -->
-    <string name="sbg1">Light Orange</string>
-    <string name="sbg2">Light Blue</string>
-    <string name="sbg3">Green</string>
-    <string name="sbg4">Water Droplets Blue</string>
-    <string name="sbg5">Light Brown</string>
-    <string name="sbg6">Milky White</string>
-    <string name="sbg7">Hua XinZi</string>
-    <string name="sbg8">Bricks</string>
-    <string name="sbg9">Chrysanthemum</string>
-    <string name="sbg10">Green Water Droplets</string>
-    <string name="sbg11">Green</string>
-    <string name="sbg12">Lavender</string>
 
     <!-- Theme -->
     <string name="theme_menu">Theme</string>
@@ -321,7 +305,6 @@
     <string name="locale_chinese" translatable="false">简中</string>
     <string name="locale_chinese_hant" translatable="false">繁中</string>
     <string name="locale_english" translatable="false">English</string>
-    <string name="lyrics_language_menu">Lyrics language</string>
     <string name="lyrics_default_title">Default lyrics language</string>
     <string name="lyrics_follow_ui">Follow app language</string>
     <string name="lyrics_simplified">Simplified Chinese</string>

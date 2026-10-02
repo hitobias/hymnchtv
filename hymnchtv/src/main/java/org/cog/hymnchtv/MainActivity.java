@@ -221,7 +221,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
 
     private static MainActivity mInstance;
 
-
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public void onCreate(Bundle savedInstanceState) {
         mInstance = this;
