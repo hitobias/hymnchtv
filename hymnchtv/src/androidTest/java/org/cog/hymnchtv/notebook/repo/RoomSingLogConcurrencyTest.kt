@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
-import org.cog.hymnchtv.notebook.data.NotebookDatabase
+import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
 import org.cog.hymnchtv.notebook.model.HymnKey
 import org.cog.hymnchtv.notebook.model.HymnTypes
 import org.cog.hymnchtv.notebook.model.IdGenerator
@@ -23,14 +23,14 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class RoomSingLogConcurrencyTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private lateinit var db: NotebookDatabase
+    private lateinit var db: HymnchtvDatabase
     private val key = HymnKey.of(HymnTypes.DB, 1)
     private val hour = 3_600_000L
 
     @Before
     fun setUp() {
         context.deleteDatabase(FILE)
-        db = NotebookDatabase.build(context, FILE)
+        db = HymnchtvDatabase.build(context, FILE)
     }
 
     @After

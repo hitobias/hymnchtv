@@ -4,7 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.cog.hymnchtv.notebook.data.NotebookDatabase
+import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
 import org.cog.hymnchtv.notebook.data.entity.FavoriteEntity
 import org.cog.hymnchtv.notebook.model.FavoriteIds
 import org.cog.hymnchtv.notebook.model.HymnKey
@@ -17,14 +17,14 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class RoomFavoriteRepositoryTest {
-    private lateinit var db: NotebookDatabase
+    private lateinit var db: HymnchtvDatabase
     private lateinit var repo: RoomFavoriteRepository
     private val clock = TestClock(1_000)
     private val key = HymnKey.of(HymnTypes.DB, 1)
 
     @Before
     fun setUp() {
-        db = NotebookDatabase.inMemory(ApplicationProvider.getApplicationContext())
+        db = HymnchtvDatabase.inMemory(ApplicationProvider.getApplicationContext())
         repo = RoomFavoriteRepository(db, clock, testDevice)
     }
 

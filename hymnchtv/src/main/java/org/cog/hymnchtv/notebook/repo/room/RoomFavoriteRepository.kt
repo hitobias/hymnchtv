@@ -1,7 +1,7 @@
 package org.cog.hymnchtv.notebook.repo.room
 
 import androidx.room.withTransaction
-import org.cog.hymnchtv.notebook.data.NotebookDatabase
+import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
 import org.cog.hymnchtv.notebook.data.entity.FavoriteEntity
 import org.cog.hymnchtv.notebook.model.Clock
 import org.cog.hymnchtv.notebook.model.DeviceIdProvider
@@ -11,7 +11,7 @@ import org.cog.hymnchtv.notebook.model.isActive
 import org.cog.hymnchtv.notebook.repo.FavoriteRepository
 
 class RoomFavoriteRepository(
-    private val db: NotebookDatabase,
+    private val db: HymnchtvDatabase,
     private val clock: Clock,
     private val device: DeviceIdProvider,
 ) : FavoriteRepository {

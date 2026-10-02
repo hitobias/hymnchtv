@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.notebook.data
 
+import org.cog.hymnchtv.persistance.room.HymnchtvDatabase
 import android.database.sqlite.SQLiteConstraintException
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -21,14 +22,14 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class NotebookDaoTest {
-    private lateinit var db: NotebookDatabase
+    private lateinit var db: HymnchtvDatabase
     private val db1 = HymnKey.of(HymnTypes.DB, 1)
     private val fu1 = HymnKey.of(HymnTypes.DB, 781)
     private val er1 = HymnKey.of(HymnTypes.ER, 1)
 
     @Before
     fun setUp() {
-        db = NotebookDatabase.inMemory(ApplicationProvider.getApplicationContext())
+        db = HymnchtvDatabase.inMemory(ApplicationProvider.getApplicationContext())
     }
 
     @After
