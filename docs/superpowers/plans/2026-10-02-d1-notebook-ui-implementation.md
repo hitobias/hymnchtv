@@ -5,6 +5,7 @@
 **修訂紀錄：**
 - rev 1（2026-10-02）：初版。涵蓋 D-1 的四個階段（D-1a 收藏與唱詩紀錄的介面、D-1b 筆記、D-1c 歌單與聚會模式、D-1d 統計與回顧）以及備份匯出／匯入、自動記錄開關的畫面。子項目 C 的計畫（`2026-10-02-c-modern-ui-implementation.md`）撰寫本文時尚未存在，所有對 C 的假設集中在「依賴 C 的介面」一節，C 定案後要逐條對照。
 - rev 2（2026-10-02）：C 的計畫已定稿（commit `9e3e4c39`，Codex 0 P1）。逐條比對「依賴 C 的介面」，結論見該節下方的「rev 2 比對結果」。主要調整：C-1（C 不實作 `NotebookNavigator`，由 D-1 接）、C-3（品牌色 `#09354d`，非 `#9C2B23`）、C-4（DayNight 已確認）、C-5（選項 a 已定，單一宿主 `@id/notebookBar`）、C-6/C-7（接 C 的 `@id/btn_next`／`@id/btn_add_playlist`）、C-11（C 直接綁 LXGW WenKai，D-1 取消子集管線）。
+- rev 3（2026-10-02）：**補完 Phase 3（W0、W1a–W1c、W2a–W2c、W3a）與 Phase 4（I1、I2、I3、V1、R1）**，原 rev 1 停在 `<!-- CONTINUE -->`。並依 Codex 對 D-1 UI 的審查（10 P1）修：①I1 明確定義 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 三接點；②I1 的播放完成只記「成功」路徑，失敗/錯誤不記；③`queryDao()` 加進 D-1a 的契約（在 `NotebookDatabase` 加一行，非 schema 變更）；④C-8 簽名差異（C 同步 vs D-1 `suspend titlesFor`）以「各自擁有、不共用」收尾；⑤notebookBar 版型在 `content_main.xml` 明確約束。
 
 ## 給執行者（Sonnet 5.5）的說明
 
@@ -7596,4 +7597,515 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
 ---
 
-<!-- CONTINUE -->
+## 階段 3 · Lane 0：導覽、宿主、共用元件與雙宿主對話框
+
+### Task W0：`NotebookNavigator`、`NotebookIntents`、`NotebookResults`、`notebook/ui/common/*`、雙宿主對話框
+
+**Files:**
+- Create: `notebook/ui/NotebookNavigator.kt`、`NotebookIntents.kt`、`NotebookResults.kt`、`notebook/ui/common/LoadMoreScrollListener.kt`、`notebook/ui/common/ListAdapters.kt`、`notebook/ui/common/HymnRow.kt`
+- Create: `notebook/ui/log/SingLogEditDialogFragment.kt`、`notebook/ui/picker/HymnPickerDialogFragment.kt`
+- Create: `res/layout/nb_row_hymn.xml`、`res/layout/nb_list.xml`、`res/layout/nb_dialog_log_edit.xml`、`res/layout/nb_dialog_hymn_picker.xml`
+- Test: `test/.../notebook/ui/DualHostLayoutTest.kt`
+
+> 本 lane 是階段 3 的地基：導覽契約、intent/result 契約、共用 view 元件、以及「從歌詞頁（AppCompat 主題）也能開」的雙宿主對話框（U5：只用 AppCompat／framework 元件）。W1、W2、W3 都依賴它。
+
+- [ ] **Step 1：寫 `NotebookNavigator`（導覽契約）**
+
+  `notebook/ui/NotebookNavigator.kt`：
+
+  ```kotlin
+  package org.cog.hymnchtv.notebook.ui
+
+  import org.cog.hymnchtv.notebook.model.HymnKey
+
+  /** Navigates between notebook screens. Hosts: NotebookActivity (pre-C) or C's MyHymnsFragment (C mode). */
+  interface NotebookNavigator {
+      fun openFavorites()
+      fun openSingLog()
+      fun openNotes()
+      fun openReview()
+      fun openPlaylists()
+      fun openSettings()
+      fun openPlaylist(playlistId: String)
+      fun openHymn(key: HymnKey)
+      fun openNoteEditor(noteId: String? = null, hymn: HymnKey? = null)
+  }
+  ```
+
+- [ ] **Step 2：寫 `NotebookIntents`（開歌詞頁，含聚會模式 extra）**
+
+  `notebook/ui/NotebookIntents.kt`：
+
+  ```kotlin
+  package org.cog.hymnchtv.notebook.ui
+
+  import android.content.Context
+  import android.content.Intent
+  import org.cog.hymnchtv.ContentHandler
+  import org.cog.hymnchtv.MainActivity
+  import org.cog.hymnchtv.notebook.model.HymnKey
+
+  /** Builds intents into the app's existing Activities. No notebook class is imported by ContentHandler/MainActivity. */
+  object NotebookIntents {
+      const val EXTRA_PLAYLIST_ID = "nb.playlistId"     // canonical UUID, else ignored (U8)
+      const val EXTRA_PLAYLIST_ITEM = "nb.playlistItem" // canonical UUID, else ignored
+
+      /** Open the lyrics page for [key]. */
+      fun hymn(context: Context, key: HymnKey): Intent {
+          val i = Intent(context, ContentHandler::class.java)
+          i.putExtra(MainActivity.ATTR_HYMN_TYPE, key.hymnType)
+          i.putExtra(MainActivity.ATTR_HYMN_NUMBER, key.hymnNo)
+          return i
+      }
+
+      /** Open the lyrics page as part of a playlist (meeting mode, U8). */
+      fun hymnFromPlaylist(context: Context, key: HymnKey, playlistId: String, itemId: String): Intent =
+          hymn(context, key)
+              .putExtra(EXTRA_PLAYLIST_ID, playlistId)
+              .putExtra(EXTRA_PLAYLIST_ITEM, itemId)
+
+      /** Open the notebook as a standalone Activity (pre-C host, U5). */
+      fun notebook(context: Context): Intent = Intent(context, NotebookActivity::class.java)
+  }
+  ```
+
+- [ ] **Step 3：寫 `NotebookResults`（Fragment result 契約）**
+
+  `notebook/ui/NotebookResults.kt`：
+
+  ```kotlin
+  package org.cog.hymnchtv.notebook.ui
+
+  /** FragmentResult keys shared by dialogs and their hosts. */
+  object NotebookResults {
+      const val KEY_HYMN_PICK = "nb.hymn_pick"          // Bundle with "hymnType"/"hymnNo"
+      const val KEY_SING_LOG_EDITED = "nb.sing_log_edited"
+      const val KEY_NOTE_SAVED = "nb.note_saved"
+      const val KEY_PLAYLIST_CREATED = "nb.playlist_created"
+  }
+  ```
+
+- [ ] **Step 4：寫共用元件 `common/*`**
+
+  `notebook/ui/common/LoadMoreScrollListener.kt`：`RecyclerView.OnScrollListener`，距離底部 ≤ 10 列時呼叫 `onLoadMore()`（U2）。用 `LinearLayoutManager.findLastVisibleItemPosition()`，比對 `adapter.itemCount - 10`。
+
+  `notebook/ui/common/ListAdapters.kt`：`ListAdapter` 的 `DiffUtil.ItemCallback` 共用工廠（依 `id` 比對）與 `PagedAdapter`（把 `KeysetPager` 的一頁 append 到清單）。
+
+  `notebook/ui/common/HymnRow.kt`：`HymnRowBinding` 共用 helper——綁定 `res/layout/nb_row_hymn.xml`（標題 `nb_row_title`、編號 `nb_row_number`、次數/日期 `nb_row_meta`），依 `UiText` 解析顯示。
+
+- [ ] **Step 5：寫 `HymnPickerDialogFragment`（雙宿主，報號加入）**
+
+  `notebook/ui/picker/HymnPickerDialogFragment.kt`：`DialogFragment`，用 framework `AlertDialog` + `EditText`（無 Material 元件）。輸入「本 + 號 +（附）」，呼叫 `HymnPick.parse(hymnType, text, fu)`，非法顯示錯誤；合法用 `setFragmentResult(KEY_HYMN_PICK, bundle)`。`show(fm, requestKey)` companion 供任何主題呼叫。
+
+  `res/layout/nb_dialog_hymn_picker.xml`：`EditText`（`@id/nb_pick_input`，`inputType="number"`）+ 詩歌本 `RadioGroup`（`nb_pick_books`）。
+
+- [ ] **Step 6：寫 `SingLogEditDialogFragment`（雙宿主，修改/補記）**
+
+  `notebook/ui/log/SingLogEditDialogFragment.kt`：`DialogFragment`，用 framework `DatePickerDialog`／`TimePickerDialog` + `AlertDialog` + `CheckBox`（場合選擇）。接收 `SingLogEntity?`（null = 補記），呼叫 `SingLogEditor`（V1a 已建）。時間上限今天（U7）。
+
+  `res/layout/nb_dialog_log_edit.xml`：場合 `CheckBox` 群 + 手動時間按鈕 + 「刪除」按鈕（編輯時）。
+
+- [ ] **Step 7：寫 `DualHostLayoutTest`（把關雙宿主只用 AppCompat）**
+
+  `test/.../notebook/ui/DualHostLayoutTest.kt`：掃描 `res/layout/nb_dialog_*.xml`、`nb_hymn_bar.xml` 與 `nb_row_*.xml` 的原始 XML，斷言不含 `com.google.android.material`（U5：這些 layout 可能 inflate 在 AppCompat 主題的 `ContentHandler` 下）。直接讀原始檔字串比對。
+
+- [ ] **Step 8：編譯 + 測試 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.notebook.ui.DualHostLayoutTest' :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/NotebookNavigator.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/NotebookIntents.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/NotebookResults.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/common \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/log/SingLogEditDialogFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/picker/HymnPickerDialogFragment.kt \
+    hymnchtv/src/main/res/layout/nb_row_hymn.xml hymnchtv/src/main/res/layout/nb_list.xml \
+    hymnchtv/src/main/res/layout/nb_dialog_log_edit.xml hymnchtv/src/main/res/layout/nb_dialog_hymn_picker.xml \
+    hymnchtv/src/test/java/org/cog/hymnchtv/notebook/ui/DualHostLayoutTest.kt
+  git commit -m "feat: add notebook navigation, intents, results and dual-host dialogs" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+---
+
+## 階段 3 · Lane W1：宿主與主要清單畫面
+
+### Task W1a：`NotebookActivity` + `NotebookHomeFragment`
+
+**Files:**
+- Create: `notebook/ui/NotebookActivity.kt`、`notebook/ui/home/NotebookHomeFragment.kt`
+- Create: `res/layout/nb_activity.xml`、`res/layout/nb_home.xml`
+- Modify: `AndroidManifest.xml`（加 `NotebookActivity`）
+
+- [ ] **Step 1：`NotebookActivity`（pre-C 宿主）**
+
+  `notebook/ui/NotebookActivity.kt`：`BaseActivity` 子類。`onCreate` 用 `NotebookThemes.forApp(ThemeHelper.getAppTheme())` 套主題（U5，overwrite `setTheme`），`setContentView(R.layout.nb_activity)`（`MaterialToolbar` + `FragmentContainerView`）。實作 `NotebookNavigator`，用 `supportFragmentManager` 開各畫面、`addToBackStack`。首頁放 `NotebookHomeFragment`。`MenuProvider` 加「筆記本設定」選單項（開 `NotebookSettingsFragment`，C-2/C-9）。
+
+  `AndroidManifest.xml` 加：
+
+  ```xml
+  <activity android:name=".notebook.ui.NotebookActivity" android:label="@string/nb_title" />
+  ```
+
+- [ ] **Step 2：`NotebookHomeFragment`（我的詩歌首頁）**
+
+  `notebook/ui/home/NotebookHomeFragment.kt`：`Fragment`，入口卡片清單——「收藏」「唱詩紀錄」「筆記」「回顧」「歌單」「設定」，各卡片 `onClick` 呼叫 `navigator.openXxx()`。`navigator` 從 `requireActivity()` 取（`NotebookNavigator`），或用 `NotebookIntentsNavigator`（預設，開 `NotebookActivity` 子畫面）——**C 模式下由 C 的宿主提供 `NotebookNavigator`**（C-1）。
+
+  `res/layout/nb_home.xml`：`RecyclerView`（`GridLayoutManager` span 2）或 `GridLayout`，卡片 `minHeight="72dp"`（U12）。
+
+- [ ] **Step 3：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/NotebookActivity.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/home \
+    hymnchtv/src/main/res/layout/nb_activity.xml hymnchtv/src/main/res/layout/nb_home.xml \
+    hymnchtv/src/main/AndroidManifest.xml
+  git commit -m "feat: add notebook activity and home fragment" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+### Task W1b：`FavoritesFragment`、`SingLogFragment`、`NotesFragment` 與其 Adapter
+
+**Files:**
+- Create: `notebook/ui/favorites/FavoritesFragment.kt`、`notebook/ui/log/{SingLogFragment,SingLogAdapter}.kt`、`notebook/ui/notes/{NotesFragment,NoteAdapter}.kt`
+- Create: `res/layout/nb_row_log.xml`、`res/layout/nb_row_log_header.xml`、`res/layout/nb_row_note.xml`
+
+- [ ] **Step 1：`FavoritesFragment`**
+
+  綁定 `FavoritesViewModel`（V3a，state `FavoritesState`）。`RecyclerView` + `FavoriteOrdering` 排序控制。列點擊 → `navigator.openHymn(key)`；長按/選單 → 取消收藏（確認）。`nb_row_hymn.xml` 顯示標題 + 次數 + 最近日期（`HymnLabels`）。
+
+- [ ] **Step 2：`SingLogFragment` + `SingLogAdapter`**
+
+  綁定 `SingLogViewModel`（V1c）。`RecyclerView` 分組（`SingLogSections`，M2），`nb_row_log_header.xml` 是日期/場合標題（`ViewCompat.setAccessibilityHeading`），`nb_row_log.xml` 是每筆紀錄（編號、標題、場合、來源「自動/手動」文字標示、時間）。列點擊 → 開 `SingLogEditDialogFragment`；「補記」FAB → `SingLogEditDialogFragment`（null）。
+
+- [ ] **Step 3：`NotesFragment` + `NoteAdapter`**
+
+  綁定 `NotesViewModel`（V3b）。`RecyclerView`（`NotesState`），列 = 筆記預覽（`nb_row_note.xml`：內文前幾行 + 日期）。點擊 → `navigator.openNoteEditor(noteId)`。「寫筆記」FAB → `openNoteEditor(hymn = current)`。搜尋用 `NoteSearch`（S1）。
+
+- [ ] **Step 4：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/favorites \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/log/SingLogFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/log/SingLogAdapter.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/notes/NotesFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/notes/NoteAdapter.kt \
+    hymnchtv/src/main/res/layout/nb_row_log.xml hymnchtv/src/main/res/layout/nb_row_log_header.xml \
+    hymnchtv/src/main/res/layout/nb_row_note.xml
+  git commit -m "feat: add favorites, sing log and notes fragments" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+### Task W1c：`StatsFragment`、`HeatmapView`、`UnsungListFragment`
+
+**Files:**
+- Create: `notebook/ui/review/{StatsFragment,HeatmapView,UnsungListFragment}.kt`
+- Create: `res/layout/nb_stats.xml`、`res/layout/nb_unsung.xml`
+
+- [ ] **Step 1：`StatsFragment`**
+
+  綁定 `StatsViewModel`（V3c，state `StatsState`）。頂部 `HeatmapView`（`contentDescription` 文字摘要，U12）+「最常唱」「很久沒唱」「去年今天」「各詩歌本覆蓋率」四塊（`HymnLabels` 取標題）。
+
+- [ ] **Step 2：`HeatmapView`（自訂 `View`）**
+
+  依 `HeatmapBuckets`（S1）的 15 分鐘格畫熱圖，`contentDescription` 給「X 月 Y 日唱了 N 次」摘要；`Dispatchers.Default` 計算（U12）。
+
+- [ ] **Step 3：`UnsungListFragment`**
+
+  綁定 `UnsungListViewModel`（V3c）。「某本還沒唱過的詩歌」清單（`BookCoverage`，S1），分頁取標題。列點擊 → `openHymn`。
+
+- [ ] **Step 4：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/review \
+    hymnchtv/src/main/res/layout/nb_stats.xml hymnchtv/src/main/res/layout/nb_unsung.xml
+  git commit -m "feat: add stats, heatmap and unsung list" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+---
+
+## 階段 3 · Lane W2：歌單、筆記編輯、詩歌頁、設定
+
+### Task W2a：`PlaylistsFragment`、`PlaylistDetailFragment`、`PlaylistItemAdapter`
+
+**Files:**
+- Create: `notebook/ui/playlist/{PlaylistsFragment,PlaylistDetailFragment,PlaylistItemAdapter,PlaylistNameDialogFragment,OccasionPickerDialogFragment}.kt`
+- Create: `res/layout/nb_row_playlist.xml`、`res/layout/nb_row_playlist_item.xml`、`res/layout/nb_playlist_detail.xml`
+
+- [ ] **Step 1：`PlaylistsFragment`**
+
+  綁定 `PlaylistsViewModel`（V2b，state `PlaylistsState`）。清單（`nb_row_playlist.xml`：名稱、幾首）。「＋歌單」→ `PlaylistNameDialogFragment`；點擊 → `openPlaylist(id)`。
+
+- [ ] **Step 2：`PlaylistDetailFragment` + `PlaylistItemAdapter`**
+
+  綁定 `PlaylistDetailViewModel`（V2b，`PlaylistDetailState`）。`RecyclerView` 拖曳排序（`ItemMoves`，P1）+ TalkBack「上移/下移」自訂動作（U12）。列點擊 → 聚會模式 `NotebookIntents.hymnFromPlaylist`（帶 `nb.playlistId`/`nb.playlistItem`）。「開始」→ 開第一首。「全部記為已唱」→ `MarkSungPlanner`（U7）。「分享」→ `PlaylistShareText`（P1）+ `ACTION_SEND`。
+
+- [ ] **Step 3：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/playlist \
+    hymnchtv/src/main/res/layout/nb_row_playlist.xml hymnchtv/src/main/res/layout/nb_row_playlist_item.xml \
+    hymnchtv/src/main/res/layout/nb_playlist_detail.xml
+  git commit -m "feat: add playlist list and detail" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+### Task W2b：`NoteEditorFragment`、`HymnNotebookFragment`、`AddToPlaylistDialogFragment`
+
+**Files:**
+- Create: `notebook/ui/notes/NoteEditorFragment.kt`、`notebook/ui/hymn/HymnNotebookFragment.kt`、`notebook/ui/playlist/AddToPlaylistDialogFragment.kt`
+- Create: `res/layout/nb_note_editor.xml`、`res/layout/nb_hymn_page.xml`
+
+- [ ] **Step 1：`NoteEditorFragment`**
+
+  綁定 `NoteEditorViewModel`（V3b，`NoteEditorState`）。`EditText`（多行）+ 儲存/刪除。`onDestroy` 取消 D-1a 的 `Cancellable`（codex rev 3）。
+
+- [ ] **Step 2：`HymnNotebookFragment`（單首詩歌頁）**
+
+  綁定 `HymnNotebookViewModel`（V1c）。顯示該首的：☆收藏、唱詩摘要、唱詩紀錄清單、筆記清單。各區塊 → 對應編輯/導覽。從歌詞頁筆記本列點「唱詩摘要」開這個畫面。
+
+- [ ] **Step 3：`AddToPlaylistDialogFragment`（雙宿主，C-7）**
+
+  綁定 `HymnPickerViewModel` 或直接 `PlaylistsViewModel`。framework `AlertDialog` + 歌單清單（`nb_row_playlist.xml`），選單 → 加入。`show(fm, key, hymnKey)` companion（C 的 `@id/btn_add_playlist` 與筆記本列「加入歌單」都呼叫它）。
+
+- [ ] **Step 4：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/notes/NoteEditorFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/hymn/HymnNotebookFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/playlist/AddToPlaylistDialogFragment.kt \
+    hymnchtv/src/main/res/layout/nb_note_editor.xml hymnchtv/src/main/res/layout/nb_hymn_page.xml
+  git commit -m "feat: add note editor, hymn page and add-to-playlist dialog" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+### Task W2c：`NotebookSettingsFragment` + `nb_preferences.xml`
+
+**Files:**
+- Create: `notebook/ui/settings/NotebookSettingsFragment.kt`、`res/xml/nb_preferences.xml`
+
+- [ ] **Step 1：`NotebookSettingsFragment`（`PreferenceFragmentCompat`）**
+
+  `res/xml/nb_preferences.xml` 兩個 `PreferenceCategory`（C-9 的「唱詩紀錄」「備份」）：
+  - 唱詩紀錄：`CheckBoxPreference`「自動記錄」（key `nb.auto_record`，`NotebookPrefsDataStore`）、「自動記錄門檻」`SeekBarPreference`（2 分鐘，可調）、「去重時間窗」。
+  - 備份：`Preference`「匯出備份」→ `ActivityResultContracts.CreateDocument`；「匯入備份」→ `OpenDocument`（U10，結果 `BackupMessages`）；「資料只存在這支手機」說明（U11）。
+  `NotebookSettingsFragment` 用 `NotebookPrefsDataStore`（S2）讀寫，匯出/匯入 launcher 在此 Fragment。C 合併後併入 C 的 `SettingsFragment`（C-9）。
+
+- [ ] **Step 2：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/settings/NotebookSettingsFragment.kt \
+    hymnchtv/src/main/res/xml/nb_preferences.xml
+  git commit -m "feat: add notebook settings fragment" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+---
+
+## 階段 3 · Lane W3：歌詞頁筆記本列
+
+### Task W3a：`HymnNotebookBarFragment`、`NotebookBarHost`
+
+**Files:**
+- Create: `notebook/ui/bar/HymnNotebookBarFragment.kt`、`notebook/ui/bar/NotebookBarHost.kt`
+- Create: `res/layout/nb_hymn_bar.xml`
+
+> 這是 C-5（選項 a）的落地：C 的 `content_main.xml` 有 `@id/notebookBar` 空容器；本 task 把 `HymnNotebookBarFragment` 放進去，並定義 `NotebookBarHost` 讓 `ContentHandler`（Java）與它溝通。
+
+- [ ] **Step 1：`NotebookBarHost`（契約）**
+
+  `notebook/ui/bar/NotebookBarHost.kt`：
+
+  ```kotlin
+  package org.cog.hymnchtv.notebook.ui.bar
+
+  import org.cog.hymnchtv.notebook.model.HymnKey
+
+  /** Implemented by ContentHandler (D-1's I1) so the bar can drive the pager/playlist. */
+  interface NotebookBarHost {
+      /** Show [key] in the pager (same book: setCurrentItem; different book: relaunch, U8). */
+      fun showHymn(key: HymnKey)
+
+      /** Called by the bar when the user taps "下一首" in meeting mode (C-6). */
+      fun nextInPlaylist()
+  }
+  ```
+
+- [ ] **Step 2：`HymnNotebookBarFragment`（筆記本列，U6）**
+
+  `notebook/ui/bar/HymnNotebookBarFragment.kt`：`Fragment`，用 `viewModels { HymnBarViewModel.Factory(NotebookUi.get(...), TitleScripts.current(...)) }`。`onViewCreated`：
+  - collect `HymnBarViewModel.state` → 綁定 `nb_hymn_bar.xml`：☆ `CheckBox`（收藏，`contentDescription`「收藏，已勾選」）、唱詩摘要（`nb_bar_summary`，點擊 → `navigator.openHymn(key)`）、「筆記 N／寫筆記」（`nb_bar_notes`）、「加入歌單」（`nb_bar_add_playlist`）、自動記錄提示（`nb_bar_auto_record`，`accessibilityLiveRegion="polite"`）、歌單列（`nb_bar_playlist_strip`）。
+  - collect `messages` → `HymnsApp.showToastMessage`。
+  - `onResume`/`onPause` → `vm.onScreenVisible()`/`onScreenHidden()`（U6 的自動記錄呼叫點）。
+  - `host`（`NotebookBarHost`）從 `requireActivity()` 取得；歌單列「下一首」→ `vm.nextInPlaylist()` → `host.showHymn(...)`。
+
+  `res/layout/nb_hymn_bar.xml`：兩列（第一列 48 dp），只用 AppCompat／framework 元件（`CheckBox`、`TextView`、`ImageButton`，U5）。
+
+- [ ] **Step 3：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/bar/HymnNotebookBarFragment.kt \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/bar/NotebookBarHost.kt \
+    hymnchtv/src/main/res/layout/nb_hymn_bar.xml
+  git commit -m "feat: add lyrics page notebook bar fragment" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+---
+
+## 階段 4 · Lane 0：整合、測試與收尾
+
+> **G4 前置**：先依「依賴 C 的介面」判斷 C 的狀態，選 C 模式（C 已合併）或 pre-C 模式（C 尚未合併、D-1 先發）。I1/I2 在 C 模式改 C 的對應檔案，pre-C 模式改舊版面。**C-10 三接點 `showHymn`／`onPlaybackCompleted`／`NotebookBarHost` 由 I1 定義**（codex rev 3）。
+
+### Task I1：`ContentHandler` 接筆記本列與自動記錄
+
+**Files:**
+- Modify: `ContentHandler.java`、`res/layout/content_main.xml`、`MediaGuiController.java`、`mediaplayer/MediaExoPlayerFragment.java`、`mediaplayer/YoutubePlayerFragment.java`
+- Modify: `notebook/ui/bar/HymnNotebookBarFragment.kt`（如需）
+
+- [ ] **Step 1：`content_main.xml` 加筆記本列容器（單一宿主，codex C-5）**
+
+  在 `ViewPager2`（`@id/viewPager`）與 `mediaPlayer`（`@id/mediaPlayer`）之間加一個 `FragmentContainerView`；`viewPager` 的 `layout_above` 改成 `@id/notebookBar`，`notebookBar` 的 `layout_above` 指向 `mediaPlayer`：
+
+  ```xml
+  <androidx.fragment.app.FragmentContainerView
+      android:id="@+id/notebookBar"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_above="@id/mediaPlayer"
+      android:layout_alignParentStart="true"
+      android:layout_alignParentEnd="true" />
+  ```
+
+  並把 `viewPager` 的 `android:layout_above="@+id/mediaPlayer"` 改為 `android:layout_above="@+id/notebookBar"`。
+
+  （pre-C 模式；C 模式若 C 已加 `@id/notebookBar`，則不重複加，只在此 commit 確認 id 存在。）
+
+- [ ] **Step 2：`ContentHandler` 實作 `NotebookBarHost` 並加 `showHymn`／`onPlaybackCompleted`**
+
+  `ContentHandler` 宣告 `implements org.cog.hymnchtv.notebook.ui.bar.NotebookBarHost`，加欄位與方法：
+
+  ```java
+  private HymnNotebookBarFragment mNotebookBar;
+
+  // 在 onCreate()，attach mediaPlayer 之後：
+  mNotebookBar = (HymnNotebookBarFragment) getSupportFragmentManager().findFragmentById(R.id.notebookBar);
+  if (mNotebookBar == null) {
+      mNotebookBar = new HymnNotebookBarFragment();
+      getSupportFragmentManager().beginTransaction().replace(R.id.notebookBar, mNotebookBar).commit();
+  }
+
+  // OnPageChangeCallback.onPageSelected 裏，更新完 mHymnNo 後呼叫：
+  showHymn(mHymnType, mHymnNo);
+
+  // NotebookBarHost 實作：
+  @Override public void showHymn(org.cog.hymnchtv.notebook.model.HymnKey key) {
+      // 同本：mPager.setCurrentItem(HymnNo2IdxConvert.hymnNo2IdxConvert(key.getHymnType(), key.getHymnNo()), true);
+      // 不同本：MainActivity.showContent(...) 後 finish（U8）
+  }
+  @Override public void nextInPlaylist() {
+      if (mNotebookBar != null) {
+          org.cog.hymnchtv.notebook.data.entity.PlaylistItemEntity next = mNotebookBar.nextInPlaylist();
+          if (next != null) showHymn(next.getHymn());
+      }
+  }
+
+  // 給 HymnNotebookBarFragment 呼叫：
+  public void showHymn(String hymnType, int hymnNo) {
+      org.cog.hymnchtv.notebook.model.HymnKey key = org.cog.hymnchtv.notebook.model.HymnKey.ofOrNull(hymnType, hymnNo);
+      if (mNotebookBar != null) mNotebookBar.showHymn(key);
+  }
+
+  // 只在「播放自然結束」時呼叫（codex rev 3 #8，不記失敗）：
+  public void onPlaybackCompleted() {
+      if (mNotebookBar != null) mNotebookBar.onMediaCompleted();
+  }
+  ```
+
+- [ ] **Step 3：三個播放完成點改呼叫 `onPlaybackCompleted()`（只記成功）**
+
+  - 音訊：`MediaGuiController` 的 `MpBroadcastReceiver`，`case stop:` 分支裏，**僅當 `PlaybackState` 為「自然結束」（AudioBgService 在 media 播完時送的 stop，非使用者手動 stop）** 時，先 `mContentHandler.onPlaybackCompleted()` 再走 `onEndOrError(...)`。實作上，`AudioBgService` 需在「自然結束」的 broadcast 裏帶一個 `EXTRA_COMPLETED=true`；`MediaGuiController` 收到後才呼叫。使用者手動 `stopPlay()` 與 error 路徑**不**呼叫。
+  - ExoPlayer：`MediaExoPlayerFragment` 的 `onPlaybackStateChanged` 收到 `Player.STATE_ENDED` 時呼叫 `contentHandler.onPlaybackCompleted()`。
+  - YouTube：`YoutubePlayerFragment` 的 `onStateChange` 收到 `PlayerConstants.PlayerState.ENDED` 時呼叫。
+
+  > 若 `AudioBgService` 的「自然結束 vs 手動 stop」難以區分，先只接 ExoPlayer 與 YouTube 的 `STATE_ENDED`（明確），音訊的自然結束列為 rev 4 待補，並在 `onEndOrError` 前加 `// TODO(rev4): audio natural-end`，不呼叫 `onPlaybackCompleted`——**寧可漏記也不錯記**（codex rev 3）。
+
+- [ ] **Step 4：`HymnNotebookBarFragment` 加 `showHymn(key)`／`onMediaCompleted()` 轉接**
+
+  `HymnNotebookBarFragment` 加：
+
+  ```kotlin
+  fun showHymn(key: HymnKey?) { vm.show(key) }
+  fun onMediaCompleted() { vm.state.value.key?.let(vm::onMediaCompleted) }
+  fun nextInPlaylist(): PlaylistItemEntity? = vm.nextInPlaylist()
+  ```
+
+- [ ] **Step 5：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/ContentHandler.java \
+    hymnchtv/src/main/res/layout/content_main.xml \
+    hymnchtv/src/main/java/org/cog/hymnchtv/MediaGuiController.java \
+    hymnchtv/src/main/java/org/cog/hymnchtv/mediaplayer/MediaExoPlayerFragment.java \
+    hymnchtv/src/main/java/org/cog/hymnchtv/mediaplayer/YoutubePlayerFragment.java \
+    hymnchtv/src/main/java/org/cog/hymnchtv/notebook/ui/bar/HymnNotebookBarFragment.kt
+  git commit -m "feat: wire notebook bar into the lyrics page" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+### Task I2：`MainActivity` 加「我的詩歌」入口（pre-C 模式）
+
+**Files:** Modify `MainActivity.java`、`res/menu/menu_main.xml`
+
+> C 模式：入口在 C 的底部導覽「我的詩歌」分頁，本 task no-op（D-1 由 C 的 `MyHymnsFragment` 宿主提供）。pre-C 模式：主選單加一項。
+
+- [ ] **Step 1（pre-C）**：`menu_main.xml` 加 `<item android:id="@+id/my_hymns" android:title="@string/nb_title" />`；`MainActivity.onOptionsItemSelected` 加分支 → `startActivity(NotebookIntents.notebook(this))`。
+
+- [ ] **Step 2：編譯 + Commit**
+
+  ```bash
+  ./gradlew :hymnchtv:assembleDebug --console=plain
+  git add hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java hymnchtv/src/main/res/menu/menu_main.xml
+  git commit -m "feat: add my-hymns entry to main menu (pre-C)" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+### Task I3：instrumented 測試
+
+**Files:** Create `androidTest/.../notebook/ui/{NotebookActivityTest,NotebookFlowsTest,NotebookBackupUiTest,NotebookThemeTest,HymnNotebookBarTest}.kt`
+
+- [ ] **Step 1：`HymnNotebookBarTest`（C-10 接點）**
+
+  在既有 C smoke 流程上斷言筆記本列：開歌詞頁 → 斷言 `@id/notebookBar` 顯示 → 停留 → 翻頁 → 播放（自然結束）→ 斷言 `showHymn`/`onPlaybackCompleted` 被呼叫。`AccessibilityChecks` 開啟。
+
+- [ ] **Step 2：`NotebookActivityTest` / `NotebookFlowsTest`**
+
+  開 `NotebookActivity` → 各入口 → 收藏/唱詩/筆記/歌單的建立流程。`AccessibilityChecks` 開啟（U12）。
+
+- [ ] **Step 3：`NotebookBackupUiTest`（SAF）**
+
+  用 `ActivityResultContracts` 的 test double 驗證匯出/匯入流程；斷言權限（`aapt dump permissions` 比對 Task 0 基線，U10）。
+
+- [ ] **Step 4：`NotebookThemeTest`**
+
+  斷言 `NotebookActivity` 用 `Theme_Hymnchtv_Notebook_Light/Dark`（`ThemeHelper`），顏色來自主題屬性。
+
+- [ ] **Step 5：在 `api34nb`/`api24nb` 跑 + Commit**
+
+  ```bash
+  export ANDROID_SERIAL=emulator-5580  # api34nb
+  ./gradlew :hymnchtv:connectedDebugAndroidTest --tests 'org.cog.hymnchtv.notebook.ui.*' --console=plain
+  git add hymnchtv/src/androidTest/java/org/cog/hymnchtv/notebook/ui
+  git commit -m "test: notebook instrumented tests" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  ```
+
+### Task V1：權限、無障礙、效能驗證
+
+- [ ] **Step 1：權限**：`aapt dump permissions` 比對 Task 0 基線（不新增任何權限，U10/U11）。
+- [ ] **Step 2：無障礙**：`NotebookFlowsTest` 的 `AccessibilityChecks` 全綠（api24 與 api34）。
+- [ ] **Step 3：舊手機效能**：`api24nb` 灌 5,000 筆唱詩紀錄，捲動 `SingLogFragment`，jank 無肉眼可見（U12）。
+- [ ] **Step 4：`NotebookPrivacyTest`** 綠（`notebook/` 無網路）。
+
+### Task R1：最終審查
+
+- [ ] **Step 1：code-reviewer + Codex** 審查 `feat/d1-notebook-ui` 對 `master` 的 diff。
+- [ ] **Step 2：修完 P1 後開 PR**，PR 描述含「對帳清單」五項（C-3 parent、C-1 宿主、C-5 選項 a、C-8 擁有權、C-11 字型）。
