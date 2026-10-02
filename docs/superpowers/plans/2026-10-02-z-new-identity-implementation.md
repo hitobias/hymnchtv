@@ -4659,6 +4659,13 @@ keytool -genkeypair -v -keystore ~/keys/hymnal/hymnal-release.jks -alias hymnal 
 printf 'keystore=%s\nsecure_properties=%s\n' ~/keys/hymnal/hymnal-release.jks ~/keys/hymnal/hymnal-release.properties > settings.signing
 ```
 
+接著由使用者本人取得憑證的 SHA-256 指紋，**自己**把它加進 `settings.signing`（`keytool` 會互動式詢問密碼，代理不得代填）。這個欄位是 `tools/release.sh` 的簽章釘選：APK 的簽章憑證必須和它完全一致（含 `--resume`），缺少或不符就中止：
+
+```bash
+keytool -list -v -keystore ~/keys/hymnal/hymnal-release.jks -alias hymnal | grep 'SHA256:'
+printf 'expectedCertSha256=%s\n' '<上一步印出的 64 位十六進位，冒號可留可去>' >> settings.signing
+```
+
 代理只能使用 Gradle 既有的 `settings.signing` 機制，**不得讀取、印出或詢問密碼**，也不得把金鑰或 `settings.signing` 加入版控。
 
 - [ ] **Step 1：確認前置條件與狀態**
@@ -4666,11 +4673,12 @@ printf 'keystore=%s\nsecure_properties=%s\n' ~/keys/hymnal/hymnal-release.jks ~/
   ```bash
   test -f settings.signing && echo signing-config-present
   git check-ignore -q settings.signing && echo ignored
+  grep -qE '^expectedCertSha256=[0-9A-Fa-f:]{64,95}$' settings.signing && echo cert-pin-present   # 只檢查有沒有，不要印出檔案內容
   git status --porcelain
   grep -nE 'versionCode|versionName' hymnchtv/build.gradle
   ```
 
-  Expected: `signing-config-present`、`ignored`；工作區乾淨；`versionCode 100000`、`versionName "1.0.0"`。缺少 `settings.signing` 時，停下來請使用者完成前置條件。
+  Expected: `signing-config-present`、`ignored`、`cert-pin-present`；工作區（含未追蹤檔案）乾淨；`versionCode 100000`、`versionName "1.0.0"`。缺少 `settings.signing` 時，停下來請使用者完成前置條件。
 
 - [ ] **Step 2：建置並驗證（`--dry-run`，不建立 tag，也不發佈）**
 
