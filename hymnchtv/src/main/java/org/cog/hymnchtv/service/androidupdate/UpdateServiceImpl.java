@@ -33,6 +33,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.database.SQLException;
 
 import androidx.core.content.ContextCompat;
 
@@ -125,7 +126,7 @@ public class UpdateServiceImpl {
 
     private static UpdateServiceImpl mInstance = null;
 
-    public static UpdateServiceImpl getInstance() {
+    public static synchronized UpdateServiceImpl getInstance() {
         if (mInstance == null) {
             mInstance = new UpdateServiceImpl();
         }
@@ -352,14 +353,14 @@ public class UpdateServiceImpl {
         }
     }
 
-    private SharedPreferences getStore() {
+    private synchronized SharedPreferences getStore() {
         if (store == null) {
             store = HymnsApp.getGlobalContext().getSharedPreferences("store", Context.MODE_PRIVATE);
         }
         return store;
     }
 
-    private void rememberDownloadId(long id) {
+    private synchronized void rememberDownloadId(long id) {
         SharedPreferences store = getStore();
         String storeStr = store.getString(ENTRY_NAME, "");
         storeStr += id + ",";
@@ -385,7 +386,7 @@ public class UpdateServiceImpl {
     /**
      * Removes old downloads.
      */
-    public void removeOldDownloads() {
+    public synchronized void removeOldDownloads() {
         List<Long> apkIds = getOldDownloads();
         DownloadManager downloadManager = HymnsApp.getDownloadManager();
         for (long id : apkIds) {
@@ -507,6 +508,12 @@ public class UpdateServiceImpl {
             }
             catch (IOException e) {
                 Timber.e("%s", e.getMessage());
+            }
+            catch (SQLException e) {
+                // The batch import now throws instead of logging per record (B-9a). Without this the
+                // exception would escape into the update service's background thread with no log and
+                // no user-visible failure; the import itself already rolled back.
+                Timber.e(e, "URL import failed");
             }
         }
     }

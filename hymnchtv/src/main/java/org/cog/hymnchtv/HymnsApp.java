@@ -18,7 +18,6 @@ package org.cog.hymnchtv;
 
 
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.Application;
 import android.app.DownloadManager;
 import android.content.ContentResolver;
@@ -38,6 +37,7 @@ import android.view.WindowManager;
 import android.webkit.WebView;
 import android.widget.Toast;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -47,9 +47,9 @@ import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
-import java.util.List;
-
+import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.impl.timberlog.TimberLogImpl;
+import org.cog.hymnchtv.perf.DebugStrictMode;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
 import org.cog.hymnchtv.service.androidupdate.OnlineUpdateService;
@@ -97,6 +97,9 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     @Override
     public void onCreate() {
         TimberLogImpl.init();
+        if (BuildConfig.DEBUG) {
+            DebugStrictMode.install();
+        }
         // https://github.com/guardian/toolargetool
         // TooLargeTool.startLogging(this);
 
@@ -137,8 +140,8 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
             screenHeight = Math.abs(mBounds.height());
         }
 
-        // Purge all the previously old downloaded apk
-        UpdateServiceImpl.getInstance().removeOldDownloads();
+        // Purge all the previously old downloaded apk; DownloadManager IPC and prefs, so off the main thread (B-7)
+        AppExecutors.io("remove-old-apks", () -> UpdateServiceImpl.getInstance().removeOldDownloads());
         EdgeToEdgeDisable();
     }
 
@@ -234,24 +237,39 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
 
     /**
      * Start online service only when app is in the foreground, before going back to background upon detect
-     * the device screen is locked. So need to handle with addition checks else Illegal exception.
+     * the device screen is locked. Deferred until the main thread is idle (after the first frame); the
+     * foreground check uses ProcessLifecycleOwner on the main thread right before startService (B-7).
      */
+    @MainThread
     private static void startUpdateService() {
         // Perform software version update check on first launch for both release and debug version
-        if ((updateServiceAllowed || BuildConfig.DEBUG) && !isUpdateServerStarted) {
-            ActivityManager manager = (ActivityManager) mInstance.getSystemService(Context.ACTIVITY_SERVICE);
-            List<ActivityManager.RunningAppProcessInfo> runningAppProcesses = manager.getRunningAppProcesses();
-            if (runningAppProcesses != null) {
-                int importance = runningAppProcesses.get(0).importance;
-                // higher importance has lower number
-                if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
-                    Intent dailyCheckupIntent = new Intent(mInstance, OnlineUpdateService.class);
-                    dailyCheckupIntent.setAction(OnlineUpdateService.ACTION_AUTO_UPDATE_START);
-                    mInstance.startService(dailyCheckupIntent);
-                    isUpdateServerStarted = true;
-                    Timber.d("### Online hymnchtv app update service started!");
-                }
-            }
+        if (!(updateServiceAllowed || BuildConfig.DEBUG) || isUpdateServerStarted) {
+            return;
+        }
+        Looper.myQueue().addIdleHandler(() -> {
+            startUpdateServiceIfStillForeground();
+            return false;
+        });
+    }
+
+    @MainThread
+    private static void startUpdateServiceIfStillForeground() {
+        if (isUpdateServerStarted) {
+            return;
+        }
+        Lifecycle.State state = ProcessLifecycleOwner.get().getLifecycle().getCurrentState();
+        if (!state.isAtLeast(Lifecycle.State.STARTED)) {
+            // Went to the background before the main thread became idle; the next ON_START retries.
+            return;
+        }
+        Intent dailyCheckupIntent = new Intent(mInstance, OnlineUpdateService.class);
+        dailyCheckupIntent.setAction(OnlineUpdateService.ACTION_AUTO_UPDATE_START);
+        try {
+            mInstance.startService(dailyCheckupIntent);
+            isUpdateServerStarted = true;
+            Timber.d("### Online hymnchtv app update service started!");
+        } catch (IllegalStateException e) {
+            Timber.w("Update service not started: %s", e.getMessage());
         }
     }
 

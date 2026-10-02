@@ -81,6 +81,13 @@ public class PermissionUtils {
             return true;
         }
 
+        // No host activity (e.g. a background lookup, or a test that never launches MainActivity): there is
+        // nobody to ask and no permission state to read, so report "not granted" instead of NPEing on the
+        // null activity.
+        if (activity == null) {
+            return false;
+        }
+
         String permission = Manifest.permission.WRITE_EXTERNAL_STORAGE;
         if (ActivityCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {

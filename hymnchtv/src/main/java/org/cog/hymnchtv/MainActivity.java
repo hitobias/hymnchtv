@@ -81,12 +81,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import org.apache.http.util.EncodingUtils;
+import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.hymnhistory.HistoryRecord;
 import org.cog.hymnchtv.logutils.LogUploadServiceImpl;
 import org.cog.hymnchtv.mediaconfig.MediaConfig;
@@ -102,6 +102,7 @@ import org.cog.hymnchtv.reading.background.MainScreenColors;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
+import org.cog.hymnchtv.toc.YbCrossRef;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
 import org.cog.hymnchtv.utils.DialogActivity;
 import org.cog.hymnchtv.utils.HymnNoValidate;
@@ -152,7 +153,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
 
     public static final String PREF_MEDIA_HYMN = "MediaHymn";
     private static final String mTocECFile = "lyrics_toc/toc_all_eng2ch.txt";
-    public static final String mTocYB = "lyrics_toc/toc_yb_toc.txt";
+    public static final String mTocYB = YbCrossRef.ASSET;
 
     private static final int FONT_SIZE_DEFAULT = 35;
 
@@ -164,7 +165,8 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
     );
 
     // A cross-reference table for YB hymn
-    public static final Map<Integer, String> ybXTable = new HashMap<>();
+    // YB -> other hymn book cross-reference: loaded lazily and thread-safely, prewarmed off the main thread in onCreate.
+    public static final Map<Integer, String> ybXTable = YbCrossRef.TABLE;
 
     private static String mHymnType = HYMN_DB;
     private static int mHymnNo = -1;
@@ -258,7 +260,7 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
             mEntry.setText(savedInstanceState.getString(STATE_ENTRY_TEXT, sNumber));
         }
         initUserSettings();
-        createYbXTable();
+        AppExecutors.io("yb-xref-prewarm", YbCrossRef::prewarm);
 
         // Request all the permissions required by Hymnchtv; only valid if user does not manually disallow it.
         PermissionUtils.checkHymnPermissionAndRequest(this);
@@ -379,7 +381,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * @param intent <tt>Activity</tt> <tt>Intent</tt>.
      */
     private void handleIntent(Intent intent) {
-        super.onStart();
         if (intent == null) {
             return;
         }
@@ -627,11 +628,12 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * @param engNo optional english hymn no to show if present
      */
     public static void showContent(Context ctx, String hymnType, int hymnNo, boolean autoPlay, Integer... engNo) {
-        // Save the user selection into history record
-        boolean isFu = MediaRecord.isFu(hymnType, hymnNo);
-        HistoryRecord historyRecord = new HistoryRecord(hymnType, hymnNo, isFu);
+        // Save the user selection into history record; the title lookup reads assets, so both run off the main thread
         if (HYMN_BB_DUMMY != hymnNo) {
-            DatabaseBackend.getInstance(ctx).storeHymnHistory(historyRecord);
+            boolean isFu = MediaRecord.isFu(hymnType, hymnNo);
+            Context appContext = ctx.getApplicationContext();
+            AppExecutors.io("store-history", () -> DatabaseBackend.getInstance(appContext)
+                    .storeHymnHistory(new HistoryRecord(hymnType, hymnNo, isFu)));
         }
 
         Intent intent = new Intent(ctx, ContentHandler.class);
@@ -1047,31 +1049,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
         MenuItem item = menu.findItem(checkedId);
         if (item != null) {
             item.setChecked(true);
-        }
-    }
-
-    // Create the YB hymn cross-reference table for use in History record and PagerSlider
-    private void createYbXTable() {
-        ybXTable.clear();
-        try {
-            InputStream in2 = HymnsApp.getInstance().getResources().getAssets().open(mTocYB);
-            byte[] buffer2 = new byte[in2.available()];
-            if (in2.read(buffer2) == -1)
-                return;
-
-            String mResult = EncodingUtils.getString(buffer2, "utf-8");
-            String[] mList = mResult.split("\r\n|\n");
-            for (String record : mList) {
-                String[] token = record.split("\\s");
-                String hymnTN = token[2].substring(1);
-                if (!hymnTN.startsWith("yb")) {
-                    int hymnNo = Integer.parseInt(token[0].substring(1));
-                    ybXTable.put(hymnNo, hymnTN);
-                }
-            }
-        }
-        catch (IOException e) {
-            Timber.w("Content toc not available: %s", e.getMessage());
         }
     }
 

@@ -47,9 +47,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.AssetManager;
+import android.database.SQLException;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -70,6 +73,11 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultCaller;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.MainThread;
+import androidx.annotation.VisibleForTesting;
+import androidx.annotation.WorkerThread;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -79,6 +87,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -87,7 +96,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.http.util.EncodingUtils;
+import org.apache.commons.io.IOUtils;
+import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.BaseActivity;
 import org.cog.hymnchtv.ContentHandler;
 import org.cog.hymnchtv.HymnsApp;
@@ -251,6 +261,49 @@ public class MediaConfig extends BaseActivity
     private MediaType mMediaType = mediaTypeValue.get(0);
     private static final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
 
+    /** True while a url import runs. Process-scoped; screens observe it lifecycle-aware. */
+    private static final MutableLiveData<Boolean> urlImportRunning = new MutableLiveData<>(false);
+
+    public static LiveData<Boolean> urlImportRunning() {
+        return urlImportRunning;
+    }
+
+    /**
+     * Start a url import owned by the process, not by any screen: it keeps running if the user leaves,
+     * reports through application-context toasts, and captures no Activity or View.
+     *
+     * @param assetFile bundled asset to import, or null to use importFile
+     * @param importFile absolute path of a user-chosen file (used when assetFile is null)
+     * @return false (and nothing is started) when an import is already running
+     */
+    @MainThread
+    public static boolean startUrlImport(DatabaseBackend db, String assetFile, String importFile, boolean isOverWrite) {
+        if (Boolean.TRUE.equals(urlImportRunning.getValue())) {
+            return false;
+        }
+        urlImportRunning.setValue(true);
+        HymnsApp.showToastMessage(R.string.db_import_start);
+        AssetManager assets = HymnsApp.getAppResources().getAssets();
+
+        AppExecutors.io("url-import", () -> {
+            try (InputStream inputStream = (assetFile != null) ? assets.open(assetFile) : new FileInputStream(importFile)) {
+                importUrlRecords(db, inputStream, isOverWrite);
+            }
+            catch (IOException e) {
+                Timber.w("Input file not accessible: %s", e.getMessage());
+                HymnsApp.showToastMessage(R.string.file_does_not_exist);
+            }
+            catch (SQLException e) {
+                Timber.e(e, "Url import rolled back");
+                HymnsApp.showToastMessage(R.string.add_to_db_failed);
+            }
+            finally {
+                urlImportRunning.postValue(false);
+            }
+        });
+        return true;
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -369,6 +422,9 @@ public class MediaConfig extends BaseActivity
 
         findViewById(R.id.button_import).setOnClickListener(this);
         findViewById(R.id.button_import).setOnLongClickListener(this);
+        // Lifecycle-aware: removed automatically when this screen is destroyed; the import itself is process-owned.
+        View btnImport = findViewById(R.id.button_import);
+        urlImportRunning.observe(this, running -> btnImport.setEnabled(!Boolean.TRUE.equals(running)));
         findViewById(R.id.button_export).setOnClickListener(this);
 
         mPlayerView = findViewById(R.id.player_container);
@@ -994,15 +1050,35 @@ public class MediaConfig extends BaseActivity
 
     // Check for any existing mediaRecord in DB or as saved local file
     public static boolean hasMediaRecord(MediaRecord mediaRecord) {
+        return hasMediaRecord(mDB, mediaRecord);
+    }
+
+    /**
+     * Check for an existing record of <tt>mediaRecord</tt> in the given <tt>db</tt> or as a saved local file.
+     * Imports receive the database as a parameter (tests pass their own file), so the lookup must follow it;
+     * it must also see local media, otherwise a non-overwrite import would shadow an already-downloaded file
+     * with a remote link, because playback prefers a DB record over file discovery.
+     */
+    public static boolean hasMediaRecord(DatabaseBackend db, MediaRecord mediaRecord) {
         if (mediaRecord == null)
             return false;
 
-        if (mDB.getMediaRecord(mediaRecord, false)) {
+        if (db.getMediaRecord(mediaRecord, false)) {
             return true;
         }
         else {
             return ContentHandler.isFileExist(mediaRecord);
         }
+    }
+
+    /** Same as {@link #hasMediaRecord(DatabaseBackend, MediaRecord)}, with local files looked up in localMedia. */
+    private static boolean hasMediaRecord(DatabaseBackend db, LocalMediaIndex localMedia, MediaRecord mediaRecord) {
+        return db.getMediaRecord(mediaRecord, false)
+                || localMedia.has(mediaRecord.getHymnType() + mediaDir.get(mediaRecord.getMediaType()), mediaRecord.getHymnNo());
+    }
+
+    private static LocalMediaIndex newLocalMediaIndex() {
+        return new LocalMediaIndex(dir -> FileBackend.getHymnchtvStore(dir, true));
     }
 
     // =============================== MediaRecord Database Handler ============================
@@ -1052,20 +1128,9 @@ public class MediaConfig extends BaseActivity
                 R.string.db_import_proceed,
                 R.string.ok, new DialogActivity.DialogListener() {
                     public boolean onConfirmClicked(DialogActivity dialog) {
-                        try {
-                            InputStream inputStream;
-                            if (assetFile != null) {
-                                inputStream = HymnsApp.getAppResources().getAssets().open(assetFile);
-                            }
-                            else {
-                                inputStream = new FileInputStream(importFile);
-                            }
-                            boolean isOverWrite = cbOverwrite.isChecked();
-                            importUrlRecords(inputStream, isOverWrite);
-                            inputStream.close();
-                        }
-                        catch (IOException e) {
-                            Timber.w("Input file not accessible: %s", e.getMessage());
+                        boolean isOverWrite = cbOverwrite.isChecked();
+                        if (!startUrlImport(mDB, assetFile, importFile, isOverWrite)) {
+                            HymnsApp.showToastMessage(R.string.in_progress);
                         }
                         return true;
                     }
@@ -1077,45 +1142,82 @@ public class MediaConfig extends BaseActivity
     }
 
     /**
-     * Import the url records into the database form the given inputStream
+     * Import the url records from the given inputStream into the app database, in one transaction (B-9a),
+     * then show the same result toast as before. Blocks for up to a few seconds: never call on the main thread.
      */
-    public static void importUrlRecords(InputStream inputStream, boolean isOverWrite) {
-        // HymnsApp.showToastMessage(R.string.db_import_start); not required.
-        int record = 0;
-        int urlRecords = 0;
+    @WorkerThread
+    public static ImportResult importUrlRecords(InputStream inputStream, boolean isOverWrite) {
+        return importUrlRecords(mDB, inputStream, isOverWrite);
+    }
 
+    /**
+     * Same as above for an explicit database. A database error propagates as android.database.SQLException
+     * after the transaction has rolled back; a read error yields ImportResult.EMPTY.
+     */
+    @WorkerThread
+    public static ImportResult importUrlRecords(DatabaseBackend db, InputStream inputStream, boolean isOverWrite) {
+        ImportResult result;
         try {
-            byte[] buffer2 = new byte[inputStream.available()];
-            if (inputStream.read(buffer2) == -1) {
-                return;
-            }
-
-            String mResult = EncodingUtils.getString(buffer2, "utf-8");
-            String[] mList = mResult.split("\r\n|\n");
-            // Timber.d("No of Records: %s", mList.length);
-
-            for (String mRecord : mList) {
-                MediaRecord mediaRecord = MediaRecord.toRecord(mRecord);
-                if (mediaRecord == null)
-                    continue;
-
-                boolean isFu = mediaRecord.isFu();
-                int hymnNo = isFu ? (mediaRecord.getHymnNo() - HYMN_DB_NO_MAX) : mediaRecord.getHymnNo();
-                int nui = HymnNoValidate.validateHymnNo(mediaRecord.getHymnType(), hymnNo, isFu);
-                if ((nui != -1) && (isOverWrite || !hasMediaRecord(mediaRecord))) {
-                    mDB.storeMediaRecord(mediaRecord);
-                    record++;
-                }
-                urlRecords++;
-
-                if (TimberLog.isFinestEnable)
-                    Timber.d("Import media record: %s; %s(%s); %s", nui, hymnNo, record, mRecord);
-            }
+            String content = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+            result = importUrlRecords(db, content, isOverWrite);
         }
         catch (IOException e) {
             Timber.w("Import file read error: %s", e.getMessage());
+            result = ImportResult.EMPTY;
         }
-        HymnsApp.showToastMessage(R.string.db_import_record, record, urlRecords);
+        HymnsApp.showToastMessage(R.string.db_import_record, result.getImported(), result.getTotal());
+        return result;
+    }
+
+    /**
+     * Import every well-formed line of content into db in a single transaction.
+     * Malformed lines are skipped; a database error rolls the whole import back.
+     * Callable from any background thread (e.g. a first-launch importer); shows no toast.
+     */
+    @VisibleForTesting
+    @WorkerThread
+    public static ImportResult importUrlRecords(DatabaseBackend db, String content, boolean isOverWrite) {
+        long start = SystemClock.elapsedRealtime();
+        String[] lines = content.split("\r\n|\n");
+        ImportResult result = db.inTransaction(() -> importLines(db, lines, isOverWrite));
+        Timber.i("perf: url import %d/%d records in %d ms",
+                result.getImported(), result.getTotal(), SystemClock.elapsedRealtime() - start);
+        return result;
+    }
+
+    private static ImportResult importLines(DatabaseBackend db, String[] lines, boolean isOverWrite) {
+        int imported = 0;
+        int total = 0;
+        LocalMediaIndex localMedia = newLocalMediaIndex();
+        for (String line : lines) {
+            MediaRecord mediaRecord = parseImportLine(line);
+            if (mediaRecord == null)
+                continue;
+
+            boolean isFu = mediaRecord.isFu();
+            int hymnNo = isFu ? (mediaRecord.getHymnNo() - HYMN_DB_NO_MAX) : mediaRecord.getHymnNo();
+            int nui = HymnNoValidate.validateHymnNo(mediaRecord.getHymnType(), hymnNo, isFu);
+            if ((nui != -1) && (isOverWrite || !hasMediaRecord(db, localMedia, mediaRecord))) {
+                db.storeMediaRecordOrThrow(mediaRecord); // SQL errors propagate: the whole import rolls back
+                imported++;
+            }
+            total++;
+
+            if (TimberLog.isFinestEnable)
+                Timber.d("Import media record: %s; %s(%s); %s", nui, hymnNo, imported, line);
+        }
+        return new ImportResult(imported, total);
+    }
+
+    /** @return the record, or null for a blank or malformed line (bad number or unknown media type). */
+    private static MediaRecord parseImportLine(String line) {
+        try {
+            return MediaRecord.toRecord(line);
+        }
+        catch (IllegalArgumentException e) {
+            Timber.w("Skip malformed import line: %s", line);
+            return null;
+        }
     }
 
     /**
@@ -1134,6 +1236,12 @@ public class MediaConfig extends BaseActivity
         }
         catch (IOException e) {
             Timber.w("Asset file not available: %s", e.getMessage());
+        }
+        catch (SQLException e) {
+            // Batch writes now throw instead of logging per record (B-9a); report it here rather than
+            // letting it escape into a background thread with no user-visible failure.
+            Timber.e(e, "URL import failed");
+            HymnsApp.showToastMessage(R.string.add_to_db_failed);
         }
     }
 

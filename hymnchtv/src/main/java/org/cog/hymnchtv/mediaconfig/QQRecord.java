@@ -24,10 +24,14 @@ import static org.cog.hymnchtv.MainActivity.HYMN_XB;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.database.SQLException;
 import android.text.TextUtils;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import androidx.annotation.VisibleForTesting;
+import androidx.annotation.WorkerThread;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,6 +41,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.BaseActivity;
 import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.MediaType;
@@ -76,8 +81,9 @@ public class QQRecord extends MediaRecord {
     public static final String QQ_TITLE = "title";
     public static final String QQ_URL = "url";
 
-    private static int mFound = 0;
-    private static int mSaved = 0;
+    // Accumulated only on the AppExecutors IO thread (storeQQPage); read on the main thread for toasts.
+    private static volatile int mFound = 0;
+    private static volatile int mSaved = 0;
     private static Context mContext;
 
     // Create a specific MediaRecord for web url fetch
@@ -206,22 +212,15 @@ public class QQRecord extends MediaRecord {
 
         final WebView webView = initWebView();
         getURLSource(webView, title, url, data -> {
-            try {
-                JSONArray jsonArray = createJsonArray(title, data);
-                if (jsonArray != null && jsonArray.length() != 0) {
-                    webView.destroy();
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject jsonObject = (JSONObject) jsonArray.get(i);
-                        storeQQJObject(jsonObject);
-                    }
-                    Timber.d(HymnsApp.getResString(R.string.nq_download_completed, title, mSaved, mFound));
-                    showToastMessage(R.string.nq_download_completed, title, mSaved, mFound);
-                }
-            } catch (JSONException e) {
-                Timber.e("URL get source exception: %s", e.getMessage());
+            JSONArray jsonArray = createJsonArray(title, data);
+            if (jsonArray != null && jsonArray.length() != 0) {
+                webView.destroy();
+                storeQQPage(title, jsonArray);
             }
         });
     }
+
+    private static final Pattern QQ_PATTERN = Pattern.compile("[DBCX](\\d+)");
 
     /**
      * Save the given JSONObject to the database table hymnType, if contains valid info, else abort.
@@ -238,50 +237,75 @@ public class QQRecord extends MediaRecord {
      * subject_name: '诗歌操练学习',
      * link_type: 'LINK_TYPE_MP_APPMSG',
      * }
+     *
+     * @return the record to store, or null when the JSON is malformed (logged and skipped). Never touches the DB.
      */
-    private static void storeQQJObject(JSONObject jsonRecord) {
-        final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
-        Pattern pattern = Pattern.compile("[DBCX](\\d+)");
-
+    @VisibleForTesting
+    public static QQRecord parseQQJObject(JSONObject jsonRecord) {
         try {
             String title = jsonRecord.getString(QQ_TITLE);
-            String hymnType = qqHymn2Type.get(title.substring(0, 1));
+            String hymnType = title.isEmpty() ? null : qqHymn2Type.get(title.substring(0, 1));
             if (TextUtils.isEmpty(hymnType)) {
                 Timber.w("### Invalid QQ record HymnTitle: %s", jsonRecord);
-                return;
+                return null;
             }
 
-            Matcher matcher = pattern.matcher(title);
-            int hymnNo;
-            if (matcher.find()) {
-                String noStr = matcher.group(1);
-                if (TextUtils.isEmpty(noStr)) {
-                    Timber.w("### Invalid QQ record HymnNo: %s", noStr);
-                    return;
-                }
-                else {
-                    hymnNo = Integer.parseInt(noStr);
-                }
+            Matcher matcher = QQ_PATTERN.matcher(title);
+            if (!matcher.find() || TextUtils.isEmpty(matcher.group(1))) {
+                Timber.w("### Invalid QQ record HymnNo: %s", jsonRecord);
+                return null;
+            }
 
-                QQRecord mRecord = new QQRecord(hymnType, hymnNo);
-                mRecord.setMediaUri(jsonRecord.getString(QQRecord.QQ_URL));
-                mFound++;
-                long row = mDB.storeMediaRecord(mRecord);
-                if (row < 0) {
-                    Timber.e("### Error in creating QQ record for: %s", title);
-                }
-                else {
-                    if ((mSaved % 10) == 0)
-                        Timber.d("QQ Hymn Record saved (%s): %s", mSaved, jsonRecord);
-                    mSaved++;
-                }
-            }
-            else {
-                Timber.w("### Invalid QQ record HymnTitle: %s", jsonRecord);
-            }
-        } catch (JSONException e) {
-            Timber.e("### Error in creating QQ record with json exception: %s", e.getMessage());
+            QQRecord mRecord = new QQRecord(hymnType, Integer.parseInt(matcher.group(1)));
+            mRecord.setMediaUri(jsonRecord.getString(QQ_URL));
+            return mRecord;
+        } catch (JSONException | NumberFormatException e) {
+            Timber.w("### Invalid QQ record (%s): %s", e.getMessage(), jsonRecord);
+            return null;
         }
+    }
+
+    /**
+     * Store one page of QQ links in a single transaction. Malformed items are skipped; any SQL error
+     * propagates as android.database.SQLException after the whole page has been rolled back.
+     *
+     * @return ImportResult(saved, found) for this page only
+     */
+    @VisibleForTesting
+    @WorkerThread
+    public static ImportResult storeQQJArray(DatabaseBackend db, JSONArray jsonArray) {
+        return db.inTransaction(() -> {
+            int found = 0;
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.optJSONObject(i);
+                QQRecord mRecord = (jsonObject == null) ? null : parseQQJObject(jsonObject);
+                if (mRecord == null)
+                    continue;
+
+                found++;
+                db.storeMediaRecordOrThrow(mRecord);
+            }
+            return new ImportResult(found, found);
+        });
+    }
+
+    /**
+     * Store one fetched page on the shared IO thread (B-9a) and report with the same per-page toast as before.
+     * Captures only immutable inputs; no Activity.
+     */
+    private static void storeQQPage(String title, JSONArray jsonArray) {
+        AppExecutors.io("qq-store", () -> {
+            try {
+                ImportResult result = storeQQJArray(DatabaseBackend.getInstance(HymnsApp.getGlobalContext()), jsonArray);
+                mFound += result.getTotal();
+                mSaved += result.getImported();
+                Timber.d(HymnsApp.getResString(R.string.nq_download_completed, title, mSaved, mFound));
+                showToastMessage(R.string.nq_download_completed, title, mSaved, mFound);
+            } catch (SQLException e) {
+                Timber.e(e, "QQ page rolled back: %s", title);
+                showToastMessage(R.string.nq_download_failed, title);
+            }
+        });
     }
 
     /**
