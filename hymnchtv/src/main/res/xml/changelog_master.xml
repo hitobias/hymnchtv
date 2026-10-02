@@ -4,6 +4,9 @@
 <changelog>
     <release version="1.0.0 (10/02/2026)" versioncode="100000">
         <change>新身分「詩歌」第一版（com.ziontkec.hymnal），以 hymnchtv 2.9.2 為基礎，可和原版同時安裝。</change>
+        <change>全新介面：首頁、目錄、設定三個分頁加底部導覽；有淺色和深色主題。</change>
+        <change>歌詞頁改版：楷體字型；閱讀設定可調背景與字級；顯示調號與拍子；節數紅字；頂列按鈕取代長按選單；新增「下一首」與「連播」。</change>
+        <change>啟動和媒體連結匯入變快。</change>
         <change>介面新增繁體中文；歌詞可以設定預設顯示簡體或繁體，也可以在歌詞頁臨時切換。</change>
         <change>搜尋時輸入特殊字元不再當機；看歌詞時螢幕保持常亮。</change>
         <change>透過 GitHub Releases 檢查並安裝更新：安裝前會核對 SHA-256、簽章、套件名稱與版本。</change>
