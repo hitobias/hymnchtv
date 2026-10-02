@@ -2,6 +2,27 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+## 給執行者（Sonnet 5.5）的說明
+
+使用者決定由 **Sonnet 5.5（`claude-sonnet-5-5`）** 執行這份計畫。建議的啟動方式：
+
+1. 在 repo 根目錄 `/Users/hitobias/orca/hymnchtv` 開一個新的 Claude Code session，用 `/model` 切換到 Sonnet 5.5，或直接執行 `claude --model claude-sonnet-5-5`。
+2. 確認目前在 `feat/zh-hant` 分支：`git branch --show-current`。
+3. 輸入以下指示：
+
+   > 使用 superpowers:executing-plans 執行 `docs/superpowers/plans/2026-10-02-zh-hant-implementation.md`。從 Task 0 Step 1 的驗證開始，這台電腦已經完成 Step 2、3，接著做 Step 4。每個 task 完成後回報，遇到計畫和程式碼對不上就停下來問我，不要自行猜測。
+
+   如果想讓每個 task 由子代理執行、主對話只負責協調，改用 `superpowers:subagent-driven-development`，並指定子代理也使用 Sonnet。
+
+**執行規則：**
+- **照順序執行**：Task 0 → 1 → 2 → 4 → 6 → 6B → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15。Task 3 和 Task 5 已經刪除。
+- **Task 9 和 Task 10 一起 commit**：Task 9 刪除 `LocaleHelper` 之後，要到 Task 10 才能再次編譯成功。
+- **計畫和程式碼對不上就停下來**：例如行號偏移後找不到計畫裡引用的原始程式碼，就停下來回報，不要自己改計畫的意圖。
+- **整合型 task 要更小心**：Task 9～12 會跨多個檔案。每完成一個 task，都要跑 `./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug`。
+- **需要模擬器的步驟**：Task 8、10～13、15 有 instrumented test 或手動驗證，要先啟動 `api34`，必要時也啟動 `api24`。
+- **人工確認的項目**：兩份校對清單（`2026-10-02-zh-hant-terms.md` 和 `lyrics-hant-review.csv`）要交給使用者確認，不能自行判定。
+- **最後的審查**：Task 15 的審查要用 code-reviewer 和 `/codex review` 兩種方式。審查發現 P1 時要先修好，才能開 PR。
+
 **Goal:** 這個子項目要做到下列幾件事：
 - 介面新增繁體中文。第一次安裝時跟隨系統語言；Android 13 以上和系統設定的「App 語言」頁共用同一份設定。
 - 歌詞可以設定預設語言：跟隨介面、簡體或繁體。繁體歌詞改用預先產生的台灣版和香港版檔案，不再即時轉換。
@@ -106,33 +127,104 @@
 
 ---
 
-### Task 0：準備環境與記錄基準
+### Task 0：準備環境、修好建置、記錄基準
 
-**Files:** 無
+**Files:**
+- Commit: `gradle/wrapper/gradle-wrapper.jar`
+- Commit: OpenCC submodule 的 gitlink（`lib-opencc-android/src/main/jni/OpenCC`）
 
-- [ ] **Step 1：安裝 OpenCC CLI**
+**現況（2026-10-02 在這台 Mac 上已確認）：** 這個 repo 原本**無法直接 build**，原因有兩個：
+- 缺少 `gradle/wrapper/gradle-wrapper.jar`。
+- `.gitmodules` 宣告了 OpenCC submodule，但 repo 裡沒有對應的 gitlink，所以 `git submodule update --init` 什麼都不會做。
 
-  Run: `brew install opencc && opencc --version`
-  Expected: 印出版本號。
+在這台電腦上，下列項目已經處理好：
+- `local.properties`（已在 `.gitignore` 中）：`sdk.dir=/opt/homebrew/share/android-commandlinetools`
+- 已安裝的 SDK 套件：`platforms;android-37.0`、`build-tools;37.0.0`、`ndk;28.2.13676358`、`cmake;4.1.2`、`emulator`、`system-images;android-24;google_apis;arm64-v8a`、`system-images;android-34;google_apis;arm64-v8a`
+- 已安裝 `opencc`（1.4.2，Homebrew）。系統 JDK 是 Temurin 17，Gradle wrapper 使用的是它。
+- `gradle-wrapper.jar`（9.7.1）和 OpenCC（`ver.1.4.2`，commit `025f371`）都已放在工作目錄裡，但**尚未 commit**，`git status` 會顯示為 untracked。
+- 基準 build 已通過（`BUILD SUCCESSFUL`）。lint 基準值：`MissingTranslation` 0、`ExtraTranslation` 0、`HardcodedText` 8。
 
-- [ ] **Step 2：準備兩台模擬器（API 24、API 34）**
+如果換到一台新電腦，Step 1 到 Step 3 要完整做一次；在這台電腦上，只要做 Step 1 的驗證指令，然後做 Step 4 和 Step 5。
+
+- [ ] **Step 1：確認工具都在（新電腦要先安裝）**
+
+  新電腦的安裝指令：
 
   ```bash
-  sdkmanager "system-images;android-24;google_apis;x86_64" "system-images;android-34;google_apis;arm64-v8a"
-  avdmanager create avd -n api24 -k "system-images;android-24;google_apis;x86_64"
-  avdmanager create avd -n api34 -k "system-images;android-34;google_apis;arm64-v8a"
+  brew install opencc
+  echo "sdk.dir=/opt/homebrew/share/android-commandlinetools" > local.properties   # 依實際 SDK 路徑調整
+  yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;28.2.13676358" "cmake;4.1.2" "emulator" \
+    "system-images;android-24;google_apis;arm64-v8a" "system-images;android-34;google_apis;arm64-v8a"
   ```
 
-  Expected: `emulator -list-avds` 列出 `api24` 和 `api34`。
+  驗證指令：
 
-  在 Apple Silicon 上，API 24 沒有 arm64 映像，x86_64 映像也可能跑不起來。這時改用一台 Android 7 的實機，並在 PR 描述中註明。
+  ```bash
+  opencc --help | head -1
+  ls /opt/homebrew/share/android-commandlinetools/{platforms,build-tools,ndk,cmake,system-images}
+  ```
 
-- [ ] **Step 3：記錄基準 build**
+  Expected: 第一行印出 `Open Chinese Convert (OpenCC) Command Line Tool`，而且上面列出的 SDK 套件都存在。注意：`opencc --version` 在 1.4.2 版不能用，只能用 `--help`。
 
-  Run: `./gradlew :hymnchtv:assembleDebug :hymnchtv:lintDebug`
-  Expected: BUILD SUCCESSFUL。
+- [ ] **Step 2：取得 OpenCC 原始碼（新電腦才需要，這台已經有了）**
 
-  把 lint 報告中 `MissingTranslation`、`ExtraTranslation`、`HardcodedText` 三項的數量記下來，作為之後比對的基準。
+  ```bash
+  git clone -q --depth 1 --branch ver.1.4.2 https://github.com/BYVoid/OpenCC.git lib-opencc-android/src/main/jni/OpenCC
+  git -C lib-opencc-android/src/main/jni/OpenCC rev-parse --short HEAD
+  ```
+
+  Expected: 印出 `025f371`。
+
+- [ ] **Step 3：取得 gradle wrapper jar（新電腦才需要，這台已經有了）**
+
+  ```bash
+  brew install gradle
+  tmp=$(mktemp -d) && (cd "$tmp" && touch settings.gradle && gradle wrapper --gradle-version 9.7.1 -q) \
+    && cp "$tmp/gradle/wrapper/gradle-wrapper.jar" gradle/wrapper/
+  ```
+
+- [ ] **Step 4：把 submodule 和 wrapper 正式加進 repo**
+
+  目的是讓其他電腦和 CI 也能直接 build。
+
+  ```bash
+  git submodule add https://github.com/BYVoid/OpenCC.git lib-opencc-android/src/main/jni/OpenCC
+  git diff --cached --stat
+  git diff --cached .gitmodules
+  ```
+
+  Expected: `git diff --cached --stat` 顯示 `lib-opencc-android/src/main/jni/OpenCC` 是新的 gitlink（commit `025f371…`）。
+
+  `.gitmodules` 不能出現重複的 `[submodule ...]` 區塊。如果出現重複，手動刪掉多的那一段，保留原本那段，包括「Pinned to the ver.1.4.2 release tag」的註解。
+
+  ```bash
+  git add gradle/wrapper/gradle-wrapper.jar .gitmodules
+  git commit -m "chore: add gradle wrapper jar and register OpenCC submodule"
+  git submodule status
+  ```
+
+  Expected: `git submodule status` 印出 `025f371… lib-opencc-android/src/main/jni/OpenCC (ver.1.4.2)` 這類格式的一行。
+
+- [ ] **Step 5：準備兩台模擬器並確認基準 build**
+
+  ```bash
+  echo no | avdmanager create avd -n api24 -k "system-images;android-24;google_apis;arm64-v8a"
+  echo no | avdmanager create avd -n api34 -k "system-images;android-34;google_apis;arm64-v8a"
+  /opt/homebrew/share/android-commandlinetools/emulator/emulator -list-avds
+  ./gradlew :hymnchtv:assembleDebug :hymnchtv:lintDebug --console=plain
+  for k in MissingTranslation ExtraTranslation HardcodedText; do
+    printf "%s: " $k; grep -c "\[$k\]" hymnchtv/build/reports/lint-results-debug.txt
+  done
+  ```
+
+  Expected:
+  - `-list-avds` 列出 `api24` 和 `api34`。
+  - build 結果為 `BUILD SUCCESSFUL`。
+  - lint 數量為 `0 / 0 / 8`，和上面記錄的基準值相同。
+
+  之後各個 task 裡提到「Task 0 記錄的基準值」，指的就是 `MissingTranslation 0`、`ExtraTranslation 0`、`HardcodedText 8`。
+
+  啟動模擬器：`/opt/homebrew/share/android-commandlinetools/emulator/emulator -avd api34 &`。需要跑 instrumented test 或手動測試時再啟動就好。
 
 ---
 
@@ -970,8 +1062,11 @@
               for rel_path, path in (("tools/gen_lyrics_hant.py", GENERATOR), ("tools/lyrics_hant_overrides.tsv", OVERRIDES))]
       outputs = sources + [ASSETS / f for f in sorted(expected_files)]
       rows += sorted(f"{rel(p)}\t{sha1(p.read_bytes())}" for p in outputs)
-      version = subprocess.run(["opencc", "--version"], capture_output=True, text=True).stdout.strip().splitlines()
-      header = f"# generated by tools/gen_lyrics_hant.py; opencc: {version[-1] if version else 'unknown'}"
+      version = "opencc unknown"  # opencc 1.4.2 has no --version flag; ask Homebrew when available
+      if shutil.which("brew"):
+          brew = subprocess.run(["brew", "list", "--versions", "opencc"], capture_output=True, text=True)
+          version = brew.stdout.strip() or version
+      header = f"# generated by tools/gen_lyrics_hant.py; {version}"
       MANIFEST.write_text(header + "\n" + "\n".join(rows) + "\n", encoding="utf-8")
 
       if args.report:
@@ -1156,7 +1251,7 @@
 
 - [ ] **Step 5：Build 並檢查產生的 locale config**
 
-  Run: `./gradlew :hymnchtv:assembleDebug && find hymnchtv/build -name '*locale_config*' -path '*res*' | head -3`
+  Run: `./gradlew :hymnchtv:assembleDebug && find hymnchtv/build/generated/res/localeConfig -name '*.xml'`
   Expected: BUILD SUCCESSFUL，而且找到產生出來的 `_generated_res_locale_config.xml`（或名稱相近的檔案）。
 
   用 `cat` 查看內容，裡面應該要有 `en-US` 和 `zh`。如果 build 報錯說 `resources.properties` 和手寫的 locale config 衝突，代表 Step 1 的刪除沒有生效，回頭確認。
@@ -1166,10 +1261,10 @@
   Run: `./gradlew :hymnchtv:lintDebug`，然後執行：
 
   ```bash
-  grep -E 'MissingTranslation|ExtraTranslation' hymnchtv/build/reports/lint-results-debug.txt | wc -l
+  grep -cE '\[(MissingTranslation|ExtraTranslation)\]' hymnchtv/build/reports/lint-results-debug.txt
   ```
 
-  Expected: 數量小於或等於 Task 0 記錄的基準值。
+  Expected: `0`（基準值是 0+0）。
 
 - [ ] **Step 7：在 API 34 模擬器上把系統語言設為簡中，跑一次冒煙測試**
 
@@ -2250,10 +2345,10 @@ Task 8 產生繁中初稿時，Task 7 新增的字串已經在 `values-zh` 裡�
   Run: `./gradlew :hymnchtv:lintDebug`，然後執行：
 
   ```bash
-  grep -E 'MissingTranslation|ExtraTranslation|HardcodedText' hymnchtv/build/reports/lint-results-debug.txt | wc -l
+  grep -cE '\[(MissingTranslation|ExtraTranslation|HardcodedText)\]' hymnchtv/build/reports/lint-results-debug.txt
   ```
 
-  Expected: 小於或等於 Task 0 記錄的基準值。
+  Expected: 小於或等於 `8`（基準值是 0+0+8）。Task 13 修掉寫死的字串之後，通常會更少。
 
 - [ ] **Step 4：Commit（如果有修改）**
 
