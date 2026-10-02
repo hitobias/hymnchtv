@@ -379,7 +379,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      * @param intent <tt>Activity</tt> <tt>Intent</tt>.
      */
     private void handleIntent(Intent intent) {
-        super.onStart();
         if (intent == null) {
             return;
         }
