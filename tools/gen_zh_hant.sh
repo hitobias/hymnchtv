@@ -8,9 +8,11 @@ DST_DIR="$ROOT/hymnchtv/src/main/res/values-b+zh+Hant"
 OVERRIDES="$ROOT/tools/zh_hant_ui_overrides.tsv"
 command -v opencc >/dev/null || { echo "opencc not found: brew install opencc" >&2; exit 1; }
 mkdir -p "$DST_DIR"
-opencc -c s2twp.json -i "$SRC" -o "$DST_DIR/strings.xml"
+TMP="$(mktemp "$DST_DIR/.strings.xml.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
+opencc -c s2twp.json -i "$SRC" -o "$TMP"
 
-python3 - "$DST_DIR/strings.xml" "$OVERRIDES" <<'PY'
+python3 - "$TMP" "$OVERRIDES" <<'PY'
 import re, sys
 
 target, table = sys.argv[1], sys.argv[2]
@@ -32,4 +34,6 @@ for lineno, line in enumerate(open(table, encoding="utf-8"), 1):
 open(target, "w", encoding="utf-8").write(text)
 print("Applied %d overrides" % count)
 PY
+mv "$TMP" "$DST_DIR/strings.xml"
+trap - EXIT
 echo "Written to $DST_DIR/strings.xml - review every changed term before committing."

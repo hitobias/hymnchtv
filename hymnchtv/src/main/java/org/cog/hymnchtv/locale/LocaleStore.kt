@@ -14,7 +14,7 @@ import androidx.annotation.RequiresApi
  * API < 33 uses PREF_LOCALE and a wrapped context.
  */
 object LocaleStore {
-    /** Same values as MainActivity.PREF_SETTINGS / PREF_LOCALE; duplicated to keep this class Android-light. */
+    /** Same value as MainActivity.PREF_SETTINGS; PREF_LOCALE is the source of truth that MainActivity refers to. */
     const val PREF_SETTINGS = "Settings"
     const val PREF_LOCALE = "Locale"
 
