@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="MissingTranslation ExtraTranslation">
+    <string name="app_name">诗歌</string>
+    <string name="app_title_main">书拉密女-诗歌本</string>
+
+    <string name="about">关于</string>
+    <string name="add">加添</string>
+    <string name="add_renew">添加/更新</string>
+    <string name="overwrite">覆盖</string>
+    <string name="add_to_db">已经添加并保存到数据库！</string>
+    <string name="add_to_db_failed">媒体记录保存失败！</string>
+    <string name="app_libraries">诗歌本程序使用以下第三方库： %1$s</string>
+    <!-- Message to display while video is buffering -->
+    <string name="buffering">正在缓冲&#8230;</string>
+    <string name="cancel">取消</string>
+    <string name="close">关闭</string>
+    <string name="copyright">Copyright@2020, Eng Chong Meng
+        &lt;br/>&lt;a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0&lt;/a>
+        &lt;br/>All rights reserved.</string>
+    <string name="db_export">数库导出</string>
+    <string name="db_import"><u>数库导入</u></string>
+    <string name="db_import_file">数据库导入文件</string>
+    <string name="db_import_proceed">开始将文件: \'%1$s\' 内容（%2$s），导入数据库媒体记录</string>
+    <string name="db_import_record">数库导入共 %1$d (%2$d) 首诗歌</string>
+    <string name="db_import_start">开始将文件内容导入数据库媒体记录…</string>
+    <string name="db_import_NQ"><u>NQ&#x2B07;</u></string>
+    <string name="db_file_missing">请提供媒体内容真实路径！</string>
+    <string name="db_list">数库列项</string>
+    <string name="db_no_overwrite">保留现有记录</string>
+    <string name="db_overwrite">覆盖现有记录</string>
+    <string name="db_overwrite_media">是否覆盖数据库中的现有媒体记录？</string>
+    <string name="delete">删除</string>
+    <string name="delete_history">删除诗歌历史记录: %1$s？</string>
+    <string name="delete_media">删除诗歌媒体记录？&lt;br/>%1$s#%2$04d: %3$s</string>
+    <string name="delete_media_failed">无法删除媒体记录: %1$s#%2$d。</string>
+    <string name="delete_media_ok">成功删除媒体记录: %1$s#%2$d。</string>
+    <string name="en2ch_hymn_same">中英文诗歌编号是一样的！</string>
+    <string name="exit">退出</string>
+    <string name="file_saved">文件保存成功完成！</string>
+    <string name="help_online">网上帮助</string>
+    <string name="hymn_no">诗歌编号</string>
+    <string name="hymn_sn_convert">诗歌数字转换测试</string>
+    <string name="hymn_type">诗歌类别</string>
+    <string name="in_development">仍在开发中</string>
+    <string name="lyrics_chinese_traditional"><u>简体&#x2B0C;繁体歌词</u></string>
+    <string name="lyrics_chinese_english"><u>中文&#x2B0C;英文歌词</u></string>
+    <string name="lyrics_english">在线英文歌词</string>
+    <string name="lyrics_english_delete">英文歌词删除</string>
+    <string name="lyrics_text_size_increase">歌词文字加大</string>
+    <string name="lyrics_text_size_decrease">歌词文字减小</string>
+    <string name="lyrics_text_size_limits">已达到文本最小或最大的限制值。</string>
+    <string name="media_content_remove">从手机中删除媒体内容（如果有）</string>
+    <string name="media_config">用户定义媒体设置</string>
+    <string name="media_file_not_found">找不到要链接到的实际媒体内容！请将副本保存到所需位置。</string>
+    <string name="media_link">媒体链接</string>
+    <string name="media_content">媒体内容</string>
+    <string name="media_type">媒体类型</string>
+    <string name="ok">确认</string>
+    <string name="back">返回</string>
+    <string name="auto_stream">自动连播</string>
+    <string name="auto_stream_start">是否启动 \"%1$s:%2$s\" 自动连播/在线下载？</string>
+    <string name="auto_stream_unsupported">\“%1$s:%2$s\” 不支持自动连播。</string>
+
+    <!-- Message for Notion / QQ links update -->
+    <string name="nq_download">NQ－诗歌链接下载</string>
+    <string name="nq_download_completed">%1$s－诗歌链接：%2$s (%3$s) 首下载完毕！</string>
+    <string name="nq_download_failed">%1$s－诗歌链接下载失败！</string>
+    <string name="nq_download_in_progress">%1$s－链接下载中…</string>
+    <string name="nq_download_proceed">执行 %1$s 诗歌链接下载 (%2$s)？\n过程需要一些时间。进程将在后台进行，您可以继续使用应用程序。</string>
+    <string name="nq_download_starting">%1$s－诗歌链接下载开始…</string>
+    <string name="nq_record_delete">删除NQ－媒体链接记录:\n%1$s?</string>
+
+    <!-- Message to display when video is finished playing -->
+    <string name="playback_completed">播放结束</string>
+    <string name="playback_rate">视频播放速率：%1$sx</string>
+    <string name="to_be_added">待加</string>
+    <string name="unsaved_changes">您尚未保存更改。保存或取消并退出。</string>
+    <string name="version">程式版本: %1$s-%2$d</string>
+    <string name="show_history_log"><u>历史记录</u></string>
+    <string name="wp_size">壁纸像素尺寸 [宽x高]：[%1$dx%2$d]</string>
+
+    <string name="error">错误</string>
+    <string name="error_hymn_config">输入错误: 未输入诗歌号码或媒体链接</string>
+    <string name="error_invalid">输入错误: 未按目录或输入(附)号码</string>
+    <string name="error_media_url_invalid">提供的媒体网址不正确: %1$s</string>
+    <string name="error_playback">无法解码视频链接或进行播放: %1$s</string>
+    <string name="error_search_empty">请输入内容进行搜索</string>
+    <string name="error_file_not_found">（无法取得文件: %1$s）</string>
+    <string name="error_english_lyrics_null">对不起！当诗歌 \'%1$d\' 首没有英文歌词</string>
+    <string name="error_invalid_mimetype_download">此应用不支持下载 MIME 类型：\'%s\'</string>
+
+    <string name="hymn_info_bb_max">补充本诗歌只有%1$d（%2$d）首</string>
+    <string name="hymn_info_bb_range_over">补充本诗歌没有: %1$s~%2$s（%3$s）</string>
+
+    <string name="hymn_info_db_max">大本诗歌只有%1$d（%2$d）首，和附歌6首</string>
+    <string name="hymn_info_db_range_fu">大本诗歌附歌只有1~6首</string>
+
+    <string name="hymn_info_er_max">儿童诗歌只有%1$d（%2$d）首</string>
+    <string name="hymn_info_er_range_over">儿童诗歌没有: %1$s~%2$s（%3$s）</string>
+
+    <string name="hymn_info_xb_max">新歌颂咏只有%1$d（%2$d）首</string>
+    <string name="hymn_info_xb_invalid">新歌颂咏诗歌没有: %1$s</string>
+
+    <string name="hymn_info_xg_max">新诗歌只有%1$d（%2$d）首</string>
+    <string name="hymn_info_xg_invalid">新诗歌本没有: %1$s</string>
+
+    <string name="hymn_info_yb_max">青年诗歌只有%1$d（%2$d）首</string>
+    <string name="hymn_info_yb_invalid">青年诗歌没有: %1$s</string>
+
+    <string name="hymn_info_media_none">对不起！此项目前没有播放文件</string>
+    <string name="hymn_info_sp_none">您选择的项目，没有附歌</string>
+
+    <!-- Update checker -->
+    <string name="app_apk_invalid">下载文件无效或版本不正确</string>
+    <string name="apk_install_failed">应用程序安装时发生错误：(%1$s) %2$s</string>
+    <string name="apk_install_completed">应用程序安装成功！</string>
+    <string name="app_install_ready">已下载应用程序包 (%1$s)，并准备进行安装。</string>
+    <string name="app_version_invalid">下载的文件包含不匹配的版本代码：实际 = %1$s (%2$s)</string>
+    <string name="app_new_available">在线新版本: %1$s-%2$s</string>
+    <string name="app_reinstall">重新安装</string>
+    <string name="app_update">升级</string>
+    <string name="app_upgrade">点击更新程序</string>
+    <string name="app_update_check">更新</string>
+    <string name="app_update_install">应用程序更新</string>
+    <string name="app_update_none">没有应用程序新版本</string>
+    <string name="app_version_current">您当前安装版本;\n编号和代码：%1$s-%2$s 是最新的。\n在线可用版本：%3$s-%4$s。</string>
+    <string name="app_version_new_available">可下载新%1$s;\n编号和代码：%2$s-%3$s。\n当前安装的版本：%4$s-%5$s。</string>
+    <string name="app_uninstall">您的版本 v1.2.0 需要先卸载再更新。\n然后从下载目录手动安装:\n%1$s</string>
+
+    <string name="download">下载</string>
+    <string name="download_again">重新下载</string>
+    <string name="download_completed">下载完毕</string>
+    <string name="download_failed">无法下载新程序版本！请退出应用程序并重试。</string>
+    <string name="download_in_progress">正在下载更新。</string>
+
+    <string name="download_remaining_time">剩余时间: %1$s</string>
+    <string name="download_speed">下载速度: %1$s/sec (%2$s)</string>
+    <string name="download_timeout_timer">下载无响应超时倒数: %1$02d秒</string>
+    <string name="download_wait">请稍候，文件下载已在进行中。</string>
+    <string name="in_progress">进行中</string>
+
+    <string name="file_access_no_permission">您没有足够的权限保存或打开文件。请检查您的读取权限，然后重试</string>
+    <string name="file_does_not_exist">找不到指定的文件。已删除或移动了该文件</string>
+    <string name="file_download_failed">下载文件时发生错误：%1$s</string>
+    <string name="file_open_no_application">诗歌本找不到与此文件类型关联的应用程序</string>
+
+    <string name="web_scrap_callback_received">网站抓取回调已收到。</string>
+    <string name="web_scrap_failed">网站内容抓取失败：%1$s</string>
+    <string name="web_scrap_started">网站内容抓取已开始：%1$s</string>
+    <string name="web_scrap_timeout">网站内容抓取超时错误：%1$s</string>
+
+    <string name="personal_password">个人密码</string>
+    <string name="password">密码:</string>
+    <string name="sign_in">登入</string>
+    <string name="user_name">用户:</string>
+    <string name="user_login">请登录</string>
+
+    <string name="share_text">Share text&#8230;</string>
+    <string name="share_file">Share file&#8230;</string>
+    <string name="share_lyrics">分享歌词&#8230;</string>
+    <string name="share_file_missing">提醒：您正在共享一个没有实际媒体内容的网址：%1$s！</string>
+
+    <string name="hint_hymn_content_search">自动繁体&#x27A1;简体歌词搜索</string>
+    <string name="hint_hymn_history">&#11014;最近选择诗歌编号</string>
+    <string name="hint_hymn_lyrics_online">歌词文本为空。请在线查看\'教唱\'诗歌词文本。</string>
+    <string name="hint_hymn_number_enter">输入诗歌编号&#11015;</string>
+    <string name="hint_hymn_ui">按目录选项，或输入(附)编号\n后按大本、补充、新诗、新颂、儿诗或英文</string>
+
+    <!-- Logs -->
+    <string name="send_logs">提報错误</string>
+    <string name="send_logs_subject">诗歌本错误报告</string>
+    <string name="send_logs_title">通过电子邮件报告诗歌本错误</string>
+    <string name="send_logs_info">您提供的以下信息可以帮助开发人员解决问题：
+        \n\n1.在问题发生之前您做的最后一件事是什么？
+        \n\n\n2.您看到的问题是什么，如果有的话，还包括显示屏的快照？
+        \n\n\n3.您能否或如何重现问题？</string>
+
+    <!-- hymnchtv main interface gui names -->
+    <string name="hymn_bb">补充</string>
+    <string name="hymn_db">大本</string>
+    <string name="hymn_content">内容</string>
+    <string name="hymn_english">英文</string>
+    <string name="hymn_er">儿诗</string>
+    <string name="hymn_fu">附歌</string>
+    <string name="hymn_lyrics">歌词</string>
+    <string name="hymn_score">歌谱</string>
+    <string name="hymn_search">内容搜索</string>
+    <string name="hymn_xb">新颂</string>
+    <string name="hymn_xg">新诗</string>
+    <string name="hymn_yb"><u>青年</u></string>
+
+    <string name="hymn_toc">目录</string>
+    <string name="hymn_category">诗歌类别</string>
+    <string name="hymn_stroke">笔画索引</string>
+    <string name="hymn_pinyin">拼音索引</string>
+    <string name="hymn_eng2ch">英中对照</string>
+
+    <!-- Hymn title -->
+    <string name="hymn_title_bb">诗歌本－补充本</string>
+    <string name="hymn_title_db">诗歌本－大本诗歌</string>
+    <string name="hymn_title_er">诗歌本－儿童诗歌</string>
+    <string name="hymn_title_xb">诗歌本－新歌颂咏</string>
+    <string name="hymn_title_xg">诗歌本－新诗歌本</string>
+    <string name="hymn_title_yb">诗歌本－青年诗歌</string>
+
+    <!-- hymnchtv media player interface gui names -->
+    <string name="hymn_media_banzou">伴奏</string>
+    <string name="hymn_media_changshi"><u>唱诗</u></string>
+    <string name="hymn_media_jiaochang"><u>教唱</u></string>
+    <string name="hymn_media_media"><u>媒体</u></string>
+
+    <!-- Hymn info for media controller title -->
+    <string name="hymn_title_mc_bb">补充 %1$d: %2$s</string>
+    <string name="hymn_title_mc_db">大本 %1$d: %2$s</string>
+    <string name="hymn_title_mc_dbs">大本 附%1$d: %2$s</string>
+    <string name="hymn_title_mc_er">儿诗 %1$d: %2$s</string>
+    <string name="hymn_title_mc_xb">新颂 %1$d: %2$s</string>
+    <string name="hymn_title_mc_xg">新诗 %1$d: %2$s</string>
+    <string name="hymn_title_mc_yb">青年 %1$d: %2$s</string>
+
+    <!-- hymn search gui strings -->
+    <string name="hymn_match">共有匹配 %1$d 首诗歌</string>
+    <string name="hymn_match_auto_create">%1$s/%2$s：共有匹配 %3$d 首诗歌</string>
+    <string name="hymn_match_er">儿童诗歌: 第 %1$d 首：\n%2$s</string>
+    <string name="hymn_match_xb">新歌颂咏: 第 %1$d 首：\n%2$s</string>
+    <string name="hymn_match_xg">新诗歌本: 第 %1$d 首：\n%2$s</string>
+    <string name="hymn_match_yb">青年诗歌: 第 %1$d 首：\n%2$s</string>
+    <string name="hymn_match_bb">補充本诗歌: 第 %1$d 首：\n%2$s</string>
+    <string name="hymn_match_db">大本诗歌: 第 %1$d 首：\n%2$s</string>
+    <string name="hymn_match_db_sp">大本诗歌: 附歌第 %1$d 首：\n%2$s</string>
+    <string name="hymn_match_none">找不到匹配</string>
+
+    <string name="menu_media_ui_default_show">默认显示播放条</string>
+    <string name="menu_media_ui_default_hide">默认隐藏播放条</string>
+    <string name="menu_media_ui_toggle">显示/隐藏播放条</string>
+
+    <string name="nn0">0</string>
+    <string name="nn1">1</string>
+    <string name="nn2">2</string>
+    <string name="nn3">3</string>
+    <string name="nn4">4</string>
+    <string name="nn5">5</string>
+    <string name="nn6">6</string>
+    <string name="nn7">7</string>
+    <string name="nn8">8</string>
+    <string name="nn9">9</string>
+    <string name="nn10">附</string>
+    <string name="nn11">删</string>
+
+    <string name="edit">编辑</string>
+    <string name="help">帮助</string>
+    <string name="stop">停止</string>
+    <string name="play">播放</string>
+    <string name="home">主页</string>
+
+    <string name="wall_paper">主界面壁纸</string>
+    <string name="fontSize">设置主面版文字大小</string>
+    <string name="small">小</string>
+    <string name="lager">大</string>
+    <string name="normal">默认</string>
+    <string name="xlager">超大</string>
+    <string name="inc">加大</string>
+    <string name="dec">减小</string>
+
+    <!-- 文字颜色 -->
+    <string name="fontColor">设置主面版字体颜色</string>
+    <string name="red">红色</string>
+    <string name="blue">蓝色</string>
+    <string name="grey">灰色</string>
+    <string name="black">黑色</string>
+    <string name="white">白色</string>
+    <string name="cyan">青色</string>
+    <string name="yellow">黄色</string>
+    <string name="green">绿色</string>
+
+    <!-- 背景颜色 -->
+    <string name="sbg1">浅橙色</string>
+    <string name="sbg2">浅蓝色</string>
+    <string name="sbg3">绿色</string>
+    <string name="sbg4">水珠蓝色</string>
+    <string name="sbg5">浅啡色</string>
+    <string name="sbg6">乳白色</string>
+    <string name="sbg7">花信子</string>
+    <string name="sbg8">砖块</string>
+    <string name="sbg9">一朵菊花</string>
+    <string name="sbg10">绿叶水珠</string>
+    <string name="sbg11">绿色幽幽</string>
+    <string name="sbg12">薰衣草</string>
+    <string name="wallpaperUser">用户定义墙纸</string>
+
+    <!-- Theme -->
+    <string name="theme_menu">应用界面主题</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_light">浅色</string>
+    <string name="score_color_change">简谱颜色切换</string>
+
+    <!-- Locale -->
+    <string name="locale_menu">应用界面语言</string>
+    <string name="locale_system">跟随系统</string>
+    <string name="lyrics_language_menu">歌词语言</string>
+    <string name="lyrics_default_title">歌词默认语言</string>
+    <string name="lyrics_follow_ui">跟随界面语言</string>
+    <string name="lyrics_simplified">简体</string>
+    <string name="lyrics_traditional">繁体</string>
+    <string name="hymn_no_chinese_lyrics">英文 #%1$d: 这首英文诗歌没有匹配的中文歌词</string>
+    <string name="update_none">无更新</string>
+
+    <!--
+    * S2HK, Simplified Chinese to Traditional Chinese (Hong Kong Standard)簡體到香港繁體（香港小學學習字詞表標準）
+    * S2T, Simplified Chinese to Traditional Chinese 簡體到繁體
+    * S2TW, Simplified Chinese to Traditional Chinese (Taiwan Standard) 簡體到臺灣正體
+    * S2TWP, Simplified Chinese to Traditional Chinese (Taiwan Standard) with Taiwanese idiom 簡體到繁體（臺灣正體標準）並轉換爲臺灣常用詞彙
+    -->
+    <string name="STD">字词转换标准表</string>
+    <string name="S2HK">简体到香港繁体</string>
+    <string name="S2T">简体到繁体</string>
+    <string name="S2TW">简体到台湾正体</string>
+    <string name="S2TWP">简体到台湾正体，并转换为台湾常用词汇</string>
+
+    <!--  ChangeLog parameters -->
+    <string name="changelog_full_title">应用程序变更历史</string>
+    <string name="changelog_title">应用程序新加功能</string>
+    <string name="changelog_ok_button">确认</string>
+    <string name="changelog_show_full">更多…</string>
+
+    <!-- Android Notification Channels -->
+    <string name="noti_channel_DEFAULT_GROUP">General Notification</string>
+    <string name="noti_channel_SILENT_GROUP">Silent Notification</string>
+
+    <string name="permission_request">权限请求</string>
+    <string name="permission_settings">安卓权限设置</string>
+    <string name="permission_notifications_request">通知权限请求</string>
+    <string name="permission_notifications_required">在您授予权限请求之前，来自诗歌本的通知将被禁用</string>
+
+    <string name="permission_storage_required">诗歌本需要存儲權限才能操作。</string>
+    <string name="permission_storage_request">儲存許可請求</string>
+
+    <string name="permission_app_rational">%1$s 被拒絕。诗歌本可能會出錯，直到您在 [App info | Permissions] 授予權限</string>
+
+    <string name="content_about">关于本诗歌软体:
+        &lt;br/>应用程序中使用的所有媒体内容：歌词和歌曲文本等，版权归台湾福音书房所有。
+        &lt;br/>首先谢谢网络上的弟兄破碎提供诗歌的源材料。此诗歌本应用程序，原版由&lt;a href="http://shulami02.net/bbs">书拉密女小站&lt;/a>个人开发;
+        &lt;br/>&lt;br/>近日由新作者，全程序重写改进，并添加新功能。如果有发现出错或建议，请到
+        &lt;a href="https://github。com/cmeng-git/hymnchtv/issues">此网址&lt;/a>提出意见。
+        &lt;br/>&lt;br/>新增诗歌资源材料来自网络:
+        &lt;br/>http://www.lshymn.net/
+        &lt;br/>https://www.hymnal.net/
+        &lt;br/>&lt;br/>万事互相效力为要叫爱祂的人得益处！正如神白白的恩典，所以请不要用做商业用途。
+        &lt;br/>技术有限希望对弟兄姐妹有用！</string>
+
+    <string name="content_help">歌词显示屏幕说明:
+        &lt;br/>\u25AA 长按屏慕启动诗歌主菜单。
+        &lt;br/>\u25AA 播放按钮点一下，开始播放媒体档。
+        &lt;br/>\u25AA 再次点播放按钮，播放就会暂停。
+        &lt;br/>\u25AA 再次点播放按钮，从暂停位置继续播放。
+        &lt;br/>\u25AA 长按播放按钮后，可再次从头开始播放。
+        &lt;br/>\u25AA 将手机置于横向模式以显示更大字幕。</string>
+</resources>
