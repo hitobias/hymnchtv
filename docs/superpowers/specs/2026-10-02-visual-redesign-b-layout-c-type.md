@@ -1,6 +1,6 @@
 # 首頁與歌詞頁視覺重設計（B 版面＋C 字形）
 
-> 狀態：rev 6（2026-10-03）。rev 5 Codex：P1×2、P2×1 已併入（鍵盤下限統一 48dp、停用狀態改用 token 不再整體 alpha、rasterize 測試改為逐像素合成後驗證）。前次：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
+> 狀態：rev 7（2026-10-03）。rev 6 Codex：P1×2、P2×1、P3×1 已照建議修正（TokenInput 明列 isPhoto、作用中／停用文字門檻分開、accent 對所有相鄰底取最差、閱讀色調整需同步更新表與測試）。前次：rev 6（2026-10-03）。rev 5 Codex：P1×2、P2×1 已併入（鍵盤下限統一 48dp、停用狀態改用 token 不再整體 alpha、rasterize 測試改為逐像素合成後驗證）。前次：rev 5（2026-10-03）。rev 4 Codex：P1×3、P2×2 已併入（outline 動態 ≥3:1、免捲動改為「開啟鍵首屏可見」並附高度預算、swatches 窮舉 overlay 組合＋插樁 rasterize 驗證、只有譜模式按鈕停用、英文標籤定稿）。前次：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
 > 範圍：C 子項目 1.1（H3 首頁已實作於 `feat/c-home-search`）之上的視覺層修訂；不改互動規則（spec `2026-10-02-home-entry-and-lyrics-jump-design.md` 仍有效）。
 
 ## 1. 使用者回饋（必須解決）
@@ -13,7 +13,7 @@
 - **B 版面**：卡片與色塊層次清楚；按鍵看得出可以按；同類元件同尺寸、同圓角、同內距。
 - **C 字形**：號碼與詩名大而粗；詩歌本名稱與詩名用楷體粗體；按鍵數字粗體。
 - **配色從背景來**：所有表面、按鈕、文字顏色由目前背景的 `ReadingPalette`（A2：`reading/background/BackgroundPolicy.kt`，含照片背景的 `PHOTO_PALETTE`）推導，不寫死；換背景、切深淺色時一起變。
-- **可讀性是硬性要求**：文字對背後實際表面 ≥ 4.5:1（WCAG AA，大字 ≥ 3:1 亦以 4.5 為目標）；按鈕外框、圖示、選中狀態對相鄰表面 ≥ 3:1。用既有 `reading/background/Wcag.kt` 計算並寫成自動測試。
+- **可讀性是硬性要求**：**作用中**文字對背後實際表面 ≥ 4.5:1（WCAG AA，大字亦以 4.5 為目標）；**停用**元件文字 ≥ 3:1（WCAG 1.4.3 非作用中元件例外）；按鈕外框、圖示、選中狀態對相鄰表面 ≥ 3:1。用既有 `reading/background/Wcag.kt` 計算並寫成自動測試。
 
 ## 3. 字形（C）
 
@@ -35,7 +35,7 @@
 
 ## 4. 色彩 token（由 ReadingPalette 推導）
 
-新增純函式 `UiTokens.from(input: TokenInput): UiTokens`（Kotlin，可單元測試）。`TokenInput` 為不可變輸入：`textColor`、`accentColor`、`baseColor`、`isDark`（取實際背景的明暗，**不**取 DayNight——使用者明選的淺色背景在深色模式下仍是淺色）、`swatches: List<Int>`（背景可能出現的代表色。preset：對每個漸層色停點，窮舉該 preset 所有 overlay 的組合（每層取 0 與最大 alpha，n 層共 2ⁿ 種，現有 preset n ≤ 3）依繪製順序合成後的所有結果；照片：`PHOTO_PALETTE` 經既有 dim 後的黑端點與白端點）。另加插樁測試：把每個 preset 的實際 drawable rasterize 成 108×192 bitmap，對**每個像素**先套用與正式 UI 相同的 `surface`／`surfaceTone`／`disabledSurface` 合成，再直接驗證 `onSurface`、`onSurfaceMuted`、`disabledOnSurface`、`accent`、`outline` 的對比門檻（不以背景亮度範圍作為涵蓋證明）、`isPhoto`。由 `BackgroundPolicy` 新增 `tokenInput(choice)` 產生（`ReadingPalette` 保留現有欄位不動，避免波及 A2）；preset 由新增的 `BackgroundPreset.swatches()` 提供。DayNight 只決定「未設定背景時的預設 preset」。下表中「淺色背景／深色背景」一律指 `input.isDark`。輸出：
+新增純函式 `UiTokens.from(input: TokenInput): UiTokens`（Kotlin，可單元測試）。`TokenInput` 為不可變輸入：`textColor`、`accentColor`、`baseColor`、`isDark`（取實際背景的明暗，**不**取 DayNight——使用者明選的淺色背景在深色模式下仍是淺色）、`swatches: List<Int>`（背景可能出現的代表色。preset：對每個漸層色停點，窮舉該 preset 所有 overlay 的組合（每層取 0 與最大 alpha，n 層共 2ⁿ 種，現有 preset n ≤ 3）依繪製順序合成後的所有結果；照片：`PHOTO_PALETTE` 經既有 dim 後的黑端點與白端點）。另加插樁測試：把每個 preset 的實際 drawable rasterize 成 108×192 bitmap，對**每個像素**先套用與正式 UI 相同的 `surface`／`surfaceTone`／`disabledSurface` 合成，再直接驗證 `onSurface`、`onSurfaceMuted`、`disabledOnSurface`、`accent`、`outline` 的對比門檻（不以背景亮度範圍作為涵蓋證明）、`isPhoto: Boolean`（`BackgroundChoice.Photo` 時為 true，決定 `surface` 走照片分支）。由 `BackgroundPolicy` 新增 `tokenInput(choice)` 產生（`ReadingPalette` 保留現有欄位不動，避免波及 A2）；preset 由新增的 `BackgroundPreset.swatches()` 提供。DayNight 只決定「未設定背景時的預設 preset」。下表中「淺色背景／深色背景」一律指 `input.isDark`。輸出：
 
 | token | 用途 | 推導 |
 |---|---|---|
@@ -43,7 +43,7 @@
 | `surfaceTone` | 鍵盤按鍵、詩歌本未選中格、歌詞頁一般按鈕 | `surface` 再向 `textColor` 混合 8%（淺）／12%（深） |
 | `onSurface` | 上述表面上的文字 | 候選依序為 `textColor`、黑、白；對**每個** swatch 合成後的 `surface`、`surfaceTone` 與頂列底板（皆為 `onSurface` 實際會出現的底）計算對比，取最差值；選最差值最高的候選，且最差值必須 ≥ 4.5:1，否則提高 `surface`／`surfaceTone` 的不透明度（上限 1.0）後重算 |
 | `onSurfaceMuted` | 次要文字（本名小標、日期、⌫） | `onSurface` alpha 0.72；以同一全矩陣檢查，不足 4.5:1 逐步提高到 1.0 |
-| `accent` | 選中詩歌本、開啟鍵底色、歌詞頁選中狀態 | `palette.accentColor`；對 `surface` 不足 3:1 時加深（淺色）或提亮（深色）直到 ≥ 3:1 |
+| `accent` | 選中詩歌本、開啟鍵底色、歌詞頁選中狀態 | `palette.accentColor`；對所有實際相鄰底（每個 swatch 合成後的 `surface`、`surfaceTone`、頂列底板）取最差值，不足 3:1 時加深（淺色）或提亮（深色）直到 ≥ 3:1 |
 | `onAccent` | 開啟鍵與選中格上的文字 | 黑或白中對 `accent` 對比較高者，且必須 ≥ 4.5:1；不足時再調整 `accent` 明度直到成立 |
 | `disabledSurface` | 停用按鍵底色 | `surface` 本身（不加 tone），以「平面化」區別可按的 `surfaceTone` |
 | `disabledOnSurface` | 停用按鍵文字與圖示 | `onSurface` 向 `disabledSurface` 混合；停用元件依 WCAG 1.4.3 非作用中元件例外不要求 4.5:1，但本設計仍要求全矩陣 ≥ 3:1 以保可讀；另以 `outline` 虛線外框作為非顏色的停用提示 |
@@ -93,7 +93,7 @@
 ## 6a. 閱讀色主題（使用者要求「色彩主題多一些」，參考微信讀書）
 
 - 現有 20 個背景預設全部保留，且因 §4 每個都成為完整主題（卡片、按鍵、開啟鍵、選中格、歌詞頁按鈕都隨之變色）。
-- 新增類別 `READING`（「閱讀色」），8 個純色、低飽和、無圖案的預設，排在背景選擇器與 Aa 面板最前（初值，實作時以 §7 對比測試微調，最終值寫回本表）：
+- 新增類別 `READING`（「閱讀色」），8 個純色、低飽和、無圖案的預設，排在背景選擇器與 Aa 面板最前（初值；實作時若需調整，PR 必須同步更新本表與對比測試的期望值）：
 
 | id | 名稱 | 底色 | 文字 | 重點 | 明暗 |
 |---|---|---|---|---|---|
@@ -135,7 +135,7 @@
 
 ## 7. 驗收
 
-1. **自動對比測試**（單元，純函式）：矩陣為「每個 `BackgroundPreset`（含新閱讀色）」＋「`PHOTO_PALETTE` 黑白端點」＋「未設定槽位時的淺色／深色預設」；對每個 swatch 合成表面後，`UiTokens` 的每組（文字／表面）≥ 4.5:1、（選中／相鄰表面）≥ 3:1。
+1. **自動對比測試**（單元，純函式）：矩陣為「每個 `BackgroundPreset`（含新閱讀色）」＋「`PHOTO_PALETTE` 黑白端點」＋「未設定槽位時的淺色／深色預設」；對每個 swatch 合成表面後，`UiTokens` 的每組（作用中文字／表面）≥ 4.5:1、（停用文字／停用表面）≥ 3:1、（選中、外框／相鄰表面）≥ 3:1。
 2. **插樁測試**：首頁七本＋目錄格文字未被 ellipsize（檢查 `Layout.getEllipsisCount`）於 320dp 英文與中文；開啟鍵文字色與底色對比 ≥ 4.5:1（讀實際 View 顏色）；換背景後首頁卡片顏色改變。
 3. **截圖**：首頁與歌詞頁 × {320×640、360×720} × {淺色預設背景、深色預設背景、照片背景} × {中文繁、英文}，外加字級 1.3 與橫向各一張；全部存 scratchpad 供協調者檢視。
 4. **Aa 面板插樁測試**：主題、字級、字型、顯示模式四項在面板內改變後，目前頁立即反映（字級在有 pinch scale 的情況下仍生效、顯示模式在有 override 時仍生效），且寫入與閱讀設定頁相同的偏好 key（關閉面板後開設定頁顯示相同值）。
