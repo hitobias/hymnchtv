@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reading_settings">閱讀設定</string>
+    <string name="pref_cat_lyrics">歌詞</string>
+    <string name="pref_cat_background">背景</string>
+    <string name="pref_cat_screen">播放器與螢幕</string>
+    <string name="pref_display_mode">顯示模式</string>
+    <string name="display_mode_both">譜＋詞</string>
+    <string name="display_mode_score">只顯示譜</string>
+    <string name="display_mode_lyrics">只顯示詞</string>
+    <string name="pref_font_size">歌詞字級</string>
+    <string name="font_size_small">小</string>
+    <string name="font_size_medium">中</string>
+    <string name="font_size_large">大</string>
+    <string name="font_size_xlarge">特大</string>
+    <string name="pref_lyrics_font">歌詞字型</string>
+    <string name="lyrics_font_system">系統字型</string>
+    <string name="lyrics_font_kai">文楷</string>
+    <string name="pref_main_background">主頁背景</string>
+    <string name="pref_lyrics_background">歌詞頁背景</string>
+    <string name="pref_photo_dim">照片變暗</string>
+    <string name="pref_photo_blur">照片模糊</string>
+    <string name="pref_photo_blur_unsupported">需要 Android 12 以上</string>
+    <string name="pref_page_animation">翻頁動畫</string>
+    <string name="pref_menu_show">預設顯示播放器</string>
+    <string name="pref_keep_screen_on">閱讀時螢幕保持開啟</string>
+    <string name="bg_photo">自訂照片</string>
+    <string name="bg_picker_sample">聖哉，聖哉，聖哉</string>
+    <string name="about_font_credit">歌詞字型 HymnalKai 衍生自 LXGW WenKai（霞鶩文楷），採用 SIL Open Font License 1.1 授權。點此閱讀授權全文。</string>
+    <string name="font_license_title">字型授權</string>
+
+    <string name="bg_name_xuan">宣紙白</string>
+    <string name="bg_name_linen">亞麻灰</string>
+    <string name="bg_name_parchment">羊皮紙</string>
+    <string name="bg_name_mist">晨霧藍</string>
+    <string name="bg_name_dawn">晨曦</string>
+    <string name="bg_name_sky">天光</string>
+    <string name="bg_name_harvest">麥田金</string>
+    <string name="bg_name_dusk">暮色</string>
+    <string name="bg_name_meadow">青草地</string>
+    <string name="bg_name_staff">五線譜</string>
+    <string name="bg_name_olive">橄欖枝</string>
+    <string name="bg_name_wheat">麥穗</string>
+    <string name="bg_name_dove">白鴿</string>
+    <string name="bg_name_rays">光芒</string>
+    <string name="bg_name_water">活水</string>
+    <string name="bg_name_vine">葡萄樹</string>
+    <string name="bg_name_nightread">夜讀</string>
+    <string name="bg_name_starry">星夜</string>
+    <string name="bg_name_deepsea">深海</string>
+    <string name="bg_name_ink">墨色</string>
+</resources>

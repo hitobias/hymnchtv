@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Reading settings (plan A2) -->
+    <string name="reading_settings">Reading settings</string>
+    <string name="pref_cat_lyrics">Lyrics</string>
+    <string name="pref_cat_background">Background</string>
+    <string name="pref_cat_screen">Player and screen</string>
+    <string name="pref_display_mode">Display mode</string>
+    <string name="display_mode_both">Score + lyrics</string>
+    <string name="display_mode_score">Score only</string>
+    <string name="display_mode_lyrics">Lyrics only</string>
+    <string name="pref_font_size">Lyrics text size</string>
+    <string name="font_size_small">Small</string>
+    <string name="font_size_medium">Medium</string>
+    <string name="font_size_large">Large</string>
+    <string name="font_size_xlarge">Extra large</string>
+    <string name="pref_lyrics_font">Lyrics font</string>
+    <string name="lyrics_font_system">System font</string>
+    <string name="lyrics_font_kai">Kai (brush script)</string>
+    <string name="pref_main_background">Home screen background</string>
+    <string name="pref_lyrics_background">Lyrics page background</string>
+    <string name="pref_photo_dim">Photo dimming</string>
+    <string name="pref_photo_blur">Photo blur</string>
+    <string name="pref_photo_blur_unsupported">Requires Android 12 or later</string>
+    <string name="pref_page_animation">Page-turn animation</string>
+    <string name="pref_menu_show">Show the player by default</string>
+    <string name="pref_keep_screen_on">Keep the screen on while reading</string>
+    <string name="bg_photo">Your photo</string>
+    <string name="bg_picker_sample">Holy, holy, holy</string>
+    <string name="bg_selected_mark" translatable="false">✓</string>
+    <string name="about_font_credit">The lyrics font HymnalKai is derived from LXGW WenKai and licensed under the SIL Open Font License 1.1. Tap to read the licence.</string>
+    <string name="font_license_title">Font licence</string>
+
+    <string name="bg_name_xuan">Rice paper</string>
+    <string name="bg_name_linen">Linen grey</string>
+    <string name="bg_name_parchment">Parchment</string>
+    <string name="bg_name_mist">Morning mist</string>
+    <string name="bg_name_dawn">Dawn</string>
+    <string name="bg_name_sky">Daylight</string>
+    <string name="bg_name_harvest">Wheat gold</string>
+    <string name="bg_name_dusk">Dusk</string>
+    <string name="bg_name_meadow">Meadow</string>
+    <string name="bg_name_staff">Music staff</string>
+    <string name="bg_name_olive">Olive branch</string>
+    <string name="bg_name_wheat">Ears of wheat</string>
+    <string name="bg_name_dove">Dove</string>
+    <string name="bg_name_rays">Rays of light</string>
+    <string name="bg_name_water">Living water</string>
+    <string name="bg_name_vine">Vine</string>
+    <string name="bg_name_nightread">Night reading</string>
+    <string name="bg_name_starry">Starry night</string>
+    <string name="bg_name_deepsea">Deep sea</string>
+    <string name="bg_name_ink">Ink</string>
+</resources>

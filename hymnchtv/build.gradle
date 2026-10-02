@@ -67,6 +67,8 @@ android {
     testOptions {
         unitTests.all {
             it.systemProperty 'hymnchtv.assetsDir', file('src/main/assets').absolutePath
+            it.systemProperty 'hymnchtv.resDir', file('src/main/res').absolutePath
+            it.systemProperty 'hymnchtv.repoRoot', rootProject.projectDir.absolutePath
         }
     }
 
@@ -98,6 +100,7 @@ dependencies {
     implementation 'androidx.fragment:fragment-ktx:1.9.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+    implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.viewpager2:viewpager2:1.1.0'
 
     implementation 'androidx.media3:media3-exoplayer:1.11.1'
@@ -187,4 +190,16 @@ tasks.withType(Test).configureEach {
     inputs.files(rootProject.file('tools/gen_lyrics_hant.py'), rootProject.file('tools/lyrics_hant_overrides.tsv'))
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName('lyricsGeneratorInputs')
+}
+
+// Reading-settings sync tests (plan A2) read generated resources and generator inputs directly.
+tasks.withType(Test).configureEach {
+    inputs.files(fileTree('src/main/res') {
+        include 'drawable*/bg_*', 'drawable*/bgx_*', 'font/**', 'xml/reading_preferences.xml', 'values/reading_arrays.xml',
+                'values*/strings*.xml'
+    }).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('readingResources')
+    inputs.files(fileTree('src/main/assets') { include 'licenses/**' })
+        .withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('readingAssets')
+    inputs.files(rootProject.file('tools/font_subset_manifest.txt'))
+        .withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('readingGeneratorInputs')
 }

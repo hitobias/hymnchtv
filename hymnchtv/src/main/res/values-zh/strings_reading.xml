@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reading_settings">阅读设置</string>
+    <string name="pref_cat_lyrics">歌词</string>
+    <string name="pref_cat_background">背景</string>
+    <string name="pref_cat_screen">播放器与屏幕</string>
+    <string name="pref_display_mode">显示模式</string>
+    <string name="display_mode_both">谱＋词</string>
+    <string name="display_mode_score">只显示谱</string>
+    <string name="display_mode_lyrics">只显示词</string>
+    <string name="pref_font_size">歌词字号</string>
+    <string name="font_size_small">小</string>
+    <string name="font_size_medium">中</string>
+    <string name="font_size_large">大</string>
+    <string name="font_size_xlarge">特大</string>
+    <string name="pref_lyrics_font">歌词字体</string>
+    <string name="lyrics_font_system">系统字体</string>
+    <string name="lyrics_font_kai">文楷</string>
+    <string name="pref_main_background">主页背景</string>
+    <string name="pref_lyrics_background">歌词页背景</string>
+    <string name="pref_photo_dim">照片变暗</string>
+    <string name="pref_photo_blur">照片模糊</string>
+    <string name="pref_photo_blur_unsupported">需要 Android 12 以上</string>
+    <string name="pref_page_animation">翻页动画</string>
+    <string name="pref_menu_show">默认显示播放器</string>
+    <string name="pref_keep_screen_on">阅读时屏幕常亮</string>
+    <string name="bg_photo">自定义照片</string>
+    <string name="bg_picker_sample">圣哉，圣哉，圣哉</string>
+    <string name="about_font_credit">歌词字体 HymnalKai 衍生自 LXGW WenKai（霞鹜文楷），采用 SIL Open Font License 1.1 授权。点此阅读授权全文。</string>
+    <string name="font_license_title">字体授权</string>
+
+    <string name="bg_name_xuan">宣纸白</string>
+    <string name="bg_name_linen">亚麻灰</string>
+    <string name="bg_name_parchment">羊皮纸</string>
+    <string name="bg_name_mist">晨雾蓝</string>
+    <string name="bg_name_dawn">晨曦</string>
+    <string name="bg_name_sky">天光</string>
+    <string name="bg_name_harvest">麦田金</string>
+    <string name="bg_name_dusk">暮色</string>
+    <string name="bg_name_meadow">青草地</string>
+    <string name="bg_name_staff">五线谱</string>
+    <string name="bg_name_olive">橄榄枝</string>
+    <string name="bg_name_wheat">麦穗</string>
+    <string name="bg_name_dove">白鸽</string>
+    <string name="bg_name_rays">光芒</string>
+    <string name="bg_name_water">活水</string>
+    <string name="bg_name_vine">葡萄树</string>
+    <string name="bg_name_nightread">夜读</string>
+    <string name="bg_name_starry">星夜</string>
+    <string name="bg_name_deepsea">深海</string>
+    <string name="bg_name_ink">墨色</string>
+</resources>
