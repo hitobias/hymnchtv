@@ -320,8 +320,8 @@
     <!-- Locale -->
     <string name="locale_menu">Language</string>
     <string name="locale_system">Follow system</string>
-    <string name="locale_chinese" translatable="false">简体中文</string>
-    <string name="locale_chinese_hant" translatable="false">繁體中文</string>
+    <string name="locale_chinese" translatable="false">简中</string>
+    <string name="locale_chinese_hant" translatable="false">繁中</string>
     <string name="locale_english" translatable="false">English</string>
     <string name="lyrics_language_menu">Lyrics language</string>
     <string name="lyrics_default_title">Default lyrics language</string>

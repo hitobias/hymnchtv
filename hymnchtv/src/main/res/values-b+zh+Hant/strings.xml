@@ -42,7 +42,7 @@
     <string name="hymn_sn_convert">詩歌數字轉換測試</string>
     <string name="hymn_type">詩歌類別</string>
     <string name="in_development">仍在開發中</string>
-    <string name="lyrics_chinese_traditional"><u>簡體&#x2B0C;繁體歌詞</u></string>
+    <string name="lyrics_chinese_traditional"><u>簡中&#x2B0C;繁中</u></string>
     <string name="lyrics_chinese_english"><u>中文&#x2B0C;英文歌詞</u></string>
     <string name="lyrics_english">線上英文歌詞</string>
     <string name="lyrics_english_delete">英文歌詞刪除</string>
@@ -300,15 +300,15 @@
     <string name="lyrics_language_menu">歌詞語言</string>
     <string name="lyrics_default_title">歌詞預設語言</string>
     <string name="lyrics_follow_ui">跟隨介面語言</string>
-    <string name="lyrics_simplified">簡體</string>
-    <string name="lyrics_traditional">繁體</string>
+    <string name="lyrics_simplified">簡中</string>
+    <string name="lyrics_traditional">繁中</string>
     <string name="hymn_no_chinese_lyrics">英文 #%1$d: 這首英文詩歌沒有匹配的中文歌詞</string>
     <string name="update_none">無更新</string>
 
     <!-- Traditional variant (pref ConversionType): S2TW = Taiwan, S2HK = Hong Kong; lyrics are pre-generated assets -->
-    <string name="STD">繁體字形標準</string>
-    <string name="S2HK">香港繁體</string>
-    <string name="S2TW">台灣正體</string>
+    <string name="STD">繁中字形</string>
+    <string name="S2HK">繁中（香港）</string>
+    <string name="S2TW">繁中（台灣）</string>
 
     <!--  ChangeLog parameters -->
     <string name="changelog_full_title">應用程式變更歷史</string>
