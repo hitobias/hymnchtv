@@ -1,6 +1,6 @@
 # 首頁與歌詞頁視覺重設計（B 版面＋C 字形）
 
-> 狀態：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
+> 狀態：rev 4（2026-10-03）。rev 3 Codex：P1×3、P2×2 已併入（目錄鈕改實底、免捲動保證改為 360×800、下方三鈕定稿短標籤、Aa 套用以 view 生命週期為準、首頁 applyHomeTheme）。前次：rev 3（2026-10-02 深夜）。rev 2 Codex：P1×3、P2×2 已併入（§4 前景色全矩陣、§6b 即時套用路徑、§6c 播放卡規則簡化與疊放版面、§7 Aa 測試）。前次：rev 2（2026-10-02 深夜）。rev 1 Codex：P1×2、P2×4、P3×2，已全部併入；另依使用者要求加入微信讀書風格的「閱讀色」主題、「Aa」快速面板與歌詞頁工具列自動隱藏（§6a–§6c）。依據：使用者真機回饋（1.1.0-preview1 截圖）與三方向比較頁 https://claude.ai/artifact/N5UwDxyHKAyKdpLxH5DnUC ，使用者選定「B 的版面、C 的字形」。
 > 範圍：C 子項目 1.1（H3 首頁已實作於 `feat/c-home-search`）之上的視覺層修訂；不改互動規則（spec `2026-10-02-home-entry-and-lyrics-jump-design.md` 仍有效）。
 
 ## 1. 使用者回饋（必須解決）
@@ -56,7 +56,7 @@
 由上而下（直向）：
 
 1. **搜尋框**：高 48dp、圓角 24dp、`surface`；左側放大鏡圖示、提示「搜尋詩名或歌詞」。
-2. **詩歌本格**：2 列 × 4 格，**兩列都是 4 等欄**（現行 `hymn_picker.xml` 第二列「3 本＋寬 2 格目錄」改為 4 等欄，橫向版同步），間距 6dp，每格高 44dp、圓角 12dp；順序「大本、補充、新歌、新詩／青年、兒童、英文、目錄›」。未選中 `surfaceTone`＋`onSurface`；選中 `accent`＋`onAccent`；「目錄›」為文字按鈕樣式（透明底、`accent` 字、無底色），與詩歌本視覺上區隔但同尺寸對齊。
+2. **詩歌本格**：2 列 × 4 格，**兩列都是 4 等欄**（現行 `hymn_picker.xml` 第二列「3 本＋寬 2 格目錄」改為 4 等欄，橫向版同步），間距 6dp，每格高 44dp、圓角 12dp；順序「大本、補充、新歌、新詩／青年、兒童、英文、目錄›」。未選中 `surfaceTone`＋`onSurface`；選中 `accent`＋`onAccent`；「目錄›」用 `surface` 實底＋`accent` 字＋`outline` 邊線（不得透明底：首頁背景可能是照片，透明底無法保證對比），與詩歌本同尺寸對齊、以邊線與字色區隔。`accent` 對 `surface` 的文字對比也納入 §4 全矩陣（≥ 4.5:1）。
    - 中文標籤固定兩字；英文介面用短標籤（≤ 6 字元，取代現行 `English`、`Contents`：`Hymns`、`Suppl`、`NewSg`、`NewHy`、`Youth`、`Child`、`Eng`、`Index ›`；最終字串由實作者在 320dp 驗證後定案並寫回本表）。任何寬度下不得出現省略號。
 3. **預覽卡**：`surface`、圓角 16dp、內距 14dp；左側上方本名小標、下方大號碼；右側詩名（楷體粗體，靠右，最多 2 行）。無效號碼時右側顯示狀態訊息（「此本無第 N 首」與「此號亦見於」chip），沿用 H3 的 live region。
 4. **鍵盤**：3 × 4，間距 8dp；每鍵 `surfaceTone`、圓角 14dp，高度 = 剩餘空間平均分配，最小 52dp、最大 72dp（填滿螢幕高度，不留大片空白）；停用鍵 alpha 0.38 且保留 contentDescription 說明原因（H3 已有）。
@@ -65,16 +65,26 @@
 7. 底部導覽列維持現狀（首頁、目錄、設定），顏色改用 token。
 
 - 間距：外側左右 16dp；區塊間 10dp。
-- 320 × 640dp：允許整頁捲動，鍵盤最小 52dp；360 × 720dp 以上：搜尋到「最近」全部可見不捲動。
+- 鍵盤每鍵最小 48dp（觸控下限）、最大 72dp；「最近」列為單行 chip，高度 52dp。
+- 免捲動保證只針對 **360 × 800dp 以上**（含頂部工具列與底部導覽）：搜尋到「最近」全部可見；更小的螢幕（360×720、320×640）允許整頁捲動，但「開啟」鍵在首屏可見（鍵盤高度先壓到 48dp 再允許捲動）。
 - 橫向：沿用 H3 的雙欄（左：搜尋、詩歌本、預覽、最近；右：鍵盤、開啟），套用同樣元件樣式。
 - 首頁背景（A2 首頁背景設定）照常顯示在整頁後方；卡片半透明疊上。
 
 ## 6. 歌詞頁按鈕（同一套 token）
 
 - **頂列**：按鈕為 `surfaceTone` 圓角 12dp 色塊、高 40dp（觸控區 ≥ 48dp）、`onSurface` 14sp 500；選中／開啟狀態（例如譜色啟用）用 `accent`＋`onAccent`。頂列整條底板 `surface`，讓按鈕不直接壓在歌詞紙紋上。
-- **下方三鈕**（簡-繁、中英、模式）：與頂列同樣式；文字改短（簡-繁 由另一工作處理；中英、模式維持），320dp 不得截斷或換行。
+- **下方三鈕**：與頂列同樣式，三等欄，14sp 單行，320dp 不得截斷或換行。標籤定稿（動態者依目前狀態）：
+
+| 按鈕 | 繁中 | 簡中 | 英文 |
+|---|---|---|---|
+| 簡繁 | 簡-繁 | 简-繁 | Simp-Trad |
+| 中英 | 中英 | 中英 | CN/EN |
+| 模式（譜＋詞／只有詞／只有譜） | 譜詞／詞／譜 | 谱词／词／谱 | Both／Text／Score |
+
+  （contentDescription 保留完整說明，例如「切換簡體與繁體歌詞」。）
 - **播放卡**：卡片 `surface`；媒體來源單選（媒體／教唱／唱詩／伴奏）改為分段按鈕樣式：未選 `surfaceTone`＋`onSurface`，選中 `accent`＋`onAccent`；「連播」CheckBox 與速度按鈕用 `onSurface`；SeekBar 進度色 `accent`、軌道 `onSurfaceMuted` alpha 0.3。
-- **單一傳播點**：`ContentHandler` 在套用背景時建立一次 `UiTokens`，明確呼叫 `ContentView`、頂列、下方三鈕與 `MediaGuiController.applyTokens(tokens)`；設定頁返回、Aa 面板改主題、activity 重建都走同一入口 `applyReadingTheme()`。`MediaGuiController` 移除對 Material `colorOnSurface` 與硬編碼 `Color.GRAY` 的依賴。
+- **首頁**：`HomeFragment` 以 `MAIN` 背景槽位建立自己的 `UiTokens`，經 `applyHomeTheme()` 套到首頁元件（取代 `HomeAppearance` 的硬編碼部分）；與歌詞頁的 `LYRICS` 槽位分開，背景變動時各自依自己的槽位重建，不得共用同一份 token。
+- **歌詞頁單一傳播點**：`ContentHandler` 在套用 `LYRICS` 槽位背景時建立一次 `UiTokens`，明確呼叫 `ContentView`、頂列、下方三鈕與 `MediaGuiController.applyTokens(tokens)`；設定頁返回、Aa 面板改主題、activity 重建都走同一入口 `applyReadingTheme()`。`MediaGuiController` 移除對 Material `colorOnSurface` 與硬編碼 `Color.GRAY` 的依賴。
 - 不改按鈕的功能與位置（H5 延後；F1 已移除長按）。
 
 ## 6a. 閱讀色主題（使用者要求「色彩主題多一些」，參考微信讀書）
@@ -101,7 +111,7 @@
 
 - 歌詞頁頂列新增「Aa」按鈕，開啟 BottomSheet（不離開歌詞頁），內容由上而下：
   1. **主題**：一排圓點（閱讀色 8 個在前，其後「更多…」開完整背景選擇器）；點選立即套用到歌詞頁（經 §6 `applyReadingTheme()`），選中圓點有勾與外圈。
-  2. **字級**：滑桿（沿用 A2 `LyricsFontSize` 的級距）。改動時必須呼叫 `ReadingPrefs.resetLyricsScale()`（清除已存的橫直向 pinch scale，否則 enum 改了畫面不變），並立即套用到目前頁與相鄰已建立的頁。
+  2. **字級**：滑桿（沿用 A2 `LyricsFontSize` 的級距）。改動時必須呼叫 `ReadingPrefs.resetLyricsScale()`（清除已存的橫直向 pinch scale，否則 enum 改了畫面不變），並立即套用到目前頁；相鄰頁若 view 已建立（以 `viewLifecycleOwner` 判斷）一併套用，未建立者在 `onViewCreated` 讀取最新偏好（字型、模式同理），不得對已銷毀或尚未建立的 View 操作。
   3. **字型**：楷體／系統字（沿用 A2 `LyricsTypefaces`）。新增可在現頁執行的 `ContentView.applyReadingPrefs()`（含非同步字型載入完成後套用），不得只在 `ContentView` 建立時生效。
   4. **顯示模式**：沿用 A2 `DisplayMode`。選擇時清除 session 的 `displayModeOverride` 並刷新目前頁。
   5. 「閱讀設定 ›」：開完整設定頁。
