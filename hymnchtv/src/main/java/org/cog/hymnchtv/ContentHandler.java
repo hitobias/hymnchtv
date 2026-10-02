@@ -55,6 +55,7 @@ import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_BB_DUMMY;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_MAX;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_TMAX;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -73,7 +74,10 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.fragment.app.FragmentManager;
 import androidx.viewpager2.widget.ViewPager2;
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback;
@@ -92,6 +96,7 @@ import java.util.regex.Pattern;
 
 import org.apache.http.util.EncodingUtils;
 import org.apache.http.util.TextUtils;
+import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.mediaconfig.MediaConfig;
 import org.cog.hymnchtv.mediaconfig.MediaRecord;
 import org.cog.hymnchtv.mediaconfig.NotionRecord;
@@ -99,6 +104,14 @@ import org.cog.hymnchtv.mediaconfig.QQRecord;
 import org.cog.hymnchtv.mediaconfig.ShareWith;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.reading.DisplayMode;
+import org.cog.hymnchtv.reading.LyricsTypefaces;
+import org.cog.hymnchtv.reading.ReadingPrefs;
+import org.cog.hymnchtv.reading.ReadingSettingsActivity;
+import org.cog.hymnchtv.reading.background.BackgroundPolicy;
+import org.cog.hymnchtv.reading.background.BackgroundPrefs;
+import org.cog.hymnchtv.reading.background.BackgroundSlot;
+import org.cog.hymnchtv.reading.background.ReadingPalette;
 import org.cog.hymnchtv.utils.DepthPageTransformer;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
 import org.cog.hymnchtv.utils.HymnNo2IdxConvert;
@@ -233,17 +246,39 @@ public class ContentHandler extends BaseActivity {
 
     private static final String STATE_PAGE = "state_page"; // fallback; ViewPager2 also restores its own item
     private static final String STATE_LYRICS_OVERRIDE = "state_lyrics_override"; // -1 none, 0 simplified, 1 traditional
+    private static final String STATE_DISPLAY_OVERRIDE = "state_display_override"; // DisplayMode name; absent = none
+
+    /** Per-session display mode chosen with button_mode; null = the default from the reading settings (plan A2). */
+    public DisplayMode displayModeOverride = null;
+
+    /** Colours matching the lyrics background actually shown; read by every ContentView page. */
+    private ReadingPalette mLyricsPalette;
+
+    private final ActivityResultLauncher<Intent> mReadingSettingsLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                Intent data = result.getData();
+                onReadingSettingsReturned(result.getResultCode() == Activity.RESULT_OK && data != null
+                        && data.getBooleanExtra(ContentView.EXTR_KEY_HAS_CHANGES, false));
+            });
 
     public void onCreate(Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             int saved = savedInstanceState.getInt(STATE_LYRICS_OVERRIDE, -1);
             lyricsViewOverride = (saved == -1) ? null : (saved == 1);
+            displayModeOverride = savedInstanceState.containsKey(STATE_DISPLAY_OVERRIDE)
+                    ? DisplayMode.fromPref(savedInstanceState.getString(STATE_DISPLAY_OVERRIDE)) : null;
         }
         super.onCreate(savedInstanceState);
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         // getWindow().setFlags(FLAG_FULLSCREEN, FLAG_FULLSCREEN); // will hide android notification bar
         setContentView(R.layout.content_main);
         registerForContextMenu(findViewById(R.id.linear));
+
+        // Reading settings (plan A2): background first, so pages created below read the matching palette
+        sPreference = getSharedPreferences(PREF_SETTINGS, 0);
+        mLyricsPalette = BackgroundPrefs.applyTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
+        LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
+        LyricsTypefaces.preload(this);
 
         // Attach the media controller player UI; Reuse the fragment if found;
         // do not create/add new, otherwise playerUi setVisibility is no working
@@ -264,7 +299,6 @@ public class ContentHandler extends BaseActivity {
         mWebView.setVisibility(View.INVISIBLE);
 
         // Always start with UiPlayer hidden if in landscape mode
-        sPreference = getSharedPreferences(PREF_SETTINGS, 0);
         isShowPlayerUi = sPreference.getBoolean(PREF_MENU_SHOW, true);
         mAutoJC = true;
 
@@ -311,7 +345,10 @@ public class ContentHandler extends BaseActivity {
         // mPager.setOffscreenPageLimit(1);
         // mPager.setCurrentItem(hymnIdx, false) will force it to load only user selected page
         mPager.setAdapter(mPagerAdapter);
-        mPager.setPageTransformer(new DepthPageTransformer());
+        // Plan A2: page-turn animation is a reading setting (B-11 will default it off on low-RAM phones)
+        if (ReadingPrefs.pageAnimation(sPreference)) {
+            mPager.setPageTransformer(new DepthPageTransformer());
+        }
 
         // Set the viewPager to the user selected hymn number, no transform animation; this also fixed incorrect page being displayed
         // see https://issuetracker.google.com/issues/177051960
@@ -332,7 +369,12 @@ public class ContentHandler extends BaseActivity {
         onUserLeaveHint = false;
         showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait);
         // Keep the screen on while lyrics/score are shown (plan A.1.7); window-level so pager changes never drop it
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (ReadingPrefs.keepScreenOn(sPreference)) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+        else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
     }
 
     @Override
@@ -346,6 +388,9 @@ public class ContentHandler extends BaseActivity {
         super.onSaveInstanceState(outState);
         outState.putInt(STATE_PAGE, mPager.getCurrentItem());
         outState.putInt(STATE_LYRICS_OVERRIDE, lyricsViewOverride == null ? -1 : (lyricsViewOverride ? 1 : 0));
+        if (displayModeOverride != null) {
+            outState.putString(STATE_DISPLAY_OVERRIDE, displayModeOverride.name());
+        }
     }
 
     /**
@@ -374,6 +419,36 @@ public class ContentHandler extends BaseActivity {
     public void showMediaPlayerUi() {
         mMediaGuiController.initPlayerUi(false);
         isMediaPlayerUi = true;
+    }
+
+    /**
+     * Colours for the lyrics background on screen (plan A2). A page restored by the FragmentManager can ask
+     * before onCreate has applied the background, so fall back to the resolved (not yet shown) choice.
+     */
+    public ReadingPalette getLyricsPalette() {
+        if (mLyricsPalette == null) {
+            mLyricsPalette = BackgroundPolicy.palette(
+                    BackgroundPrefs.resolve(getSharedPreferences(PREF_SETTINGS, 0), BackgroundSlot.LYRICS));
+        }
+        return mLyricsPalette;
+    }
+
+    /** Opens the reading settings; on return with changes all pages are rebuilt (see onReadingSettingsReturned). */
+    public void openReadingSettings() {
+        mReadingSettingsLauncher.launch(new Intent(this, ReadingSettingsActivity.class));
+    }
+
+    /**
+     * New defaults: drop both session toggles and rebuild every page with the new settings.
+     * Public so ContentHandlerReadingTest can drive the settings-return path without the settings UI.
+     */
+    @VisibleForTesting
+    public void onReadingSettingsReturned(boolean hasChanges) {
+        if (hasChanges) {
+            lyricsViewOverride = null;
+            displayModeOverride = null;
+            recreate();
+        }
     }
 
     /**
@@ -458,22 +533,11 @@ public class ContentHandler extends BaseActivity {
     //     getMenuInflater().inflate(R.menu.content_menu, menu);
     // }
     public boolean onContextItemSelected(MenuItem item) {
-        SharedPreferences.Editor editor = sPreference.edit();
         ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
 
         int itemId = item.getItemId();
-        if (itemId == R.id.alwayshow) {
-            isShowPlayerUi = true;
-            editor.putBoolean(PREF_MENU_SHOW, true);
-            editor.apply();
-            showPlayerUi(true);
-            return true;
-        }
-        else if (itemId == R.id.alwayhide) {
-            isShowPlayerUi = false;
-            editor.putBoolean(PREF_MENU_SHOW, false);
-            editor.apply();
-            showPlayerUi(false);
+        if (itemId == R.id.readingSettings) {
+            openReadingSettings();
             return true;
         }
         else if (itemId == R.id.menutoggle) {

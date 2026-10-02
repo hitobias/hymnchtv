@@ -89,6 +89,13 @@ public class LyricsEnglishRecord {
     public static String HYMNAL_LINK_MAIN_ER = "https://www.hymnal.net/en/hymn/c/";
 
     private static final WeakHashMap<Context, LyricsEnglishRecord> INSTANCES = new WeakHashMap<>();
+
+    /** Set by ContentHandler from the lyrics background (plan A2); null = follow the app theme as before. */
+    private static volatile Boolean sDarkBackground = null;
+
+    public static void setDarkBackground(boolean dark) {
+        sDarkBackground = dark;
+    }
     private final Context mContext;
     private EnglishLyricsListener mListener = null;
     private String mLyricsEnglish = null;
@@ -318,8 +325,9 @@ public class LyricsEnglishRecord {
                 .append("<html><head>\n<style type=\"text/css\">\n")
                 .append(DEFAULT_CSS);
 
-        // Change text and ulr according to app theme
-        if (ThemeHelper.isAppTheme(ThemeHelper.Theme.DARK)) {
+        // Text and link colours follow the lyrics background (plan A2), else the app theme
+        boolean dark = (sDarkBackground != null) ? sDarkBackground : ThemeHelper.isAppTheme(ThemeHelper.Theme.DARK);
+        if (dark) {
             html.append(About.bodyTextLight);
         }
         else {
