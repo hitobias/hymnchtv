@@ -18,10 +18,11 @@ class ThemeDefaultTest {
     }
 
     @Test
-    fun mainActivityReadsThePrefWithTheSharedDefault() {
+    fun themePrefsUsesTheSharedDefault() {
+        // C-0: the preference is read by ThemePrefs (applied in HymnsApp), whose default is ThemeHelper.DEFAULT_THEME
         val root = File(checkNotNull(System.getProperty("hymnchtv.repoRoot")) { "hymnchtv.repoRoot not set" })
-        val source = File(root, "hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java").readText()
-        assertThat(source).contains("getString(PREF_THEME, ThemeHelper.DEFAULT_THEME.toString())")
-        assertThat(source).doesNotContain("getString(PREF_THEME, Theme.DARK.toString())")
+        val source = File(root, "hymnchtv/src/main/java/org/cog/hymnchtv/ui/theme/ThemePrefs.kt").readText()
+        assertThat(source).contains("val DEFAULT = LIGHT")
+        assertThat(org.cog.hymnchtv.ui.theme.NightMode.DEFAULT.name).isEqualTo(ThemeHelper.DEFAULT_THEME.name)
     }
 }

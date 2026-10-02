@@ -123,6 +123,10 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
         // The Room database itself is opened lazily on the first query.
         DatabaseBackend.getInstance(this);
 
+        // DayNight mode from the stored preference (also restores ThemeHelper's cache after process death)
+        org.cog.hymnchtv.ui.theme.ThemePrefs.INSTANCE.applyStored(this);
+        com.google.android.material.color.DynamicColors.applyToActivitiesIfAvailable(this);
+
         super.onCreate();
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
         mMediaDownloadHandler = new MediaDownloadHandler();
@@ -166,6 +170,10 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
                 }
 
                 public void onActivityPostCreated(@NonNull Activity activity, Bundle savedInstanceState) {
+                    // MainActivity handles edge-to-edge itself; do not stack a second insets padding on it
+                    if (activity instanceof MainActivity) {
+                        return;
+                    }
                     // must not use getRootView(), else toolbar overlays content;
                     View view = activity.getWindow().getDecorView().findViewById(android.R.id.content);
                     ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
@@ -212,6 +220,8 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         isPortrait = (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT);
+        // SYSTEM mode: keep ThemeHelper's dark/light cache in step with the system
+        org.cog.hymnchtv.ui.theme.ThemePrefs.INSTANCE.resync(this);
     }
 
     /**

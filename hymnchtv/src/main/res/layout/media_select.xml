@@ -5,7 +5,6 @@
     android:id="@+id/hymnsGroup"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/background_dark"
     android:layout_alignParentBottom="true"
     android:orientation="horizontal"
     tools:ignore="ExtraText">
@@ -13,6 +12,8 @@
     <Button
         android:id="@+id/btn_hymnSearch"
         style="@style/ButtonTop"
+        android:background="@drawable/bg_media_chip"
+        android:textColor="?attr/colorOnSurface"
         android:paddingStart="6dp"
         android:layout_weight="0.7"
         android:drawableStart="@drawable/ic_search"
@@ -23,24 +24,32 @@
     <RadioButton
         android:id="@+id/btn_media"
         style="@style/ButtonRadio"
+        android:background="@drawable/bg_media_chip"
+        android:textColor="?attr/colorOnSurface"
         android:layout_marginStart="1dp"
         android:text="@string/hymn_media_media" />
 
     <RadioButton
         android:id="@+id/btn_jiaochang"
         style="@style/ButtonRadio"
+        android:background="@drawable/bg_media_chip"
+        android:textColor="?attr/colorOnSurface"
         android:layout_marginStart="1dp"
         android:text="@string/hymn_media_jiaochang" />
 
     <RadioButton
         android:id="@+id/btn_changshi"
         style="@style/ButtonRadio"
+        android:background="@drawable/bg_media_chip"
+        android:textColor="?attr/colorOnSurface"
         android:layout_marginStart="1dp"
         android:text="@string/hymn_media_changshi" />
 
     <RadioButton
         android:id="@+id/btn_banzhou"
         style="@style/ButtonRadio"
+        android:background="@drawable/bg_media_chip"
+        android:textColor="?attr/colorOnSurface"
         android:checked="true"
         android:layout_marginStart="1dp"
         android:text="@string/hymn_media_banzou" />

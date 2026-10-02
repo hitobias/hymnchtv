@@ -16,12 +16,6 @@
  */
 package org.cog.hymnchtv;
 
-import static org.cog.hymnchtv.ContentView.LYRICS_BB_DIR;
-import static org.cog.hymnchtv.ContentView.LYRICS_DB_DIR;
-import static org.cog.hymnchtv.ContentView.LYRICS_ER_DIR;
-import static org.cog.hymnchtv.ContentView.LYRICS_TOC;
-import static org.cog.hymnchtv.ContentView.LYRICS_XB_DIR;
-import static org.cog.hymnchtv.ContentView.LYRICS_XG_DIR;
 import static org.cog.hymnchtv.MainActivity.ATTR_HYMN_TYPE;
 import static org.cog.hymnchtv.MainActivity.ATTR_PAGE;
 import static org.cog.hymnchtv.MainActivity.HYMN_BB;
@@ -30,19 +24,8 @@ import static org.cog.hymnchtv.MainActivity.HYMN_ER;
 import static org.cog.hymnchtv.MainActivity.HYMN_XB;
 import static org.cog.hymnchtv.MainActivity.HYMN_XG;
 import static org.cog.hymnchtv.MainActivity.HYMN_YB;
-import static org.cog.hymnchtv.MainActivity.mTocYB;
-import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_BB_NO_MAX;
-import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_MAX;
-import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_DB_NO_TMAX;
-import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_ER_NO_MAX;
-import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_XB_NO_MAX;
-import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_XG_NO_MAX;
-import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_YB_NO_TMAX;
-import static org.cog.hymnchtv.utils.HymnNoValidate.rangeBbLimit;
-import static org.cog.hymnchtv.utils.HymnNoValidate.rangeErLimit;
 
 import android.os.Bundle;
-import android.util.Range;
 import android.widget.ExpandableListAdapter;
 import android.widget.ExpandableListView;
 
@@ -55,7 +38,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import net.duguying.pinyin.Pinyin;
@@ -63,6 +45,8 @@ import net.duguying.pinyin.PinyinException;
 
 import org.apache.http.util.EncodingUtils;
 import org.apache.http.util.TextUtils;
+import org.cog.hymnchtv.ui.toc.TocBuilder;
+import org.cog.hymnchtv.ui.toc.TocData;
 
 import timber.log.Timber;
 
@@ -76,38 +60,13 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class HymnToc extends BaseActivity {
-    /* 大本诗歌 db toc category */
-    public static final String[] hymnCategoryDb
-            = new String[]{"颂三一神", "敬拜父", "赞美主", "圣灵丰满", "得救证实", "羡慕", "奉献", "联合基督",
-            "经历基督", "经历神", "十架夸耀", "十架道路", "复活生命", "鼓励", "试炼安慰", "里面生命", "神医",
-            "祷告", "读经", "召会", "聚会", "属灵争战", "事奉", "传扬福音", "福音", "受浸", "国度", "荣耀盼望", "终极显出", "附"
-    };
-
-    /* 补充本 bb toc category */
-    public static final String[] hymnCategoryBb
-            = new String[]{"赞美的话", "灵与生命", "享受基督", "爱慕耶稣", "追求长进", "教会异象", "建造合一", "教会生活",
-            "事奉福音", "盼望预备", "新约经纶"
-    };
-
-    /* 新诗歌本 xg toc category */
-    public static final String[] hymnCategoryXg
-            = new String[]{"新诗歌"
-    };
-
-    public static final String[] hymnCategoryYb
-            = new String[]{"青年诗歌"
-    };
-
-    /* 新歌颂咏 xb toc category */
-    public static final String[] hymnCategoryXb
-            = new String[]{"新路实行", "福音喜信", "生命与灵", "召会生活", "新耶路撒冷", "新诗歌"
-    };
-
-    /* 儿童诗歌 er toc category */
-    public static final String[] hymnCategoryEr
-            = new String[]{"神的创造", "主的爱", "圣灵同在", "主的看顾", "赞美喜乐", "祷告读经", "爱主", "亲近倚靠",
-            "彰显主", "召会聚会", "传扬福音", "发光争战", "经文故事"
-    };
+    // The category tables moved to TocData (so the TOC can be built without loading this Activity); same public fields as before
+    public static final String[] hymnCategoryDb = TocData.hymnCategoryDb;
+    public static final String[] hymnCategoryBb = TocData.hymnCategoryBb;
+    public static final String[] hymnCategoryXg = TocData.hymnCategoryXg;
+    public static final String[] hymnCategoryYb = TocData.hymnCategoryYb;
+    public static final String[] hymnCategoryXb = TocData.hymnCategoryXb;
+    public static final String[] hymnCategoryEr = TocData.hymnCategoryEr;
 
     // TocType for user selection
     public static final String TOC_TITLE = "目录";
@@ -140,22 +99,12 @@ public class HymnToc extends BaseActivity {
     public static final String TOC_BB = "toc_bb";
     public static final String TOC_DB = "toc_db";
 
-    // The text files use to generate the various toc type for display and selection
-    private static final String STROKE_FILE = "_stroke.txt";
-    private static final String PINYIN_FILE = "_pinyin.txt";
-    private static final String ENGLISH_FILE = "_eng2ch.txt";
-
-    /**
-     * Array contains the max hymnNo max (i.e. start number of next category) for each category
-     */
-    public static final int[] category_db = new int[]{1, 6, 53, 194, 229, 269, 330, 356, 367, 441, 454, 458, 472,
-            474, 490, 529, 548, 551, 579, 592, 624, 632, 650, 662, 670, 740, 745, 752, 768, 781, 787};
-
-    public static final int[] category_bb = new int[]{1, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001, 1101};
-    public static final int[] category_er = new int[]{1, 101, 201, 301, 401, 501, 601, 701, 801, 901, 1001, 1101, 1201, 1301};
-    public static final int[] category_xg = new int[]{1, 300};
-    public static final int[] category_xb = new int[]{1, 40, 74, 110, 131, 143, 170};
-    public static final int[] category_yb = new int[]{1, 300};
+    public static final int[] category_db = TocData.categoryDb;
+    public static final int[] category_bb = TocData.categoryBb;
+    public static final int[] category_er = TocData.categoryEr;
+    public static final int[] category_xg = TocData.categoryXg;
+    public static final int[] category_xb = TocData.categoryXb;
+    public static final int[] category_yb = TocData.categoryYb;
 
     // The treeView arrays for display
     private HashMap<String, List<String>> tocListDetail = new LinkedHashMap<>();
@@ -189,7 +138,8 @@ public class HymnToc extends BaseActivity {
      * @param tocPage the TOC type
      */
     private void initHymnTocAdapter(String hymnType, String tocPage) {
-        tocListDetail = getHymnToc(hymnType, tocPage);
+        showTitle(hymnType, tocPage);
+        tocListDetail = TocBuilder.build(this, hymnType, tocPage);
         tocListCategory = new ArrayList<>(tocListDetail.keySet());
         ExpandableListAdapter expandableListAdapter = new HymnTocExpandableListAdapter(this, tocListCategory, tocListDetail);
         expandableListView.setAdapter(expandableListAdapter);
@@ -231,405 +181,33 @@ public class HymnToc extends BaseActivity {
     }
 
     /**
-     * Routine to generate all the various TOC type i.e. tocPage
-     * The title will indicate the select hymn type: toc
-     * <p>
-     * TocCategory: is generated from the various hymn lyrics files
-     * TocStroke / TocPinyin: generate based on the respective toc text file
-     *
-     * @param hymnType the hymn type
-     * @param tocPage the toc page
-     *
-     * @return HashMap to build the tree view
+     * The activity title: the hymn book name and the TOC type
      */
-    private HashMap<String, List<String>> getHymnToc(String hymnType, String tocPage) {
-        int hymnNo;
-        String fname;
-        Range<Integer> rangeToc;
-
+    private void showTitle(String hymnType, String tocPage) {
+        int bookRes;
         switch (hymnType) {
-            // 大本詩歌 in LYRICS_DBS_TEXT
             case HYMN_DB:
-                setTitle(getString(R.string.hymn_title_db) + "：" + tocPage);
-
-                switch (tocPage) {
-                    case TOC_STROKE:
-                        fname = LYRICS_TOC + TOC_DB + STROKE_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_PINYIN:
-                        fname = LYRICS_TOC + TOC_DB + PINYIN_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_ENGLISH:
-                        fname = LYRICS_TOC + TOC_DB + ENGLISH_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_CATEGORY:
-                        hymnNo = 1;
-                        for (int x = 0; x < category_db.length - 1; x++) {
-                            List<String> tocItems = new ArrayList<>();
-                            rangeToc = new Range<>(category_db[x], category_db[x + 1] - 1);
-
-                            while (hymnNo <= HYMN_DB_NO_TMAX) {
-                                if (rangeToc.contains(hymnNo)) {
-                                    fname = LYRICS_DB_DIR + "db" + hymnNo + ".txt";
-
-                                    String hymnTitle = getHymnTitle(hymnNo, fname);
-                                    if (hymnNo > HYMN_DB_NO_MAX) {
-                                        hymnTitle = hymnTitle.replace(": ", ": 附" + (hymnNo - HYMN_DB_NO_MAX) + "-");
-                                    }
-                                    tocItems.add(hymnTitle);
-                                    hymnNo++;
-                                }
-                                else {
-                                    break;
-                                }
-                            }
-                            tocListDetail.put(hymnCategoryDb[x], tocItems);
-                        }
-                        break;
-                }
+                bookRes = R.string.hymn_title_db;
                 break;
-
-            // 補充本詩歌 in LYRICS_BBS_TEXT
             case HYMN_BB:
-                setTitle(getString(R.string.hymn_title_bb) + "：" + tocPage);
-
-                switch (tocPage) {
-                    case TOC_STROKE:
-                        fname = LYRICS_TOC + TOC_BB + STROKE_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_PINYIN:
-                        fname = LYRICS_TOC + TOC_BB + PINYIN_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_ENGLISH:
-                        fname = LYRICS_TOC + TOC_BB + ENGLISH_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_CATEGORY:
-                        hymnNo = 1;
-                        for (int x = 0; x < category_bb.length - 1; x++) {
-                            List<String> tocItems = new ArrayList<>();
-                            rangeToc = new Range<>(category_bb[x], category_bb[x + 1] - 1);
-
-                            while (hymnNo <= HYMN_BB_NO_MAX) {
-                                if (hymnNo == rangeBbLimit[x]) {
-                                    hymnNo = 100 * (x + 1) + 1;
-                                }
-
-                                if (rangeToc.contains(hymnNo)) {
-                                    fname = LYRICS_BB_DIR + "bb" + hymnNo + ".txt";
-                                    tocItems.add(getHymnTitle(hymnNo, fname));
-                                    hymnNo++;
-                                }
-                                else {
-                                    break;
-                                }
-                            }
-                            tocListDetail.put(hymnCategoryBb[x], tocItems);
-                        }
-                        break;
-                }
+                bookRes = R.string.hymn_title_bb;
                 break;
-
-            // 新歌颂咏 in LYRICS_XB_TEXT
             case HYMN_XB:
-                setTitle(getString(R.string.hymn_title_xb) + "：" + tocPage);
-
-                switch (tocPage) {
-                    case TOC_STROKE:
-                        fname = LYRICS_TOC + TOC_XB + STROKE_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_PINYIN:
-                        fname = LYRICS_TOC + TOC_XB + PINYIN_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_CATEGORY:
-                        hymnNo = 1;
-                        for (int x = 0; x < category_xb.length - 1; x++) {
-                            List<String> tocItems = new ArrayList<>();
-                            rangeToc = new Range<>(category_xb[x], category_xb[x + 1] - 1);
-
-                            while (hymnNo <= HYMN_XB_NO_MAX) {
-                                if (rangeToc.contains(hymnNo)) {
-                                    fname = LYRICS_XB_DIR + "xb" + hymnNo + ".txt";
-                                    tocItems.add(getHymnTitle(hymnNo, fname));
-                                    hymnNo++;
-                                }
-                                else {
-                                    break;
-                                }
-                            }
-                            tocListDetail.put(hymnCategoryXb[x], tocItems);
-                        }
-                        break;
-                }
+                bookRes = R.string.hymn_title_xb;
                 break;
-
-            // 新诗歌本 in LYRICS_XG_TEXT
             case HYMN_XG:
-                setTitle(getString(R.string.hymn_title_xg) + "：" + tocPage);
-
-                switch (tocPage) {
-                    case TOC_STROKE:
-                        fname = LYRICS_TOC + TOC_XG + STROKE_FILE;
-                        getHymnTocType(fname);
-                        // tocToStroke(LYRICS_TOC + TOC_XG + "_toc.txt");
-                        break;
-
-                    case TOC_PINYIN:
-                        fname = LYRICS_TOC + TOC_XG + PINYIN_FILE;
-                        getHymnTocType(fname);
-                        // tocToPinyin(LYRICS_TOC + TOC_XG + "_toc.txt");
-                        break;
-
-                    case TOC_ENGLISH:
-                        fname = LYRICS_TOC + TOC_XG + ENGLISH_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_CATEGORY:
-                        hymnNo = 1;
-                        for (int x = 0; x < category_xg.length - 1; x++) {
-                            List<String> tocItems = new ArrayList<>();
-                            rangeToc = new Range<>(category_xg[x], category_xg[x + 1] - 1);
-
-                            while (hymnNo <= HYMN_XG_NO_MAX) {
-                                if (rangeToc.contains(hymnNo)) {
-                                    fname = LYRICS_XG_DIR + "xg" + hymnNo + ".txt";
-                                    tocItems.add(getHymnTitle(hymnNo, fname));
-                                    hymnNo++;
-                                }
-                                else {
-                                    break;
-                                }
-                            }
-                            tocListDetail.put(hymnCategoryXg[x], tocItems);
-                        }
-                        break;
-                }
+                bookRes = R.string.hymn_title_xg;
                 break;
-
-            // 青年诗歌  in LYRICS_YB_TEXT
             case HYMN_YB:
-                setTitle(getString(R.string.hymn_title_yb) + "：" + tocPage);
-
-                switch (tocPage) {
-                    case TOC_STROKE:
-                        fname = LYRICS_TOC + TOC_YB + STROKE_FILE;
-                        getHymnTocType(fname);
-                        // tocToStroke(LYRICS_TOC + TOC_YB + "_toc.txt");
-                        break;
-
-                    case TOC_PINYIN:
-                        fname = LYRICS_TOC + TOC_YB + PINYIN_FILE;
-                        getHymnTocType(fname);
-                        // tocToPinyin(LYRICS_TOC + TOC_YB + "_toc.txt");
-                        break;
-
-                    case TOC_ENGLISH:
-                        // 青年诗歌 does not have ch2eng toc
-                        break;
-
-                    case TOC_CATEGORY:
-                        try {
-                            InputStream in2 = HymnsApp.getInstance().getResources().getAssets().open(mTocYB);
-                            byte[] buffer2 = new byte[in2.available()];
-
-                            if (in2.read(buffer2) != -1) {
-                                String mResult = EncodingUtils.getString(buffer2, "utf-8");
-                                String[] mList = mResult.split("\r\n|\n");
-
-                                hymnNo = 1;
-                                for (int x = 0; x < category_yb.length - 1; x++) {
-                                    List<String> tocItems = new ArrayList<>();
-                                    rangeToc = new Range<>(category_yb[x], category_yb[x + 1] - 1);
-                                    while (hymnNo <= HYMN_YB_NO_TMAX) {
-                                        if (rangeToc.contains(hymnNo)) {
-                                            // remove last # to avoid onHymnTitleClick() incorrect interpretation
-                                            fname = mList[hymnNo - 1].replaceAll("^#([0-9]+) (.+?) #([xyb]b[0-9]+[ab]*)", "$1: $2 ($3)");
-                                            // Timber.w("Filename: %s: %s %s", hymnNo, mList[hymnNo-1], fname);
-                                            tocItems.add(fname);
-                                            hymnNo++;
-                                        }
-                                        else {
-                                            break;
-                                        }
-                                    }
-                                    tocListDetail.put(hymnCategoryYb[x], tocItems);
-                                }
-                            }
-                        } catch (IOException e) {
-                            Timber.w("Content toc not available: %s", e.getMessage());
-                        }
-                }
+                bookRes = R.string.hymn_title_yb;
                 break;
-
-            // 儿童诗歌 in LYRICS_ER_TEXT
             case HYMN_ER:
-                setTitle(getString(R.string.hymn_title_er) + "：" + tocPage);
-                switch (tocPage) {
-                    case TOC_STROKE:
-                        fname = LYRICS_TOC + TOC_ER + STROKE_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_PINYIN:
-                        fname = LYRICS_TOC + TOC_ER + PINYIN_FILE;
-                        getHymnTocType(fname);
-                        break;
-
-                    case TOC_CATEGORY:
-                        hymnNo = 1;
-                        for (int x = 0; x < category_er.length - 1; x++) {
-                            List<String> tocItems = new ArrayList<>();
-                            rangeToc = new Range<>(category_er[x], category_er[x + 1] - 1);
-
-                            while (hymnNo <= HYMN_ER_NO_MAX) {
-                                if (hymnNo == rangeErLimit[x]) {
-                                    hymnNo = 100 * (x + 1) + 1;
-                                }
-
-                                if (rangeToc.contains(hymnNo)) {
-                                    fname = LYRICS_ER_DIR + "er" + hymnNo + ".txt";
-                                    tocItems.add(getHymnTitle(hymnNo, fname));
-                                    hymnNo++;
-                                }
-                                else {
-                                    break;
-                                }
-                            }
-                            tocListDetail.put(hymnCategoryEr[x], tocItems);
-                        }
-                        break;
-                }
+                bookRes = R.string.hymn_title_er;
                 break;
-        }
-        return tocListDetail;
-    }
-
-    /**
-     * Generate the expandable TOC list from the given tocFile sorted by the stroke or pinyin
-     *
-     * @param tocFile the toc file to extract info from
-     */
-    private void getHymnTocType(String tocFile) {
-        List<String> tocItems = new ArrayList<>();
-        String tocCategory = "";
-        StringBuilder indexString = new StringBuilder("（");
-
-        try {
-            InputStream in2 = getResources().getAssets().open(tocFile);
-            byte[] buffer2 = new byte[in2.available()];
-            if (in2.read(buffer2) == -1)
+            default:
                 return;
-
-            String mResult = EncodingUtils.getString(buffer2, "utf-8");
-            String[] mList = mResult.split("\r\n|\n");
-
-            int ml = 0;
-            while (ml < mList.length) {
-                if (mList[ml].matches("^.+画$|[A-Z]|[0-9~]+")) {
-                    tocCategory = mList[ml++];
-                    tocItems = new ArrayList<>();
-                    indexString = new StringBuilder("（");
-                }
-
-                while (ml < mList.length) {
-                    if (mList[ml].startsWith("^ ")) {
-                        String tmp = mList[ml].substring(2, 3);
-                        // Timber.d("stroke ### %s: %s", getStroke(tmp), mList[ml]);
-                        if (!indexString.toString().contains(tmp)) {
-                            indexString.append(tmp);
-                        }
-                        tocItems.add(mList[ml++].substring(2));
-                    }
-                    else {
-                        break;
-                    }
-                }
-
-                // Do not add additional info in the title text or sort the toc for English cross-reference
-                if (!tocFile.contains(ENGLISH_FILE)) {
-                    tocCategory += indexString + "）";
-                    Collections.sort(tocItems);
-                }
-                tocListDetail.put(tocCategory, tocItems);
-            }
-        } catch (IOException e) {
-            Timber.w("Content toc not available: %s", e.getMessage());
-            HymnsApp.showToastMessage(R.string.in_development);
         }
-    }
-
-    /**
-     * Search the content of the given file for the specified search string.
-     * return result if found, else null
-     *
-     * @param fName The name of file to search
-     *
-     * @return matching string if found, else null
-     */
-    private String getHymnTitle(int hymnNo, String fName) {
-        String hymnTitle = "";
-
-        // These two variables are used to generate "英中对照"
-        // String engStr = "";
-        // String engNoStr = "";
-
-        try {
-            InputStream in2 = getResources().getAssets().open(fName);
-            byte[] buffer2 = new byte[in2.available()];
-            if (in2.read(buffer2) == -1)
-                return hymnTitle;
-
-            String mResult = EncodingUtils.getString(buffer2, "utf-8");
-            String[] mList = mResult.split("\r\n|\n");
-
-            // fetch the hymn title with the category stripped off
-            hymnTitle = mList[1];
-            int idx = hymnTitle.lastIndexOf("－");
-            if (idx != -1) {
-                hymnTitle = hymnTitle.substring(idx + 1);
-            }
-            // engStr = hymnTitle; //"英中对照"
-
-            // Check the third line for additional info e.g.（诗篇二篇）（英1094）
-            idx = mList[2].indexOf("（");
-            if (idx != -1) {
-                hymnTitle = hymnTitle + mList[2].substring(idx);
-            }
-            hymnTitle = String.format(Locale.CHINA, "%04d: %s", hymnNo, hymnTitle);
-
-            // This section is used to generate "英中对照"
-//            {
-//                idx = mList[2].lastIndexOf("（英");
-//                if (idx != -1) {
-//                    int idx2 = mList[2].lastIndexOf("）");
-//                    engNoStr = mList[2].substring(idx + 2, idx2);
-//                }
-//
-//                int engNo = (TextUtils.isEmpty(engNoStr)) ? 0 : Integer.parseInt(engNoStr.split("[，|,]")[0]);
-//                // String engXRef = String.format(Locale.CHINA, "%s %s #%d", engNo, engStr, hymnNo);
-//                Timber.d("English ### %04d: %s #%d", engNo, engStr, hymnNo);
-//            }
-
-        } catch (IOException e) {
-            Timber.w("Content search error: %s", e.getMessage());
-        }
-        return hymnTitle;
+        setTitle(getString(bookRes) + "：" + tocPage);
     }
 
     /**

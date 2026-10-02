@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sub-project C: modern UI -->
+    <string name="c_nav_home">首頁</string>
+    <string name="c_nav_toc">目錄</string>
+    <string name="c_nav_my_hymns">我的詩歌</string>
+    <string name="c_nav_settings">設定</string>
+    <string name="c_add_playlist">＋歌單</string>
+    <string name="c_next_hymn">下一首</string>
+    <string name="c_history_delete">從歷史移除</string>
+    <string name="c_toc_empty">沒有條目</string>
+    <string name="c_cat_appearance">介面</string>
+    <string name="c_cat_home">主面版</string>
+    <string name="c_cat_reading">閱讀</string>
+    <string name="c_cat_media">媒體</string>
+    <string name="c_cat_other">其他</string>
+    <string name="c_cat_sing_log">唱詩記錄</string>
+    <string name="c_cat_backup">備份</string>
+    <string name="c_check_update">檢查更新</string>
+    <string name="c_myhymns_placeholder">我的詩歌將在後續更新中提供。</string>
+    <string name="c_lyrics_score_color">譜色</string>
+    <string name="c_lyrics_font_dec">A-</string>
+    <string name="c_lyrics_font_inc">A+</string>
+    <string name="c_lyrics_share">分享</string>
+    <string name="c_lyrics_media">媒體</string>
+    <string name="c_lyrics_more">更多</string>
+    <string name="c_auto_stream">連播</string>
+</resources>

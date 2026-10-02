@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lyrics actions that are top-bar buttons only; the overflow menu (menu_lyrics_more) declares its own ids -->
+    <item name="scoreColorChange" type="id" />
+    <item name="lyrcsTextSizeInc" type="id" />
+    <item name="lyrcsTextSizeDec" type="id" />
+    <item name="media_config" type="id" />
+    <item name="lyrcsShare" type="id" />
+</resources>

@@ -38,4 +38,54 @@
         <item>1.3x</item>
         <item>1.4x</item>
     </string-array>
+
+    <!-- Sub-project C settings tab -->
+    <string-array name="c_night_modes">
+        <item>@string/locale_system</item>
+        <item>@string/theme_light</item>
+        <item>@string/theme_dark</item>
+    </string-array>
+
+    <string-array name="c_night_mode_values" translatable="false">
+        <item>SYSTEM</item>
+        <item>LIGHT</item>
+        <item>DARK</item>
+    </string-array>
+
+    <string-array name="c_locales">
+        <item>@string/locale_system</item>
+        <item>@string/locale_chinese</item>
+        <item>@string/locale_chinese_hant</item>
+        <item>@string/locale_english</item>
+    </string-array>
+
+    <string-array name="c_locale_values" translatable="false">
+        <item>SYSTEM</item>
+        <item>ZH_HANS</item>
+        <item>ZH_HANT</item>
+        <item>EN</item>
+    </string-array>
+
+    <string-array name="c_font_colors">
+        <item>@string/red</item>
+        <item>@string/blue</item>
+        <item>@string/white</item>
+        <item>@string/grey</item>
+        <item>@string/cyan</item>
+        <item>@string/yellow</item>
+        <item>@string/green</item>
+        <item>@string/black</item>
+    </string-array>
+
+    <string-array name="c_font_color_values" translatable="false">
+        <item>red</item>
+        <item>blue</item>
+        <item>white</item>
+        <item>grey</item>
+        <item>cyan</item>
+        <item>yellow</item>
+        <item>green</item>
+        <item>black</item>
+    </string-array>
+
 </resources>

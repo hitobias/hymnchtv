@@ -36,7 +36,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
-import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,15 +43,19 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -76,6 +79,7 @@ import org.cog.hymnchtv.reading.ScoreTintPolicy;
 import org.cog.hymnchtv.reading.background.BackgroundDrawables;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
+import org.cog.hymnchtv.ui.lyrics.LyricsMeta;
 import org.cog.hymnchtv.utils.ZoomTextView;
 import org.jetbrains.annotations.NotNull;
 
@@ -89,7 +93,7 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class ContentView extends Fragment implements ZoomTextView.ZoomTextListener, View.OnClickListener,
-        View.OnLongClickListener, LyricsEnglishRecord.EnglishLyricsListener {
+        LyricsEnglishRecord.EnglishLyricsListener {
     public static String SCORE_DB_DIR = "lyrics_db_score/";
     public static String SCORE_BB_DIR = "lyrics_bb_score/";
     public static String SCORE_ER_DIR = "lyrics_er_score/";
@@ -132,7 +136,12 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private View scoreContainer;
     private ZoomTextView lyricsSimplify;
     private ZoomTextView lyricsTraditional;
+    private TextView meterKeyView;
     private WebView lyricsEnglish;
+
+    /** Key and time signature per script ("大调" / "大調"); null when the lyrics header has none. */
+    private String mMeterKeySimplified;
+    private String mMeterKeyTraditional;
 
     private Integer mHymnNoEng = null;
     private boolean isErGe;
@@ -182,15 +191,17 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         btn_ts = mConvertView.findViewById(R.id.button_ts);
         btn_ts.setOnClickListener(this);
-        btn_ts.setOnLongClickListener(this);
 
         btn_english = mConvertView.findViewById(R.id.button_english);
         btn_english.setOnClickListener(this);
-        btn_english.setOnLongClickListener(this);
+
+        for (int id : new int[]{R.id.btn_score_color, R.id.btn_font_dec, R.id.btn_font_inc, R.id.btn_share,
+                R.id.btn_lyrics_media, R.id.btn_next, R.id.btn_more}) {
+            mConvertView.findViewById(id).setOnClickListener(this);
+        }
 
         btn_mode = mConvertView.findViewById(R.id.button_mode);
         btn_mode.setOnClickListener(this);
-        btn_mode.setOnLongClickListener(this);
 
         lyricsView = mConvertView.findViewById(R.id.lyricsView);
         lyricsSimplify = mConvertView.findViewById(R.id.lyrics_simplified);
@@ -199,6 +210,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsTraditional = mConvertView.findViewById(R.id.lyrics_traditional);
         lyricsTraditional.registerZoomTextListener(this);
 
+        meterKeyView = mConvertView.findViewById(R.id.meter_key);
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
 
         mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
@@ -233,7 +245,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     @Override
     public void onResume() {
         super.onResume();
-        registerForContextMenu(lyricsView);
         mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
         Timber.w("Content View on Resume");
 
@@ -250,29 +261,42 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         applyDisplayMode(autoEnglish || !hasEnglishLyrics);
     }
 
-    @Override
-    public void onPause() {
-        unregisterForContextMenu(lyricsView);
-        super.onPause();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onCreateContextMenu(@NotNull ContextMenu menu, @NotNull View v, ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        mContentHandler.getMenuInflater().inflate(R.menu.menu_content, menu);
-
-        // Hide "英文歌词" if no associated English lyrics
-        menu.findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);
-        menu.findItem(R.id.lyrcsEnglishDelete).setVisible(mHymnNoEng != null && hasEnglishLyrics);
+    /** The "more" button of the top bar: the entries that have no button of their own. */
+    private void showMoreMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        popup.inflate(R.menu.menu_lyrics_more);
+        // Hide the English entries if there are no associated English lyrics
+        popup.getMenu().findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);
+        popup.getMenu().findItem(R.id.lyrcsEnglishDelete).setVisible(mHymnNoEng != null && hasEnglishLyrics);
+        popup.setOnMenuItemClickListener(item -> mContentHandler.onLyricsAction(item.getItemId()));
+        popup.show();
     }
 
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        if (id == R.id.button_ts) {
+        if (id == R.id.btn_score_color) {
+            mContentHandler.onLyricsAction(R.id.scoreColorChange);
+        }
+        else if (id == R.id.btn_font_inc) {
+            mContentHandler.onLyricsAction(R.id.lyrcsTextSizeInc);
+        }
+        else if (id == R.id.btn_font_dec) {
+            mContentHandler.onLyricsAction(R.id.lyrcsTextSizeDec);
+        }
+        else if (id == R.id.btn_share) {
+            mContentHandler.onLyricsAction(R.id.lyrcsShare);
+        }
+        else if (id == R.id.btn_lyrics_media) {
+            mContentHandler.onLyricsAction(R.id.media_config);
+        }
+        else if (id == R.id.btn_next) {
+            mContentHandler.scrollNextHymn();
+        }
+        else if (id == R.id.btn_more) {
+            showMoreMenu(v);
+        }
+        else if (id == R.id.button_ts) {
             if (!hasEnglishLyrics) {
                 // Session-only toggle; the persisted default is set in the reading settings
                 mContentHandler.lyricsViewOverride = !isShowTraditional();
@@ -291,30 +315,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             mContentHandler.displayModeOverride = currentDisplayMode().next();
             applyDisplayMode(true);
         }
-    }
-
-    @Override
-    public boolean onLongClick(View v) {
-        int id = v.getId();
-        if (id == R.id.button_ts || id == R.id.button_mode) {
-            mContentHandler.openReadingSettings();
-            return true;
-        }
-        else if (id == R.id.button_english) {
-            if (View.VISIBLE == lyricsEnglish.getVisibility()) {
-                mContentHandler.initWebView(ContentHandler.UrlType.englishLyrics);
-            }
-            else {
-                HymnsApp.showToastMessage("Reinit English lyrics");
-                reinitEnglishLyrics();
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private void reinitEnglishLyrics() {
-        MainActivity.showContent(mContentHandler, mContentHandler.mHymnType, mContentHandler.getHymnNo(), false, mHymnNoEng);
     }
 
     /**
@@ -438,8 +438,15 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private void showLyricsChText(String resFName) {
         String lyrics = readAsset(resFName);
         if (lyrics != null) {
-            lyricsSimplify.setText(lyrics);
-            lyricsTraditional.setText(loadTraditional(resFName, lyrics));
+            // The key/meter line is shown by meter_key instead of inside the text
+            String traditional = loadTraditional(resFName, lyrics);
+            mMeterKeySimplified = LyricsMeta.parseMeterKey(Arrays.asList(lyrics.split("\n", -1)));
+            mMeterKeyTraditional = LyricsMeta.parseMeterKey(Arrays.asList(traditional.split("\n", -1)));
+            // Red on light backgrounds; on dark ones (and photos) red cannot reach AA contrast, so the accent colour
+            int verseColor = mPalette.isDark() ? mPalette.getAccentColor()
+                    : ContextCompat.getColor(mContentHandler, R.color.c_verse_red);
+            lyricsSimplify.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(lyrics), verseColor));
+            lyricsTraditional.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(traditional), verseColor));
         }
         mHasLyricsText = DisplayModePolicy.hasLyricsText(lyrics);
 
@@ -499,17 +506,20 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         ZoomTextView view = traditional ? lyricsTraditional : lyricsSimplify;
         if (ReadingPrefs.lyricsFont(mSharedPref) != LyricsFont.KAI) {
             view.setTypeface(Typeface.DEFAULT);
+            meterKeyView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             return;
         }
         Typeface ready = LyricsTypefaces.peek(traditional);
         if (ready != null) {
             view.setTypeface(ready);
+            meterKeyView.setTypeface(ready, Typeface.BOLD);
             return;
         }
         view.setTypeface(Typeface.DEFAULT);
         LyricsTypefaces.request(mContentHandler, traditional, face -> {
             if (isAdded()) {
                 view.setTypeface(face);
+                meterKeyView.setTypeface(face, Typeface.BOLD);
             }
         });
     }
@@ -517,6 +527,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private void styleLyrics(ZoomTextView view) {
         int accent = mPalette.getAccentColor();
         view.setTextColor(mPalette.getTextColor());
+        meterKeyView.setTextColor(accent);
         view.setLinkTextColor(accent);
         view.setHighlightColor((accent & 0x00FFFFFF) | 0x40000000);
         // null for drawn backgrounds; an 85 % panel for photos
@@ -676,7 +687,15 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             boolean traditional = isShowTraditional();
             applyFont(traditional);
             (traditional ? lyricsTraditional : lyricsSimplify).setVisibility(View.VISIBLE);
+            showMeterKey(traditional ? mMeterKeyTraditional : mMeterKeySimplified);
+            return;
         }
+        showMeterKey(null);
+    }
+
+    private void showMeterKey(@Nullable String meterKey) {
+        meterKeyView.setText(meterKey);
+        meterKeyView.setVisibility(TextUtils.isEmpty(meterKey) ? View.GONE : View.VISIBLE);
     }
 
     private boolean isShowTraditional() {

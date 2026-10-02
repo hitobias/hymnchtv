@@ -5,28 +5,41 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_gravity="bottom"
-    android:background="@color/background_dark"
+    android:background="?attr/colorSurfaceContainer"
     android:orientation="vertical"
     android:padding="5dp">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="90dp"
-        android:background="@drawable/tv_border_grey"
+        android:background="@drawable/bg_player_card"
         android:paddingStart="5dp"
         android:paddingEnd="5dp">
+
+        <!-- Auto-play the next hymn after this one (was: long-press the play button) -->
+        <CheckBox
+            android:id="@+id/playback_auto_stream"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="2dp"
+            android:minHeight="0dp"
+            android:text="@string/c_auto_stream"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/hymn_info"
             style="@style/SmallFont"
             android:layout_width="fill_parent"
+            android:layout_toStartOf="@id/playback_auto_stream"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
             android:clickable="true"
             android:focusable="true"
             android:maxLines="1"
             android:text="@string/hymn_title_mc_bb"
-            android:textColor="@color/textColorBlack" />
+            android:textColor="?attr/colorOnSurface" />
 
         <SeekBar
             android:id="@+id/playback_seekbar"
@@ -52,7 +65,7 @@
             android:layout_below="@id/playback_seekbar"
             android:layout_alignStart="@id/playback_seekbar"
             android:text="00:00"
-            android:textColor="@color/grey"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="visible" />
 
         <TextView
@@ -63,14 +76,14 @@
             android:layout_below="@id/playback_seekbar"
             android:layout_alignEnd="@id/playback_seekbar"
             android:text="00:00"
-            android:textColor="@color/grey"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="visible" />
 
         <ImageView
             android:id="@+id/playback_play"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_below="@+id/hymn_info"
+            android:layout_below="@id/playback_auto_stream"
             android:layout_alignParentEnd="true"
             android:background="@drawable/ic_player_play"
             android:src="@drawable/ic_play_stop" />
@@ -102,7 +115,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="-5dp"
                 android:background="@null"
-                android:textColor="@color/textColorBlack"
+                android:textColor="?attr/colorOnSurface"
                 android:inputType="number"
                 android:maxLines="1"
                 android:textSize="16sp" />

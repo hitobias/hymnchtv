@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sub-project C: modern UI -->
+    <string name="c_nav_home">Home</string>
+    <string name="c_nav_toc">Contents</string>
+    <string name="c_nav_my_hymns">My hymns</string>
+    <string name="c_nav_settings">Settings</string>
+    <string name="c_add_playlist">+ Playlist</string>
+    <string name="c_next_hymn">Next</string>
+    <string name="c_history_delete">Delete from history</string>
+    <string name="c_toc_empty">No entries</string>
+    <string name="c_cat_appearance">Appearance</string>
+    <string name="c_cat_home">Home screen</string>
+    <string name="c_cat_reading">Reading</string>
+    <string name="c_cat_media">Media</string>
+    <string name="c_cat_other">More</string>
+    <string name="c_cat_sing_log">Singing log</string>
+    <string name="c_cat_backup">Backup</string>
+    <string name="c_check_update">Check for updates</string>
+    <string name="c_myhymns_placeholder">My hymns will be available in a later update.</string>
+    <string name="c_lyrics_score_color">Tint</string>
+    <string name="c_lyrics_font_dec">A-</string>
+    <string name="c_lyrics_font_inc">A+</string>
+    <string name="c_lyrics_share">Share</string>
+    <string name="c_lyrics_media">Media</string>
+    <string name="c_lyrics_more">More</string>
+    <string name="c_auto_stream">Auto-next</string>
+</resources>

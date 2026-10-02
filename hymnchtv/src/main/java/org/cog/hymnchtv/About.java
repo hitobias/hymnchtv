@@ -39,7 +39,7 @@ import timber.log.Timber;
  *
  * @author Eng Chong Meng
  */
-public class About extends BaseActivity implements View.OnClickListener, View.OnLongClickListener {
+public class About extends BaseActivity implements View.OnClickListener {
     /**
      * Default CSS styles used to format the change log.
      */
@@ -65,7 +65,6 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
 
         Button btn_HistoryLog = findViewById(R.id.history_log);
         btn_HistoryLog.setOnClickListener(this);
-        btn_HistoryLog.setOnLongClickListener(this);
 
         findViewById(R.id.submit_logs).setOnClickListener(this);
         findViewById(R.id.ok_button).setOnClickListener(this);
@@ -109,15 +108,6 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
         else {
             finish();
         }
-    }
-
-    @Override
-    public boolean onLongClick(View view) {
-        if (view.getId() == R.id.history_log) {
-            checkUpdate();
-            return true;
-        }
-        return false;
     }
 
     private void checkUpdate() {

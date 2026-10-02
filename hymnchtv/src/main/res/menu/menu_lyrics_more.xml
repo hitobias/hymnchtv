@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<!-- Overflow of the lyrics top bar: what menu_content offered that has no button of its own -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
         android:id="@+id/readingSettings"
@@ -10,32 +11,12 @@
         android:title="@string/menu_media_ui_toggle" />
 
     <item
-        android:id="@+id/scoreColorChange"
-        android:title="@string/score_color_change" />
-
-    <item
-        android:id="@+id/lyrcsTextSizeInc"
-        android:title="@string/lyrics_text_size_increase" />
-
-    <item
-        android:id="@+id/lyrcsTextSizeDec"
-        android:title="@string/lyrics_text_size_decrease" />
-
-    <item
-        android:id="@+id/media_config"
-        android:title="@string/media_config" />
-
-    <item
         android:id="@+id/lyrcsEnglish"
         android:title="@string/lyrics_english" />
 
     <item
         android:id="@+id/lyrcsEnglishDelete"
         android:title="@string/lyrics_english_delete" />
-
-    <item
-        android:id="@+id/lyrcsShare"
-        android:title="@string/share_lyrics" />
 
     <item
         android:id="@+id/help"

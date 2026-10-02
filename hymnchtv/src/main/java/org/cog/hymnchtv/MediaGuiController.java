@@ -63,6 +63,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.google.android.material.color.MaterialColors;
+
 import org.cog.hymnchtv.mediaplayer.AudioBgService;
 import org.cog.hymnchtv.utils.DialogActivity;
 import org.cog.hymnchtv.utils.ViewUtil;
@@ -87,7 +89,7 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class MediaGuiController extends Fragment implements AdapterView.OnItemSelectedListener,
-        SeekBar.OnSeekBarChangeListener, RadioGroup.OnCheckedChangeListener, View.OnClickListener, View.OnLongClickListener {
+        SeekBar.OnSeekBarChangeListener, RadioGroup.OnCheckedChangeListener, View.OnClickListener {
     /**
      * The state of a player where playback is stopped
      */
@@ -128,6 +130,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     private SeekBar playbackSeekBar;
     private Spinner playbackSpeed;
     private CheckBox cbPlaybackLoop;
+    private CheckBox cbAutoStream;
     private EditText edLoopCount;
 
     private RadioGroup mHymnTypesGroup;
@@ -180,6 +183,10 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         cbPlaybackLoop = convertView.findViewById(R.id.playback_repeat);
         cbPlaybackLoop.setOnClickListener(v -> onLoopClick());
 
+        cbAutoStream = convertView.findViewById(R.id.playback_auto_stream);
+        cbAutoStream.setChecked(mContentHandler.isAutoStream());
+        cbAutoStream.setOnClickListener(v -> onAutoStreamClick());
+
         edLoopCount = convertView.findViewById(R.id.repeatCount);
         edLoopCount.setOnKeyListener((v, keyCode, event) -> {
             if (event.getAction() == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
@@ -222,24 +229,19 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
         playbackPlay = convertView.findViewById(R.id.playback_play);
         playbackPlay.setOnClickListener(this);
-        playbackPlay.setOnLongClickListener(this);
 
         mPlayerAnimate = (AnimationDrawable) playbackPlay.getBackground();
         Button mBtnHymnSearch = convertView.findViewById(R.id.btn_hymnSearch);
         // mBtnHymnSearch.setOnTouchListener(touchListener);
         mBtnHymnSearch.setOnClickListener(this);
-        mBtnHymnSearch.setOnLongClickListener(this);
 
         mHymnTypesGroup = convertView.findViewById(R.id.hymnsGroup);
         mBtnMedia = convertView.findViewById(R.id.btn_media);
-        mBtnMedia.setOnLongClickListener(this);
 
         mBtnJiaoChang = convertView.findViewById(R.id.btn_jiaochang);
         mBtnJiaoChang.setOnClickListener(this);
-        mBtnJiaoChang.setOnLongClickListener(this);
 
         mBtnChangShi = convertView.findViewById(R.id.btn_changshi);
-        mBtnChangShi.setOnLongClickListener(this);
 
         mBtnBanZhou = convertView.findViewById(R.id.btn_banzhou);
         return convertView;
@@ -358,10 +360,12 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         if (STATE_STOP == playerState) {
             hymnInfo.setText(info);
             mediaHymns.clear();
-            mBtnMedia.setTextColor(isAvailable[0] ? Color.BLACK : Color.GRAY);
-            mBtnJiaoChang.setTextColor(isAvailable[1] ? Color.BLACK : Color.GRAY);
-            mBtnChangShi.setTextColor(isAvailable[2] ? Color.BLACK : Color.GRAY);
-            mBtnBanZhou.setTextColor(isAvailable[3] ? Color.BLACK : Color.GRAY);
+            // Available: the theme's text colour (readable in day and night mode); else gray
+            int on = MaterialColors.getColor(mBtnMedia, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
+            mBtnMedia.setTextColor(isAvailable[0] ? on : Color.GRAY);
+            mBtnJiaoChang.setTextColor(isAvailable[1] ? on : Color.GRAY);
+            mBtnChangShi.setTextColor(isAvailable[2] ? on : Color.GRAY);
+            mBtnBanZhou.setTextColor(isAvailable[3] ? on : Color.GRAY);
         }
     }
 
@@ -490,42 +494,31 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         }
     }
 
-    @Override
-    public boolean onLongClick(View v) {
-        int id = v.getId();
-        if (id == R.id.playback_play) {
-            if (playerState == STATE_STOP) {
-                if (mMediaType != MediaType.HYMN_JIAOCHANG) {
-                    confirmAutoStream();
-                }
-                else {
-                    HymnsApp.showToastMessage(R.string.auto_stream_unsupported,
-                            mContentHandler.hymnType2Text(requireContext()), MediaType.mediaType2Text(requireContext(), mMediaType));
-                }
-            }
-            else {
-                mContentHandler.setAutoStream(false);
-                stopPlay();
-            }
-            return true;
+    /** The visible auto-play check box (confirm, then start); replaces the old long press on the play button. */
+    private void onAutoStreamClick() {
+        if (!cbAutoStream.isChecked()) {
+            mContentHandler.setAutoStream(false);
         }
-        else if (id == R.id.btn_hymnSearch) {
-            mContentHandler.initWebView(ContentHandler.UrlType.hymnGoogleSearch);
-            return true;
+        else if (mMediaType == MediaType.HYMN_JIAOCHANG) {
+            cbAutoStream.setChecked(false);
+            HymnsApp.showToastMessage(R.string.auto_stream_unsupported,
+                    mContentHandler.hymnType2Text(requireContext()), MediaType.mediaType2Text(requireContext(), mMediaType));
         }
-        else if (id == R.id.btn_media) {
-            mContentHandler.initWebView(ContentHandler.UrlType.hymnQqSearch);
-            return true;
+        else if (playerState == STATE_STOP) {
+            // checked again by ContentHandler.setAutoStream once the user confirms
+            cbAutoStream.setChecked(false);
+            confirmAutoStream();
         }
-        else if (id == R.id.btn_jiaochang) {
-            mContentHandler.initWebView(ContentHandler.UrlType.hymnNotionSearch);
-            return true;
+        else {
+            mContentHandler.setAutoStream(true);
         }
-        else if (id == R.id.btn_changshi) {
-            mContentHandler.showBibleToolHymnal();
-            return true;
+    }
+
+    /** Reflects ContentHandler's auto-play state in the check box (no click event). */
+    public void setAutoStreamChecked(boolean on) {
+        if (cbAutoStream != null) {
+            cbAutoStream.setChecked(on);
         }
-        return false;
     }
 
     /**

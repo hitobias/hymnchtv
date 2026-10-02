@@ -78,4 +78,7 @@
     <color name="goldenrod">#daa520</color>
     <color name="goldenrod_dark">#b8860b</color>
 
+
+    <!-- Verse numbers on light lyrics backgrounds (VerseColorTest); dark backgrounds use the preset's accent colour -->
+    <color name="c_verse_red">#ff861710</color>
 </resources>

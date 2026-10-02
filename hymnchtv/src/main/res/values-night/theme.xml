@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Dark list rows and radios when the system/app is in night mode (values/theme.xml pins .Light) -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">@color/color_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/color_primary_dark</item>
+        <item name="colorSecondary">@color/color_accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="listItemRow">@style/RowList.Dark</item>
+        <item name="listItemRadio">@style/RadioListItem.Dark</item>
+    </style>
+
+    <style name="AppTheme.Dialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/color_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/color_accent</item>
+        <item name="listItemRow">@style/RowList.Dark</item>
+        <item name="listItemRadio">@style/RadioListItem.Dark</item>
+    </style>
+</resources>

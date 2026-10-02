@@ -17,11 +17,21 @@
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/mediaPlayer"
+        android:layout_above="@+id/notebookBar"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:layout_margin="5dp"
         android:spacing="20dp" />
+
+    <!-- Empty slot for the notebook bar (sub-project D-1 fills it and makes it visible); C only reserves it (C-5) -->
+    <FrameLayout
+        android:id="@+id/notebookBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/mediaPlayer"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/mediaPlayer"
