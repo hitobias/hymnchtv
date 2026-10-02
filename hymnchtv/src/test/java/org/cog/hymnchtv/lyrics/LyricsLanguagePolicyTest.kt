@@ -75,4 +75,15 @@ class LyricsLanguagePolicyTest {
             assertThat(LyricsLanguagePolicy.isCanonical(it)).isFalse()
         }
     }
+
+    @Test
+    fun defaultVariantForScriptOnlyLocaleIsTw() {
+        assertThat(LyricsLanguagePolicy.defaultVariant(Locale.forLanguageTag("zh-Hant"))).isEqualTo(HantVariant.TW)
+    }
+
+    @Test
+    fun hantVariantPrefValueIsLiteral() {
+        assertThat(HantVariant.HK.prefValue).isEqualTo("S2HK")
+        assertThat(HantVariant.TW.prefValue).isEqualTo("S2TW")
+    }
 }

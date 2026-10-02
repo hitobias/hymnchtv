@@ -5,6 +5,7 @@ import java.util.regex.Pattern
 /**
  * Builds a literal search pattern from user input. Only "他" is widened to also match "祂";
  * every other character, including regex meta characters, is matched literally.
+ * Matching is case-sensitive (same as the previous ContentSearch behavior).
  */
 object SearchPattern {
     private const val HE = "他"

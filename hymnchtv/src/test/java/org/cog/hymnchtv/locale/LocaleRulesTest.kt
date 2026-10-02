@@ -40,4 +40,9 @@ class LocaleRulesTest {
         assertThat(LocaleRules.isChinese(t("zh-TW"))).isTrue()
         assertThat(LocaleRules.isChinese(t("en"))).isFalse()
     }
+
+    @Test
+    fun explicitHansScriptWithTraditionalRegionIsSimplified() {
+        assertThat(LocaleRules.isTraditional(t("zh-Hans-HK"))).isFalse()
+    }
 }

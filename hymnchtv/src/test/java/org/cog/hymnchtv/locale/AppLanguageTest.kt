@@ -53,4 +53,10 @@ class AppLanguageTest {
         assertThat(AppLanguage.SYSTEM.toLocale()).isNull()
         assertThat(AppLanguage.ZH_HANT.toLocale()).isEqualTo(Locale.forLanguageTag("zh-Hant-TW"))
     }
+
+    @Test
+    fun fromFrameworkTagsIgnoresBlankTags() {
+        assertThat(AppLanguage.fromFrameworkTags(listOf(""))).isEqualTo(AppLanguage.SYSTEM)
+        assertThat(AppLanguage.fromFrameworkTags(listOf("", " "))).isEqualTo(AppLanguage.SYSTEM)
+    }
 }

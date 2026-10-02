@@ -51,4 +51,15 @@ class SearchPatternTest {
         assertThat(finds("𠀀他", "𠀀祂")).isTrue()
         assertThat(finds("🙏", "a🙏b")).isTrue()
     }
+
+    @Test
+    fun consecutiveHeMatchesAnyCombination() {
+        assertThat(finds("他他", "祂他")).isTrue()
+        assertThat(finds("他他", "他祂")).isTrue()
+    }
+
+    @Test
+    fun nullQueryReturnsNull() {
+        assertThat(SearchPattern.build(null)).isNull()
+    }
 }

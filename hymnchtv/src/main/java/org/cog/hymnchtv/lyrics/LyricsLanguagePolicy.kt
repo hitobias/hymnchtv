@@ -21,10 +21,10 @@ object LyricsLanguagePolicy {
 
     /** True only for values written by this version ("S2TW"/"S2HK"). */
     @JvmStatic
-    fun isCanonical(value: String?): Boolean = HantVariant.values().any { it.prefValue == value }
+    fun isCanonical(value: String?): Boolean = HantVariant.entries.any { it.prefValue == value }
 
     /** Never throws; a missing or invalid value follows the UI region. */
     @JvmStatic
     fun parseVariant(value: String?, uiLocale: Locale): HantVariant =
-        HantVariant.values().firstOrNull { it.prefValue == value } ?: defaultVariant(uiLocale)
+        HantVariant.entries.firstOrNull { it.prefValue == value } ?: defaultVariant(uiLocale)
 }

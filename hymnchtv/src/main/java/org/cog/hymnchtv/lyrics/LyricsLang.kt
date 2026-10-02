@@ -7,6 +7,6 @@ enum class LyricsLang {
     companion object {
         /** Never throws; unknown values mean FOLLOW_UI. */
         @JvmStatic
-        fun fromPref(value: String?): LyricsLang = values().firstOrNull { it.name == value } ?: FOLLOW_UI
+        fun fromPref(value: String?): LyricsLang = entries.firstOrNull { it.name == value } ?: FOLLOW_UI
     }
 }

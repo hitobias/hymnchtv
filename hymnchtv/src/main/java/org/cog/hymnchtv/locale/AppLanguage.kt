@@ -20,13 +20,13 @@ enum class AppLanguage(val tag: String?) {
         @JvmStatic
         fun fromPref(value: String?): AppLanguage? {
             if (value.isNullOrBlank()) return null
-            return values().firstOrNull { it.prefValue == value }
+            return entries.firstOrNull { it.prefValue == value }
         }
 
         /** Maps the framework per-app locale list (API 33+); unsupported languages display as English. */
         @JvmStatic
         fun fromFrameworkTags(tags: List<String>): AppLanguage {
-            val first = tags.firstOrNull() ?: return SYSTEM
+            val first = tags.firstOrNull { it.isNotBlank() } ?: return SYSTEM
             val locale = Locale.forLanguageTag(first)
             return when {
                 LocaleRules.isTraditional(locale) -> ZH_HANT
