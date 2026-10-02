@@ -209,7 +209,7 @@ object LyricsLanguagePolicy {
 - **App 端**：
   - 純函式 `LyricsAssets.hantPath(simplifiedPath, variant)`，例如把 `lyrics_db_text/db1.txt` 對應到 `lyrics_db_text_hant_tw/db1.txt`。
   - `ContentView.showLyricsChText` 讀取簡體檔和對應 variant 的繁體檔，兩份都讀。每首只有幾 KB，這樣切換簡繁時不必重新讀檔。不再呼叫 `ChineseConverter`。
-  - 如果繁體檔不存在（理論上會被測試擋下），就退回用 OpenCC 即時轉換，並記錄 `Timber.w`，不能當機。
+  - 如果繁體檔不存在（理論上會被測試擋下），就退回顯示簡體，並記錄 `Timber.w`，不能當機（已移除 OpenCC，不再即時轉換）。
 - **不在 A 的範圍**：
   - 目錄（TOC）標題的繁體版：檔案可以用同一個工具產生，但 `HymnToc` 還用到筆畫索引（簡體和繁體的筆畫數不同），需要另外設計，延到 A-opt-2。
   - 搜尋結果的摘要：仍然是簡體。
@@ -371,7 +371,7 @@ object LyricsLanguagePolicy {
 
 | # | 熱點 | 位置 | 初步修法 |
 |---|---|---|---|
-| B-1 | 每次呼叫 OpenCC `convert()` 都重建 config 並載入字典，而且是在主執行緒上對每一頁執行，連簡體模式也照樣轉換；第一次呼叫時還會在主執行緒複製 1.1 MB 的 assets | `chineseconverter.cpp:57`、`ContentView.java:462`、`ChineseConverter.java:24-27` | **大部分已由 A.1.9 解決**：歌詞改讀預先產生的檔案，翻頁不再呼叫 OpenCC。剩下的只有搜尋時一次的 T2S 轉換，以及第一次使用時的 assets 複製，因此優先順序降為低 |
+| B-1 | ~~每次呼叫 OpenCC `convert()` 都重建 config 並載入字典，而且是在主執行緒上對每一頁執行~~（已由 A.1.9 移除） | ~~`chineseconverter.cpp:57`、`ContentView.java:462`、`ChineseConverter.java:24-27`~~ | **已由 A.1.9 完全移除**：OpenCC JNI 與 `ChineseConverter` 已刪除，歌詞改讀預先產生的檔案；搜尋改用預產生的 `T2sMap`。本項關閉 |
 | B-2 | 每個歌詞頁都會 inflate 一個 WebView | `content_lyrics.xml:91` | 延遲到需要時才建立 WebView（需要先重構，見 B.3） |
 | B-3 | `Application.onCreate` 預建 WebView | `HymnsApp.java:109` | 這是為了處理 locale 的問題，**不能直接刪除**；只考慮延後到 IdleHandler 執行，而且必須通過語系回歸測試 |
 | B-4 | 每次翻頁都在主執行緒查 SQLite、掃目錄、呼叫 `getIdentifier` | `ContentHandler.java:613, 1090-1175, 1250` | 改成非同步（需要先設計，見 B.3） |
@@ -420,12 +420,8 @@ object LyricsLanguagePolicy {
    - 定義載入中與失敗時的 UI。
    - 頁面銷毀時取消請求。
    - `getHymnMediaState` 改成「先回傳預設狀態，完成後再更新」，並定義快取在下載、刪除、匯入、外部儲存變動時如何失效。
-3. **JNI 快取**：
-   - 每個 config 對應一個 converter。除非能從 OpenCC 原始碼確認 `Converter::Convert` 是 thread-safe，否則每個 converter 都要有自己的 mutex。
-   - 處理 `NewFromFile()` 失敗和 native 例外：回傳原文並記錄 log，不能讓 app 當機。
-   - 字典版本改變時，快取要失效。
-   - 測試改成驗證「並發時結果正確」和「失敗路徑」；效能用明確的 benchmark 門檻驗收，不寫「第二次比較快」這種不穩定的測試。
-4. **OpenCC assets 初始化**：先寫到暫存目錄，完整複製後再原子性地 rename；整個初始化只用一把鎖；初始化完成前，轉換請求要等待，或暫時顯示簡體。
+3. **JNI 快取**：~~已作廢~~（A.1.9 已移除 OpenCC JNI，runtime 不再即時轉換。繁簡歌詞用預先產生的 lyrics asset；搜尋用預產生的 `T2sMap` 資料，都不是 OpenCC。）
+4. **OpenCC assets 初始化**：~~已作廢~~（同上，OpenCC 已移除。）
 5. **WebView 延遲建立**（B-2）：先把 `ContentView` 裡所有存取 `lyricsEnglish` 的地方（字級、visibility、載入、長按、callback）改成可以處理 null 的寫法，再改用 ViewStub；同時對英文歌詞做回歸測試，包括自動載入的情況。
 6. **桌布**（B-5）：先用 `dumpsys meminfo` 和 bitmap 尺寸實際量測。背景容器要另外定義，因為 Glide 只能載入到 `ImageView`，而桌布目前是用 `setBackgroundResource` 設在一般 view 上。冷啟動時的 window background 要保留，避免出現白屏。
 7. **RGB_565、R8、baseline profile**：
@@ -584,8 +580,7 @@ Codex 的 P1 指出，C 目前**還不是可執行的計畫**。開工前必須�
    - 對策：所有讀取 pref 的地方都要能處理非法值、絕不丟例外，並寫測試覆蓋。
 3. **B 的非同步改動**：可能把結果寫到錯誤的頁面，或寫回已經銷毀的 view。
    - 對策：B.3 開工前必須先補完設計。
-4. **OpenCC JNI 的並發與初始化**：多執行緒可能同時轉換或同時初始化字典，造成結果錯誤或讀到不完整的字典。
-   - 對策：見 B.3 的第 3、4 項。
+4. **OpenCC JNI 的並發與初始化**：~~已排除~~（A.1.9 已移除 OpenCC JNI，本風險不再存在。）
 5. **沒有測試保護網**：重構 `MainActivity` 和 `ContentHandler` 時容易改壞既有功能。
    - 對策：C 開工前先寫 smoke test。
 
