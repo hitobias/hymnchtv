@@ -180,3 +180,13 @@ tasks.withType(JavaCompile).configureEach {
 tasks.named("build") {
     dependsOn "updateVersionFile"
 }
+
+// LyricsHantAssetsTest reads these files directly; declare them so Gradle re-runs unit tests when they change.
+tasks.withType(Test).configureEach {
+    inputs.files(fileTree('src/main/assets') { include 'lyrics_*_text*/**', 'lyrics_hant_manifest.txt' })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName('lyricsAssets')
+    inputs.files(rootProject.file('tools/gen_lyrics_hant.py'), rootProject.file('tools/lyrics_hant_overrides.tsv'))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName('lyricsGeneratorInputs')
+}
