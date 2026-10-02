@@ -36,12 +36,12 @@ import org.cog.hymnchtv.logutils.LogUploadServiceImpl;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
 import org.cog.hymnchtv.utils.ThemeHelper;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 import de.cketti.library.changelog.ChangeLog;
-import org.apache.commons.io.IOUtils;
 import timber.log.Timber;
 
 /**
@@ -178,7 +178,14 @@ public class About extends BaseActivity implements View.OnClickListener, View.On
     private void showFontLicense() {
         String licence;
         try (InputStream in = getAssets().open("licenses/OFL-HymnalKai.txt")) {
-            licence = new String(IOUtils.toByteArray(in), StandardCharsets.UTF_8);
+            // not IOUtils.toByteArray: commons-io 2.x touches java.nio.file, which API 24 does not have
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            licence = out.toString(StandardCharsets.UTF_8.name());
         }
         catch (IOException e) {
             Timber.e(e, "Font licence asset missing");
