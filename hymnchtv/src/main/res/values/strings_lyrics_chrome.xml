@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lyrics page chrome (visual redesign B): top bar, short button labels, Aa panel, toolbar hint -->
+    <string name="c_lyrics_aa">Aa</string>
+    <string name="c_btn_script">Simp-Trad</string>
+    <string name="c_btn_cn_en">CN/EN</string>
+    <string name="c_btn_mode_both">Both</string>
+    <string name="c_btn_mode_lyrics">Text</string>
+    <string name="c_btn_mode_score">Score</string>
+    <string name="c_cd_script">Switch between Simplified and Traditional lyrics</string>
+    <string name="c_cd_cn_en">Switch between Chinese and English lyrics</string>
+    <string name="c_cd_mode">Display mode: %1$s. Tap to change</string>
+    <string name="c_cd_score_only_na">Not available in score-only mode</string>
+    <string name="c_chrome_hint">Tap the middle of the screen to show the toolbar</string>
+    <string name="c_aa_title">Reading style</string>
+    <string name="c_aa_theme">Theme</string>
+    <string name="c_aa_more">More…</string>
+    <string name="c_aa_size">Text size</string>
+    <string name="c_aa_font">Typeface</string>
+    <string name="c_aa_mode">Display</string>
+    <string name="c_aa_settings">Reading settings ›</string>
+    <string name="c_aa_theme_selected">%1$s, selected</string>
+</resources>

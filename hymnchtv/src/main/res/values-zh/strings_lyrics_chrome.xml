@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lyrics page chrome (visual redesign B): top bar, short button labels, Aa panel, toolbar hint -->
+    <string name="c_lyrics_aa">Aa</string>
+    <string name="c_btn_script">简-繁</string>
+    <string name="c_btn_cn_en">中英</string>
+    <string name="c_btn_mode_both">谱词</string>
+    <string name="c_btn_mode_lyrics">词</string>
+    <string name="c_btn_mode_score">谱</string>
+    <string name="c_cd_script">切换简体与繁体歌词</string>
+    <string name="c_cd_cn_en">切换中文与英文歌词</string>
+    <string name="c_cd_mode">显示模式：%1$s，点一下切换</string>
+    <string name="c_cd_score_only_na">只有谱模式不适用</string>
+    <string name="c_chrome_hint">点一下画面中央可显示工具栏</string>
+    <string name="c_aa_title">阅读样式</string>
+    <string name="c_aa_theme">主题</string>
+    <string name="c_aa_more">更多…</string>
+    <string name="c_aa_size">字号</string>
+    <string name="c_aa_font">字体</string>
+    <string name="c_aa_mode">显示</string>
+    <string name="c_aa_settings">阅读设置 ›</string>
+    <string name="c_aa_theme_selected">%1$s，已选</string>
+</resources>
