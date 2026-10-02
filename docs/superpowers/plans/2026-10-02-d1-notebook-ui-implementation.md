@@ -270,7 +270,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 |---|---|
 | 狀態 | C 已合併（6f73d776，1.0.0）→ 本計畫階段 4 **一律 C 模式**（G4 的「pre-C／等待」分支作廢）。D-1a 資料層在 master（`notebook.model`／`data`／`repo`／`record`）。**D-1 UI 排在 1.1.0 之後**；H5 與 D-1 UI 的先後待定。 |
 | C-1 | `MyHymnsFragment` 仍是空槽位，`MainHost` 的「我的詩歌」分頁由 `UiFlags.NOTEBOOK_UI_ENABLED` 控制顯示（1.0／1.1.0 皆 `false`）；I2 Step 1 不變，Step 4（新）打開旗標。 |
-| C-6 | **調整**：首頁的 `btn_next`（輸入號 +1）已由 H3 **移除**（`HomeEntry.next` 與測試一併刪）；「下一首」只剩**歌詞頁** `@id/btn_next`（`ContentView` → `ContentHandler.scrollNextHymn()`）。D-1 的 `nextInPlaylistOrNextHymn()`（I1 Step 4a）**維持不變**。H5（1.1 之後）才加「下一首槽位」與 `PlaybackSession`；屆時優先序改為 **槽位 ＞ 歌單 ＞ 同本下一首**，D-1 的方法加一個前置判斷即可。 |
+| C-6 | **調整**：首頁的 `btn_next`（輸入號 +1）已由 H3 **移除**（`HomeEntry.next` 與測試一併刪）；「下一首」只剩**歌詞頁** `@id/btn_next`（`ContentView` → `ContentHandler.scrollNextHymn()`）。D-1 的 `nextInPlaylistOrNextHymn()`（I1 Step 4a）**維持不變**。H5（1.1 之後）才加「下一首槽位」與 `PlaybackSession`；優先序為 **槽位 ＞ 歌單 ＞ 同本下一首**。**H5 與 D-1 UI 的先後待定，兩種順序都可執行**：D-1 先 → 現在的 `nextInPlaylistOrNextHymn()` 維持不變，H5 實作時把槽位判斷加在它之前；H5 先 → D-1 實作 `nextInPlaylistOrNextHymn()` 時要先問槽位（呼叫 H5 的槽位 API），再問歌單，最後 `scrollNextHymn()`。 |
 | C-7 | **調整**：`@id/btn_add_playlist` 現在在 `res/layout/hymn_picker.xml`（首頁的可重用 HymnPicker），可見度由 `PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)` 決定；click 由 `HymnPickerController`（`ui/picker/`）設定，**不再是 `HomeFragment.kt`**（`HomeFragment` 縮成薄殼）。「＋歌單」在輸入框有有效號碼時，用 `PickerReducer.target(preview)`（`HymnRef`）取得 `(book, storedNo)`，轉成 `HymnKey.ofOrNull(ref.book, ref.storedNo)`（兩者對附號的編號一致：大本附＝780+n，青年附＝275+n 且 `isFu=false`）；沒有有效號碼時仍用 `AddToPlaylistDialogFragment.show(..., null)`。 |
 | 新 C-12 | **歷史／唱詩紀錄**：H3 的「更多›」開全螢幕 `ui/home/HistoryFragment`（host back stack 疊加），1.1.0 只有「最近開過」。D-1 在 I2 新增 Step 2b：把它改成兩個分頁——「最近開過」（原內容）＋「唱詩紀錄」（`SingLogFragment` 的清單或其簡版）。 |
 | 新 C-13 | **`UiFlags` 打開時機**：D-1 UI 完成時（I2 Step 4），同一個 commit 打開 `NOTEBOOK_UI_ENABLED = true`，並一併驗證：我的詩歌分頁出現且接 `NotebookHomeFragment`、`btn_add_playlist` 出現且可加入歌單、`HistoryFragment` 有唱詩紀錄分頁、歌詞頁 `notebookBar` 顯示、歌詞頁 `btn_next` 走歌單。 |
@@ -8148,7 +8148,7 @@ C 定稿見 `docs/superpowers/plans/2026-10-02-c-modern-ui-implementation.md`（
 
   `ContentView` 的 `btn_next` click 呼叫 `mContentHandler.nextInPlaylistOrNextHymn()`（取代 C 預設的直接 `scrollNextHymn()`）。`showHymn(HymnKey)`（NotebookBarHost 實作）負責同本 `setCurrentItem`／不同本 relaunch（U8）。
 
-  - （rev 5 註：C 1.1 的 H5〔1.1 之後〕會把 `btn_next` 改成「槽位 ＞ 歌單 ＞ 同本」並讓 `ContentView` 呼叫 `ContentHandler.onNextPressed()`；**D-1 現在只改 `nextInPlaylistOrNextHymn()` 這一個方法，H5 時再在它前面加槽位判斷**。首頁的 `btn_next` 已移除，與本接點無關。）
+  - （rev 5 註：C 1.1 的 H5〔1.1 之後〕會把 `btn_next` 改成「槽位 ＞ 歌單 ＞ 同本」並讓 `ContentView` 呼叫 `ContentHandler.onNextPressed()`；**D-1 現在只改 `nextInPlaylistOrNextHymn()` 這一個方法；H5 若在 D-1 之後實作，就在它前面加槽位判斷；H5 若先於 D-1，D-1 實作此方法時先問槽位**。首頁的 `btn_next` 已移除，與本接點無關。）
   - C 模式：改 C 的 `ContentView.java` + `content_lyrics.xml`（`btn_next` click）。
   - pre-C 模式：D-1 在 `content_lyrics.xml` 加 `@id/btn_next`，同上。
 

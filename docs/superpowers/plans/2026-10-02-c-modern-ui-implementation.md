@@ -65,7 +65,7 @@
 
 **7. Commit 格式。** `<type>: <description>`（feat/fix/refactor/docs/test/chore/perf/ci），**不加 scope**；結尾加 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`。
 
-**8. C 不 import `notebook.*` 的通則在 1.1 的修訂。** D-1a 資料層已在 master。H 系列主程式碼**允許** `import org.cog.hymnchtv.notebook.model.HymnNumbering`／`HymnTypes`（純 Kotlin 常數與驗證，已有 `HymnTypesConsistencyTest`／`HymnNumberingConsistencyTest` 與 `HymnNoValidate` 對照），**仍禁止** import `notebook.data`／`notebook.repo`／`notebook.ui`／`notebook.record`。
+**8. C 不 import `notebook.*` 的通則在 1.1 的修訂。** D-1a 的 `notebook.model`／`data`／`repo`／`record`（純 Kotlin 部分）**已在 master**；D-1a 的其餘工作（備份等，PR #11）同屬 1.1.0，但**與 H 系列互不依賴**（H 只用 master 已有的 `notebook.model`）。H 系列主程式碼**允許** `import org.cog.hymnchtv.notebook.model.HymnNumbering`／`HymnTypes`（純 Kotlin 常數與驗證，已有 `HymnTypesConsistencyTest`／`HymnNumberingConsistencyTest` 與 `HymnNoValidate` 對照），**仍禁止** import `notebook.data`／`notebook.repo`／`notebook.ui`／`notebook.record`。
 
 ---
 
@@ -83,7 +83,7 @@
 | 4 | 0 | F1（**已完成**，併入 1.0.0） | （歷史列：`menu_content.xml` 已刪、`HymnToc` 已自 manifest 移除，細節見 F2） | G3 |
 | 5 | H | **H3 → H4**（同一分支、同一 PR；H3 Step 1–7 與 H4 Step 1–2 不碰 G-DB 的衝突檔〔新增純檔案＋`HistoryRecord.java`／`strings*.xml`／`AssetHymnTitles.kt` 的不重疊小修改〕，可在 G-DB 前先做） | `hymn/`（新，純 Kotlin）、`ui/picker/`（新）、`ui/home/`、`ui/search/`（新）、`search/`（新核心）、`ui/host/MainHost.kt`＋`MainNavigator.kt`、`ui/toc/TocFragment.kt`、`hymnhistory/HistoryRecord.java`、`res/layout/hymn_picker.xml`＋`layout-land/`、`fragment_home.xml`、`activity_main_host.xml`、`fragment_history.xml`、`fragment_search.xml`、`strings_c.xml`×3、`MainActivity.java`（CRLF，只加導覽委派）、`AndroidManifest.xml`（CRLF，H4 移除 `ContentSearch`）、`ContentSearch.java`（刪）、對應測試 | **G-DB**（Step 9 起）與 G3 |
 | 6 | 0 | **F2**（spec 對帳＋已決定事項） | `MediaConfig.java`、`ContentHandler.java`（CRLF，只刪死碼）、`HymnNoCh2EngXRef.java`（CRLF，只換 import）、`HymnToc.java`（刪外殼）、`ui/toc/TocConstants.kt`（新）、`res/layout/media_config.xml`＋`layout-land/`（CRLF）、`media_player_audio_ui.xml`、`content_lyrics.xml`（CRLF）、`ui/theme/`、`androidTest/` | **G4** |
-| — | — | **1.1.0 發版**：G-DB ＋ D-1a 資料層（PR #11）＋ G4 ＋ G5 全數合併後，產 1.1.0 APK 並全面檢查 | — | G5 |
+| — | — | **1.1.0 發版**：G-DB ＋ D-1a 其餘部分（PR #11，與 H 系列互不依賴）＋ G4 ＋ G5 全數合併後，產 1.1.0 APK 並全面檢查 | — | G5 |
 | 7（**1.1 之後**） | H5 | **H5a → H5b → H5c → H5d → H5e → H5f → H5g → H5h**（歌詞頁跳轉與回到上一首；設計已定案，實作排在 D-1 UI 之後或之前待定，H5 要整合 D-1 歌單時再排） | `ContentHandler.java`（CRLF）、`MediaContentHandler.java`（CRLF）、`MyPagerAdapter.java`（CRLF）、`mediaplayer/AudioBgService.java`（CRLF）、`MediaGuiController.java`、`MediaDownloadHandler.java`、`ContentView.java`、`content_lyrics.xml`／`content_main.xml`（CRLF）、`media_player_audio_ui.xml`、`nav/`（新，純 Kotlin）、`ui/lyrics/jump/`（新）、對應測試 | **G5**（1.1.0 已發）、**G-DB** 已合併 |
 
 **合併關卡：**
@@ -1312,7 +1312,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
     - **按鍵**：`autoClear`（每次 `onResume` 設為 true）為真時，下一個按鍵先把 `digits=""`、`isFu=false` 再處理；來源變更不受 `autoClear` 影響。`bs_yb` 的長按替代（`HYMN_YB_ALT`，104→272 等）**移除**：青年附改由「附」鍵進入（spec §2）。
     - **開啟**：`PickerReducer.target(preview)` 得 `HymnRef`；`MainActivity.setHymnTypeNo(ref.book, ref.storedNo)`；英文來源 `MainActivity.showContent(ctx, ref.book, ref.storedNo, false, englishNo)`，其餘 `showContent(ctx, ref.book, ref.storedNo, false)`。**不再有 `HYMN_BB_DUMMY` 開啟**（無對照時開啟鍵停用）。開啟後 `vm.autoClear = true`。
     - **記住來源**：`selectSource` 時 `prefs.edit().putString(HomePrefs.LAST_HYMN_TYPE, source.prefValue).apply()`（含 `"english"`）；`HomePrefs.LAST_HYMN_TYPE` 的 KDoc 補上新值；`onCreate` 以 `restoreSource` 恢復。**未開啟的號碼與附狀態不跨行程恢復**（只存 ViewModel，旋轉保留）。
-    - `PickerHost`：`interface PickerHost { fun openToc(book: String, page: String); fun openSearch(book: String?); fun openHistory(); fun onOpenRef(ref: HymnRef, englishNo: Int?) }`；Home 的實作委派 `MainNavigator`（Step 10）。
+    - `PickerHost`：`interface PickerHost { fun onOpenRef(ref: HymnRef, englishNo: Int?); fun openSearch(book: String?); fun onSetNext(ref: HymnRef) {}; fun openToc(book: String, page: String) {}; fun openHistory() {}; fun onAddToPlaylist(ref: HymnRef?) {} }`——**只有 `onOpenRef`、`openSearch` 是必實作**；`onSetNext`（`btn_set_next` 的 callback，只在 JUMP 模式出現）、`openToc`、`openHistory`、`onAddToPlaylist`（D-1 加）是 HOME 或 JUMP 專屬，預設空實作（`PickerChrome` 已讓對應按鈕在另一個模式 `GONE`，不會被點到）。`HymnPickerController` 的 `btn_open` → `host.onOpenRef`、`btn_set_next` → `host.onSetNext`（目標＝`PickerReducer.target(preview)`）、`tv_search` → `host.openSearch`。`HomeFragment` 實作 `onOpenRef`（`setHymnTypeNo`＋`showContent`）、`openSearch`／`openToc`／`openHistory`（委派 `MainNavigator`，Step 10）。
   - `HomeFragment`：保留類別名（`MainHost`、測試、D-1 計畫都引用）；內容縮成：`onViewCreated` 建 `HymnPickerViews`＋`HomeAppearance`＋`HymnPickerController(mode=HOME)`；`onResume` 呼叫 `appearance.apply(prefs)` 與 `controller.onResume()`（`autoClear=true`、重載最近）；`onHiddenChanged` 重套外觀；**刪除** `onBackPressed()`（歷史清單已不在首頁）與 `EnglishCrossRef`、`showHymnFromEnglish`、`toggleHistory` 等；`MainHost.onBackPressed()` 對應移除對 `HomeFragment.onBackPressed()` 的呼叫。
   - `HomeAppearance`：欄位改吃 `HymnPickerViews`；`views.hint` 相關程式移除，原本給 `hint` 的 `backdrop` 改給 `previewArea`；字級：數字鍵 `HomePrefs.textSize`、其餘鍵 `size - SMALL_KEY_DELTA`；`coloredButtons` ＝ 數字鍵＋附＋刪除＋七個來源鈕＋`btn_toc`＋`btn_open`；`tv_search` 的背板與提示色沿用現有 `search` 處理。
   - 歷史讀寫都在 `AppExecutors.io`（見通則）；`openFromHistory(record)`：`HymnRef(record.hymnType, record.hymnNo)` → 設 `state`（`source=HymnSource.ofBook`、`digits=ref.displayNo`、`isFu=ref.isFu`）→ `onOpenRef`。**青年附與大本附都正確重開**（原本只處理大本）。
@@ -1365,15 +1365,16 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
     adb shell wm size $size; adb shell wm density 160
     for scale in 1.0 1.3; do
       adb shell settings put system font_scale $scale
-      for night in no yes; do adb shell cmd uiautomator night $night; shot "$size-font$scale-night_$night"; done
+      for night in no yes; do adb shell cmd uimode night $night; shot "$size-font$scale-night_$night"; done
     done
   done
-  adb shell cmd uiautomator night no; adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation 1
+  adb shell cmd uimode night no; adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation 1
   shot land-360x720; adb shell settings put system user_rotation 0
   adb shell wm size reset; adb shell wm density reset; adb shell settings put system font_scale 1.0
   ./gradlew :hymnchtv:connectedDebugAndroidTest --console=plain          # api34b，再以 5582（api24b）各跑一次
   ./gradlew -PstrictDbThread :hymnchtv:installDebug --console=plain       # G-DB 之後；手動走完整條首頁流程
   ```
+  （`cmd uimode night yes|no` 在 API 29+ 可用；`api24b` 沒有此指令，深色截圖只在 `api34b` 做，`api24b` 以 instrumented 測試覆蓋。腳本結束務必還原 `night no`、`wm size/density reset`、`font_scale 1.0`、`user_rotation 0`。）
   驗收標準：360×720 字級 1.0 直向無捲動即可看到 `btn_open`；320×640 與字級 1.3 可捲動、觸控目標不小於 48dp、文字不重疊；淺／深色文字對比 ≥ 4.5:1；橫向雙欄；TalkBack（`api34b` 開啟）讀得出預覽、來源 checked 狀態與停用原因。截圖貼進 PR 描述。
 
 - [ ] **Step 15：Commit（可分 2 個）**
@@ -1585,7 +1586,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 4：320dp 小螢幕截字改善**
 
-  - 先建稽核工具：`androidTest/.../ui/EllipsisAudit.kt`——遍歷 view 樹，找出 `TextView` 的 `layout` 有 `getEllipsisCount(line) > 0`，或 `lineCount == maxLines` 且 `layout.getLineEnd(last) < text.length` 者，回傳（畫面、view id、文字）清單。`TruncationAuditTest` 對 **MediaConfig**、**歌詞頁（播放列展開）**、首頁、搜尋頁、目錄頁、設定頁跑稽核，**`assertThat(findings).isEmpty()`**；測試本身與尺寸無關，由協調者在 `wm size 320x640`／字級 1.0 與 1.3 下執行（H3 Step 14 的腳本）。
+  - 先建稽核工具：`androidTest/.../ui/EllipsisAudit.kt`——遍歷 view 樹，找出 `TextView` 的 `layout` 有 `getEllipsisCount(line) > 0`，或 `lineCount == maxLines` 且 `layout.getLineEnd(last) < text.length` 者，回傳（畫面、view id、文字）清單。`TruncationAuditTest` 只稽核**指定畫面的必要元件**（MediaConfig 的所有 `Button`、歌詞頁頂列與播放列的按鈕與單選鈕、首頁來源鈕／`btn_open`／`btn_toc`／`tv_entry`、搜尋頁的 `tv_search_status`、目錄頁的書別 chip 與頁籤），並只看**可見**（`isShown`）的 view；**刻意省略的控制項**（單行 `ellipsize=end` 的詩名／snippet／chip，其完整文字已放進 `contentDescription`）在 view 的 `tag` 設 `"allow_ellipsis"` 並於測試內註明理由，稽核時略過。**`assertThat(findings).isEmpty()`**；測試本身與尺寸無關，由協調者在 `wm size 320x640`／字級 1.0 與 1.3 下執行（H3 Step 14 的腳本）。
   - 已知問題與做法：①**`MediaConfig` 按鈕**（`media_config.xml`＋`layout-land/media_config.xml`，CRLF；`button_NQ`／`button_import`／`button_export`／`button_db_records` 等同列按鈕）：改 `maxLines=2`＋`autoSizeTextType=uniform`（`autoSizeMinTextSize=10sp`）或拆成兩列，**不縮到觸控目標 < 48dp**；②**歌詞頁下方按鈕**（`media_player_audio_ui.xml`〔LF〕的 `btn_media/jiaochang/changshi/banzhou` 單選列與 `btn_hymnSearch`）：同法；③**頂列 Media**（`content_lyrics.xml`〔CRLF〕的 `btn_lyrics_media`，英文 "Media"、`c_lyrics_media`）：頂列在 320dp 下 `HorizontalScrollView` 會把它擠出，調整 `btn_next` 的 `maxWidth` 並縮小頂列按鈕內距讓出寬度（英文字串 `Media` 不改），或把 `btn_lyrics_media` 移到溢出選單 `menu_lyrics_more`（若移動，**要在 G5 前確認 spec §4 功能對應表仍有「看得見的入口」**——產品確認項）。
   - 驗收：`TruncationAuditTest` 在 320×640 字級 1.0／1.3 皆空；截圖貼 PR。
 
@@ -1653,7 +1654,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 2：特徵化測試（在**舊程式碼**上先建立基準，TDD 的 red-before-refactor）**
 
-  `androidTest/.../playback/PlaybackLinkCharacterizationTest.kt`：對固定樣本（每本的首／中／末號、大本附 781、青年 276/277、數個有 `ybXTable` 對照的青年號、跨 category 邊界號，約 24 筆）逐筆 `ActivityScenario.launch(ContentHandler, intent(type,no))`，`onActivity` 取 `getHymnInfo()` 與 `getHymnUri()`，輸出 `book\tstoredNo\tinfo\turi` 到 logcat 與 `files/` 目錄；協調者在 `api34b` 跑一次並 `adb pull` 成 **`hymnchtv/src/androidTest/assets/playback_fixtures/media_links.tsv`**（Commit 它）。之後同一個測試改為「讀 fixture 逐行斷言」（重構後必須仍相等）。
+  `androidTest/.../playback/PlaybackLinkCharacterizationTest.kt`：對固定樣本（每本的首／中／末號、大本附 781、青年 276/277、數個有 `ybXTable` 對照的青年號、跨 category 邊界號，約 24 筆）逐筆 `ActivityScenario.launch(ContentHandler, intent(type,no)).use { scenario -> … }`（**必須 `use`／`close()`**，否則 24 筆樣本會累積 Activity、服務與播放器，污染 fixture 並讓 API 24 不穩；取值前 `InstrumentationRegistry.getInstrumentation().waitForIdleSync()` 並確認 pager 已建立目前頁），`onActivity` 取 `getHymnInfo()` 與 `getHymnUri()`，輸出 `book\tstoredNo\tinfo\turi` 到 logcat 與 `files/` 目錄；協調者在 `api34b` 跑一次並 `adb pull` 成 **`hymnchtv/src/androidTest/assets/playback_fixtures/media_links.tsv`**（Commit 它）。之後同一個測試改為「讀 fixture 逐行斷言」（重構後必須仍相等）。
 
 - [ ] **Step 3：純函式（TDD；`nav/`，JVM）**
 
@@ -1791,7 +1792,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 5：`ReadingPosition` 擷取與還原**
 
-  `content_lyrics.xml`（CRLF，只加一個屬性）：歌詞外層 `ScrollView` 加 `android:id="@+id/lyrics_scroll"`。`ContentView`（LF）：`ReadingPosition captureReadingPosition()`（`currentDisplayMode().name`、`lyrics_scroll.getScrollY()`、`lyricsEnglish` 可見時 `lyricsEnglish.getScrollY()` 否則 null）；`void restoreReadingPosition(ReadingPosition p)`：先 `ContentHandler.displayModeOverride`（若 `p.displayMode` 與目前有效模式不同才設，並 `applyDisplayMode`），再 `lyrics_scroll.doOnLayout { scrollTo(0, p.outerScrollY) }`（`androidx.core.view.doOnLayout`；英文模式另 `lyricsEnglish.post { scrollTo(0, p.webViewScrollY) }`）。`ContentHandler.navigateTo` 後若有待還原位置：目標頁 Fragment 尚未建立時存 `mPendingPosition`，`ContentView.onResume()` 在「自己是目前頁」時向 `ContentHandler.takePendingPosition()` 取走並還原。
+  `content_lyrics.xml`（CRLF，只加一個屬性）：歌詞外層 `ScrollView` 加 `android:id="@+id/lyrics_scroll"`。`ContentView`（LF）：`ReadingPosition captureReadingPosition()`（`currentDisplayMode().name`、`lyrics_scroll.getScrollY()`、`lyricsEnglish` 可見時 `lyricsEnglish.getScrollY()` 否則 null）；`void restoreReadingPosition(ReadingPosition p)`：先 `ContentHandler.displayModeOverride`（若 `p.displayMode` 與目前有效模式不同才設，並 `applyDisplayMode`），再 `lyrics_scroll.post(() -> lyrics_scroll.scrollTo(0, p.getOuterScrollY()))`（`ContentView` 是 Java，**不能用 Kotlin 的 `doOnLayout` 擴充函式**；若 `!ViewCompat.isLaidOut(lyrics_scroll)`，改掛一次性 `ViewTreeObserver.OnGlobalLayoutListener`，觸發後立刻 `removeOnGlobalLayoutListener`；英文模式另 `lyricsEnglish.post(() -> lyricsEnglish.scrollTo(0, y))`）。`ContentHandler.navigateTo` 後若有待還原位置：目標頁 Fragment 尚未建立時存 `mPendingPosition`，`ContentView.onResume()` 在「自己是目前頁」時向 `ContentHandler.takePendingPosition()` 取走並還原。
 
 - [ ] **Step 6：測試 `NavigateToTest`**
 
@@ -1855,7 +1856,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
   ```
   `onEndOrError`：`if (mAutoStream && advancePlayback())` → 釋放影片 UI（沿用現有 `isMediaPlayerUi` 區塊）→ `postDelayed(this::startPlay, 100)`；`startPlay()` 因 session 已換、`mediaHymns` 為空，會以**新 session 的 ref** 取媒體。失敗與手動停仍 `setAutoStream(false)`。**自動連播的下一首＝session.ref 的下一首（不是正在看的那首的下一首）；有槽位優先播槽位並清空。**
 
-- [ ] **Step 4：槽位與「下一首」鈕**：`setNextSlot(HymnRef)`／`clearNextSlot()`；`nextLabel()`＝槽位存在時 `c_jump_next_label`（「下一首：新詩12」），否則 `c_next_hymn`；`ContentView` 在 `onResume` 與 `refreshNavBars()` 時更新 `btn_next` 文字與 `contentDescription`（頂列空間有限：`maxWidth=140dp`、`maxLines=1`、`ellipsize=end`，完整文字放 `contentDescription`）。`ContentHandler.onNextPressed()`（`ContentView` 的 `btn_next` click 改呼叫它）：有槽位 → 清槽位、`navigateTo(slot)`（**不推返回堆疊**）、`if (nav.session != null && 播放中) switchPlayback(slot)`；沒有槽位 → 既有 `scrollNextHymn()`（H5 之前的行為不變；D-1 的 `nextInPlaylistOrNextHymn()` 在此之前加歌單判斷，優先序「槽位 ＞ 歌單 ＞ 同本」）。
+- [ ] **Step 4：槽位與「下一首」鈕**：`setNextSlot(HymnRef)`／`clearNextSlot()`；`nextLabel()`＝槽位存在時 `c_jump_next_label`（「下一首：新詩12」），否則 `c_next_hymn`；`ContentView` 在 `onResume` 與 `refreshNavBars()` 時更新 `btn_next` 文字與 `contentDescription`（頂列空間有限：`maxWidth=140dp`、`maxLines=1`、`ellipsize=end`，完整文字放 `contentDescription`）。`ContentHandler.onNextPressed()`（`ContentView` 的 `btn_next` click 改呼叫它）：有槽位 → 清槽位、`navigateTo(slot)`（**不推返回堆疊**）、`if (nav.session != null && 播放中) switchPlayback(slot)`；沒有槽位 → 既有 `scrollNextHymn()`（H5 之前的行為不變）。**H5 與 D-1 UI 的先後待定，兩條路徑都可執行：(a) H5 先於 D-1：`onNextPressed()` 只處理「槽位 ＞ 同本下一首」；D-1 之後把 `nextInPlaylistOrNextHymn()` 的歌單判斷插在兩者之間（優先序槽位 ＞ 歌單 ＞ 同本）。(b) D-1 先於 H5：歌詞頁 `btn_next` 已走 `nextInPlaylistOrNextHymn()`；H5 實作時把槽位判斷加在它**之前**，沿用同一優先序。**
 
 - [ ] **Step 5：「正在播放」條與「改播此首」**：`refreshNavBars()`：`session != null && viewing != session.ref` → `btn_playing` 顯示「正在播放：補45」＋箭頭圖示；點擊：若返回堆疊頂端就是 `session.ref` → `returnToPrevious()`，否則 `jumpTo`（推入目前頁，讓使用者可再回來）。`media_player_audio_ui.xml`（LF）在播放鍵區加 `Button btn_play_this`（「改播此首」，`gone`；同樣條件顯示，點擊 → `switchPlayback(viewing)`）。播放列標題維持 `initHymnInfo` 的既有行為（播放中凍結在播放的那首）。
 
@@ -1873,7 +1874,7 @@ git commit -m "refactor(c): remove long-press/menu; move entries to settings"
 
 - [ ] **Step 1：頂列加「跳轉」（`content_lyrics.xml`，CRLF）**：在 `btn_next` 之前加 `Button btn_jump`（`c_jump`：en `Jump` / zh `跳转` / hant `跳轉`；與 `btn_next` 同樣式、`minHeight=48dp`，放在捲動區**之外**以免被捲走；320dp 寬度檢查在 H5h，必要時縮 `btn_next` 的 `maxWidth`）。`ContentView` 把 `btn_jump` 加進 click 清單 → `mContentHandler.showJumpSheet()`。
 
-- [ ] **Step 2：`JumpSheetFragment : BottomSheetDialogFragment`**：`sheet_jump.xml` ＝ `<include layout="@layout/hymn_picker"/>`（H3 的同一份，含橫向版）＋ 「最近跳轉」清單區（`jump_stack_list`，來自 `nav.returnStack`，點一列 → `returnTo(i)`；為長按清單的**可見**版本）＋ 目前槽位列（「下一首：新詩12」，附「清除」）。以 `HymnPickerController(mode = JUMP)`：`PickerChrome` 已隱藏 `btn_toc`／`btn_recent_more`／`btn_add_playlist`，顯示 `btn_set_next`；**初始來源＝目前 `viewing.book`**（不是 `LastHymnType`，也不寫回偏好）。host 介面 `JumpHost`（`ContentHandler` 實作）：`onJumpOpen(ref, engNo)`→`jumpTo`（英文來源帶 `engNo` 時先設 `mHymnNoEng`／`mAutoEnglish`）、`onJumpSetNext(ref)`→`setNextSlot`＋關閉面板；「開啟」＝切過去看，「設為下一首」＝留在原頁只排隊。**不放「＋歌單」**。
+- [ ] **Step 2：`JumpSheetFragment : BottomSheetDialogFragment`**：`sheet_jump.xml` ＝ `<include layout="@layout/hymn_picker"/>`（H3 的同一份，含橫向版）＋ 「最近跳轉」清單區（`jump_stack_list`，來自 `nav.returnStack`，點一列 → `returnTo(i)`；為長按清單的**可見**版本）＋ 目前槽位列（「下一首：新詩12」，附「清除」）。以 `HymnPickerController(mode = JUMP)`：`PickerChrome` 已隱藏 `btn_toc`／`btn_recent_more`／`btn_add_playlist`，顯示 `btn_set_next`；**初始來源＝目前 `viewing.book`**（不是 `LastHymnType`，也不寫回偏好）。`JumpSheetFragment` 實作 **`PickerHost` adapter** 並把呼叫轉給 `JumpHost`（`ContentHandler` 實作）：`onOpenRef(ref, engNo)` → `JumpHost.onJumpOpen(ref, engNo)`→`jumpTo`（英文來源帶 `engNo` 時先設 `mHymnNoEng`／`mAutoEnglish`）；`onSetNext(ref)` → `JumpHost.onJumpSetNext(ref)`→`setNextSlot`＋關閉面板；`openSearch(book)` 留在面板內（子 Fragment）；`openToc`／`openHistory`／`onAddToPlaylist` 沿用預設空實作；「開啟」＝切過去看，「設為下一首」＝留在原頁只排隊。**不放「＋歌單」**。
 - [ ] **Step 3：搜尋入口**：`HymnPickerController.openSearch` 在面板內以 `childFragmentManager` 疊 `SearchFragment.newInstance(book)`；H4 的 `SearchFragment` 結果點擊改為「`(parentFragment as? SearchHost ?: activity as? SearchHost)?.onResultChosen(ref)`，沒有 host 時才走預設的 `MainActivity.showContent`」（`SearchHost` 由 `JumpSheetFragment` 實作，轉成 `onJumpOpen`）。面板的 `OnBackPressedCallback`（`dialog.onBackPressedDispatcher.addCallback`）先 pop 子搜尋頁、再關面板——即返回鍵優先序第 (1) 層。
 - [ ] **Step 4：無障礙**：面板有標題（`c_jump`）、焦點順序同首頁、`bottomSheet` 預設展開；`btn_jump` 的 `contentDescription`。
 - [ ] **Step 5：測試 `JumpSheetTest`**：①開面板、選補充本 `4`、`5`、「開啟」→ 歌詞頁換成補充 45、返回堆疊多一筆；②「設為下一首」→ 面板關閉、`btn_next` 文字變「下一首：…」、原頁不動；③面板內搜尋 → 點結果 → 跳轉；返回鍵先關搜尋再關面板；④面板的 `btn_toc`／`btn_add_playlist`／`btn_recent_more` 不可見；⑤`UiFlags.NOTEBOOK_UI_ENABLED` 的任一值面板都不顯示「＋歌單」；⑥旋轉／`recreate()` 後面板關閉但 `nav` 保留。
