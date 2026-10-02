@@ -127,7 +127,8 @@ class ContentHandlerReadingTest {
             scenario.click(R.id.button_mode)   // SCORE_AND_LYRICS -> SCORE_ONLY
             assertThat(scenario.read { it.displayModeOverride }).isEqualTo(DisplayMode.SCORE_ONLY)
             assertThat(scenario.read { visible(it, R.id.lyrics_simplified) || visible(it, R.id.lyrics_traditional) }).isFalse()
-            assertThat(scenario.read { visible(it, R.id.button_ts) }).isFalse()
+            // Script and language buttons keep their place in score-only mode but are disabled (visual redesign 6)
+            assertThat(scenario.read { page(it)!!.findViewById<View>(R.id.button_ts).isEnabled }).isFalse()
             scenario.recreate()
             scenario.waitFor("restored page") { page(it) != null }
             assertThat(scenario.read { it.displayModeOverride }).isEqualTo(DisplayMode.SCORE_ONLY)
