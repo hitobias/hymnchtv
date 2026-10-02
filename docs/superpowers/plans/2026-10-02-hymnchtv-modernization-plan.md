@@ -167,28 +167,73 @@ object LanguageResolver {
 enum class LyricsLang { FOLLOW_UI, SIMPLIFIED, TRADITIONAL
     companion object { fun fromPref(v: String?): LyricsLang = /* 非法 → FOLLOW_UI */ } }
 
+/** 繁體歌詞的地區版本；每一種都有預先產生好的 assets（見 A.1.9）。 */
+enum class HantVariant(val conversion: ConversionType, val dirSuffix: String) {
+    TW(ConversionType.S2TW, "_hant_tw"), HK(ConversionType.S2HK, "_hant_hk") }
+
 object LyricsLanguagePolicy {
     fun resolveShowTraditional(pref: LyricsLang, uiLocale: Locale): Boolean
-    fun defaultConversion(uiLocale: Locale): ConversionType   // zh-Hant-HK/MO → S2HK；其他 → S2TW
-    fun parseConversion(v: String?, uiLocale: Locale): ConversionType  // 非法/null → defaultConversion；絕不丟例外
+    fun defaultVariant(uiLocale: Locale): HantVariant          // zh-HK/MO → HK；其他 → TW
+    fun parseVariant(v: String?, uiLocale: Locale): HantVariant
+    // "S2HK" → HK；"S2TW"、"S2TWP" → TW；"S2T"、null、非法值 → defaultVariant；絕不丟例外
 }
 ```
 
 - 新增 pref `LyricsDefaultLang`。
+- `PREF_CONVERSION_TYPE` 沿用原本的 key，但只會存 `S2TW` 或 `S2HK`。
+- **轉換標準從 4 個精簡成 2 個（使用者決策，2026-10-02）**：
+  - 只保留「台灣」（S2TW，只轉字形）和「香港」（S2HK）。
+  - 移除「標準繁體」（S2T）和「台灣詞彙」（S2TWP），因為 S2TWP 會改動詩歌用詞。
+  - 舊值的對應：
+    - `S2TWP` → TW（使用者明確選過台灣）。
+    - `S2T` → 依介面地區決定的預設值。S2T 是舊版的預設值，不代表使用者真的選過。
 - 遷移 `migr.lyrics.v1`（獨立的旗標，見 A.1.3）：
   - 舊的 `PREF_SIMPLIFY == false` → 設為 `TRADITIONAL`；其他情況設為 `FOLLOW_UI`。
-  - 如果 `PREF_CONVERSION_TYPE` 是非法值，把它刪掉，之後回到預設。
-- **所有讀取 `PREF_CONVERSION_TYPE` 的地方都改用 `parseConversion`**：
+  - 只要 `PREF_CONVERSION_TYPE` 不是 `S2TW` 或 `S2HK`，就依 `parseVariant` 的結果改寫成其中之一；沒有值的話就維持沒有值。
+- **所有讀取 `PREF_CONVERSION_TYPE` 的地方都改用 `parseVariant`**：
   - `ContentView.java:189, 603`：原本用 `valueOf`，遇到非法值會當機。
-  - `ChineseS2TSelection.java:53`：原本直接讀字串去勾選 RadioButton，遇到非法值會讓 `mConversionType` 沒有初始化。改成先用 `parseConversion` 初始化，再勾選對應的 RadioButton；如果讀到的原始值是非法的，就立刻把合法值寫回 pref。
-- 預設轉換標準用 **S2TW**（只轉換字形）。不用 S2TWP，因為它會轉換詞彙，可能改動詩歌原文的用詞。使用者仍然可以手動選其他標準。
+  - `ChineseS2TSelection.java:53`：原本直接讀字串去勾選 RadioButton，遇到非法值會讓 `mConversionType` 沒有初始化。改成先用 `parseVariant` 初始化，再勾選對應的 RadioButton；如果讀到的原始值是非法的，就立刻把合法值寫回 pref。
 - `button_ts` 改成只切換「這次的檢視」：
   - 狀態放在 `ContentHandler` 的欄位 `Boolean? lyricsViewOverride`，`null` 代表依照預設。
   - 翻頁時維持同一個狀態；`ContentHandler` 結束後就消失。
   - `ContentView` 每次要顯示時都計算 `override ?: policy.resolveShowTraditional(...)`。
   - 不再寫入 `PREF_SIMPLIFY`。
-- `ChineseS2TSelection` 的上方新增「歌詞預設語言」RadioGroup，下方保留轉換標準。主選單新增入口「歌詞語言」，開啟同一個畫面。
+- `ChineseS2TSelection` 的上方新增「歌詞預設語言」RadioGroup；下方的轉換標準改成只有「台灣／香港」兩個選項。主選單新增入口「歌詞語言」，開啟同一個畫面。
 - 注意（Codex P2）：這些改動跨越 Activity 與 Fragment 的狀態，不是純局部修改。A.3 有對應的整合測試項目。
+
+#### A.1.9 預先產生繁體歌詞（使用者決策，2026-10-02，取代執行時轉換）
+
+- **目的**：
+  - 不再於每次翻頁時呼叫 OpenCC。
+  - 繁體歌詞可以人工校對，修正 OpenCC 遇到一字多義時的錯誤。
+- **產物**：每個 `lyrics_<type>_text/` 都有兩個對應的目錄：
+  - `lyrics_<type>_text_hant_tw/`：用 S2TW 產生
+  - `lyrics_<type>_text_hant_hk/`：用 S2HK 產生
+
+  檔名和原本的簡體檔相同。這些產物要 commit 進 repo（完整的簡體歌詞本來就在 repo 裡）。
+- **大小**：簡體歌詞共約 1.6 MB，壓縮後約 0.6 MB。兩套繁體會讓 APK 多約 1.2 MB，相對於 99 MB 的 assets 可以忽略。
+- **產生工具 `tools/gen_lyrics_hant.py`**（呼叫 OpenCC CLI）：
+  1. 對每個簡體檔用 OpenCC 轉換。
+  2. 套用校對表 `tools/lyrics_hant_overrides.tsv`。格式是 `variant<TAB>from<TAB>to`，`variant` 可以是 `tw`、`hk` 或 `*`；`from` 是轉換後的繁體片段，要帶足夠的上下文，避免誤替換。
+  3. 寫出產物。
+  4. 寫出 `assets/lyrics_hant_manifest.txt`，每行是 `來源相對路徑<TAB>來源的 sha1`。
+  - 這個工具是冪等的：同樣的輸入加上同樣的校對表，產物完全相同。
+- **校對（使用者決策：只校對一字多義的字）**：
+  - `tools/gen_lyrics_hant.py --report` 會列出含有易錯字的歌詞行，輸出成 `docs/superpowers/plans/lyrics-hant-review.csv`，欄位是「檔案、行、簡體、台灣、香港」。
+  - 易錯字清單：于、里、后、复、发、只、干、历、面、云、台、余、松、谷、斗、志、准、范、冲、尽、获、系、钟、制、致、表、卷、借、恶、征、党、丑。
+  - 使用者或教會同工確認後，把需要修正的地方寫進校對表，再重新產生。
+- **同步保護**：新增 JVM 單元測試 `LyricsHantAssetsTest`，直接讀 `src/main/assets`，檢查以下兩點，任一不符就失敗：
+  - 每個簡體檔在兩個 `_hant_*` 目錄都有對應檔案，不多也不少。
+  - manifest 裡的 sha1 和目前的簡體檔一致。
+
+  這樣簡體歌詞更新了卻忘記重新產生時，測試就會失敗。
+- **App 端**：
+  - 純函式 `LyricsAssets.hantPath(simplifiedPath, variant)`，例如把 `lyrics_db_text/db1.txt` 對應到 `lyrics_db_text_hant_tw/db1.txt`。
+  - `ContentView.showLyricsChText` 讀取簡體檔和對應 variant 的繁體檔，兩份都讀。每首只有幾 KB，這樣切換簡繁時不必重新讀檔。不再呼叫 `ChineseConverter`。
+  - 如果繁體檔不存在（理論上會被測試擋下），就退回用 OpenCC 即時轉換，並記錄 `Timber.w`，不能當機。
+- **不在 A 的範圍**：
+  - 目錄（TOC）標題的繁體版：檔案可以用同一個工具產生，但 `HymnToc` 還用到筆畫索引（簡體和繁體的筆畫數不同），需要另外設計，延到 A-opt-2。
+  - 搜尋結果的摘要：仍然是簡體。
 
 #### A.1.6 搜尋輸入安全性（取代原本的 A-opt-1，處理 Codex P1-5）
 
@@ -327,7 +372,7 @@ object LyricsLanguagePolicy {
 
 | # | 熱點 | 位置 | 初步修法 |
 |---|---|---|---|
-| B-1 | 每次呼叫 OpenCC `convert()` 都重建 config 並載入字典，而且是在主執行緒上對每一頁執行，連簡體模式也照樣轉換；第一次呼叫時還會在主執行緒複製 1.1 MB 的 assets | `chineseconverter.cpp:57`、`ContentView.java:462`、`ChineseConverter.java:24-27` | 只在需要顯示繁體時才轉換（最簡單、收益最大，可以先做）；JNI 端快取 converter；assets 原子化初始化 |
+| B-1 | 每次呼叫 OpenCC `convert()` 都重建 config 並載入字典，而且是在主執行緒上對每一頁執行，連簡體模式也照樣轉換；第一次呼叫時還會在主執行緒複製 1.1 MB 的 assets | `chineseconverter.cpp:57`、`ContentView.java:462`、`ChineseConverter.java:24-27` | **大部分已由 A.1.9 解決**：歌詞改讀預先產生的檔案，翻頁不再呼叫 OpenCC。剩下的只有搜尋時一次的 T2S 轉換，以及第一次使用時的 assets 複製，因此優先順序降為低 |
 | B-2 | 每個歌詞頁都會 inflate 一個 WebView | `content_lyrics.xml:91` | 延遲到需要時才建立 WebView（需要先重構，見 B.3） |
 | B-3 | `Application.onCreate` 預建 WebView | `HymnsApp.java:109` | 這是為了處理 locale 的問題，**不能直接刪除**；只考慮延後到 IdleHandler 執行，而且必須通過語系回歸測試 |
 | B-4 | 每次翻頁都在主執行緒查 SQLite、掃目錄、呼叫 `getIdentifier` | `ContentHandler.java:613, 1090-1175, 1250` | 改成非同步（需要先設計，見 B.3） |

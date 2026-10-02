@@ -4,7 +4,7 @@
 
 **Goal:** 這個子項目要做到下列幾件事：
 - 介面新增繁體中文。第一次安裝時跟隨系統語言；Android 13 以上和系統設定的「App 語言」頁共用同一份設定。
-- 歌詞可以設定預設語言：跟隨介面、簡體或繁體。
+- 歌詞可以設定預設語言：跟隨介面、簡體或繁體。繁體歌詞改用預先產生的台灣版和香港版檔案，不再即時轉換。
 - 搜尋時輸入特殊字元不再當機。
 - 看歌詞時螢幕不會自動關閉。
 
@@ -50,6 +50,8 @@
 | `hymnchtv/src/main/java/org/cog/hymnchtv/locale/AppLanguage.kt` | 介面語言的 enum，以及和 pref 值、framework tag、`Locale` 之間的互相轉換 |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/locale/LocaleMigration.kt` | 決定遷移後的語言（純函式） |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLang.kt` | 歌詞預設語言的 enum |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/HantVariant.kt` | 繁體歌詞的地區版本（TW、HK）與對應的目錄後綴 |
+| `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsAssets.kt` | 簡體歌詞路徑轉成繁體歌詞路徑 |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicy.kt` | 決定歌詞顯示簡或繁、轉換標準的預設值與解析 |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsMigration.kt` | 遷移舊的 `PREF_SIMPLIFY` 與 `PREF_CONVERSION_TYPE`（純函式） |
 | `hymnchtv/src/main/java/org/cog/hymnchtv/search/SearchPattern.kt` | 把使用者的搜尋字串安全地轉成 `Pattern` |
@@ -68,6 +70,8 @@
 - `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicyTest.kt`
 - `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsMigrationTest.kt`
 - `hymnchtv/src/test/java/org/cog/hymnchtv/search/SearchPatternTest.kt`
+- `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsAssetsTest.kt`
+- `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsHantAssetsTest.kt`：檢查簡體與繁體的 assets 是否同步
 - `hymnchtv/src/androidTest/java/org/cog/hymnchtv/ResourceLocaleResolutionTest.kt`
 
 **修改：**
@@ -86,6 +90,11 @@
 | `hymnchtv/src/main/res/menu/menu_main.xml` | 語言子選單、歌詞語言入口 |
 | `hymnchtv/src/main/res/layout/chinese_t2s_selection.xml` | 新增歌詞預設語言的 RadioGroup |
 | `hymnchtv/src/main/res/layout/hymn_toc_list_item.xml`、`hymn_toc_list_group.xml` | 範例文字改成 `tools:text` |
+
+**工具與產生的 assets（Task 6B）：**
+- `tools/gen_lyrics_hant.py`
+- `tools/lyrics_hant_overrides.tsv`
+- `assets/lyrics_*_text_hant_tw/`、`assets/lyrics_*_text_hant_hk/`、`assets/lyrics_hant_manifest.txt`
 
 **資源搬移與新增：**
 - `res/values/strings.xml`（簡中）移到 `res/values-zh/strings.xml`
@@ -461,10 +470,11 @@
 
 ---
 
-### Task 4：LyricsLang 與 LyricsLanguagePolicy
+### Task 4：LyricsLang、HantVariant 與 LyricsLanguagePolicy
 
 **Files:**
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLang.kt`
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/HantVariant.kt`
 - Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicy.kt`
 - Test: `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsLanguagePolicyTest.kt`
 
@@ -510,27 +520,43 @@
       }
 
       @Test
-      fun defaultConversion() {
-          assertThat(LyricsLanguagePolicy.defaultConversion(hantHk)).isEqualTo(ConversionType.S2HK)
-          assertThat(LyricsLanguagePolicy.defaultConversion(Locale.forLanguageTag("zh-MO"))).isEqualTo(ConversionType.S2HK)
-          assertThat(LyricsLanguagePolicy.defaultConversion(hantTw)).isEqualTo(ConversionType.S2TW)
-          assertThat(LyricsLanguagePolicy.defaultConversion(hans)).isEqualTo(ConversionType.S2TW)
-          assertThat(LyricsLanguagePolicy.defaultConversion(en)).isEqualTo(ConversionType.S2TW)
+      fun hantVariantMetadata() {
+          assertThat(HantVariant.TW.conversion).isEqualTo(ConversionType.S2TW)
+          assertThat(HantVariant.HK.conversion).isEqualTo(ConversionType.S2HK)
+          assertThat(HantVariant.TW.prefValue).isEqualTo("S2TW")
+          assertThat(HantVariant.HK.dirSuffix).isEqualTo("_hant_hk")
       }
 
       @Test
-      fun parseConversionAcceptsOnlySelectableTypes() {
-          listOf("S2T", "S2HK", "S2TW", "S2TWP").forEach {
-              assertThat(LyricsLanguagePolicy.parseConversion(it, hans).name).isEqualTo(it)
-              assertThat(LyricsLanguagePolicy.isValidConversion(it)).isTrue()
+      fun defaultVariant() {
+          assertThat(LyricsLanguagePolicy.defaultVariant(hantHk)).isEqualTo(HantVariant.HK)
+          assertThat(LyricsLanguagePolicy.defaultVariant(Locale.forLanguageTag("zh-MO"))).isEqualTo(HantVariant.HK)
+          listOf(hantTw, hans, en).forEach {
+              assertThat(LyricsLanguagePolicy.defaultVariant(it)).isEqualTo(HantVariant.TW)
           }
       }
 
       @Test
-      fun parseConversionFallsBackWithoutThrowing() {
-          listOf(null, "", "T2S", "s2t", "bogus").forEach {
-              assertThat(LyricsLanguagePolicy.parseConversion(it, hantHk)).isEqualTo(ConversionType.S2HK)
-              assertThat(LyricsLanguagePolicy.isValidConversion(it)).isFalse()
+      fun parseVariantMapsLegacyValues() {
+          assertThat(LyricsLanguagePolicy.parseVariant("S2HK", hans)).isEqualTo(HantVariant.HK)
+          assertThat(LyricsLanguagePolicy.parseVariant("S2TW", hantHk)).isEqualTo(HantVariant.TW)
+          assertThat(LyricsLanguagePolicy.parseVariant("S2TWP", hantHk)).isEqualTo(HantVariant.TW)
+      }
+
+      @Test
+      fun parseVariantFallsBackToLocaleDefaultWithoutThrowing() {
+          listOf(null, "", "S2T", "T2S", "s2tw", "bogus").forEach {
+              assertThat(LyricsLanguagePolicy.parseVariant(it, hantHk)).isEqualTo(HantVariant.HK)
+              assertThat(LyricsLanguagePolicy.parseVariant(it, hantTw)).isEqualTo(HantVariant.TW)
+          }
+      }
+
+      @Test
+      fun canonicalValues() {
+          assertThat(LyricsLanguagePolicy.isCanonical("S2TW")).isTrue()
+          assertThat(LyricsLanguagePolicy.isCanonical("S2HK")).isTrue()
+          listOf(null, "S2T", "S2TWP", "bogus").forEach {
+              assertThat(LyricsLanguagePolicy.isCanonical(it)).isFalse()
           }
       }
   }
@@ -539,7 +565,7 @@
 - [ ] **Step 2：執行測試，確認它失敗**
 
   Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsLanguagePolicyTest'`
-  Expected: 編譯失敗，訊息為 `Unresolved reference 'LyricsLang'`。
+  Expected: 編譯失敗，出現 `Unresolved reference 'LyricsLang'`。
 
 - [ ] **Step 3：實作 `LyricsLang.kt`**
 
@@ -558,12 +584,31 @@
   }
   ```
 
-- [ ] **Step 4：實作 `LyricsLanguagePolicy.kt`**
+- [ ] **Step 4：實作 `HantVariant.kt`**
 
   ```kotlin
   package org.cog.hymnchtv.lyrics
 
   import com.zqc.opencc.android.lib.ConversionType
+
+  /**
+   * Regional Traditional Chinese lyrics variant. Each one has pre-generated assets in
+   * lyrics_<type>_text<dirSuffix>/ (plan A.1.9); [conversion] is used only as a runtime fallback.
+   */
+  enum class HantVariant(val conversion: ConversionType, val dirSuffix: String) {
+      TW(ConversionType.S2TW, "_hant_tw"),
+      HK(ConversionType.S2HK, "_hant_hk");
+
+      /** Value stored in PREF_CONVERSION_TYPE; the key and its values are kept for backward compatibility. */
+      val prefValue: String get() = conversion.name
+  }
+  ```
+
+- [ ] **Step 5：實作 `LyricsLanguagePolicy.kt`**
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
   import org.cog.hymnchtv.locale.LocaleRules
   import java.util.Locale
 
@@ -572,9 +617,6 @@
 
       private val HK_REGIONS = setOf("HK", "MO")
 
-      /** The S2x types offered in ChineseS2TSelection; anything else stored in prefs is treated as invalid. */
-      private val SELECTABLE = listOf(ConversionType.S2T, ConversionType.S2HK, ConversionType.S2TW, ConversionType.S2TWP)
-
       @JvmStatic
       fun resolveShowTraditional(pref: LyricsLang, uiLocale: Locale): Boolean = when (pref) {
           LyricsLang.SIMPLIFIED -> false
@@ -582,31 +624,37 @@
           LyricsLang.FOLLOW_UI -> LocaleRules.isTraditional(uiLocale)
       }
 
-      /** S2TW converts glyphs only, so hymn wording is never rewritten; S2HK for Hong Kong / Macau users. */
       @JvmStatic
-      fun defaultConversion(uiLocale: Locale): ConversionType =
-          if (LocaleRules.isChinese(uiLocale) && uiLocale.country in HK_REGIONS) ConversionType.S2HK else ConversionType.S2TW
+      fun defaultVariant(uiLocale: Locale): HantVariant =
+          if (LocaleRules.isChinese(uiLocale) && uiLocale.country in HK_REGIONS) HantVariant.HK else HantVariant.TW
 
+      /** True only for values written by this version ("S2TW"/"S2HK"). */
       @JvmStatic
-      fun isValidConversion(value: String?): Boolean = SELECTABLE.any { it.name == value }
+      fun isCanonical(value: String?): Boolean = HantVariant.values().any { it.prefValue == value }
 
-      /** Never throws; invalid or missing values fall back to [defaultConversion]. */
+      /**
+       * Never throws. Legacy S2TWP (explicit Taiwan choice) maps to TW; legacy S2T was the old implicit
+       * default, so it follows the UI region like a missing or invalid value.
+       */
       @JvmStatic
-      fun parseConversion(value: String?, uiLocale: Locale): ConversionType =
-          SELECTABLE.firstOrNull { it.name == value } ?: defaultConversion(uiLocale)
+      fun parseVariant(value: String?, uiLocale: Locale): HantVariant = when (value) {
+          "S2HK" -> HantVariant.HK
+          "S2TW", "S2TWP" -> HantVariant.TW
+          else -> defaultVariant(uiLocale)
+      }
   }
   ```
 
-- [ ] **Step 5：執行測試，確認它通過**
+- [ ] **Step 6：執行測試，確認它通過**
 
   Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsLanguagePolicyTest'`
-  Expected: 6 個測試全部通過。
+  Expected: 8 個測試全部通過。
 
-- [ ] **Step 6：Commit**
+- [ ] **Step 7：Commit**
 
   ```bash
   git add hymnchtv/src/main/java/org/cog/hymnchtv/lyrics hymnchtv/src/test/java/org/cog/hymnchtv/lyrics
-  git commit -m "feat: add lyrics default language policy"
+  git commit -m "feat: add lyrics default language policy and Hant variants"
   ```
 
 ---
@@ -639,11 +687,14 @@
       }
 
       @Test
-      fun dropsOnlyInvalidConversionType() {
-          assertThat(LyricsMigration.plan(null, "bogus").dropConversionType).isTrue()
-          assertThat(LyricsMigration.plan(null, "T2S").dropConversionType).isTrue()
-          assertThat(LyricsMigration.plan(null, "S2HK").dropConversionType).isFalse()
-          assertThat(LyricsMigration.plan(null, null).dropConversionType).isFalse()
+      fun conversionTypeAfterMigration() {
+          assertThat(LyricsMigration.plan(null, "S2TW").conversionType).isEqualTo("S2TW")
+          assertThat(LyricsMigration.plan(null, "S2HK").conversionType).isEqualTo("S2HK")
+          assertThat(LyricsMigration.plan(null, "S2TWP").conversionType).isEqualTo("S2TW")
+          // S2T was the old implicit default and invalid values carry no intent: remove so the UI region decides
+          assertThat(LyricsMigration.plan(null, "S2T").conversionType).isNull()
+          assertThat(LyricsMigration.plan(null, "bogus").conversionType).isNull()
+          assertThat(LyricsMigration.plan(null, null).conversionType).isNull()
       }
   }
   ```
@@ -651,7 +702,7 @@
 - [ ] **Step 2：執行測試，確認它失敗**
 
   Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsMigrationTest'`
-  Expected: 編譯失敗，訊息為 `Unresolved reference 'LyricsMigration'`。
+  Expected: 編譯失敗，出現 `Unresolved reference 'LyricsMigration'`。
 
 - [ ] **Step 3：實作**
 
@@ -662,7 +713,8 @@
   object LyricsMigration {
       const val KEY = "migr.lyrics.v1"
 
-      data class Result(val defaultLang: LyricsLang, val dropConversionType: Boolean)
+      /** [conversionType] is the PREF_CONVERSION_TYPE value to store after migration; null = remove the key. */
+      data class Result(val defaultLang: LyricsLang, val conversionType: String?)
 
       /**
        * @param simplify legacy PREF_SIMPLIFY value, null if absent
@@ -671,7 +723,11 @@
       @JvmStatic
       fun plan(simplify: Boolean?, conversionType: String?): Result = Result(
           defaultLang = if (simplify == false) LyricsLang.TRADITIONAL else LyricsLang.FOLLOW_UI,
-          dropConversionType = conversionType != null && !LyricsLanguagePolicy.isValidConversion(conversionType),
+          conversionType = when (conversionType) {
+              "S2TW", "S2HK" -> conversionType
+              "S2TWP" -> HantVariant.TW.prefValue
+              else -> null
+          },
       )
   }
   ```
@@ -798,6 +854,300 @@
   git add hymnchtv/src/main/java/org/cog/hymnchtv/search hymnchtv/src/test/java/org/cog/hymnchtv/search
   git commit -m "feat: add literal search pattern builder"
   ```
+
+---
+
+### Task 6B：預先產生繁體歌詞與同步測試（spec A.1.9）
+
+**Files:**
+- Create: `hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsAssets.kt`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsAssetsTest.kt`
+- Create: `tools/gen_lyrics_hant.py`
+- Create: `tools/lyrics_hant_overrides.tsv`
+- Test: `hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsHantAssetsTest.kt`
+- Generate (commit): `hymnchtv/src/main/assets/lyrics_*_text_hant_tw/`、`lyrics_*_text_hant_hk/`、`hymnchtv/src/main/assets/lyrics_hant_manifest.txt`
+- Generate (commit): `docs/superpowers/plans/lyrics-hant-review.csv`
+
+- [ ] **Step 1：為路徑對應寫會失敗的測試** `LyricsAssetsTest.kt`
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+
+  class LyricsAssetsTest {
+      @Test
+      fun mapsSimplifiedPathToVariantDir() {
+          assertThat(LyricsAssets.hantPath("lyrics_db_text/db1.txt", HantVariant.TW))
+              .isEqualTo("lyrics_db_text_hant_tw/db1.txt")
+          assertThat(LyricsAssets.hantPath("lyrics_er_text/er12.txt", HantVariant.HK))
+              .isEqualTo("lyrics_er_text_hant_hk/er12.txt")
+      }
+
+      @Test
+      fun rejectsPathsWithoutDirectory() {
+          assertThat(LyricsAssets.hantPath("db1.txt", HantVariant.TW)).isNull()
+          assertThat(LyricsAssets.hantPath("", HantVariant.TW)).isNull()
+      }
+  }
+  ```
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsAssetsTest'`
+  Expected: 編譯失敗，出現 `Unresolved reference 'LyricsAssets'`。
+
+- [ ] **Step 2：實作 `LyricsAssets.kt`**
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  /** Asset path rules for the pre-generated Traditional Chinese lyrics (plan A.1.9). */
+  object LyricsAssets {
+      /** "lyrics_db_text/db1.txt" + TW -> "lyrics_db_text_hant_tw/db1.txt"; null if [simplifiedPath] has no directory. */
+      @JvmStatic
+      fun hantPath(simplifiedPath: String, variant: HantVariant): String? {
+          val slash = simplifiedPath.indexOf('/')
+          if (slash <= 0) return null
+          return simplifiedPath.substring(0, slash) + variant.dirSuffix + simplifiedPath.substring(slash)
+      }
+  }
+  ```
+
+  Run 同一個測試。
+  Expected: 2 個測試全部通過。
+
+- [ ] **Step 3：寫會失敗的同步測試** `LyricsHantAssetsTest.kt`
+
+  Gradle 執行單元測試時，工作目錄是模組根目錄 `hymnchtv/`。
+
+  ```kotlin
+  package org.cog.hymnchtv.lyrics
+
+  import com.google.common.truth.Truth.assertThat
+  import org.junit.Test
+  import java.io.File
+  import java.security.MessageDigest
+
+  /** Fails when Simplified lyrics change without re-running tools/gen_lyrics_hant.py (plan A.1.9). */
+  class LyricsHantAssetsTest {
+      private val assets = File("src/main/assets")
+      private val sourceDirs: List<File> =
+          assets.listFiles { f -> f.isDirectory && Regex("lyrics_[a-z]+_text").matches(f.name) }!!.sortedBy { it.name }
+
+      private fun txtNames(dir: File): Set<String> =
+          dir.listFiles { f -> f.isFile && f.name.endsWith(".txt") }?.map { it.name }?.toSet() ?: emptySet()
+
+      private fun sha1(file: File): String =
+          MessageDigest.getInstance("SHA-1").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
+
+      @Test
+      fun sourceDirectoriesFound() {
+          assertThat(sourceDirs.map { it.name }).containsAtLeast("lyrics_db_text", "lyrics_bb_text")
+      }
+
+      @Test
+      fun everyVariantMirrorsTheSourceFileSet() {
+          for (dir in sourceDirs) {
+              for (variant in HantVariant.values()) {
+                  val mirror = File(assets, dir.name + variant.dirSuffix)
+                  assertThat(txtNames(mirror)).isEqualTo(txtNames(dir))
+              }
+          }
+      }
+
+      @Test
+      fun manifestMatchesCurrentSources() {
+          val manifest = File(assets, "lyrics_hant_manifest.txt").readLines()
+              .filter { it.isNotBlank() }
+              .associate { line -> line.split('\t').let { it[0] to it[1] } }
+          val actual = sourceDirs.flatMap { dir ->
+              txtNames(dir).map { name -> "${dir.name}/$name" to sha1(File(dir, name)) }
+          }.toMap()
+          assertThat(manifest).isEqualTo(actual)
+      }
+  }
+  ```
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsHantAssetsTest'`
+  Expected: `everyVariantMirrorsTheSourceFileSet` 和 `manifestMatchesCurrentSources` 失敗，因為還沒產生任何檔案；`sourceDirectoriesFound` 通過。
+
+- [ ] **Step 4：新增空的校對表** `tools/lyrics_hant_overrides.tsv`
+
+  ```
+  # Manual corrections applied after OpenCC (plan A.1.9).
+  # Format: variant<TAB>from<TAB>to   variant = tw | hk | *
+  # "from" is a Traditional fragment as produced by OpenCC; include enough context to be unique.
+  # Example (do not uncomment unless verified):  *	皇後	皇后
+  ```
+
+- [ ] **Step 5：新增產生工具** `tools/gen_lyrics_hant.py`
+
+  ```python
+  #!/usr/bin/env python3
+  """Generate Traditional Chinese lyrics assets from the Simplified sources with OpenCC (plan A.1.9).
+
+  Usage: tools/gen_lyrics_hant.py [--report]
+  Requires the OpenCC CLI (brew install opencc). Output is deterministic for the same inputs.
+  """
+  import argparse
+  import csv
+  import hashlib
+  import pathlib
+  import shutil
+  import subprocess
+  import sys
+
+  ROOT = pathlib.Path(__file__).resolve().parent.parent
+  ASSETS = ROOT / "hymnchtv/src/main/assets"
+  OVERRIDES = ROOT / "tools/lyrics_hant_overrides.tsv"
+  MANIFEST = ASSETS / "lyrics_hant_manifest.txt"
+  REPORT = ROOT / "docs/superpowers/plans/lyrics-hant-review.csv"
+  VARIANTS = {"tw": "s2tw.json", "hk": "s2hk.json"}
+  SPLIT = "\n@@@HYMNCHTV_SPLIT@@@\n"  # ASCII marker survives OpenCC unchanged
+  AMBIGUOUS = set("于里后复发只干历面云台余松谷斗志准范冲尽获系钟制致表卷借恶征党丑")
+
+
+  def source_files():
+      dirs = sorted(d for d in ASSETS.glob("lyrics_*_text") if d.is_dir())
+      return [f for d in dirs for f in sorted(d.glob("*.txt"))]
+
+
+  def read(path):
+      # bytes -> str keeps CRLF line endings exactly
+      return path.read_bytes().decode("utf-8")
+
+
+  def opencc_batch(texts, config):
+      joined = SPLIT.join(texts)
+      result = subprocess.run(["opencc", "-c", config], input=joined.encode("utf-8"),
+                              capture_output=True, check=True)
+      parts = result.stdout.decode("utf-8").split(SPLIT)
+      if len(parts) != len(texts):
+          sys.exit(f"OpenCC changed the split marker: {len(parts)} parts for {len(texts)} files")
+      return parts
+
+
+  def load_overrides():
+      rules = []
+      if not OVERRIDES.exists():
+          return rules
+      for n, line in enumerate(OVERRIDES.read_text(encoding="utf-8").splitlines(), 1):
+          if not line.strip() or line.startswith("#"):
+              continue
+          cols = line.split("\t")
+          if len(cols) != 3 or cols[0] not in ("tw", "hk", "*") or not cols[1]:
+              sys.exit(f"{OVERRIDES.name}:{n}: expected 'variant<TAB>from<TAB>to'")
+          rules.append((n, cols[0], cols[1], cols[2]))
+      return rules
+
+
+  def apply_overrides(text, variant, rules, used):
+      for n, v, frm, to in rules:
+          if v in (variant, "*") and frm in text:
+              text = text.replace(frm, to)
+              used.add(n)
+      return text
+
+
+  def main():
+      parser = argparse.ArgumentParser()
+      parser.add_argument("--report", action="store_true", help=f"also write {REPORT.relative_to(ROOT)}")
+      args = parser.parse_args()
+      if shutil.which("opencc") is None:
+          sys.exit("opencc not found: brew install opencc")
+
+      sources = source_files()
+      texts = [read(p) for p in sources]
+      rules = load_overrides()
+      used = set()
+      converted = {}
+      for variant, config in VARIANTS.items():
+          out = [apply_overrides(t, variant, rules, used) for t in opencc_batch(texts, config)]
+          converted[variant] = out
+          for src, text in zip(sources, out):
+              dst_dir = src.parent.with_name(f"{src.parent.name}_hant_{variant}")
+              dst_dir.mkdir(exist_ok=True)
+              (dst_dir / src.name).write_bytes(text.encode("utf-8"))
+          # remove stale outputs whose source no longer exists
+          for dst_dir in ASSETS.glob(f"lyrics_*_text_hant_{variant}"):
+              src_dir = ASSETS / dst_dir.name[: -len(f"_hant_{variant}")]
+              for f in dst_dir.glob("*.txt"):
+                  if not (src_dir / f.name).exists():
+                      f.unlink()
+
+      lines = [f"{p.relative_to(ASSETS).as_posix()}\t{hashlib.sha1(p.read_bytes()).hexdigest()}" for p in sources]
+      MANIFEST.write_text("\n".join(sorted(lines)) + "\n", encoding="utf-8")
+
+      unused = [n for n, *_ in rules if n not in used]
+      if unused:
+          print(f"WARNING: override lines never matched (stale?): {unused}", file=sys.stderr)
+
+      if args.report:
+          with REPORT.open("w", encoding="utf-8", newline="") as fh:
+              writer = csv.writer(fh)
+              writer.writerow(["file", "line", "chars", "simplified", "tw", "hk"])
+              for i, src in enumerate(sources):
+                  s_lines = texts[i].splitlines()
+                  tw_lines = converted["tw"][i].splitlines()
+                  hk_lines = converted["hk"][i].splitlines()
+                  for ln, s in enumerate(s_lines):
+                      hits = sorted(AMBIGUOUS.intersection(s))
+                      if hits:
+                          writer.writerow([src.relative_to(ASSETS).as_posix(), ln + 1, "".join(hits),
+                                           s, tw_lines[ln], hk_lines[ln]])
+      print(f"Generated {len(sources)} files x {len(VARIANTS)} variants")
+
+
+  if __name__ == "__main__":
+      main()
+  ```
+
+- [ ] **Step 6：產生檔案並驗證**
+
+  Run: `chmod +x tools/gen_lyrics_hant.py && tools/gen_lyrics_hant.py --report`
+  Expected: 輸出 `Generated 2142 files x 2 variants`。實際數字等於 6 個 `lyrics_*_text` 目錄的 txt 檔總數。
+
+  抽查以下幾點：
+  - `diff <(file hymnchtv/src/main/assets/lyrics_db_text/db1.txt) <(file hymnchtv/src/main/assets/lyrics_db_text_hant_tw/db1.txt)`：兩者都是 `UTF-8 text, with CRLF line terminators`，換行格式要保留。
+  - `head -3 hymnchtv/src/main/assets/lyrics_db_text_hant_tw/db1.txt`：第 2 行是「頌讚三一神－祂的計劃」之類的繁體文字。
+  - 再跑一次 `tools/gen_lyrics_hant.py`，然後 `git status --short hymnchtv/src/main/assets | head`：不能有任何變動，確認輸出是可重現的。
+
+- [ ] **Step 7：執行同步測試，確認它通過**
+
+  Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.lyrics.LyricsHantAssetsTest'`
+  Expected: 3 個測試全部通過。
+
+- [ ] **Step 8：驗證保護機制有效（不要 commit 這個修改）**
+
+  在 `hymnchtv/src/main/assets/lyrics_db_text/db1.txt` 結尾加一個空白後，重跑 Step 7。
+  Expected: `manifestMatchesCurrentSources` 失敗。
+
+  確認後用 `git checkout hymnchtv/src/main/assets/lyrics_db_text/db1.txt` 還原。
+
+- [ ] **Step 9：Commit**
+
+  ```bash
+  git add tools/gen_lyrics_hant.py tools/lyrics_hant_overrides.tsv \
+          hymnchtv/src/main/java/org/cog/hymnchtv/lyrics/LyricsAssets.kt \
+          hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsAssetsTest.kt \
+          hymnchtv/src/test/java/org/cog/hymnchtv/lyrics/LyricsHantAssetsTest.kt \
+          hymnchtv/src/main/assets/lyrics_*_text_hant_tw hymnchtv/src/main/assets/lyrics_*_text_hant_hk \
+          hymnchtv/src/main/assets/lyrics_hant_manifest.txt docs/superpowers/plans/lyrics-hant-review.csv
+  git commit -m "feat: pre-generate Traditional Chinese lyrics (TW/HK) with sync test"
+  ```
+
+- [ ] **Step 10：交付校對清單（不擋後續 task）**
+
+  把 `docs/superpowers/plans/lyrics-hant-review.csv` 交給使用者或教會同工確認。用 `chars` 欄位排序，方便逐字檢查。
+
+  需要修正的地方寫進 `tools/lyrics_hant_overrides.tsv`，然後重跑：
+
+  ```bash
+  tools/gen_lyrics_hant.py --report
+  ./gradlew :hymnchtv:testDebugUnitTest
+  ```
+
+  另外用 `fix: correct Traditional lyrics terms` 為訊息單獨 commit。這一步可以和 Task 7～15 並行，但要在 PR 合併前完成。
 
 ---
 
@@ -1166,7 +1516,8 @@
               val simplify = if (prefs.contains(ContentView.PREF_SIMPLIFY)) prefs.getBoolean(ContentView.PREF_SIMPLIFY, true) else null
               val result = LyricsMigration.plan(simplify, prefs.getString(ContentView.PREF_CONVERSION_TYPE, null))
               val editor = prefs.edit().putString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, result.defaultLang.name)
-              if (result.dropConversionType) editor.remove(ContentView.PREF_CONVERSION_TYPE)
+              if (result.conversionType == null) editor.remove(ContentView.PREF_CONVERSION_TYPE)
+              else editor.putString(ContentView.PREF_CONVERSION_TYPE, result.conversionType)
               editor.putBoolean(LyricsMigration.KEY, true).commit()
           }
       }
@@ -1452,15 +1803,16 @@
 
 ---
 
-### Task 11：ChineseS2TSelection 新增歌詞預設語言並處理非法值
+### Task 11：ChineseS2TSelection 新增歌詞預設語言，轉換標準精簡為台灣與香港
 
 **Files:**
-- Modify: `hymnchtv/src/main/res/layout/chinese_t2s_selection.xml`（在第 8 行 `<TextView`（STD 標題）之前插入）
+- Modify: `hymnchtv/src/main/res/layout/chinese_t2s_selection.xml`
 - Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/utils/ChineseS2TSelection.java`
+- Modify: `res/values/strings.xml`、`res/values-zh/strings.xml`、`res/values-b+zh+Hant/strings.xml`：刪除 `S2T` 和 `S2TWP` 兩個字串
 
-- [ ] **Step 1：在 layout 中加入歌詞預設語言區塊**
+- [ ] **Step 1：修改 layout**
 
-  插在原本 `android:text="@string/STD"` 那個 `TextView` 之前：
+  (a) 在原本 `android:text="@string/STD"` 的 `TextView` **之前**插入下面這段：
 
   ```xml
       <TextView
@@ -1498,17 +1850,31 @@
       </RadioGroup>
   ```
 
-  同時刪掉 `radioButtonS2T` 上的 `android:checked="true"`，改由程式碼決定要勾選哪一個。
+  (b) 在 `radioGroupVar` 裡，**刪除** `radioButtonS2T` 和 `radioButtonS2TWP` 這兩個 `RadioButton`，只留下 `radioButtonS2HK` 和 `radioButtonS2TW`。任何 `android:checked="true"` 也一併刪除，改由程式碼決定要勾選哪一個。
 
-- [ ] **Step 2：修改 `ChineseS2TSelection.java`**
+- [ ] **Step 2：刪除不再使用的字串**
 
-  新增欄位（放在 `mConversionType` 下面）：
+  Run:
+
+  ```bash
+  for f in hymnchtv/src/main/res/values/strings.xml hymnchtv/src/main/res/values-zh/strings.xml "hymnchtv/src/main/res/values-b+zh+Hant/strings.xml"; do
+    sed -i '' -e '/<string name="S2T">/d' -e '/<string name="S2TWP">/d' "$f"
+  done
+  grep -rn 'name="S2T"\|name="S2TWP"\|@string/S2T\b\|@string/S2TWP\|R.string.S2T\b\|R.string.S2TWP' hymnchtv/src/main || echo none
+  ```
+
+  Expected: 印出 `none`。
+
+- [ ] **Step 3：修改 `ChineseS2TSelection.java`**
+
+  (a) 欄位 `private ConversionType mConversionType;` 換成：
 
   ```java
+      private HantVariant mVariant;
       private LyricsLang mLyricsLang;
   ```
 
-  `onCreate` 中第 52-59 行，原本是：
+  (b) `onCreate` 中第 52-59 行，原本是：
 
   ```java
           mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
@@ -1527,12 +1893,12 @@
           mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
           Locale uiLocale = getResources().getConfiguration().getLocales().get(0);
           String rawType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, null);
-          mConversionType = LyricsLanguagePolicy.parseConversion(rawType, uiLocale);
-          if (rawType != null && !LyricsLanguagePolicy.isValidConversion(rawType)) {
-              // Self-heal a corrupted value so other readers never see it again
-              mSharedPref.edit().putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.name()).apply();
+          mVariant = LyricsLanguagePolicy.parseVariant(rawType, uiLocale);
+          if (rawType != null && !LyricsLanguagePolicy.isCanonical(rawType)) {
+              // Self-heal a legacy or corrupted value so other readers never see it again
+              mSharedPref.edit().putString(ContentView.PREF_CONVERSION_TYPE, mVariant.getPrefValue()).apply();
           }
-          checkRadioButton(mConversionType);
+          checkVariantButton(mVariant);
 
           mLyricsLang = LyricsLang.fromPref(mSharedPref.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null));
           checkLyricsLangButton(mLyricsLang);
@@ -1542,25 +1908,11 @@
           ((RadioGroup) findViewById(R.id.radioGroupLyricsDefault)).setOnCheckedChangeListener(this);
   ```
 
-  整個 `checkRadioButton(String cType)` 方法換成下面兩個方法：
+  (c) 整個 `checkRadioButton(String cType)` 方法換成下面兩個方法：
 
   ```java
-      private void checkRadioButton(ConversionType type) {
-          int id;
-          switch (type) {
-              case S2HK:
-                  id = R.id.radioButtonS2HK;
-                  break;
-              case S2TW:
-                  id = R.id.radioButtonS2TW;
-                  break;
-              case S2TWP:
-                  id = R.id.radioButtonS2TWP;
-                  break;
-              default:
-                  id = R.id.radioButtonS2T;
-                  break;
-          }
+      private void checkVariantButton(HantVariant variant) {
+          int id = (variant == HantVariant.HK) ? R.id.radioButtonS2HK : R.id.radioButtonS2TW;
           ((RadioButton) findViewById(id)).setChecked(true);
       }
 
@@ -1581,24 +1933,33 @@
       }
   ```
 
-  `onCheckedChanged` 中 `if (null != rb) {` 區塊的開頭插入下面這段，處理歌詞預設語言的 RadioGroup：
+  (d) 整個 `onCheckedChanged` 方法換成：
 
   ```java
-              if (group.getId() == R.id.radioGroupLyricsDefault) {
-                  if (checkedId == R.id.radioLyricsSimplified) {
-                      mLyricsLang = LyricsLang.SIMPLIFIED;
-                  }
-                  else if (checkedId == R.id.radioLyricsTraditional) {
-                      mLyricsLang = LyricsLang.TRADITIONAL;
-                  }
-                  else {
-                      mLyricsLang = LyricsLang.FOLLOW_UI;
-                  }
-                  return;
+      @Override
+      public void onCheckedChanged(RadioGroup group, int checkedId) {
+          if (group.findViewById(checkedId) == null) {
+              return;
+          }
+          mHasChanges = true;
+          if (group.getId() == R.id.radioGroupLyricsDefault) {
+              if (checkedId == R.id.radioLyricsSimplified) {
+                  mLyricsLang = LyricsLang.SIMPLIFIED;
               }
+              else if (checkedId == R.id.radioLyricsTraditional) {
+                  mLyricsLang = LyricsLang.TRADITIONAL;
+              }
+              else {
+                  mLyricsLang = LyricsLang.FOLLOW_UI;
+              }
+          }
+          else {
+              mVariant = (checkedId == R.id.radioButtonS2HK) ? HantVariant.HK : HantVariant.TW;
+          }
+      }
   ```
 
-  `updateS2TSelection` 中原本的：
+  (e) `updateS2TSelection` 中原本的：
 
   ```java
               editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.toString());
@@ -1607,39 +1968,45 @@
   換成：
 
   ```java
-              editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.name());
+              editor.putString(ContentView.PREF_CONVERSION_TYPE, mVariant.getPrefValue());
               editor.putString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, mLyricsLang.name());
   ```
 
-  新增 import：
+  (f) import 調整：
+  - 刪除 `import com.zqc.opencc.android.lib.ConversionType;`。
+  - 新增：
 
-  ```java
-  import java.util.Locale;
-  import org.cog.hymnchtv.lyrics.LyricsLang;
-  import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
-  ```
+    ```java
+    import java.util.Locale;
+    import org.cog.hymnchtv.lyrics.HantVariant;
+    import org.cog.hymnchtv.lyrics.LyricsLang;
+    import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+    ```
 
-- [ ] **Step 3：Build**
+- [ ] **Step 4：Build**
 
   Run: `./gradlew :hymnchtv:assembleDebug`
   Expected: BUILD SUCCESSFUL。
 
-- [ ] **Step 4：手動驗證非法值不會當機**
+- [ ] **Step 5：手動驗證非法值與舊值都不會當機**
 
   ```bash
   adb shell am force-stop org.cog.hymnchtv
   adb shell "run-as org.cog.hymnchtv sed -i 's#<string name=\"ConversionType\">[^<]*#<string name=\"ConversionType\">BOGUS#' shared_prefs/Settings.xml"
   ```
 
-  `ConversionType` 這個 key 如果還不存在，先在 app 裡選一次轉換標準，再執行上面的指令。
+  如果 `ConversionType` 這個 key 還不存在，先在 app 裡選一次轉換標準，再執行上面的指令。
 
-  接著從主選單開啟「歌詞語言」：畫面要正常顯示，而且勾選的是預設的轉換標準（簡中介面是 S2TW）。用 `run-as ... cat shared_prefs/Settings.xml` 確認，`ConversionType` 應該已經被修正成合法值。
+  驗證：
+  1. 從主選單開啟「歌詞語言」：畫面正常顯示，勾選的是「台灣」（簡中或台灣介面）。
+  2. 用 `run-as ... cat shared_prefs/Settings.xml` 確認，`ConversionType` 已經被修正成 `S2TW`。
+  3. 把值改成 `S2TWP` 再重複一次：勾選的仍然是「台灣」。
 
-- [ ] **Step 5：Commit**
+- [ ] **Step 6：Commit**
 
   ```bash
-  git add hymnchtv/src/main/res/layout/chinese_t2s_selection.xml hymnchtv/src/main/java/org/cog/hymnchtv/utils/ChineseS2TSelection.java
-  git commit -m "feat: add default lyrics language setting and self-heal invalid conversion type"
+  git add hymnchtv/src/main/res hymnchtv/src/main/java/org/cog/hymnchtv/utils/ChineseS2TSelection.java
+  git commit -m "feat: default lyrics language setting; limit Traditional variants to Taiwan and Hong Kong"
   ```
 
 ---
@@ -1745,18 +2112,14 @@
       /** Legacy: read only by PrefsMigrator (migr.lyrics.v1); replaced by LyricsLanguagePolicy.PREF_LYRICS_DEFAULT. */
   ```
 
-  (c) 第 188-189 行：
+  (c) **刪除**第 188-189 行：
 
   ```java
           isSimplify = mSharedPref.getBoolean(PREF_SIMPLIFY, true);
           mConversionType = ConversionType.valueOf(mSharedPref.getString(PREF_CONVERSION_TYPE, ConversionType.S2T.toString()));
   ```
 
-  換成：
-
-  ```java
-          mConversionType = LyricsLanguagePolicy.parseConversion(mSharedPref.getString(PREF_CONVERSION_TYPE, null), uiLocale());
-  ```
+  同時刪除第 113 行的欄位 `private ConversionType mConversionType = ConversionType.S2T;`。之後每次載入歌詞時才讀取 variant，見 (j)。
 
   (d) 在 `onResume()` 裡，`registerForContextMenu(lyricsView);` 之後加上：
 
@@ -1824,15 +2187,70 @@
       }
   ```
 
-  (i) 新增 import：
+  (i) import 調整：
+
+  - 新增：
+
+    ```java
+    import java.util.Locale;
+    import org.cog.hymnchtv.lyrics.HantVariant;
+    import org.cog.hymnchtv.lyrics.LyricsAssets;
+    import org.cog.hymnchtv.lyrics.LyricsLang;
+    import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+    ```
+
+    已經 import 過的就不要重複加。
+  - 刪除 `import com.zqc.opencc.android.lib.ConversionType;`。
+  - 保留 `ChineseConverter` 的 import，因為 (j) 的後備路徑還會用到它。
+
+  (j) **改讀預先產生的繁體歌詞**（spec A.1.9）。`showLyricsChText` 裡原本整個 `try { ... } catch (IOException e) { ... }` 區塊（第 450-465 行，也就是從 `try {` 到 `Timber.w("Error reading file: %s", resFName);` 的右大括號）換成：
 
   ```java
-  import java.util.Locale;
-  import org.cog.hymnchtv.lyrics.LyricsLang;
-  import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+          String lyrics = readAsset(resFName);
+          if (lyrics != null) {
+              lyricsSimplify.setText(lyrics);
+              lyricsTraditional.setText(loadTraditional(resFName, lyrics));
+          }
   ```
 
-  已經 import 過的就不要重複加。
+  方法結尾的 `selectJC()` 判斷保持不動。
+
+  兩份檔案都讀進來：每首只有幾 KB，不需要 OpenCC，而且按「簡／繁」切換時不必重新讀檔。
+
+  在 `showLyricsChText` 之後新增：
+
+  ```java
+      /** Pre-generated Traditional lyrics (plan A.1.9); runtime OpenCC only if the asset is unexpectedly missing. */
+      private String loadTraditional(String resFName, String simplified) {
+          HantVariant variant = LyricsLanguagePolicy.parseVariant(mSharedPref.getString(PREF_CONVERSION_TYPE, null), uiLocale());
+          String hantPath = LyricsAssets.hantPath(resFName, variant);
+          String text = (hantPath == null) ? null : readAsset(hantPath);
+          if (text != null) {
+              return text;
+          }
+          Timber.w("Missing pre-generated lyrics %s; converting at runtime", hantPath);
+          return ChineseConverter.convert(simplified, variant.getConversion(), mContentHandler);
+      }
+
+      /** @return the asset text with '\n' line ends, or null if it cannot be read. */
+      private String readAsset(String path) {
+          try (BufferedReader reader = new BufferedReader(
+                  new InputStreamReader(getResources().getAssets().open(path), StandardCharsets.UTF_8))) {
+              StringBuilder text = new StringBuilder();
+              String line;
+              while ((line = reader.readLine()) != null) {
+                  text.append(line).append('\n');
+              }
+              return text.toString();
+          }
+          catch (IOException e) {
+              Timber.w("Error reading file: %s", path);
+              return null;
+          }
+      }
+  ```
+
+  如果 `InputStream` 這個 import 不再被使用，就把它刪掉。
 
 - [ ] **Step 6：Build 並執行全部單元測試**
 
@@ -1849,6 +2267,8 @@
   3. 返回主頁再重新開啟，歌詞應該回到繁體。
   4. 停在歌詞頁不動，超過系統的螢幕逾時時間，螢幕不能熄滅。
   5. 回到主頁後，螢幕要恢復正常的逾時行為。
+  6. 用 `adb logcat | grep -i "converting at runtime"` 觀察，連續翻 20 頁，不能出現任何一行。這代表全部讀的是預先產生的檔案。
+  7. 在「歌詞語言」把轉換標準改成「香港」後回到歌詞頁：頁面會重建，顯示香港字形（例如「裏」）。
 
 - [ ] **Step 8：Commit**
 
