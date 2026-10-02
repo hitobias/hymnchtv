@@ -59,6 +59,7 @@ import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
 import org.cog.hymnchtv.toc.YbCrossRef;
 import org.cog.hymnchtv.ui.host.MainHost;
+import org.cog.hymnchtv.ui.host.MainNavigator;
 import org.cog.hymnchtv.utils.DialogActivity;
 
 import de.cketti.library.changelog.ChangeLog;
@@ -73,7 +74,7 @@ import timber.log.Timber;
  * @author wayfarer
  */
 public class MainActivity extends BaseActivity implements LifecycleEventObserver,
-        ActivityCompat.OnRequestPermissionsResultCallback {
+        ActivityCompat.OnRequestPermissionsResultCallback, MainNavigator {
     public static final String ATTR_HYMN_TYPE = "hymn_type";
     public static final String ATTR_HYMN_NUMBER = "hymn_number";
     public static final String ATTR_MEDIA_URI = "media_uri";
@@ -213,6 +214,26 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
             intent.putExtras(bundle);
             startActivity(intent);
         }
+    }
+
+    @Override
+    public void openToc(@NonNull String book, @NonNull String page) {
+        if (mainHost != null) {
+            mainHost.openToc(book, page);
+        }
+    }
+
+    @Override
+    public void openHistory() {
+        if (mainHost != null) {
+            mainHost.openHistory();
+        }
+    }
+
+    @Override
+    public void openSearch(String book) {
+        // H4 replaces this with the search page
+        Timber.w("Search page is not available yet (book=%s)", book);
     }
 
     @Override

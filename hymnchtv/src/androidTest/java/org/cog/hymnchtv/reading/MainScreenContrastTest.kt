@@ -41,7 +41,7 @@ class MainScreenContrastTest {
             val palette = BackgroundPolicy.palette(BackgroundChoice.Preset(preset))
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 scenario.onActivity {
-                    for (id in listOf(R.id.tv_entry, R.id.tv_search, R.id.n1, R.id.btn_search)) {
+                    for (id in listOf(R.id.tv_entry, R.id.tv_search, R.id.n1, R.id.btn_open, R.id.bs_db)) {
                         val color = it.findViewById<TextView>(id).currentTextColor
                         assertWithMessage("${preset.id} view $id")
                             .that(Wcag.contrast(color, palette.paperColor)).isAtLeast(MainScreenColors.MIN_TEXT_CONTRAST)

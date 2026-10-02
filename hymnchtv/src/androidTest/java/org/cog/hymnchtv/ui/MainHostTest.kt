@@ -8,7 +8,9 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.Espresso.pressBack
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.scrollTo
+import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.ViewMatchers.isEnabled
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
@@ -70,11 +72,11 @@ class MainHostTest {
 
     @Test
     fun homeKeepsTheTypedNumberWhileAnotherTabIsShown() = launch {
-        onView(withId(R.id.n1)).perform(click())
-        onView(withId(R.id.n2)).perform(click())
+        onView(withId(R.id.n1)).perform(scrollTo(), click())
+        onView(withId(R.id.n2)).perform(scrollTo(), click())
         selectTab(R.id.nav_settings)
         selectTab(R.id.nav_home)
-        onView(withId(R.id.tv_entry)).check(matches(withText("12")))
+        onView(withId(R.id.tv_entry)).check(matches(withText(org.hamcrest.CoreMatchers.containsString(ctx.getString(R.string.c_label_no, 12)))))
     }
 
     @Test
@@ -100,19 +102,22 @@ class MainHostTest {
     }
 
     @Test
-    fun backClosesTheOpenHistoryListBeforeFinishing() = launch { scenario ->
+    fun backClosesTheHistoryPageBeforeFinishing() = launch { scenario ->
         val db = DatabaseBackend.getInstance(ctx)
+        db.historyRecords.forEach { db.deleteHymnHistory(it) }
         db.storeHymnHistory(HistoryRecord(MainActivity.HYMN_DB, 1, false))
-        onView(withId(R.id.tv_entry)).perform(click())
-        onView(withId(R.id.historyListView)).check(matches(isDisplayed()))
+        FragmentHost.eventually { onView(withId(R.id.btn_recent_more)).check(matches(isDisplayed())) }
+        onView(withId(R.id.btn_recent_more)).perform(click())
+        onView(withId(R.id.history_list)).check(matches(isDisplayed()))
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        onView(withId(R.id.historyListView)).check(matches(not(isDisplayed())))
+        onView(withId(R.id.history_list)).check(doesNotExist())
+        onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
         scenario.onActivity { assertThat(it.isFinishing).isFalse() }
     }
 
     @Test
-    fun nextButtonIsShownOnHome() = launch {
-        onView(withId(R.id.btn_next)).perform(scrollTo()).check(matches(isDisplayed()))
+    fun openButtonIsShownOnHomeAndStartsDisabled() = launch {
+        onView(withId(R.id.btn_open)).perform(scrollTo()).check(matches(isDisplayed())).check(matches(not(isEnabled())))
     }
 
     @Test
