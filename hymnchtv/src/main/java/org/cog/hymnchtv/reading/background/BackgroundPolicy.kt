@@ -18,12 +18,21 @@ enum class BackgroundSlot(val prefKey: String, val lightDefault: BackgroundPrese
     MAIN("MainBackground", BackgroundPreset.DAWN),
     LYRICS("LyricsBackground", BackgroundPreset.XUAN);
 
+    /**
+     * Long pref bumped whenever the stored photo is replaced: re-importing while the slot already says "photo"
+     * leaves [prefKey] unchanged, so this is what tells listeners (ReadingSettings, lyrics page) to reapply.
+     */
+    val revisionKey: String get() = prefKey + "Revision"
+
     companion object {
         /** Never throws; unknown names mean LYRICS. */
         @JvmStatic
         fun fromName(name: String?): BackgroundSlot = entries.firstOrNull { it.name == name } ?: LYRICS
     }
 }
+
+/** Next photo revision: strictly greater than [previous] even if the clock did not move or went back. */
+fun nextPhotoRevision(previous: Long, nowMillis: Long): Long = maxOf(nowMillis, previous + 1)
 
 sealed interface BackgroundChoice {
     data class Preset(val preset: BackgroundPreset) : BackgroundChoice

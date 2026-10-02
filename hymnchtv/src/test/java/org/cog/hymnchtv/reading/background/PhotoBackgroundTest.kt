@@ -32,12 +32,18 @@ class PhotoBackgroundTest {
     }
 
     @Test
-    fun boundedSampleSizeCapsTheLongSideAtTwiceTheScreen() {
-        // landscape photo on a portrait screen: the both-sides rule alone would keep 8000 px
+    fun boundedSampleSizeCapsPixelsAtTwiceTheScreen() {
+        // landscape photo on a portrait screen: the both-sides rule alone would keep all 36 Mpx
         assertThat(PhotoBackground.sampleSize(8000, 4500, 1080, 2400)).isEqualTo(1)
-        assertThat(PhotoBackground.boundedSampleSize(8000, 4500, 1080, 2400)).isEqualTo(2)
-        assertThat(PhotoBackground.boundedSampleSize(4000, 2250, 1080, 2400)).isEqualTo(1)
+        assertThat(PhotoBackground.boundedSampleSize(8000, 4500, 1080, 2400)).isEqualTo(4)
+        assertThat(PhotoBackground.boundedSampleSize(4000, 3000, 1080, 2400)).isEqualTo(2)
+        assertThat(PhotoBackground.boundedSampleSize(4000, 2250, 1080, 2400)).isEqualTo(2)
         assertThat(PhotoBackground.boundedSampleSize(4320, 9600, 1080, 2400)).isEqualTo(4)
+        assertThat(PhotoBackground.boundedSampleSize(1200, 2600, 1080, 2400)).isEqualTo(1)
         assertThat(PhotoBackground.boundedSampleSize(0, 100, 10, 10)).isEqualTo(1)
+        for ((w, h) in listOf(8000 to 4500, 4000 to 3000, 12000 to 9000)) {
+            val size = PhotoBackground.boundedSampleSize(w, h, 1080, 2400)
+            assertThat((w / size).toLong() * (h / size)).isAtMost(2L * 1080 * 2400)
+        }
     }
 }

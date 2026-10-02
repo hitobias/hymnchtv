@@ -64,4 +64,17 @@ class BackgroundPolicyTest {
         assertThat(BackgroundSlot.fromName(null)).isEqualTo(BackgroundSlot.LYRICS)
         assertThat(BackgroundSlot.fromName("main")).isEqualTo(BackgroundSlot.LYRICS)
     }
+
+    @Test
+    fun photoRevisionAlwaysAdvances() {
+        assertThat(nextPhotoRevision(0L, 1000L)).isEqualTo(1000L)
+        assertThat(nextPhotoRevision(1000L, 1000L)).isEqualTo(1001L) // same millisecond
+        assertThat(nextPhotoRevision(5000L, 1000L)).isEqualTo(5001L) // clock went back
+    }
+
+    @Test
+    fun eachSlotHasItsOwnRevisionKey() {
+        assertThat(BackgroundSlot.MAIN.revisionKey).isEqualTo("MainBackgroundRevision")
+        assertThat(BackgroundSlot.LYRICS.revisionKey).isEqualTo("LyricsBackgroundRevision")
+    }
 }

@@ -30,6 +30,7 @@ import org.cog.hymnchtv.reading.background.BackgroundPreset
 import org.cog.hymnchtv.reading.background.BackgroundPrefs
 import org.cog.hymnchtv.reading.background.BackgroundSlot
 import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
+import org.cog.hymnchtv.reading.background.nextPhotoRevision
 import org.cog.hymnchtv.reading.background.ReadingPalette
 
 /** Grid of the 20 backgrounds plus "your photo" for one slot (plan A2); writes the slot's pref and finishes. */
@@ -71,8 +72,15 @@ class BackgroundPickerActivity : BaseActivity() {
         // The callback may arrive after this Activity was recreated: the slot pref is written regardless, the UI only if alive
         val appPrefs = applicationContext.getSharedPreferences(MainActivity.PREF_SETTINGS, MODE_PRIVATE)
         val slotKey = slot.prefKey
+        val revisionKey = slot.revisionKey
         PhotoBackgroundImporter.importAsync(this, uri) { ok ->
-            if (ok) appPrefs.edit().putString(slotKey, BackgroundPolicy.prefValue(BackgroundChoice.Photo)).apply()
+            if (ok) {
+                val revision = nextPhotoRevision(runCatching { appPrefs.getLong(revisionKey, 0L) }.getOrDefault(0L), System.currentTimeMillis())
+                appPrefs.edit()
+                    .putString(slotKey, BackgroundPolicy.prefValue(BackgroundChoice.Photo))
+                    .putLong(revisionKey, revision) // a changed value even when the slot was already "photo"
+                    .apply()
+            }
             if (isFinishing || isDestroyed) return@importAsync
             if (ok) {
                 setResult(RESULT_OK)
@@ -95,9 +103,19 @@ class BackgroundPickerActivity : BaseActivity() {
     }
 
     private inner class Adapter(private val current: BackgroundChoice) : BaseAdapter() {
-        private val sampleFont: Typeface =
-            (if (ReadingPrefs.lyricsFont(prefs) == LyricsFont.KAI) LyricsTypefaces.get(this@BackgroundPickerActivity, false) else null)
-                ?: Typeface.DEFAULT
+        // System font first; the lyrics face replaces it (and the grid refreshes) once it has loaded off the main thread
+        private var sampleFont: Typeface = Typeface.DEFAULT
+
+        init {
+            if (ReadingPrefs.lyricsFont(prefs) == LyricsFont.KAI) {
+                LyricsTypefaces.request(this@BackgroundPickerActivity, false) { face ->
+                    if (!isDestroyed) {
+                        sampleFont = face
+                        notifyDataSetChanged()
+                    }
+                }
+            }
+        }
 
         override fun getCount(): Int = choices.size
         override fun getItem(position: Int): Any = choices[position]

@@ -49,23 +49,24 @@ object LyricsTypefaces {
         }
     }
 
-    /** Blocking variant for off-main or one-off callers (the background picker's sample text). */
-    @JvmStatic
-    fun get(context: Context, traditionalScript: Boolean): Typeface? = load(context.applicationContext, traditionalScript)
-
-    /** A failed load is remembered so it is not retried on every page. */
-    @Synchronized
+    /**
+     * A failed load is remembered so it is not retried on every page. The locks are short (state only): the
+     * multi-MB font decode runs outside them so [peek] on the main thread never waits for it.
+     */
     private fun load(context: Context, traditionalScript: Boolean): Typeface? {
         val i = slot(traditionalScript)
-        if (attempted[i]) return faces[i]
-        attempted[i] = true
+        synchronized(this) {
+            if (attempted[i]) return faces[i]
+            attempted[i] = true
+        }
         val res = if (traditionalScript) R.font.hymnal_kai_tc else R.font.hymnal_kai_sc
-        faces[i] = try {
+        val face = try {
             ResourcesCompat.getFont(context, res)
         } catch (e: Resources.NotFoundException) {
             Timber.e(e, "Lyrics font %s could not be loaded", if (traditionalScript) "TC" else "SC")
             null
         }
-        return faces[i]
+        synchronized(this) { faces[i] = face }
+        return face
     }
 }

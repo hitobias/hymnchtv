@@ -29,13 +29,16 @@ object PhotoBackground {
         return size
     }
 
-    /** [sampleSize], raised until the decoded long side is at most twice the screen's long side. */
+    /** Decoded pixels may be at most this many times the screen's pixels (centerCrop shows only a screen-sized part). */
+    const val MAX_PIXEL_RATIO = 2L
+
+    /** [sampleSize], raised until the decoded pixel count is at most [MAX_PIXEL_RATIO] times the screen's. */
     @JvmStatic
     fun boundedSampleSize(srcWidth: Int, srcHeight: Int, screenWidth: Int, screenHeight: Int): Int {
         var size = sampleSize(srcWidth, srcHeight, screenWidth, screenHeight)
         if (srcWidth <= 0 || srcHeight <= 0 || screenWidth <= 0 || screenHeight <= 0) return size
-        val limit = 2 * maxOf(screenWidth, screenHeight)
-        while (maxOf(srcWidth, srcHeight) / size > limit) size *= 2
+        val budget = MAX_PIXEL_RATIO * screenWidth.toLong() * screenHeight
+        while ((srcWidth / size).toLong() * (srcHeight / size) > budget) size *= 2
         return size
     }
 }

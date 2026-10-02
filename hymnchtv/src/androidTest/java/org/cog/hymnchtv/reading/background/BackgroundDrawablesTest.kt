@@ -5,7 +5,10 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.os.Build
+import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.test.core.app.ActivityScenario
+import org.cog.hymnchtv.reading.ReadingSettingsActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
@@ -60,20 +63,34 @@ class BackgroundDrawablesTest {
         val source = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
         photo.outputStream().use { source.compress(Bitmap.CompressFormat.PNG, 100, it) }
         prefs.edit().putInt(PhotoBackground.PREF_BLUR, 10).commit()
-        lateinit var view: ImageView
         var blurredRadius = 0f
-        instrumentation.runOnMainSync {
-            view = ImageView(ctx)
-            BackgroundApplier.apply(view, BackgroundChoice.Photo, prefs, photo, BackgroundPreset.XUAN)
-            blurredRadius = BackgroundApplier.appliedBlurRadius(view)
-            BackgroundApplier.apply(view, BackgroundChoice.Preset(BackgroundPreset.MIST), prefs, photo, BackgroundPreset.XUAN)
+        lateinit var view: ImageView
+        // The photo decodes off the main thread and lands only on an attached view, so host it in a real Activity
+        ActivityScenario.launch(ReadingSettingsActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                view = ImageView(activity)
+                activity.addContentView(view, ViewGroup.LayoutParams(100, 100))
+                BackgroundApplier.apply(view, BackgroundChoice.Photo, prefs, photo, BackgroundPreset.XUAN)
+            }
+            val deadline = System.currentTimeMillis() + 5000
+            while (view.drawable == null && System.currentTimeMillis() < deadline) {
+                Thread.sleep(20)
+            }
+            scenario.onActivity {
+                blurredRadius = BackgroundApplier.appliedBlurRadius(view)
+                // A decode still in flight for the photo must not land after this newer choice
+                BackgroundApplier.apply(view, BackgroundChoice.Preset(BackgroundPreset.MIST), prefs, photo, BackgroundPreset.XUAN)
+            }
+            Thread.sleep(300)
+            scenario.onActivity {
+                assertThat(BackgroundApplier.appliedBlurRadius(view)).isEqualTo(0f)
+                assertThat(view.drawable).isNull()
+                assertThat(view.colorFilter).isNull()
+            }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             assertThat(blurredRadius).isGreaterThan(0f)
         }
-        assertThat(BackgroundApplier.appliedBlurRadius(view)).isEqualTo(0f)
-        assertThat(view.drawable).isNull()
-        assertThat(view.colorFilter).isNull()
     }
 
     @Test
