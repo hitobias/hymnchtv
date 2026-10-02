@@ -84,6 +84,7 @@ class Prefs:
     char: dict = field(default_factory=dict)   # (s, a) -> b
     pairs: dict = field(default_factory=dict)  # (a, b) -> APPLY | KEEP | ALWAYS (manual decisions)
     always: dict = field(default_factory=dict)  # a -> b for the ALWAYS pairs
+    char_partial: frozenset = frozenset()       # (s, a) whose char rule held in less than 100% of the RcV
 
 
 def bigram_sides(prefs, s, l, r):
@@ -288,7 +289,7 @@ def format_char_table(prefs, per_a_counts):
 
 def parse_tables(word_lines, char_lines, pair_lines=()):
     """Inverse of the formatters plus the manual pairs table (opencc<TAB>rcv<TAB>apply|keep<TAB>note)."""
-    uni, weak, left, right, tri, char, pairs, always = {}, {}, {}, {}, {}, {}, {}, {}
+    uni, weak, left, right, tri, char, pairs, always, partial = {}, {}, {}, {}, {}, {}, {}, {}, set()
     for n, line in enumerate(word_lines, 1):
         if not line.strip() or line.startswith("#"):
             continue
@@ -303,8 +304,10 @@ def parse_tables(word_lines, char_lines, pair_lines=()):
     for n, line in enumerate(char_lines, 1):
         if not line.strip() or line.startswith("#"):
             continue
-        s, a, b, _, _ = _cols(line, 5, n)
+        s, a, b, n_b, total = _cols(line, 5, n)
         char[(s, a)] = b
+        if n_b != total:
+            partial.add((s, a))
     for n, line in enumerate(pair_lines, 1):
         if not line.strip() or line.startswith("#"):
             continue
@@ -316,7 +319,8 @@ def parse_tables(word_lines, char_lines, pair_lines=()):
         pairs[(a, b)] = decision
         if decision == ALWAYS:
             always[a] = b
-    return Prefs(uni=uni, weak=weak, left=left, right=right, tri=tri, char=char, pairs=pairs, always=always)
+    return Prefs(uni=uni, weak=weak, left=left, right=right, tri=tri, char=char, pairs=pairs, always=always,
+                 char_partial=frozenset(partial))
 
 
 def _cols(line, count, n):

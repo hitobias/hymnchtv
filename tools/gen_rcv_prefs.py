@@ -11,6 +11,7 @@ thresholds. Requires the OpenCC CLI; output is deterministic for the same corpus
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -90,9 +91,12 @@ def main():
         f"# thresholds: contested >= {rp.CONTEST_MIN} disagreements; context >= {rp.CTX_MIN} occurrences and "
         f">= {rp.CTX_SHARE:.0%}; char rule >= {rp.CHAR_MIN}, >= {rp.CHAR_SHARE:.0%} and >= {rp.CHAR_CONTEXTS} contexts; bigrams stored >= {rp.BIGRAM_STORE_MIN}",
     ]
-    WORD_TABLE.write_text("\n".join(header + [rp.WORD_HEADER] + rp.format_word_table(prefs)) + "\n", encoding="utf-8")
-    CHAR_TABLE.write_text("\n".join(header + [rp.CHAR_HEADER] + rp.format_char_table(prefs, per_a)) + "\n",
-                          encoding="utf-8")
+    tables = {WORD_TABLE: [rp.WORD_HEADER] + rp.format_word_table(prefs),
+              CHAR_TABLE: [rp.CHAR_HEADER] + rp.format_char_table(prefs, per_a)}
+    for path, rows in tables.items():  # write both, then swap both in
+        path.with_suffix(".tmp").write_text("\n".join(header + rows) + "\n", encoding="utf-8")
+    for path in tables:
+        os.replace(path.with_suffix(".tmp"), path)
     print(f"{len(prefs.uni)} contested chars, {len(prefs.char)} char rules, "
           f"{len(prefs.left) + len(prefs.right)} bigram rows, {len(prefs.tri)} trigram rows")
 

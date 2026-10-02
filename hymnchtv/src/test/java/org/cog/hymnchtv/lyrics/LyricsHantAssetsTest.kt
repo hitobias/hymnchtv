@@ -84,6 +84,7 @@ class LyricsHantAssetsTest {
             "tools/rcv_word_prefs.tsv",
             "tools/rcv_char_prefs.tsv",
             "tools/rcv_pair_decisions.tsv",
+            "tools/rcv_review_decisions.tsv",
         )
     }
 }

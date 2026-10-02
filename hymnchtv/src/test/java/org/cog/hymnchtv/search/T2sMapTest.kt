@@ -31,6 +31,10 @@ class T2sMapTest {
         for (query in listOf("在灵裏", "在靈裡", "在灵里")) {
             assertThat(SearchPattern.build(query, map)!!.matcher("活在灵里面").find()).isTrue()
         }
+        // Other Recovery Version glyphs shown in the lyrics map back to the Simplified sources.
+        for ((rcv, simplified) in listOf("喫" to "吃", "纔" to "才", "祕" to "秘", "脣" to "唇", "讚" to "赞")) {
+            assertThat(map.candidates(rcv)).contains(simplified)
+        }
     }
 
     @Test
