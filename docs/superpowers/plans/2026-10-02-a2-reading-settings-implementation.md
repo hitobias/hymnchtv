@@ -205,9 +205,9 @@ A2 有 12 個設定項（4 個清單、3 個開關、2 個滑桿、2 個背景�
 | 1 | P | P1 → P2 → P3 → P4 → P5 | `java/.../reading/{ReadingPrefKeys,DisplayMode,LyricsFontSize,ScoreTint,ScorePages,ReadingPrefs}.kt`、對應測試、`test/.../reading/FakeSharedPreferences.kt`、`utils/ThemeHelper.java`、`test/.../utils/ThemeDefaultTest.kt` | 階段 0 |
 | 1 | B | B1 → B2 → B3 | `java/.../reading/background/*.kt`、`test/.../reading/background/*`、`androidTest/.../reading/background/*`、`tools/gen_backgrounds.py`、`res/drawable*/bg_*`、`res/drawable*/bgx_*`、`res/values/ids_reading.xml` | 階段 0 |
 | 1 | F | F0 → F1 → F2 → F3 | `assets/lyrics_xg_text/xg171.txt`、`assets/lyrics_xg_text_hant_{tw,hk}/xg171.txt`、`assets/lyrics_hant_manifest.txt`、`assets/lyrics_t2s_map.txt`、`tools/gen_font_subset.py`、`tools/font_subset_manifest.txt`、`res/font/*`、`assets/licenses/*`、`java/.../reading/LyricsTypefaces.kt`、`test/.../reading/FontSubsetTest.kt`、`About.java`、`res/layout/about.xml` | 階段 0 |
-| 2 | S | S1 → S2 | `java/.../reading/{ReadingSettingsActivity,ReadingSettingsFragment,BackgroundPickerActivity}.kt`、`res/xml/reading_preferences.xml`、`res/layout/{reading_settings,background_picker,background_picker_item}.xml`、`AndroidManifest.xml`、`test/.../reading/ReadingPreferencesXmlTest.kt` | 階段 1 全部合併 |
+| 2 | S | S1 → S2 → S3 | `java/.../reading/{ReadingSettingsActivity,ReadingSettingsFragment,BackgroundPickerActivity}.kt`、`res/xml/reading_preferences.xml`、`res/layout/{reading_settings,background_picker,background_picker_item}.xml`、`AndroidManifest.xml`、`test/.../reading/ReadingPreferencesXmlTest.kt`、S3 另有：`java/.../reading/background/{PhotoBackgroundImporter,BackgroundPrefs,BackgroundPolicy}.kt`、`utils/WallPaperUtil.java` 與 `res/layout/wallpaper_editor.xml`（刪除）、`hymnchtv/build.gradle` 與根 `build.gradle`（移除 ucrop、jitpack）、`res/values*/strings.xml`（只刪 `wp_size`）、`res/values*/strings_reading.xml`、`MainActivity.java`（只改到能編譯：移除 `WallPaperUtil` import、`sbguser` 分支，`setWallpaper()` 改讀 `BackgroundPrefs.photoFile`）、對應 test／androidTest  | 階段 1 全部合併 |
 | 3 | I | I1 → I2 | `ContentHandler.java`、`res/layout/content_main.xml`、`res/menu/menu_content.xml`、`mediaconfig/LyricsEnglishRecord.java`、`ContentView.java`、`res/layout/content_lyrics.xml`、`androidTest/.../ContentHandlerReadingTest.kt` | 階段 2 合併 |
-| 3 | M | M1 | `MainActivity.java`、`res/layout/main.xml`、`res/layout-land/main.xml`、`res/menu/menu_main.xml`、`utils/WallPaperUtil.java` | 階段 2 合併 |
+| 3 | M | M1 | `MainActivity.java`、`res/layout/main.xml`、`res/layout-land/main.xml`、`res/menu/menu_main.xml`（`utils/WallPaperUtil.java` 已在 S3 刪除，不再屬於任何 lane） | 階段 2 合併 |
 | 4 | — | C1 → V1 → R1 | 清理、模擬器驗證、審查 | 階段 3 全部合併 |
 
 （`java/...` = `hymnchtv/src/main/java/org/cog/hymnchtv`；`test/...` = `hymnchtv/src/test/java/org/cog/hymnchtv`；`androidTest/...` = `hymnchtv/src/androidTest/java/org/cog/hymnchtv`；`res/`、`assets/` 都在 `hymnchtv/src/main/` 底下。）
@@ -256,9 +256,9 @@ Instrumented test（`androidTest`）在平行 lane 只做編譯檢查（`./gradl
 
 **資源：** `res/values{,-zh,-b+zh+Hant}/strings_reading.xml`、`res/values/reading_arrays.xml`、`res/values/ids_reading.xml`、`res/xml/reading_preferences.xml`、`res/layout/{reading_settings,background_picker,background_picker_item}.xml`。
 
-**修改：** `hymnchtv/build.gradle`、`.gitignore`、`AndroidManifest.xml`、`ContentView.java`（整檔替換）、`ContentHandler.java`、`MainActivity.java`、`utils/ThemeHelper.java`、`About.java`、`assets/lyrics_xg_text/xg171.txt`、`mediaconfig/LyricsEnglishRecord.java`、`utils/WallPaperUtil.java`、`res/layout/{content_lyrics,content_main,main,about}.xml`、`res/layout-land/main.xml`、`res/menu/{menu_main,menu_content}.xml`、三份 `strings.xml`（C1 刪除不用的字串）。
+**修改：** `hymnchtv/build.gradle`、`.gitignore`、`AndroidManifest.xml`、`ContentView.java`（整檔替換）、`ContentHandler.java`、`MainActivity.java`、`utils/ThemeHelper.java`、`About.java`、`assets/lyrics_xg_text/xg171.txt`、`mediaconfig/LyricsEnglishRecord.java`、`res/layout/{content_lyrics,content_main,main,about}.xml`、`res/layout-land/main.xml`、`res/menu/{menu_main,menu_content}.xml`、三份 `strings.xml`（C1 刪除不用的字串）。
 
-**刪除：** `utils/ChineseS2TSelection.java`、`res/layout/chinese_t2s_selection.xml`、`res/drawable-ldpi/bg*.jpg`（12 張）。
+**刪除：** `utils/WallPaperUtil.java`、`res/layout/wallpaper_editor.xml`（兩者在 S3 已刪）、`utils/ChineseS2TSelection.java`、`res/layout/chinese_t2s_selection.xml`、`res/drawable-ldpi/bg*.jpg`（12 張）。
 
 ---
 
@@ -4011,6 +4011,18 @@ Lane S 的子代理在 worktree `../hymnchtv-a2-s` 工作（從合併了 P、B�
 
   Lane S 完成，回報給協調者合併。
 
+### Task S3：移除舊桌布程式，改用系統照片挑選器匯入（使用者決策，rev 3）
+
+使用者決定整支舊桌布程式（`WallPaperUtil`＋UCrop 裁切）移除。Lane S 在 S2 之後多做這個 task，另含兩項審查修正，皆已完成：
+
+- 刪除：`utils/WallPaperUtil.java`、`res/layout/wallpaper_editor.xml`、manifest 的 `.utils.WallPaperUtil` 與 `com.yalantis.ucrop.UCropActivity`、字串 `wp_size`（三份）、`hymnchtv/build.gradle` 的 `com.github.yalantis:ucrop`、根 `build.gradle` 的 jitpack 倉庫（只有 ucrop 用到）。
+- 新增 `reading/background/PhotoBackgroundImporter.kt`：`BackgroundPickerActivity` 的照片格用 `ActivityResultContracts.PickVisualMedia(ImageOnly)`（舊版 Android 自動退回文件挑選器，不需儲存權限）。結果 Uri 在背景執行緒處理：`ContentResolver` 開串流 → 讀尺寸 → 以 `PhotoBackground.boundedSampleSize` 解碼（長邊 ≤ 螢幕長邊 2 倍）→ 套用 EXIF 方向（`androidx.exifinterface:1.3.6`，S3 明確加入依賴，原本只是 Glide 的傳遞依賴）→ JPEG q85 寫到 `filesDir/backgrounds/photo.tmp` → `renameTo` 成 `photo.jpg`。`IOException`／`SecurityException`／`IllegalStateException`／OOM 都清掉暫存檔、顯示 toast（`bg_photo_import_failed`）並保持原狀；成功才把該位置（`EXTRA_SLOT`）的 pref 設為 `photo`。不做裁切，顯示仍是 centerCrop＋變暗／模糊。
+- `BackgroundPrefs.photoFile(prefs)` 改讀固定路徑（簽名不變，`prefs` 參數保留以相容 I、M 的呼叫；路徑來自 `HymnsApp.getGlobalContext().filesDir`），不再使用 `PREF_WALLPAPER`、`DIR_WALLPAPER`、`FileBackend`。B3 Step 3 的 `photoFile`、`BackgroundDrawablesTest.photoPrefKeyIsTheWallpaperKey`、S2 `BackgroundPickerActivity` 啟動 `WallPaperUtil` 的程式碼已被 S3 取代，以 repo 內實際程式碼為準。
+- `MainActivity.java` 只改最少的地方（lane M 之後再整理）：移除 `DIR_WALLPAPER` 與 `WallPaperUtil` 兩個 import、`sbguser` 的點擊分支，`setWallpaper()` 的自訂照片分支改成 `BackgroundPrefs.photoFile(mSharedPref)`（新增 `BackgroundPrefs` import）。選單 item `sbguser` 與 `PREF_WALLPAPER` 常數仍在，由 M1 刪除。
+- 審查修正（設定畫面）：`reading_preferences.xml` 不再有任何 `app:defaultValue`，每個項目都是 `app:persistent="false"`。`ReadingSettingsFragment.bindStoredValues()` 從 `ReadingPrefs` 讀出有效值顯示（不寫入），使用者改動時才由 listener 寫入；`ConversionType` 的自我修復移到 `ReadingSettingsActivity.onCreate`，在註冊變更 listener 之前執行，所以只有使用者造成的寫入才會讓結果帶 `EXTR_KEY_HAS_CHANGES`。`ReadingPreferencesXmlTest.openingTheScreenWritesNothing` 守住這件事（原本的 `defaultsMatchTheCode` 拆成它和 `seekBarRangesMatchTheCode`）。
+- 審查修正（挑選畫面）：照片縮圖只在背景執行緒解碼一次再快取，預設背景 drawable 依位置快取。
+- 測試：`PhotoBackgroundImporterTest`（JVM：路徑、EXIF 方向對照；androidTest：匯入成功與失敗保留舊檔，只編譯檢查，V1 才跑）。新字串避開字型子集沒有的字（例如「張」），否則 `FontSubsetTest` 會失敗。
+
 ---
 
 ## 階段 3 · Lane I：歌詞頁
@@ -5426,10 +5438,9 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
 - Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java`
 - Modify: `hymnchtv/src/main/res/layout/main.xml`、`hymnchtv/src/main/res/layout-land/main.xml`
 - Modify: `hymnchtv/src/main/res/menu/menu_main.xml`
-- Modify: `hymnchtv/src/main/java/org/cog/hymnchtv/utils/WallPaperUtil.java`
 - Modify（test）: `hymnchtv/src/test/java/org/cog/hymnchtv/utils/ThemeDefaultTest.kt`
 
-**前置:** 階段 2 合併。舊 JPG 檔本身在 C1 才刪除（這裡先移除所有程式引用）。
+**前置:** 階段 2 合併。舊 JPG 檔本身在 C1 才刪除（這裡先移除所有程式引用）。`utils/WallPaperUtil.java`、`wallpaper_editor.xml`、UCrop 依賴與 `sbguser` 的點擊分支已在 S3 刪除；S3 讓 `MainActivity.setWallpaper()` 的自訂照片分支改讀 `BackgroundPrefs.photoFile(mSharedPref)`（M1 Step 6 會把整個 `setWallpaper()` 換掉）。所以 M1 不要再碰 `WallPaperUtil`，也找不到 `DIR_WALLPAPER`。
 
 - [ ] **Step 1：`layout/main.xml` 加上背景 view**
 
@@ -5539,7 +5550,7 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
              android:title="@string/reading_settings" />
      ```
 
-  2. 刪除整個 `<item android:id="@+id/bg" android:title="@string/wall_paper"> ... </item>` 區塊（含 `sbguser`、`sbg1`～`sbg12`）。
+  2. 刪除整個 `<item android:id="@+id/bg" android:title="@string/wall_paper"> ... </item>` 區塊（含 `sbguser`、`sbg1`～`sbg12`；`sbguser` 的程式分支 S3 已刪，選單 item 與字串 `wallpaperUser` 仍在，這一步一起刪）。
 
 - [ ] **Step 4：`MainActivity.java` 常數與欄位**
 
@@ -5579,7 +5590,7 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
          }
      ```
 
-  2. 刪除從 `// === Set background color ===` 開始，到 `sbguser` 分支（`mStartForResult.launch(new Intent(this, WallPaperUtil.class)); return true; }`）結束的所有 `else if` 分支（`sbg1`～`sbg12`、`sbguser`，共 13 個）。刪完後，前一個分支（`R.id.black`）的 `}` 之後接著就是 `else if (itemId == R.id.sn_convert) {`。
+  2. 刪除從 `// === Set background color ===` 開始，到 `sbg12` 分支結束的所有 `else if` 分支（`sbg1`～`sbg12`，共 12 個；`sbguser` 分支 S3 已刪）。刪完後，前一個分支（`R.id.black`）的 `}` 之後接著就是 `else if (itemId == R.id.sn_convert) {`。
 
 - [ ] **Step 6：背景套用**
 
@@ -5641,7 +5652,7 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
   import org.cog.hymnchtv.reading.background.ReadingPalette;
   ```
 
-  刪除 `import org.cog.hymnchtv.utils.ChineseS2TSelection;`。然後逐一檢查下列 import 是否還有使用者，沒有就刪除：`import static org.cog.hymnchtv.utils.WallPaperUtil.DIR_WALLPAPER;`、`import org.cog.hymnchtv.utils.WallPaperUtil;`、`import android.graphics.drawable.Drawable;`、`import java.io.File;`、`import org.cog.hymnchtv.persistance.FileBackend;`、`import android.net.Uri;`、`import android.widget.LinearLayout;`。檢查方式：`grep -n "DIR_WALLPAPER\|WallPaperUtil\|Drawable\b\|\bFile\b\|FileBackend\|\bUri\b\|LinearLayout" hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java`，只出現在 import 行的才刪。
+  刪除 `import org.cog.hymnchtv.utils.ChineseS2TSelection;`。然後逐一檢查下列 import 是否還有使用者，沒有就刪除：`import android.graphics.drawable.Drawable;`、`import java.io.File;`、`import org.cog.hymnchtv.persistance.FileBackend;`、`import android.net.Uri;`、`import android.widget.LinearLayout;`。檢查方式：`grep -n "Drawable\b\|\bFile\b\|FileBackend\|\bUri\b\|LinearLayout" hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java`，只出現在 import 行的才刪。
 
 - [ ] **Step 7b：預設主題改用 `ThemeHelper.DEFAULT_THEME`（使用者決策：淺色）**
 
@@ -5674,14 +5685,14 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
   Run: `./gradlew :hymnchtv:testDebugUnitTest --tests 'org.cog.hymnchtv.utils.ThemeDefaultTest' --console=plain`
   Expected: 3 個測試通過（改 `MainActivity` 之前，新測試會失敗）。
 
-- [ ] **Step 8：`WallPaperUtil.java`**
+- [ ] **Step 8：移除 `PREF_WALLPAPER` 殘留**
 
-  刪除 `import static org.cog.hymnchtv.MainActivity.PREF_BACKGROUND;` 和 `updateWallPaperPref()` 裡的 `editor.putInt(PREF_BACKGROUND, -1);`。照片要用在哪一頁，改由背景挑選畫面寫入 `MainBackground`／`LyricsBackground`。
+  S3 之後 `MainActivity.PREF_WALLPAPER` 沒有任何使用者（`BackgroundPrefs.photoFile` 讀固定的私有路徑 `filesDir/backgrounds/photo.jpg`）。刪除 `public static final String PREF_WALLPAPER = "WallPaper";`；`PREF_BACKGROUND` 依 Step 9 的 grep 一併清掉。
 
 - [ ] **Step 9：確認沒有殘留引用**
 
   ```bash
-  grep -rn "bgResId\|PREF_BACKGROUND\|setBgColor\|setWallpaper\|R.id.sbg\|R.id.bg\b\|lyricsLanguage\|R.drawable.bg[0-9]" hymnchtv/src/main/java hymnchtv/src/main/res/layout hymnchtv/src/main/res/layout-land hymnchtv/src/main/res/menu || echo "clean"
+  grep -rn "bgResId\|PREF_BACKGROUND\|PREF_WALLPAPER\|WallPaperUtil\|DIR_WALLPAPER\|setBgColor\|setWallpaper\|R.id.sbg\|R.id.bg\b\|lyricsLanguage\|R.drawable.bg[0-9]" hymnchtv/src/main/java hymnchtv/src/main/res/layout hymnchtv/src/main/res/layout-land hymnchtv/src/main/res/menu || echo "clean"
   ./gradlew :hymnchtv:testDebugUnitTest :hymnchtv:assembleDebug --console=plain
   ```
 
@@ -5692,7 +5703,6 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
   ```bash
   git add hymnchtv/src/main/java/org/cog/hymnchtv/MainActivity.java hymnchtv/src/main/res/layout/main.xml \
           hymnchtv/src/main/res/layout-land/main.xml hymnchtv/src/main/res/menu/menu_main.xml \
-          hymnchtv/src/main/java/org/cog/hymnchtv/utils/WallPaperUtil.java \
           hymnchtv/src/test/java/org/cog/hymnchtv/utils/ThemeDefaultTest.kt
   git commit -m "feat: main screen background, reading settings menu entry and light default theme" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   ```
@@ -5752,10 +5762,10 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
 
 - [ ] **Step 3：刪除不再使用的字串**
 
-  候選：`sbg1`～`sbg12`、`wall_paper`、`lyrics_language_menu`、`menu_media_ui_default_show`、`menu_media_ui_default_hide`。先確認每一個都沒有引用：
+  候選：`sbg1`～`sbg12`、`wall_paper`、`wallpaperUser`、`lyrics_language_menu`、`menu_media_ui_default_show`、`menu_media_ui_default_hide`。先確認每一個都沒有引用：
 
   ```bash
-  for n in sbg1 sbg2 sbg3 sbg4 sbg5 sbg6 sbg7 sbg8 sbg9 sbg10 sbg11 sbg12 wall_paper lyrics_language_menu \
+  for n in sbg1 sbg2 sbg3 sbg4 sbg5 sbg6 sbg7 sbg8 sbg9 sbg10 sbg11 sbg12 wall_paper wallpaperUser lyrics_language_menu \
            menu_media_ui_default_show menu_media_ui_default_hide; do
     hits=$(grep -rn "R.string.$n\b\|@string/$n\"" hymnchtv/src/main --include=*.java --include=*.kt --include=*.xml | wc -l)
     echo "$n $hits"
@@ -5769,7 +5779,7 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
   ```bash
   python3 - <<'EOF'
   import pathlib, re
-  names = [f"sbg{i}" for i in range(1, 13)] + ["wall_paper", "lyrics_language_menu",
+  names = [f"sbg{i}" for i in range(1, 13)] + ["wall_paper", "wallpaperUser", "lyrics_language_menu",
            "menu_media_ui_default_show", "menu_media_ui_default_hide"]
   pattern = re.compile(r'^\s*<string name="(%s)"[^>]*>.*</string>\s*\n' % "|".join(names), re.M)
   for d in ("values", "values-zh", "values-b+zh+Hant"):
@@ -5812,10 +5822,9 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
   import org.cog.hymnchtv.ContentView
   import org.cog.hymnchtv.MainActivity
   import org.cog.hymnchtv.R
-  import org.cog.hymnchtv.persistance.FileBackend
   import org.cog.hymnchtv.reading.background.BackgroundPolicy
   import org.cog.hymnchtv.reading.background.BackgroundSlot
-  import org.cog.hymnchtv.utils.WallPaperUtil
+  import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
   import org.junit.After
   import org.junit.Before
   import org.junit.Rule
@@ -5836,18 +5845,16 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
 
       private val ctx: Context = ApplicationProvider.getApplicationContext()
       private val prefs = ctx.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
-      private val keys = listOf(BackgroundSlot.MAIN.prefKey, BackgroundSlot.LYRICS.prefKey, MainActivity.PREF_WALLPAPER)
+      private val keys = listOf(BackgroundSlot.MAIN.prefKey, BackgroundSlot.LYRICS.prefKey)
       private lateinit var photo: File
 
       @Before
       fun setUp() {
-          val dir = checkNotNull(FileBackend.getHymnchtvStore(WallPaperUtil.DIR_WALLPAPER, false)) { "no wallpaper dir" }
-          dir.mkdirs()
-          photo = File(dir, "a2-photo-backdrop-test.png")
+          photo = PhotoBackgroundImporter.photoFileIn(ctx.filesDir)
+          photo.parentFile?.mkdirs()
           val white = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
-          photo.outputStream().use { white.compress(Bitmap.CompressFormat.PNG, 100, it) }
+          photo.outputStream().use { white.compress(Bitmap.CompressFormat.JPEG, 85, it) }
           prefs.edit()
-              .putString(MainActivity.PREF_WALLPAPER, photo.name)
               .putString(BackgroundSlot.MAIN.prefKey, BackgroundPolicy.PHOTO)
               .putString(BackgroundSlot.LYRICS.prefKey, BackgroundPolicy.PHOTO)
               .commit()
@@ -5923,7 +5930,7 @@ Lane M 的子代理在 worktree `../hymnchtv-a2-m` 工作，和 lane I 同時進
   ```
 
   說明：
-  - 照片放在 `FileBackend.getHymnchtvStore(DIR_WALLPAPER, false)` 回傳的目錄（`createNew = true` 需要 `MainActivity` 實例，所以自己 `mkdirs()`）。如果該目錄在 API 24 需要的權限不是 `WRITE_EXTERNAL_STORAGE`，依 `PermissionUtils` 調整 `GrantPermissionRule`，不要拿掉斷言。
+  - 照片放在 `PhotoBackgroundImporter.photoFileIn(ctx.filesDir)`（App 私有目錄，不需要任何儲存權限；測試前後會覆蓋／刪除這個檔，只在模擬器上跑）。`GrantPermissionRule` 只保留 `MainActivity` 自己需要的權限。
   - `MainActivity` 啟動時若跳出系統權限對話框導致 `launch` 逾時，先查 `MainActivity.onCreate` 實際要求哪些權限，加進 `GrantPermissionRule`。
   - `GradientDrawable.getColor()` 是 API 24 起才有的方法，minSdk 剛好符合。
 

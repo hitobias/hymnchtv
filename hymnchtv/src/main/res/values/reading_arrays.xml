@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="display_mode_entries" translatable="false">
+        <item>@string/display_mode_both</item>
+        <item>@string/display_mode_score</item>
+        <item>@string/display_mode_lyrics</item>
+    </string-array>
+    <string-array name="display_mode_values" translatable="false">
+        <item>SCORE_AND_LYRICS</item>
+        <item>SCORE_ONLY</item>
+        <item>LYRICS_ONLY</item>
+    </string-array>
+
+    <string-array name="lyrics_lang_entries" translatable="false">
+        <item>@string/lyrics_follow_ui</item>
+        <item>@string/lyrics_simplified</item>
+        <item>@string/lyrics_traditional</item>
+    </string-array>
+    <string-array name="lyrics_lang_values" translatable="false">
+        <item>FOLLOW_UI</item>
+        <item>SIMPLIFIED</item>
+        <item>TRADITIONAL</item>
+    </string-array>
+
+    <string-array name="conversion_entries" translatable="false">
+        <item>@string/S2TW</item>
+        <item>@string/S2HK</item>
+    </string-array>
+    <string-array name="conversion_values" translatable="false">
+        <item>S2TW</item>
+        <item>S2HK</item>
+    </string-array>
+
+    <string-array name="font_size_entries" translatable="false">
+        <item>@string/font_size_small</item>
+        <item>@string/font_size_medium</item>
+        <item>@string/font_size_large</item>
+        <item>@string/font_size_xlarge</item>
+    </string-array>
+    <string-array name="font_size_values" translatable="false">
+        <item>SMALL</item>
+        <item>MEDIUM</item>
+        <item>LARGE</item>
+        <item>XLARGE</item>
+    </string-array>
+
+    <string-array name="lyrics_font_entries" translatable="false">
+        <item>@string/lyrics_font_system</item>
+        <item>@string/lyrics_font_kai</item>
+    </string-array>
+    <string-array name="lyrics_font_values" translatable="false">
+        <item>SYSTEM</item>
+        <item>KAI</item>
+    </string-array>
+</resources>

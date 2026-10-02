@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reading settings (plan A2). Nothing here persists by itself and there are no defaultValue attributes: the fragment shows the
+     effective value from ReadingPrefs and writes only when the user changes a setting, so opening the screen never freezes a default. -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/pref_cat_lyrics">
+
+        <ListPreference
+            app:entries="@array/display_mode_entries"
+            app:entryValues="@array/display_mode_values"
+            app:iconSpaceReserved="false"
+            app:key="DisplayMode"
+            app:persistent="false"
+            app:title="@string/pref_display_mode"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:entries="@array/lyrics_lang_entries"
+            app:entryValues="@array/lyrics_lang_values"
+            app:iconSpaceReserved="false"
+            app:key="LyricsDefaultLang"
+            app:persistent="false"
+            app:title="@string/lyrics_default_title"
+            app:useSimpleSummaryProvider="true" />
+
+        <!-- Hidden while LyricsLanguagePolicy.HK_VARIANT_ENABLED is false -->
+        <ListPreference
+            app:entries="@array/conversion_entries"
+            app:entryValues="@array/conversion_values"
+            app:iconSpaceReserved="false"
+            app:key="ConversionType"
+            app:persistent="false"
+            app:title="@string/STD"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:entries="@array/font_size_entries"
+            app:entryValues="@array/font_size_values"
+            app:iconSpaceReserved="false"
+            app:key="LyricsFontSize"
+            app:persistent="false"
+            app:title="@string/pref_font_size"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:entries="@array/lyrics_font_entries"
+            app:entryValues="@array/lyrics_font_values"
+            app:iconSpaceReserved="false"
+            app:key="LyricsFont"
+            app:persistent="false"
+            app:title="@string/pref_lyrics_font"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/pref_cat_background">
+
+        <!-- Opens BackgroundPickerActivity, which writes the pref itself -->
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="MainBackground"
+            app:persistent="false"
+            app:title="@string/pref_main_background" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="LyricsBackground"
+            app:persistent="false"
+            app:title="@string/pref_lyrics_background" />
+
+        <SeekBarPreference
+            android:max="80"
+            app:iconSpaceReserved="false"
+            app:key="PhotoDim"
+            app:persistent="false"
+            app:min="20"
+            app:showSeekBarValue="true"
+            app:title="@string/pref_photo_dim" />
+
+        <SeekBarPreference
+            android:max="25"
+            app:iconSpaceReserved="false"
+            app:key="PhotoBlur"
+            app:persistent="false"
+            app:min="0"
+            app:showSeekBarValue="true"
+            app:title="@string/pref_photo_blur" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/pref_cat_screen">
+
+        <SwitchPreferenceCompat
+            app:iconSpaceReserved="false"
+            app:key="PageAnimation"
+            app:persistent="false"
+            app:title="@string/pref_page_animation" />
+
+        <SwitchPreferenceCompat
+            app:iconSpaceReserved="false"
+            app:key="MenuShow"
+            app:persistent="false"
+            app:title="@string/pref_menu_show" />
+
+        <SwitchPreferenceCompat
+            app:iconSpaceReserved="false"
+            app:key="KeepScreenOn"
+            app:persistent="false"
+            app:title="@string/pref_keep_screen_on" />
+    </PreferenceCategory>
+</PreferenceScreen>

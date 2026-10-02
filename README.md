@@ -60,7 +60,6 @@
 * [pinyin](https://github.com/duguying/pinyin)
 * [RichEditor for Android](https://github.com/wasabeef/richeditor-android)
 * [Timber](https://github.com/JakeWharton/timber)
-* [uCrop](https://github.com/Yalantis/uCrop)
 
 ##### Build tooling (not shipped in the app)：
 * [OpenCC](https://github.com/byvoid/opencc)：仅用于 `tools/gen_lyrics_hant.py` 预先生成繁体歌词

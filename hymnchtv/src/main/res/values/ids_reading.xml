@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- BackgroundApplier records the applied blur radius under this tag (View has no RenderEffect getter) -->
+    <item name="tag_blur_radius" type="id" />
+    <!-- BackgroundApplier: token of the newest photo decode for this view; older results are dropped -->
+    <item name="tag_bg_request" type="id" />
+</resources>
