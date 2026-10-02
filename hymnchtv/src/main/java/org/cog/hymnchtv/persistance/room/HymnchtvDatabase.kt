@@ -16,7 +16,6 @@ import org.cog.hymnchtv.notebook.data.entity.NoteEntity
 import org.cog.hymnchtv.notebook.data.entity.PlaylistEntity
 import org.cog.hymnchtv.notebook.data.entity.PlaylistItemEntity
 import org.cog.hymnchtv.notebook.data.entity.SingLogEntity
-import org.cog.hymnchtv.BuildConfig
 import org.cog.hymnchtv.persistance.room.dao.EnglishLyricsDao
 import org.cog.hymnchtv.persistance.room.dao.HymnHistoryDao
 import org.cog.hymnchtv.persistance.room.dao.MediaRecordDao
@@ -59,30 +58,24 @@ abstract class HymnchtvDatabase : RoomDatabase() {
         private var instance: HymnchtvDatabase? = null
 
         /**
-         * The process-wide database. Main-thread queries stay allowed as a transition (plan section 2.4): the
-         * listed call sites must move to AppExecutors.io before 1.0. The debug-only 1.0 gate turns this off with
-         * `-PstrictDbThread` (see [BuildConfig.ALLOW_MAIN_THREAD_DB] and the DatabaseBackend class doc).
+         * The process-wide database. Room refuses every query on the main thread (IllegalStateException): all
+         * access goes through AppExecutors.io or a coroutine on Dispatchers.IO (see the DatabaseBackend class doc).
          */
         @JvmStatic
         fun getInstance(context: Context): HymnchtvDatabase =
             instance ?: synchronized(this) {
-                instance ?: build(context, FILE_NAME, BuildConfig.ALLOW_MAIN_THREAD_DB).also { instance = it }
+                instance ?: build(context, FILE_NAME).also { instance = it }
             }
 
         /**
          * A file-backed database. Write-ahead logging is set explicitly (Room's default may pick another mode).
-         * With [allowMainThreadQueries] false, Room throws IllegalStateException for a query on the main thread.
+         * Main-thread queries are never allowed: Room throws IllegalStateException for them.
          */
         @JvmStatic
         @JvmOverloads
-        fun build(
-            context: Context,
-            fileName: String = FILE_NAME,
-            allowMainThreadQueries: Boolean = true,
-        ): HymnchtvDatabase =
+        fun build(context: Context, fileName: String = FILE_NAME): HymnchtvDatabase =
             Room.databaseBuilder(context.applicationContext, HymnchtvDatabase::class.java, fileName)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .apply { if (allowMainThreadQueries) allowMainThreadQueries() }
                 .build()
 
         /** A throw-away in-memory database for tests. */

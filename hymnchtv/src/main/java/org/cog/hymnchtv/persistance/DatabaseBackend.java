@@ -52,34 +52,28 @@ import timber.log.Timber;
  * The <tt>DatabaseBackend</tt> is the app's data access facade over the unified Room {@link HymnchtvDatabase}
  * (file "hymnchtv.db"). The public methods keep the signatures of the former SQLite implementation.
  * <p>
- * Threading: every method should run on {@code AppExecutors.io}. TODO(1.0): the transitional main-thread call
- * sites below still query on the main thread (the database allows it for now) and must be moved to
- * {@code AppExecutors.io} before the 1.0 release (plan section 2.4). Line numbers drift; grep the method names:
+ * Threading: every method runs on {@code AppExecutors.io} (Java) or {@code Dispatchers.IO} (Kotlin). The Room
+ * database is built without {@code allowMainThreadQueries()} and has no switch to turn that back on, so a query
+ * on the main thread throws IllegalStateException ("Cannot access database on the main thread"); the gate is
+ * covered by {@code MainThreadQueryGateTest}. The former transitional main-thread call sites now follow one
+ * pattern: read or write inside {@code AppExecutors.ioThenMain(...)} (or {@code AppExecutors.io}), then update the
+ * UI in the main-thread callback, which is skipped when the Activity is finishing or destroyed:
  * <ul>
- * <li>MainActivity.initHistoryList -> getHistoryRecords</li>
- * <li>MainActivity history row delete (MySwipeListAdapter.remove) -> deleteHymnHistory</li>
- * <li>ContentHandler.getHymnMediaState -> getMediaRecord x4 (plan B-4)</li>
- * <li>ContentHandler options-menu item lyrcsEnglishDelete -> deleteLyricsEng</li>
- * <li>ContentHandler.getMediaUrl (share menu) -> getMediaRecord</li>
- * <li>MediaContentHandler.getMediaUris -> getMediaRecord (from ContentHandler, two call sites)</li>
- * <li>LyricsEnglishRecord.fetchLyrics -> getLyricsEnglish (from ContentView), and storeLyricsEng in its
- * WebView download callback (WebView callbacks run on the main thread)</li>
- * <li>MediaConfig.onCreate / checkEntry -> hasMediaRecord, getMediaRecord (checkEntry also runs from the
- * entry text watchers)</li>
- * <li>MediaConfig.updateMediaRecord (button_add onClick) -> hasMediaRecord</li>
- * <li>MediaConfig.saveMediaRecord -> storeMediaRecord</li>
- * <li>MediaConfig record delete dialog onConfirmClicked -> getMediaRecord, deleteMediaRecord</li>
+ * <li>HomeFragment history list and row delete: getHistoryRecords, deleteHymnHistory (AppExecutors.io, results
+ * posted to the main thread while the view exists)</li>
+ * <li>MainActivity.showContent: storeHymnHistory</li>
+ * <li>ContentHandler.updateMediaPlayerInfo: getMediaRecord x4 for the media button state (plan B-4)</li>
+ * <li>ContentHandler.openMediaConfig and ContentHandler.fetchPlayHymn (MediaGuiController.startPlay):
+ * MediaContentHandler.findMediaRecord; the resulting uri handling stays on the main thread</li>
+ * <li>ContentHandler share menu: getMediaRecord (getMediaUrl); lyrcsEnglishDelete: deleteLyricsEng</li>
+ * <li>LyricsEnglishRecord.fetchLyrics: getLyricsEnglish, and storeLyricsEng after the WebView download</li>
+ * <li>MediaConfig entry check and overwrite highlight (checkEntry, highlightOverwrite): getMediaRecord;
+ * add (updateMediaRecord, saveMediaRecord): getMediaRecord, storeMediaRecord; delete dialog: getMediaRecord,
+ * deleteMediaRecord</li>
+ * <li>MediaConfig records list, export, url/Notion/QQ imports, MediaLinksUpdater: already on AppExecutors.io</li>
  * </ul>
- * Everything else (url, Notion and QQ importers, MediaLinksUpdater, MainActivity store-history, record list and
- * export reads) already runs on a worker thread.
- * <p>
- * 1.0 gate: build the debug app with {@code ./gradlew -PstrictDbThread :hymnchtv:installDebug}. That sets
- * {@code BuildConfig.ALLOW_MAIN_THREAD_DB} to false, the app database is built without
- * {@code allowMainThreadQueries()}, and every remaining main-thread query throws IllegalStateException
- * ("Cannot access database on the main thread"). Walk the main flows (open a hymn, share, history list and swipe
- * delete, English lyrics show/delete, media config add/overwrite/delete/list/export/import); the gate passes when
- * nothing crashes. The gate mechanism itself is covered by {@code MainThreadQueryGateTest}. Once the list above is
- * empty, remove {@code allowMainThreadQueries()} for good.
+ * Repeated taps are ignored while such a call is pending, and an answer that is no longer current is dropped.
+ * Test code that is not on the main thread (instrumentation threads) may call the facade directly.
  *
  * @author Eng Chong Meng
  */
@@ -132,7 +126,7 @@ public class DatabaseBackend {
      * Run body in one transaction: committed when it returns, rolled back when it throws (the exception is
      * rethrown as is). Nested calls join the outer transaction; if a nested body throws, the WHOLE outer
      * transaction is rolled back even when the outer body catches the exception (pinned by
-     * DatabaseBackendTransactionTest). Must not be called on the main thread for bulk work.
+     * DatabaseBackendTransactionTest). Must not be called on the main thread (Room refuses main-thread queries).
      */
     public <T> T inTransaction(@NonNull Supplier<T> body) {
         return db.runInTransaction(body::get);
@@ -248,8 +242,7 @@ public class DatabaseBackend {
     }
 
     /**
-     * Check if mRecord exist in DB and update with the DB result if update if true. Run on AppExecutors.io
-     * (transitional main-thread caller: ContentHandler.getHymnMediaState, see class doc).
+     * Check if mRecord exist in DB and update with the DB result if update if true. Run on AppExecutors.io.
      *
      * @param mRecord Media record to check for
      * @param update Update mRecord if true, else just return the status; i.e just to check if exist in DB
@@ -369,7 +362,7 @@ public class DatabaseBackend {
     /**
      * Delete the given HistoryRecord in the table hymn_history. As before, matches on hymnType and hymnNo only
      * (isFu is ignored), so the Fu and the non-Fu row of a number go together.
-     * Run on AppExecutors.io (transitional main-thread caller: MainActivity history row delete, see class doc).
+     * Run on AppExecutors.io.
      *
      * @param mRecord an instance of HistoryRecord
      */
@@ -379,7 +372,7 @@ public class DatabaseBackend {
 
     /**
      * Fetch a list of the history record from hymn_history table for user selection, newest first.
-     * Run on AppExecutors.io (transitional main-thread caller: MainActivity.initHistoryList, see class doc).
+     * Run on AppExecutors.io.
      *
      * @return List of HistoryRecord
      */
@@ -417,8 +410,7 @@ public class DatabaseBackend {
     }
 
     /**
-     * Delete the English lyrics of the given hymn. Run on AppExecutors.io (transitional main-thread caller:
-     * ContentView long press, see class doc).
+     * Delete the English lyrics of the given hymn. Run on AppExecutors.io.
      *
      * @param hymnNoEng English hymnNo
      */

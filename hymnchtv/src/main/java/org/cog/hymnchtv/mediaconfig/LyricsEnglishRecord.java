@@ -17,6 +17,7 @@
 package org.cog.hymnchtv.mediaconfig;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Handler;
@@ -37,6 +38,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.cog.hymnchtv.About;
 import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.R;
+import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.utils.ThemeHelper;
 
@@ -120,11 +122,22 @@ public class LyricsEnglishRecord {
      * Note: ErGe hymnNo is with offset ER_GE_ENG_OFFSET for DB saving/retrieving.
      */
     public void fetchLyrics(int hymnNoEng, boolean isErGe) {
-        DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
         final String webUrl = (isErGe ? HYMNAL_LINK_MAIN_ER : HYMNAL_LINK_MAIN) + hymnNoEng;
         final int hymnNoE = hymnNoEng + (isErGe ? ER_GE_ENG_OFFSET : 0);
 
-        mLyricsEnglish = StringUtils.trim(mDB.getLyricsEnglish(hymnNoE));
+        // The DB read runs on AppExecutors.io; the lyrics (or the web fetch) continue on the main thread.
+        AppExecutors.ioThenMain("lyrics-eng-read", this::isContextAlive,
+                () -> StringUtils.trim(DatabaseBackend.getInstance(HymnsApp.getGlobalContext()).getLyricsEnglish(hymnNoE)),
+                stored -> onStoredLyrics(stored, webUrl, hymnNoE));
+    }
+
+    /** The result of a background read is shown only while the screen that asked for it still exists. */
+    private boolean isContextAlive() {
+        return !(mContext instanceof Activity) || !((Activity) mContext).isDestroyed();
+    }
+
+    private void onStoredLyrics(String stored, String webUrl, int hymnNoE) {
+        mLyricsEnglish = stored;
         if (StringUtils.isNotEmpty(mLyricsEnglish)) {
             showLyrics(mLyricsEnglish);
             // HymnsApp.showToastMessage("Show English lyrics from DB!");
@@ -137,7 +150,9 @@ public class LyricsEnglishRecord {
 
         getURLSource(webUrl, data -> {
             if (extraEnglishLyrics(data)) {
-                mDB.storeLyricsEng(hymnNoE, mLyricsEnglish);
+                final String lyrics = mLyricsEnglish;
+                AppExecutors.io("lyrics-eng-store",
+                        () -> DatabaseBackend.getInstance(HymnsApp.getGlobalContext()).storeLyricsEng(hymnNoE, lyrics));
                 showLyrics(mLyricsEnglish, true);
                 Timber.d("Show English lyrics in webView: %s", hymnNoE);
                 // HymnsApp.showToastMessage("Show English lyrics in webView!");

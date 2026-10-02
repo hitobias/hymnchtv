@@ -154,6 +154,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
     protected Uri mUri;
     List<Uri> mediaHymns = new ArrayList<>();
+    /** True while the playback list is being looked up off the main thread: further play taps are ignored. */
+    private boolean mFetchingHymns = false;
 
     private ContentHandler mContentHandler;
 
@@ -387,11 +389,27 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             mContentHandler.da_link_test(mMediaType, false);
             return;
         }
-        // proceed to fetch the playback uri list if it is empty
+        // proceed to fetch the playback uri list if it is empty; the DB lookup runs off the main thread
         if (mediaHymns.isEmpty()) {
-            mediaHymns = mContentHandler.getPlayHymn(mMediaType, true);
+            if (mFetchingHymns) {
+                return;
+            }
+            mFetchingHymns = true;
+            final MediaType mediaType = mMediaType;
+            mContentHandler.fetchPlayHymn(mediaType, true, uriList -> {
+                mFetchingHymns = false;
+                // dropped when the user changed the hymn or the media type meanwhile
+                if (uriList != null && mediaType == mMediaType) {
+                    mediaHymns = uriList;
+                    playFetchedHymns();
+                }
+            });
+            return;
         }
+        playFetchedHymns();
+    }
 
+    private void playFetchedHymns() {
         for (Uri uri : mediaHymns) {
             String url = uri.toString();
             if (url.contains(".notion.site") || (url.contains("mp.weixin.qq.com") && !HYMN_DB.equals(mContentHandler.mHymnType))) {

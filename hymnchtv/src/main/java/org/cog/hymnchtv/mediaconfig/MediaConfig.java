@@ -258,6 +258,12 @@ public class MediaConfig extends BaseActivity
     private MediaType mMediaType = mediaTypeValue.get(0);
     private static final DatabaseBackend mDB = DatabaseBackend.getInstance(HymnsApp.getGlobalContext());
 
+    /** Counts the entry checks; a database answer for an older check is dropped. */
+    private int mEntrySeq = 0;
+
+    /** True while a save or delete runs on AppExecutors.io: taps are ignored until it is done. */
+    private boolean mDbBusy = false;
+
     /** True while a url import runs. Process-scoped; screens observe it lifecycle-aware. */
     private static final MutableLiveData<Boolean> urlImportRunning = new MutableLiveData<>(false);
 
@@ -389,7 +395,7 @@ public class MediaConfig extends BaseActivity
                 tvHymnNo.setText(String.valueOf(hymnNo));
 
                 // Highlight if the new url link overwrites existing media record
-                tvMediaUri.setTextColor(hasMediaRecord(createMediaRecord()) ? Color.RED : Color.DKGRAY);
+                highlightOverwrite();
             }
             else {
                 mShare = false;
@@ -461,9 +467,7 @@ public class MediaConfig extends BaseActivity
             uriDecode();
         }
         else if (id == R.id.button_add) {
-            if (updateMediaRecord()) {
-                Timber.d("Record saved successful: %s", tvMediaUri.getText());
-            }
+            updateMediaRecord();
 
         }
         // Manual deletion must be performed by user if the user modifies the link to point to different HymnType
@@ -720,18 +724,22 @@ public class MediaConfig extends BaseActivity
     // ================= Media Record Handlers ================
 
     /**
-     * Update user entry to the DB media record, get user confirmation if there is an existing record present
-     *
-     * @return true if update is successful
+     * Update user entry to the DB media record, get user confirmation if there is an existing record present.
+     * The existing-record lookup and the save run on AppExecutors.io.
      */
-    private boolean updateMediaRecord() {
+    private void updateMediaRecord() {
+        if (mDbBusy) {
+            return;
+        }
         final MediaRecord mRecord = createMediaRecord();
-        if (mRecord != null) {
-            if (!checkMediaAvailable(mRecord)) {
-                return false;
-            }
+        if (mRecord == null || !checkMediaAvailable(mRecord)) {
+            return;
+        }
 
-            if (hasMediaRecord(mRecord)) {
+        mDbBusy = true;
+        AppExecutors.ioThenMain("media-has-record", this, () -> safeHasMediaRecord(mRecord), exists -> {
+            mDbBusy = false;
+                if (exists) {
                 DialogActivity.showConfirmDialog(this,
                         R.string.to_be_added,
                         R.string.db_overwrite_media,
@@ -742,7 +750,8 @@ public class MediaConfig extends BaseActivity
                              * @param dialog source <tt>DialogActivity</tt>.
                              */
                             public boolean onConfirmClicked(DialogActivity dialog) {
-                                return saveMediaRecord(mRecord);
+                                saveMediaRecord(mRecord);
+                                return true;
                             }
 
                             /**
@@ -755,10 +764,20 @@ public class MediaConfig extends BaseActivity
                         });
             }
             else {
-                return saveMediaRecord(mRecord);
+                saveMediaRecord(mRecord);
             }
+        });
+    }
+
+    /** {@link #hasMediaRecord(MediaRecord)} for a background caller that must always get an answer: false on a DB error. */
+    private static boolean safeHasMediaRecord(MediaRecord mediaRecord) {
+        try {
+            return hasMediaRecord(mediaRecord);
         }
-        return false;
+        catch (RuntimeException e) {
+            Timber.e(e, "Media record lookup failed: %s", mediaRecord);
+            return false;
+        }
     }
 
     private boolean checkMediaAvailable(MediaRecord mRecord) {
@@ -811,11 +830,39 @@ public class MediaConfig extends BaseActivity
     }
 
     /**
-     * Save the user entry to the DB media record on user confirmation
-     *
-     * @return true is successfully
+     * Save the user entry to the DB media record on user confirmation. The file move and the database write run on
+     * AppExecutors.io; the outcome toast comes from there, the list refresh on the main thread while the screen lives.
      */
-    private boolean saveMediaRecord(MediaRecord mRecord) {
+    private void saveMediaRecord(MediaRecord mRecord) {
+        if (mDbBusy) {
+            return;
+        }
+        mDbBusy = true;
+        final String hymnType = mHymnType;
+        final MediaType mediaType = mMediaType;
+
+        AppExecutors.ioThenMain("media-save", this, () -> {
+            try {
+                        return storeMediaRecord(mRecord, hymnType, mediaType);
+            }
+            catch (RuntimeException e) {
+                Timber.e(e, "Media record save failed: %s", mRecord);
+                HymnsApp.showToastMessage(R.string.add_to_db_failed);
+                return false;
+            }
+        }, isSuccess -> {
+            mDbBusy = false;
+            if (isSuccess) {
+                if (mListView.getVisibility() == View.VISIBLE) {
+                    showMediaRecords(mVisibleItem);
+                }
+                isAutoFilled = true;
+            }
+        });
+    }
+
+    /** Worker-thread part of {@link #saveMediaRecord}: move a temporary file into the store, then write the record. */
+    private boolean storeMediaRecord(MediaRecord mRecord, String hymnType, MediaType mediaType) {
         String filePath = mRecord.getMediaFilePath();
         boolean isSuccess = true;
 
@@ -823,7 +870,7 @@ public class MediaConfig extends BaseActivity
             if (filePath.contains(FileBackend.TMP)) {
                 File inFile = new File(filePath);
 
-                File subDir = FileBackend.getHymnchtvStore(mHymnType + mediaDir.get(mMediaType), true);
+                File subDir = FileBackend.getHymnchtvStore(hymnType + mediaDir.get(mediaType), true);
                 if (subDir == null) {
                     HymnsApp.showToastMessage(R.string.file_access_no_permission);
                     isSuccess = false;
@@ -854,10 +901,6 @@ public class MediaConfig extends BaseActivity
         if (isSuccess) {
             mDB.storeMediaRecord(mRecord);
             HymnsApp.showToastMessage(R.string.add_to_db);
-            if (mListView.getVisibility() == View.VISIBLE) {
-                showMediaRecords(mVisibleItem);
-            }
-            isAutoFilled = true;
         }
         else {
             HymnsApp.showToastMessage(R.string.add_to_db_failed);
@@ -889,29 +932,34 @@ public class MediaConfig extends BaseActivity
                     args, getString(R.string.delete), new DialogActivity.DialogListener() {
                         @Override
                         public boolean onConfirmClicked(DialogActivity dialog) {
-                            MediaRecord mRecord = new MediaRecord(mHymnType, nui, isFu, mMediaType);
-                            CheckBox cbMediaDelete = dialog.findViewById(R.id.cb_media_delete);
+                            if (mDbBusy) {
+                                return true;
+                            }
+                            mDbBusy = true;
+                            final MediaRecord mRecord = new MediaRecord(mHymnType, nui, isFu, mMediaType);
+                            final boolean deleteFile = ((CheckBox) dialog.findViewById(R.id.cb_media_delete)).isChecked();
+                            final String failedMsg = getString(R.string.delete_media_failed, mHymnType, nui);
+                            final String okMsg = getString(R.string.delete_media_ok, mHymnType, nui);
 
-                            if (cbMediaDelete.isChecked()) {
-                                mDB.getMediaRecord(mRecord, true);
-                                String filePath = mRecord.getMediaFilePath();
-                                if (filePath != null) {
-                                    File mediaFile = new File(filePath);
-                                    if (mediaFile.exists() && !mediaFile.delete()) {
-                                        Timber.w(getString(R.string.delete_media_failed, mHymnType, nui));
-                                    }
+                            // The file and database work run on AppExecutors.io; the screen refresh only if it lives
+                            AppExecutors.ioThenMain("media-delete", MediaConfig.this, () -> {
+                                boolean deleted = false;
+                                try {
+                                    deleted = deleteMediaRecordAndFile(mRecord, deleteFile, failedMsg);
                                 }
-                            }
-                            int row = mDB.deleteMediaRecord(mRecord);
-                            HymnsApp.showToastMessage((row != 0)
-                                    ? getString(R.string.delete_media_ok, mHymnType, nui)
-                                    : getString(R.string.delete_media_failed, mHymnType, nui));
-
-                            if (mListView.getVisibility() == View.VISIBLE) {
-                                showMediaRecords(mVisibleItem);
-                            }
-                            isAutoFilled = true;
-                            checkEntry();
+                                catch (RuntimeException e) {
+                                    Timber.e(e, "Media record delete failed: %s", mRecord);
+                                }
+                                HymnsApp.showToastMessage(deleted ? okMsg : failedMsg);
+                                return deleted;
+                            }, deleted -> {
+                                mDbBusy = false;
+                                if (mListView.getVisibility() == View.VISIBLE) {
+                                    showMediaRecords(mVisibleItem);
+                                }
+                                isAutoFilled = true;
+                                checkEntry();
+                            });
                             return true;
                         }
 
@@ -920,6 +968,21 @@ public class MediaConfig extends BaseActivity
                         }
                     }, null);
         }
+    }
+
+    /** Worker-thread part of the record delete: optionally the media file too, then the record. */
+    private static boolean deleteMediaRecordAndFile(MediaRecord mRecord, boolean deleteFile, String failedMsg) {
+        if (deleteFile) {
+            mDB.getMediaRecord(mRecord, true);
+            String filePath = mRecord.getMediaFilePath();
+            if (filePath != null) {
+                File mediaFile = new File(filePath);
+                if (mediaFile.exists() && !mediaFile.delete()) {
+                    Timber.w(failedMsg);
+                }
+            }
+        }
+        return mDB.deleteMediaRecord(mRecord) != 0;
     }
 
     /**
@@ -990,14 +1053,66 @@ public class MediaConfig extends BaseActivity
         }
     }
 
+    /** Highlight the media uri if the new link overwrites an existing record; the lookup runs on AppExecutors.io. */
+    private void highlightOverwrite() {
+        final int seq = ++mEntrySeq;
+        final MediaRecord mediaRecord = createMediaRecord();
+        if (mediaRecord == null) {
+            tvMediaUri.setTextColor(Color.DKGRAY);
+            return;
+        }
+        AppExecutors.ioThenMain("media-has-record", this, () -> safeHasMediaRecord(mediaRecord), has -> {
+            if (seq == mEntrySeq) {
+                tvMediaUri.setTextColor(has ? Color.RED : Color.DKGRAY);
+            }
+        });
+    }
+
+    /** What the DB and the local files say about the entry being edited (see {@link #lookupEntry}). */
+    private static final class EntryLookup {
+        final String uriPath;
+        /** The text color to apply, or null to leave the current one. */
+        final Integer color;
+
+        EntryLookup(String uriPath, Integer color) {
+            this.uriPath = uriPath;
+            this.color = color;
+        }
+    }
+
+    /** Worker-thread part of {@link #checkEntry}: the stored record, else a local media file of the hymn. */
+    private static EntryLookup lookupEntry(MediaRecord mediaRecord, String dir, int hymnNo) {
+        try {
+            if (mDB.getMediaRecord(mediaRecord, true)) {
+                String uriPath = mediaRecord.getMediaFilePath();
+                if (TextUtils.isEmpty(uriPath)) {
+                    uriPath = mediaRecord.getMediaUri();
+                }
+                return new EntryLookup(uriPath, ContentHandler.isFileExist(mediaRecord) ? Color.RED : Color.DKGRAY);
+            }
+        }
+        catch (RuntimeException e) {
+            Timber.e(e, "Media record lookup failed: %s", mediaRecord);
+            return new EntryLookup(null, null);
+        }
+
+        List<Uri> uriList = new ArrayList<>();
+        if (ContentHandler.isFileExist(dir, hymnNo, uriList)) {
+            return new EntryLookup(uriList.get(0).getPath(), Color.DKGRAY);
+        }
+        return new EntryLookup(null, null);
+    }
+
     /**
-     * Check any saved entry in DB based on user input. Show the DB content if found
+     * Check any saved entry in DB based on user input. Show the DB content if found. The lookup runs on
+     * AppExecutors.io; an answer that is no longer current (newer check, user typed a link) is dropped.
      */
     private void checkEntry() {
+        final int seq = ++mEntrySeq;
         if (!isAutoFilled) {
             Timber.d("AutoFilled is false");
             // Highlight if the new url link overwrites existing media record
-            tvMediaUri.setTextColor(hasMediaRecord(createMediaRecord()) ? Color.RED : Color.DKGRAY);
+            highlightOverwrite();
             return;
         }
 
@@ -1012,25 +1127,24 @@ public class MediaConfig extends BaseActivity
             return;
         }
 
-        String uriPath = null;
-        MediaRecord mediaRecord = new MediaRecord(mHymnType, nui, isFu, mMediaType);
-        if (mDB.getMediaRecord(mediaRecord, true)) {
-            uriPath = mediaRecord.getMediaFilePath();
-            if (TextUtils.isEmpty(uriPath)) {
-                uriPath = mediaRecord.getMediaUri();
+        final MediaRecord mediaRecord = new MediaRecord(mHymnType, nui, isFu, mMediaType);
+        final String dir = mHymnType + mediaDir.get(mMediaType);
+        final int hymnNoValue = Integer.parseInt(hymnNo);
+        final String uriTextAtCheck = String.valueOf(tvMediaUri.getText());
+        AppExecutors.ioThenMain("media-check-entry", this, () -> lookupEntry(mediaRecord, dir, hymnNoValue), found -> {
+            // dropped if a newer check started, the user typed a link, or the link text changed while we looked
+            if (seq == mEntrySeq && isAutoFilled && uriTextAtCheck.contentEquals(tvMediaUri.getText())) {
+                showEntry(found);
             }
-            tvMediaUri.setTextColor(ContentHandler.isFileExist(mediaRecord) ? Color.RED : Color.DKGRAY);
-        }
-        else {
-            List<Uri> uriList = new ArrayList<>();
-            String dir = mHymnType + mediaDir.get(mMediaType);
-            if (ContentHandler.isFileExist(dir, Integer.parseInt(hymnNo), uriList)) {
-                uriPath = uriList.get(0).getPath();
-                tvMediaUri.setTextColor(Color.DKGRAY);
-            }
+        });
+    }
+
+    private void showEntry(EntryLookup found) {
+        if (found.color != null) {
+            tvMediaUri.setTextColor(found.color);
         }
 
-        if (!TextUtils.isEmpty(uriPath)) {
+        if (!TextUtils.isEmpty(found.uriPath)) {
             // show the mediaUri EditText view
             if (tvMediaUri.getVisibility() == View.GONE) {
                 tvMediaUri.setVisibility(View.VISIBLE);
@@ -1039,7 +1153,7 @@ public class MediaConfig extends BaseActivity
 
             // force focus to tvHymnNo so isAutoFilled cannot be accidentally cleared
             tvHymnNo.requestFocus();
-            tvMediaUri.setText(uriPath);
+            tvMediaUri.setText(found.uriPath);
             return;
         }
         tvMediaUri.setText("");

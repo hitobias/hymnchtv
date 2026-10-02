@@ -34,4 +34,54 @@ class AppExecutorsTest {
         AppExecutors.io("after") { done.countDown() }
         assertThat(done.await(5, TimeUnit.SECONDS)).isTrue()
     }
+
+    @Test
+    fun ioThenMainRunsWorkOnIoAndDeliversOnMain() {
+        val done = CountDownLatch(1)
+        val workThread = AtomicReference<String>()
+        val result = AtomicReference<Int>()
+        val deliveredOnMain = AtomicBoolean(false)
+        AppExecutors.ioThenMain("test", { true }, {
+            workThread.set(Thread.currentThread().name)
+            42
+        }) { value ->
+            result.set(value)
+            deliveredOnMain.set(Looper.myLooper() == Looper.getMainLooper())
+            done.countDown()
+        }
+        assertThat(done.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(workThread.get()).isEqualTo("hymn-io")
+        assertThat(result.get()).isEqualTo(42)
+        assertThat(deliveredOnMain.get()).isTrue()
+    }
+
+    @Test
+    fun ioThenMainDropsTheResultWhenTheOwnerIsGone() {
+        val alive = AtomicBoolean(true)
+        val delivered = AtomicBoolean(false)
+        val workDone = CountDownLatch(1)
+        AppExecutors.ioThenMain("test-dead", { alive.get() }, {
+            alive.set(false) // the screen is destroyed while the work runs
+            workDone.countDown()
+            1
+        }) { delivered.set(true) }
+        assertThat(workDone.await(5, TimeUnit.SECONDS)).isTrue()
+        // later main-thread work proves the delivery post has been processed
+        val flushed = CountDownLatch(1)
+        AppExecutors.ioThenMain("flush", { true }, { 0 }) { flushed.countDown() }
+        assertThat(flushed.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(delivered.get()).isFalse()
+    }
+
+    @Test
+    fun ioThenMainSkipsDeliveryWhenTheWorkFailsAndKeepsTheThreadAlive() {
+        val delivered = AtomicBoolean(false)
+        AppExecutors.ioThenMain<Int>("test-fail", { true }, { throw IllegalStateException("expected in test") }) {
+            delivered.set(true)
+        }
+        val flushed = CountDownLatch(1)
+        AppExecutors.ioThenMain("flush", { true }, { 0 }) { flushed.countDown() }
+        assertThat(flushed.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(delivered.get()).isFalse()
+    }
 }
