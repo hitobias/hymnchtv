@@ -121,6 +121,9 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
     private MainHost mainHost;
     private BottomNavigationView bottomNav;
 
+    /** Delayed work that captures this activity; cleared in onDestroy so a recreated activity is not kept alive. */
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
+
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public void onCreate(Bundle savedInstanceState) {
         mInstance = this;
@@ -150,7 +153,7 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         // allow 15 seconds for first launch login to complete before showing history log if the activity is still active
         ChangeLog cl = new ChangeLog(this);
         if (cl.isFirstRun()) {
-            runOnUiThread(() -> new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            runOnUiThread(() -> mHandler.postDelayed(() -> {
                 // a recreated (e.g. rotated) activity is not finishing but its window token is already gone
                 if (!isFinishing() && !isDestroyed()) {
                     cl.getLogDialog().show();
@@ -228,6 +231,15 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         else {
             bottomNav.removeBadge(R.id.nav_settings);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        // The process lifecycle outlives every activity: without this, each recreated (e.g. rotated) MainActivity
+        // stays reachable with its whole tab host, until a small heap (48 MB on API 24 phones) runs out.
+        ProcessLifecycleOwner.get().getLifecycle().removeObserver(this);
+        mHandler.removeCallbacksAndMessages(null);
+        super.onDestroy();
     }
 
     public static MainActivity getInstance() {
