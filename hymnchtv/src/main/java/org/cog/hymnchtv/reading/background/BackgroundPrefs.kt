@@ -24,14 +24,18 @@ object BackgroundPrefs {
 
     /** Shows the slot's background in [target] and returns the palette matching what is actually shown. */
     @JvmStatic
-    fun applyTo(target: ImageView, prefs: SharedPreferences, slot: BackgroundSlot): ReadingPalette {
+    fun applyTo(target: ImageView, prefs: SharedPreferences, slot: BackgroundSlot): ReadingPalette =
+        BackgroundPolicy.palette(applyChoiceTo(target, prefs, slot))
+
+    /** Like [applyTo] but returns the choice actually shown (palette and UI tokens are both derived from it). */
+    @JvmStatic
+    fun applyChoiceTo(target: ImageView, prefs: SharedPreferences, slot: BackgroundSlot): BackgroundChoice {
         val photo = photoFile(prefs)
         val choice = BackgroundPolicy.resolve(
             runCatching { prefs.getString(slot.prefKey, null) }.getOrNull(), slot, isDarkTheme(), photo != null,
         )
-        val applied = BackgroundApplier.apply(
+        return BackgroundApplier.apply(
             target, choice, prefs, photo, BackgroundPolicy.defaultFor(slot, isDarkTheme()),
         )
-        return BackgroundPolicy.palette(applied)
     }
 }

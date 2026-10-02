@@ -80,6 +80,8 @@ import org.cog.hymnchtv.reading.ScorePages;
 import org.cog.hymnchtv.reading.ScoreTintPolicy;
 import org.cog.hymnchtv.reading.background.BackgroundDrawables;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
+import org.cog.hymnchtv.reading.background.UiTokens;
+import org.cog.hymnchtv.ui.lyrics.ChromeButtonStyle;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
 import org.cog.hymnchtv.ui.lyrics.LyricsInsets;
@@ -153,6 +155,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private WebView lyricsEnglish;
 
     /** Key and time signature per script ("大调" / "大調"); null when the lyrics header has none. */
+    private String mLyricsSimplifiedPlain;
+    private String mLyricsTraditionalPlain;
     private String mMeterKeySimplified;
     private String mMeterKeyTraditional;
 
@@ -225,6 +229,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         buttonBar.addOnLayoutChangeListener(insetsFollowBars);
         ((NestedScrollableHost) mConvertView.findViewById(R.id.lyrics_scroll_host))
                 .setOnCenterTapListener(mContentHandler::onLyricsCenterTap);
+        ChromeButtonStyle.styleBar((ViewGroup) topBar, mContentHandler.getLyricsTokens());
+        ChromeButtonStyle.styleBar((ViewGroup) buttonBar, mContentHandler.getLyricsTokens());
         mContentHandler.registerChromePage(this);
 
         btn_mode = mConvertView.findViewById(R.id.button_mode);
@@ -473,11 +479,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             String traditional = loadTraditional(resFName, lyrics);
             mMeterKeySimplified = LyricsMeta.parseMeterKey(Arrays.asList(lyrics.split("\n", -1)));
             mMeterKeyTraditional = LyricsMeta.parseMeterKey(Arrays.asList(traditional.split("\n", -1)));
-            // Red on light backgrounds; on dark ones (and photos) red cannot reach AA contrast, so the accent colour
-            int verseColor = mPalette.isDark() ? mPalette.getAccentColor()
-                    : ContextCompat.getColor(mContentHandler, R.color.c_verse_red);
-            lyricsSimplify.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(lyrics), verseColor));
-            lyricsTraditional.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(traditional), verseColor));
+            mLyricsSimplifiedPlain = LyricsMeta.removeMeterLine(lyrics);
+            mLyricsTraditionalPlain = LyricsMeta.removeMeterLine(traditional);
+            applyVerseColors();
         }
         mHasLyricsText = DisplayModePolicy.hasLyricsText(lyrics);
 
@@ -486,6 +490,53 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         if (!mHasLyricsText && currentDisplayMode() != DisplayMode.SCORE_ONLY) {
             mContentHandler.selectJC();
         }
+    }
+
+    /** Verse numbers: red on light backgrounds; on dark ones (and photos) red cannot reach AA contrast, so the accent colour. */
+    private void applyVerseColors() {
+        if (mLyricsSimplifiedPlain == null || mLyricsTraditionalPlain == null) {
+            return;
+        }
+        int verseColor = mPalette.isDark() ? mPalette.getAccentColor()
+                : ContextCompat.getColor(mContentHandler, R.color.c_verse_red);
+        lyricsSimplify.setText(LyricsMeta.applyVerseSpans(mLyricsSimplifiedPlain, verseColor));
+        lyricsTraditional.setText(LyricsMeta.applyVerseSpans(mLyricsTraditionalPlain, verseColor));
+    }
+
+    /**
+     * The background changed (Aa panel, settings): re-colour this page in place. Single page-level entry of
+     * ContentHandler.applyReadingTheme(); a page created later reads the same palette and tokens in onCreateView.
+     */
+    public void applyTheme(@NonNull ReadingPalette palette, @NonNull UiTokens tokens) {
+        if (mConvertView == null) {
+            return;
+        }
+        mPalette = palette;
+        applyPaletteAndFont();
+        applyVerseColors();
+        applyScoreFilter();
+        ChromeButtonStyle.styleBar((ViewGroup) topBar, tokens);
+        ChromeButtonStyle.styleBar((ViewGroup) buttonBar, tokens);
+        if (hasEnglishLyrics) {
+            toggleLyricsView(); // the English HTML is generated for the background brightness
+        }
+    }
+
+    /**
+     * Re-read the reading preferences that the Aa panel changes (size, typeface, display mode) and apply them to
+     * the page on screen, without recreating it. Pages whose view does not exist yet read the same values in
+     * onCreateView, so the caller only needs to reach pages that have a view.
+     */
+    public void applyReadingPrefs() {
+        if (mConvertView == null || !isAdded()) {
+            return;
+        }
+        mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
+        lyricsScaleP = ReadingPrefs.lyricsScale(mSharedPref, true);
+        lyricsScaleL = ReadingPrefs.lyricsScale(mSharedPref, false);
+        setLyricsTextScale();
+        applyPaletteAndFont();
+        applyDisplayMode(true);
     }
 
     /** Pre-generated Traditional lyrics (plan A.1.9); the sync test guarantees they exist, Simplified is a last resort. */

@@ -18,6 +18,6 @@
     <string name="c_aa_size">Text size</string>
     <string name="c_aa_font">Typeface</string>
     <string name="c_aa_mode">Display</string>
-    <string name="c_aa_settings">Reading settings ›</string>
+    <string name="c_aa_settings">Reading settings</string>
     <string name="c_aa_theme_selected">%1$s, selected</string>
 </resources>
