@@ -63,7 +63,8 @@ class LyricsHantAssetsTest {
     fun manifestMatchesSourcesAndOutputs() {
         val actual = sourceDirs.flatMap { dir ->
             listOf(dir) + HantVariant.values().map { File(assets, dir.name + it.dirSuffix) }
-        }.flatMap { dir -> txtNames(dir).map { "${dir.name}/$it" to sha1(File(dir, it)) } }.toMap()
+        }.flatMap { dir -> txtNames(dir).map { "${dir.name}/$it" to sha1(File(dir, it)) } }.toMap() +
+            ("lyrics_t2s_map.txt" to sha1(File(assets, "lyrics_t2s_map.txt")))
         assertThat(manifest().second).isEqualTo(actual)
     }
 
@@ -79,7 +80,7 @@ class LyricsHantAssetsTest {
 
     private companion object {
         val SOURCE_DIR = Regex("lyrics_[a-z]+_text")
-        val PATH = Regex("lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
+        val PATH = Regex("lyrics_t2s_map\\.txt|lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
         val SHA1 = Regex("[0-9a-f]{40}")
     }
 }

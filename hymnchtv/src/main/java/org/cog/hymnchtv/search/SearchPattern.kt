@@ -11,13 +11,39 @@ object SearchPattern {
     private const val HE = "他"
     private const val HE_OR_HIM = "[祂他]"
 
-    /** @return null when the query is blank; never throws PatternSyntaxException. */
+    /**
+     * @param t2s Traditional->Simplified candidates; each mapped code point matches any of its candidates
+     * @return null when the query is blank; never throws PatternSyntaxException.
+     */
     @JvmStatic
-    fun build(query: String?): Pattern? {
+    @JvmOverloads
+    fun build(query: String?, t2s: T2sMap = T2sMap.EMPTY): Pattern? {
         val q = query?.trim().orEmpty()
         if (q.isEmpty()) return null
-        // Quote each segment separately; quoting the whole string first would also quote HE_OR_HIM.
-        val regex = q.split(HE).joinToString(HE_OR_HIM) { if (it.isEmpty()) "" else Pattern.quote(it) }
-        return Pattern.compile(regex)
+        val regex = StringBuilder()
+        var i = 0
+        while (i < q.length) {
+            val cp = q.codePointAt(i)
+            val ch = String(Character.toChars(cp))
+            i += Character.charCount(cp)
+            val candidates = t2s.candidates(ch)
+            when {
+                ch == HE -> regex.append(HE_OR_HIM)
+                candidates != null -> regex.append(alternatives(candidates))
+                else -> regex.append(Pattern.quote(ch))
+            }
+        }
+        return Pattern.compile(regex.toString())
+    }
+
+    private fun alternatives(candidates: String): String {
+        val parts = mutableListOf<String>()
+        var i = 0
+        while (i < candidates.length) {
+            val cp = candidates.codePointAt(i)
+            parts += Pattern.quote(String(Character.toChars(cp)))
+            i += Character.charCount(cp)
+        }
+        return parts.joinToString("|", prefix = "(?:", postfix = ")")
     }
 }

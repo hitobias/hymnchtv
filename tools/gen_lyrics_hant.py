@@ -17,6 +17,7 @@ ASSETS = ROOT / "hymnchtv/src/main/assets"
 GENERATOR = pathlib.Path(__file__).resolve()
 OVERRIDES = ROOT / "tools/lyrics_hant_overrides.tsv"
 MANIFEST = ASSETS / "lyrics_hant_manifest.txt"
+T2S_MAP = ASSETS / "lyrics_t2s_map.txt"
 REPORT = ROOT / "docs/superpowers/plans/lyrics-hant-review.csv"
 VARIANTS = {"tw": "s2tw.json", "hk": "s2hk.json"}
 SPLIT = "\n@@@HYMNCHTV_SPLIT@@@\n"  # ASCII marker survives OpenCC unchanged
@@ -98,6 +99,29 @@ def clean_stale(expected_dirs, expected_files):
                 f.unlink()
 
 
+def build_t2s_map(texts, converted):
+    """Traditional char -> every Simplified char it came from (itself included when it also stays unchanged)."""
+    mapping, identity = {}, set()
+    for variant_out in converted.values():
+        for src, out in zip(texts, variant_out):
+            s_lines, t_lines = src.splitlines(), out.splitlines()
+            if len(s_lines) != len(t_lines):
+                sys.exit("OpenCC changed the line count of a lyrics file; cannot align for the T2S map")
+            for s_line, t_line in zip(s_lines, t_lines):
+                if len(s_line) != len(t_line):
+                    continue  # phrase conversion changed the length; no reliable alignment
+                for a, b in zip(s_line, t_line):
+                    if a == b:
+                        identity.add(b)
+                    else:
+                        mapping.setdefault(b, set()).add(a)
+    lines = []
+    for b in sorted(mapping):
+        candidates = mapping[b] | ({b} if b in identity else set())
+        lines.append(f"{b}\t{''.join(sorted(candidates))}")
+    T2S_MAP.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", action="store_true", help=f"also write {REPORT.relative_to(ROOT)}")
@@ -123,10 +147,11 @@ def main():
             expected_dirs.add(dst_dir.name)
             expected_files.add(rel(dst_dir / src.name))
     clean_stale(expected_dirs, expected_files)
+    build_t2s_map(texts, converted)
 
     rows = [f"#input\t{rel_path}\t{sha1(path.read_bytes())}"
             for rel_path, path in (("tools/gen_lyrics_hant.py", GENERATOR), ("tools/lyrics_hant_overrides.tsv", OVERRIDES))]
-    outputs = sources + [ASSETS / f for f in sorted(expected_files)]
+    outputs = sources + [ASSETS / f for f in sorted(expected_files)] + [T2S_MAP]
     rows += sorted(f"{rel(p)}\t{sha1(p.read_bytes())}" for p in outputs)
     version = "opencc unknown"  # opencc 1.4.2 has no --version flag; ask Homebrew when available
     if shutil.which("brew"):

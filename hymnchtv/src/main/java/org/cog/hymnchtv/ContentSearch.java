@@ -45,8 +45,11 @@ import android.widget.SimpleAdapter;
 
 import androidx.activity.OnBackPressedCallback;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -56,7 +59,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.http.util.EncodingUtils;
-import org.apache.http.util.TextUtils;
+import org.cog.hymnchtv.search.SearchPattern;
+import org.cog.hymnchtv.search.T2sMap;
 
 import timber.log.Timber;
 
@@ -93,8 +97,12 @@ public class ContentSearch extends BaseActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         String searchString = getIntent().getExtras().getString(ATTR_SEARCH);
-        if (TextUtils.isEmpty((searchString)))
+        Pattern searchPattern = SearchPattern.build(searchString, loadT2sMap());
+        if (searchPattern == null) {
+            HymnsApp.showToastMessage(R.string.error_search_empty);
+            finish();
             return;
+        }
 
         // The search matched contents for display and user selection
         List<Map<String, Object>> data = new ArrayList<>();
@@ -107,7 +115,7 @@ public class ContentSearch extends BaseActivity {
         int hymnNo = 1;
         while (hymnNo <= HYMN_DB_NO_TMAX) {
             fname = LYRICS_DB_DIR + "db" + hymnNo + ".txt";
-            result = getMatchResult(fname, searchString);
+            result = getMatchResult(fname, searchPattern);
             if (result != null) {
                 mHymnNo[mCount] = hymnNo;
                 mHmynNoType.put(hymnNo, HYMN_DB);
@@ -142,7 +150,7 @@ public class ContentSearch extends BaseActivity {
                 }
 
                 fname = LYRICS_BB_DIR + "bb" + hymnNo + ".txt";
-                result = getMatchResult(fname, searchString);
+                result = getMatchResult(fname, searchPattern);
                 if (result != null) {
                     mHymnNo[mCount] = hymnNo;
                     mHmynNoType.put(hymnNo, HYMN_BB);
@@ -165,7 +173,7 @@ public class ContentSearch extends BaseActivity {
             hymnNo = 1;
             while (hymnNo <= HYMN_XB_NO_MAX) {
                 fname = LYRICS_XB_DIR + "xb" + hymnNo + ".txt";
-                result = getMatchResult(fname, searchString);
+                result = getMatchResult(fname, searchPattern);
                 if (result != null) {
                     mHymnNo[mCount] = hymnNo;
                     mHmynNoType.put(hymnNo, HYMN_XB);
@@ -188,7 +196,7 @@ public class ContentSearch extends BaseActivity {
             hymnNo = 1;
             while (hymnNo <= HYMN_XG_NO_MAX) {
                 fname = LYRICS_XG_DIR + "xg" + hymnNo + ".txt";
-                result = getMatchResult(fname, searchString);
+                result = getMatchResult(fname, searchPattern);
                 if (result != null) {
                     mHymnNo[mCount] = hymnNo;
                     mHmynNoType.put(hymnNo, HYMN_XG);
@@ -211,7 +219,7 @@ public class ContentSearch extends BaseActivity {
             hymnNo = 1;
             while (hymnNo <= HYMN_YB_NO_TMAX) {
                 fname = LYRICS_YB_DIR + "yb" + hymnNo + ".txt";
-                result = getMatchResult(fname, searchString);
+                result = getMatchResult(fname, searchPattern);
                 if (result != null) {
                     mHymnNo[mCount] = hymnNo;
                     mHmynNoType.put(hymnNo, HYMN_YB);
@@ -241,7 +249,7 @@ public class ContentSearch extends BaseActivity {
                 }
 
                 fname = LYRICS_ER_DIR + "er" + hymnNo + ".txt";
-                result = getMatchResult(fname, searchString);
+                result = getMatchResult(fname, searchPattern);
                 if (result != null) {
                     mHymnNo[mCount] = hymnNo;
                     mHmynNoType.put(hymnNo, HYMN_ER);
@@ -298,11 +306,11 @@ public class ContentSearch extends BaseActivity {
      * return result if found, else null
      *
      * @param fName The name of file to search
-     * @param sString the matching string
+     * @param pattern the literal search pattern built by SearchPattern (compiled once per search)
      *
      * @return matching string if found, else null
      */
-    private String getMatchResult(String fName, String sString) {
+    private String getMatchResult(String fName, Pattern pattern) {
         byte[] buffer;
         try {
             InputStream inStream = getResources().getAssets().open(fName);
@@ -318,7 +326,6 @@ public class ContentSearch extends BaseActivity {
         String result = EncodingUtils.getString(buffer, "utf-8");
         result = result.substring(4);
 
-        Pattern pattern = Pattern.compile(sString.replace("他", "[祂|他]"));
         Matcher matcher = pattern.matcher(result);
         if (matcher.find()) {
             int matchIdx = matcher.start();
@@ -332,6 +339,23 @@ public class ContentSearch extends BaseActivity {
             return result;
         }
         return null;
+    }
+
+    /** Traditional->Simplified candidates generated with the lyrics (Task 6C); empty map if the asset is missing. */
+    private T2sMap loadT2sMap() {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(getAssets().open(T2sMap.ASSET_PATH), StandardCharsets.UTF_8))) {
+            List<String> lines = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lines.add(line);
+            }
+            return T2sMap.parse(lines);
+        }
+        catch (IOException e) {
+            Timber.w(e, "T2S map missing; searching without Traditional conversion");
+            return T2sMap.EMPTY;
+        }
     }
 
     /**

@@ -28,8 +28,6 @@ import android.widget.RadioGroup;
 
 import androidx.activity.OnBackPressedCallback;
 
-import com.zqc.opencc.android.lib.ConversionType;
-
 import org.cog.hymnchtv.BaseActivity;
 import org.cog.hymnchtv.ContentView;
 import org.cog.hymnchtv.R;
@@ -41,7 +39,7 @@ import org.cog.hymnchtv.R;
  */
 public class ChineseS2TSelection extends BaseActivity implements View.OnClickListener, RadioGroup.OnCheckedChangeListener {
     private SharedPreferences mSharedPref;
-    private ConversionType mConversionType;
+    private String mConversionPref;
     private boolean mHasChanges = false;
 
     public void onCreate(Bundle savedInstanceState) {
@@ -50,8 +48,7 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
         setTitle(R.string.app_title_main);
 
         mSharedPref = getSharedPreferences(PREF_SETTINGS, 0);
-        String cType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, ConversionType.S2T.toString());
-        // mConversionType = Enum.valueOf(ConversionType.class, cType);
+        String cType = mSharedPref.getString(ContentView.PREF_CONVERSION_TYPE, "S2T");
         checkRadioButton(cType);
 
         // Only enable OnCheckedChangeListener only after checkRadioButton()
@@ -106,27 +103,27 @@ public class ChineseS2TSelection extends BaseActivity implements View.OnClickLis
 
         if (null != rb) {
             if (checkedId == R.id.radioButtonS2T) {
-                mConversionType = ConversionType.S2T;
+                mConversionPref = "S2T";
             }
             else if (checkedId == R.id.radioButtonS2HK) {
-                mConversionType = ConversionType.S2HK;
+                mConversionPref = "S2HK";
             }
             else if (checkedId == R.id.radioButtonS2TW) {
-                mConversionType = ConversionType.S2TW;
+                mConversionPref = "S2TW";
             }
             else if (checkedId == R.id.radioButtonS2TWP) {
-                mConversionType = ConversionType.S2TWP;
+                mConversionPref = "S2TWP";
             }
         }
     }
 
     /**
-     * Save the user defined ConversionType setting.
+     * Save the user defined conversion type setting.
      */
     private void updateS2TSelection(boolean hasChanges) {
         if (hasChanges) {
             SharedPreferences.Editor editor = mSharedPref.edit();
-            editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionType.toString());
+            editor.putString(ContentView.PREF_CONVERSION_TYPE, mConversionPref);
             editor.apply();
         }
 

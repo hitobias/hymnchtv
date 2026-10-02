@@ -89,7 +89,7 @@
 ## 书拉密女-诗歌本构建说明：
 ### Build Process
 The hymnchtv project is built using Android Studio Quail 3 | 2026.1.3 running on Ubuntu 22.04.<br/>
-Hymnchtv uses OpenCC jni library. The OpenCC source must be downloaded via build.gradle#initJniLibs before android SDK build.
+The app does not bundle OpenCC. Only developers who regenerate the Traditional Chinese lyrics need the OpenCC CLI (`brew install opencc`) and must run `tools/gen_lyrics_hant.py`.
 
 #### PlayStore release only
 The project uses android bundled assets, due to its final apk file size exceed android apk size limit.<br/>
