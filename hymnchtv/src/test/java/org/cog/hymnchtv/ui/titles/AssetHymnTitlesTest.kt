@@ -49,4 +49,17 @@ class AssetHymnTitlesTest {
     fun fuHymnFilesAreReachableByTheirContinuedNumber() {
         assertThat(titles.lookup(HYMN_DB, 781)).isNotNull()
     }
+
+    @Test
+    fun titleOfStripsCategoryAndKeepsTheNote() {
+        assertThat(AssetHymnTitles.titleOf("1\r\n颂赞三一神－祂的计划\r\n8583（英1）\r\n")).isEqualTo("祂的计划（英1）")
+        assertThat(AssetHymnTitles.titleOf("1\n标题\n无注\n")).isEqualTo("标题")
+        assertThat(AssetHymnTitles.titleOf("1\n甲－乙－丙")).isEqualTo("丙")
+    }
+
+    @Test
+    fun titleOfNeedsTwoLines() {
+        assertThat(AssetHymnTitles.titleOf("1")).isNull()
+        assertThat(AssetHymnTitles.titleOf("")).isNull()
+    }
 }
