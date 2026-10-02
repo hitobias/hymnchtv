@@ -3921,7 +3921,8 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   keytool -genkeypair -keystore "$tmp/dry.jks" -storepass dryrun123 -keypass dryrun123 -alias dry \
     -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Hymnal Dry Run" >/dev/null 2>&1
   printf 'key.store.password=dryrun123\nkey.store.alias=dry\nkey.alias.password=dryrun123\n' > "$tmp/dry.properties"
-  printf 'keystore=%s\nsecure_properties=%s\n' "$tmp/dry.jks" "$tmp/dry.properties" > settings.signing
+  cert=$(keytool -list -v -keystore "$tmp/dry.jks" -storepass dryrun123 2>/dev/null | sed -nE 's/.*SHA256: *(.*)/\1/p' | tr -d ':' | tr 'A-F' 'a-f')
+  printf 'keystore=%s\nsecure_properties=%s\nexpectedCertSha256=%s\n' "$tmp/dry.jks" "$tmp/dry.properties" "$cert" > settings.signing
   echo "settings.signing" >> .git/info/exclude; echo "/dist/" >> .git/info/exclude
   git status --porcelain
   tools/release.sh 2.9.2 --dry-run; echo "exit=$?"
@@ -3929,7 +3930,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
   ```
 
   Expected:
-  - `git status --porcelain` 沒有輸出（暫時用 `.git/info/exclude` 排除；正式的 `.gitignore` 由 Task 12 加入）。
+  - `git status --porcelain` 沒有輸出：腳本要求工作樹（含未追蹤檔案）乾淨，否則中止（暫時用 `.git/info/exclude` 排除；正式的 `.gitignore` 由 Task 12 加入）。
   - 輸出包含 `Signer #1 certificate DN: CN=Hymnal Dry Run`，接著是上述 badging mismatch，`exit=1`。
 
 - [ ] **Step 5：Commit**
@@ -4371,7 +4372,7 @@ Task 0 → Task 1 ──┬─ Lane A：Task 2 → 3 → 4 → 5 → 6 ─┐
 
   在 api34 與 api24 上跑 `./gradlew --console=plain :hymnchtv:connectedDebugAndroidTest`（模擬器啟動方式見 Task 13 Step 1）。
 
-  再重做一次發佈腳本的試跑：照 Task 11 Step 4 的指令，但不需要 `.git/info/exclude` 那一行，並把 `tools/release.sh 2.9.2 --dry-run` 換成 `tools/release.sh 1.0.0 --dry-run`；這次 badging 必須通過（`com.ziontkec.hymnal 100000 1.0.0`），`dist/v1.0.0/` 內有 `hymnal-1.0.0.apk` 與 `.sha256`。用完刪除 `settings.signing`（測試金鑰）與 `dist/`。
+  再重做一次發佈腳本的試跑：照 Task 11 Step 4 的指令（包含用 `keytool -list -v` 取出拋棄式金鑰的 SHA-256、正規化後寫成 `expectedCertSha256`；執行前 `git status --porcelain` 必須沒有輸出），但不需要 `.git/info/exclude` 那一行，並把 `tools/release.sh 2.9.2 --dry-run` 換成 `tools/release.sh 1.0.0 --dry-run`；這次 badging 必須通過（`com.ziontkec.hymnal 100000 1.0.0`），`dist/v1.0.0/` 內有 `hymnal-1.0.0.apk` 與 `.sha256`。用完刪除 `settings.signing`（測試金鑰）與 `dist/`。
 
   Expected:
   - `BUILD SUCCESSFUL`；`IdentityGuardTest` 3 個測試全部通過（Step 2 失敗的那個，現在通過了）。
