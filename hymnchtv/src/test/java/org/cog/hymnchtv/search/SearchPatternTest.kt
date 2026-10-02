@@ -62,4 +62,34 @@ class SearchPatternTest {
     fun nullQueryReturnsNull() {
         assertThat(SearchPattern.build(null)).isNull()
     }
+
+    private val t2s = T2sMap.parse(listOf("頌\t颂", "讚\t赞", "乾\t乾干", "祂\t祂"))
+
+    private fun findsT2s(query: String, text: String) = SearchPattern.build(query, t2s)!!.matcher(text).find()
+
+    @Test
+    fun traditionalQueryMatchesSimplifiedText() {
+        assertThat(findsT2s("頌讚", "颂赞三一神")).isTrue()
+    }
+
+    @Test
+    fun mixedScriptQuery() {
+        assertThat(findsT2s("颂讚", "颂赞三一神")).isTrue()
+    }
+
+    @Test
+    fun ambiguousCharMatchesEveryCandidate() {
+        assertThat(findsT2s("乾", "干净")).isTrue()
+        assertThat(findsT2s("乾", "乾坤")).isTrue()
+    }
+
+    @Test
+    fun heRuleStillAppliesWithMap() {
+        assertThat(findsT2s("他", "祂")).isTrue()
+    }
+
+    @Test
+    fun metaCharactersStillLiteralWithMap() {
+        assertThat(findsT2s("(頌", "(颂")).isTrue()
+    }
 }

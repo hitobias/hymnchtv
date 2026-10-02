@@ -86,9 +86,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.zqc.opencc.android.lib.ChineseConverter;
-import com.zqc.opencc.android.lib.ConversionType;
-
 import org.apache.http.util.EncodingUtils;
 import org.cog.hymnchtv.hymnhistory.HistoryRecord;
 import org.cog.hymnchtv.logutils.LogUploadServiceImpl;
@@ -333,8 +330,6 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
                 HymnsApp.showToastMessage(R.string.error_search_empty);
                 return;
             }
-            sValue = ChineseConverter.convert(sValue, ConversionType.T2S, this);
-            tv_Search.setText(sValue);
 
             Intent intent = new Intent();
             intent.setClass(this, ContentSearch.class);

@@ -63,20 +63,24 @@ class LyricsHantAssetsTest {
     fun manifestMatchesSourcesAndOutputs() {
         val actual = sourceDirs.flatMap { dir ->
             listOf(dir) + HantVariant.values().map { File(assets, dir.name + it.dirSuffix) }
-        }.flatMap { dir -> txtNames(dir).map { "${dir.name}/$it" to sha1(File(dir, it)) } }.toMap()
+        }.flatMap { dir -> txtNames(dir).map { "${dir.name}/$it" to sha1(File(dir, it)) } }.toMap() +
+            ("lyrics_t2s_map.txt" to sha1(File(assets, "lyrics_t2s_map.txt")))
         assertThat(manifest().second).isEqualTo(actual)
     }
 
     @Test
     fun manifestMatchesGeneratorInputs() {
-        val inputs = manifest().first
-        assertThat(inputs["tools/gen_lyrics_hant.py"]).isEqualTo(sha1(File(repoRoot, "tools/gen_lyrics_hant.py")))
-        assertThat(inputs["tools/lyrics_hant_overrides.tsv"]).isEqualTo(sha1(File(repoRoot, "tools/lyrics_hant_overrides.tsv")))
+        assertThat(manifest().first).isEqualTo(
+            mapOf(
+                "tools/gen_lyrics_hant.py" to sha1(File(repoRoot, "tools/gen_lyrics_hant.py")),
+                "tools/lyrics_hant_overrides.tsv" to sha1(File(repoRoot, "tools/lyrics_hant_overrides.tsv")),
+            )
+        )
     }
 
     private companion object {
         val SOURCE_DIR = Regex("lyrics_[a-z]+_text")
-        val PATH = Regex("lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
+        val PATH = Regex("lyrics_t2s_map\\.txt|lyrics_[a-z]+_text(_hant_(tw|hk))?/[^/\t]+\\.txt")
         val SHA1 = Regex("[0-9a-f]{40}")
     }
 }

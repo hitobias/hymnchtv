@@ -1,0 +1,5 @@
+tools/gen_lyrics_hant.py text eol=lf
+tools/lyrics_hant_overrides.tsv text eol=lf
+hymnchtv/src/main/assets/lyrics_*_text*/** -text
+hymnchtv/src/main/assets/lyrics_hant_manifest.txt text eol=lf
+hymnchtv/src/main/assets/lyrics_t2s_map.txt text eol=lf

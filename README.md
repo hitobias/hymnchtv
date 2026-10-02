@@ -46,7 +46,6 @@
 
 ##### 该项目中使用的库源：
 * [Android Support Library](https://developer.android.com/topic/libraries/support-library/index.html)
-* [android-opencc](https://github.com/frankslin/android-opencc)
 * [android-youtube-player](https://github.com/PierfrancescoSoffritti/android-youtube-player)
 * [annotations-java5](https://mvnrepository.com/artifact/org.jetbrains/annotations)
 * [Apache HttpCore](https://hc.apache.org/httpcomponents-core-4.4.x/httpcore/dependency-info.html)
@@ -58,11 +57,13 @@
 * [js-evaluator-for-android](https://github.com/evgenyneu/js-evaluator-for-android)
 * [httpcore](https://hc.apache.org/httpcomponents-core-ga/)
 * [okhttp](https://github.com/lysine-dev/okhttp)
-* [OpenCC](https://github.com/byvoid/opencc)
 * [pinyin](https://github.com/duguying/pinyin)
 * [RichEditor for Android](https://github.com/wasabeef/richeditor-android)
 * [Timber](https://github.com/JakeWharton/timber)
 * [uCrop](https://github.com/Yalantis/uCrop)
+
+##### Build tooling (not shipped in the app)：
+* [OpenCC](https://github.com/byvoid/opencc)：仅用于 `tools/gen_lyrics_hant.py` 预先生成繁体歌词
 
 ## 致谢
 * 书拉密女-诗歌本:<br/>应用程序中使用的所有媒体内容：歌词和歌曲文本等，版权归台湾福音书房所有。<br/>
@@ -89,7 +90,7 @@
 ## 书拉密女-诗歌本构建说明：
 ### Build Process
 The hymnchtv project is built using Android Studio Quail 3 | 2026.1.3 running on Ubuntu 22.04.<br/>
-Hymnchtv uses OpenCC jni library. The OpenCC source must be downloaded via build.gradle#initJniLibs before android SDK build.
+The app does not bundle OpenCC. Only developers who regenerate the Traditional Chinese lyrics need the OpenCC CLI (`brew install opencc`) and must run `tools/gen_lyrics_hant.py`.
 
 #### PlayStore release only
 The project uses android bundled assets, due to its final apk file size exceed android apk size limit.<br/>

@@ -59,10 +59,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-import com.zqc.opencc.android.lib.ChineseConverter;
-import com.zqc.opencc.android.lib.ConversionType;
-
 import org.cog.hymnchtv.glide.MyGlideApp;
+import org.cog.hymnchtv.lyrics.HantVariant;
+import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.utils.ChineseS2TSelection;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
@@ -110,7 +109,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
     public ContentHandler mContentHandler;
     private LyricsEnglishRecord mLyricsEnglishRecord;
-    private ConversionType mConversionType = ConversionType.S2T;
 
     private Button btn_english;
     private View mConvertView;
@@ -186,7 +184,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsScaleEL = mSharedPref.getFloat(PREF_LYRICS_ENGLISH_SCALE_L, 1.0f);
 
         isSimplify = mSharedPref.getBoolean(PREF_SIMPLIFY, true);
-        mConversionType = ConversionType.valueOf(mSharedPref.getString(PREF_CONVERSION_TYPE, ConversionType.S2T.toString()));
 
         mScoreColor = mSharedPref.getInt(PREF_SCORE_COLOR, 0);
         mMatrix = (mScoreColor == 0) ? null : getColorMatrix(mColorRange[mScoreColor]);
@@ -459,7 +456,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
                 lyrics.append('\n');
             }
             lyricsSimplify.setText(lyrics);
-            lyricsTraditional.setText(ChineseConverter.convert(lyrics.toString(), mConversionType, mContentHandler));
+            String hantPath = LyricsAssets.hantPath(resFName, HantVariant.TW);
+            lyricsTraditional.setText(hantPath == null ? lyrics : readHantAsset(hantPath, lyrics));
         }
         catch (IOException e) {
             Timber.w("Error reading file: %s", resFName);
@@ -468,6 +466,23 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         // Auto launch or hint user to view lyrics text via online JiaoChang if available; er,length > 47
         if (lyricsSimplify.getText().length() < 40) {
             mContentHandler.selectJC();
+        }
+    }
+
+    /** Temporary until Task 12 (j): pre-generated TW lyrics, falling back to the Simplified text. */
+    private CharSequence readHantAsset(String path, CharSequence fallback) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(getResources().getAssets().open(path), StandardCharsets.UTF_8))) {
+            StringBuilder text = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                text.append(line).append('\n');
+            }
+            return text;
+        }
+        catch (IOException e) {
+            Timber.w("Missing pre-generated lyrics %s", path);
+            return fallback;
         }
     }
 
@@ -600,7 +615,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             if (intent != null) {
                 boolean hasChanges = intent.getBooleanExtra(EXTR_KEY_HAS_CHANGES, false);
                 if (!isSimplify && hasChanges) {
-                    mConversionType = ConversionType.valueOf(mSharedPref.getString(PREF_CONVERSION_TYPE, ConversionType.S2T.toString()));
                     toggleLyricsView();
                 }
             }

@@ -1,7 +1,6 @@
 package org.cog.hymnchtv.lyrics
 
 import com.google.common.truth.Truth.assertThat
-import com.zqc.opencc.android.lib.ConversionType
 import org.junit.Test
 import java.util.Locale
 
@@ -38,8 +37,6 @@ class LyricsLanguagePolicyTest {
 
     @Test
     fun hantVariantMetadata() {
-        assertThat(HantVariant.TW.conversion).isEqualTo(ConversionType.S2TW)
-        assertThat(HantVariant.HK.conversion).isEqualTo(ConversionType.S2HK)
         assertThat(HantVariant.TW.prefValue).isEqualTo("S2TW")
         assertThat(HantVariant.HK.dirSuffix).isEqualTo("_hant_hk")
     }
