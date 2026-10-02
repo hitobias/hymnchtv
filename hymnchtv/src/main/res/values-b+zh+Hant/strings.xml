@@ -37,7 +37,7 @@
     <string name="hymn_sn_convert">詩歌數字轉換測試</string>
     <string name="hymn_type">詩歌類別</string>
     <string name="in_development">仍在開發中</string>
-    <string name="lyrics_chinese_traditional"><u>簡中↔繁中</u></string>
+    <string name="lyrics_chinese_traditional"><u>簡-繁</u></string>
     <string name="lyrics_chinese_english"><u>中文↔英文歌詞</u></string>
     <string name="lyrics_english">線上英文歌詞</string>
     <string name="lyrics_english_delete">英文歌詞刪除</string>

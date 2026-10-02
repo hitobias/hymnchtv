@@ -37,7 +37,7 @@
     <string name="hymn_sn_convert">Hymn digital conversion test</string>
     <string name="hymn_type">Hymn Category:</string>
     <string name="in_development">Still under development</string>
-    <string name="lyrics_chinese_traditional"><u>CN↔TW Lyrics</u></string>
+    <string name="lyrics_chinese_traditional"><u>Simp-Trad</u></string>
     <string name="lyrics_chinese_english"><u>CN↔ENG Lyrics</u></string>
     <string name="lyrics_english">Online English lyrics</string>
     <string name="lyrics_english_delete">Delete English lyrics</string>
