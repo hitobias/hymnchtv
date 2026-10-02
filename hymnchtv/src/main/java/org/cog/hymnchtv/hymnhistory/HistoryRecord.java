@@ -42,6 +42,7 @@ import org.apache.http.util.TextUtils;
 import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.MainActivity;
 import org.cog.hymnchtv.R;
+import org.cog.hymnchtv.hymn.HymnRef;
 import org.jetbrains.annotations.NotNull;
 
 import timber.log.Timber;
@@ -112,11 +113,12 @@ public class HistoryRecord {
     }
 
     public String getHymnNoFu() {
-        String hymnNo = Integer.toString(mHymnNo);
-        if (mIsFu && mHymnType.equals(HYMN_DB)) {
-            hymnNo = "附" + (mHymnNo - HYMN_DB_NO_MAX);
+        HymnRef ref = new HymnRef(mHymnType, mHymnNo);
+        // the media layer stores isFu = 0 for the youth book's appendix; HymnRef derives it from the number
+        if ((mIsFu && mHymnType.equals(HYMN_DB)) || ref.isFu()) {
+            return "附" + ref.getDisplayNo();
         }
-        return hymnNo;
+        return Integer.toString(mHymnNo);
     }
 
     /**
@@ -223,7 +225,10 @@ public class HistoryRecord {
                 hymnInfo = res.getString(R.string.hymn_title_mc_xg, mHymnNo, mHymnTitle);
                 break;
             case HYMN_YB:
-                hymnInfo = res.getString(R.string.hymn_title_mc_yb, mHymnNo, mHymnTitle);
+                HymnRef ybRef = new HymnRef(mHymnType, mHymnNo);
+                hymnInfo = ybRef.isFu()
+                        ? res.getString(R.string.hymn_title_mc_ybs, ybRef.getDisplayNo(), mHymnTitle)
+                        : res.getString(R.string.hymn_title_mc_yb, mHymnNo, mHymnTitle);
                 break;
             case HYMN_BB:
                 hymnInfo = res.getString(R.string.hymn_title_mc_bb, mHymnNo, mHymnTitle);
