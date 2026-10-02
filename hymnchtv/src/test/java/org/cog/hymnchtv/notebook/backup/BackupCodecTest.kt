@@ -201,4 +201,15 @@ class BackupCodecTest {
         assertThat(failureOf("""{"format":"hymnchtv-notebook","schemaVersion":2}"""))
             .isEqualTo(BackupError.UNSUPPORTED_VERSION)
     }
+
+    @Test
+    fun absurdPlaylistPositionsAreSkipped() {
+        fun item(id: String, position: String) =
+            """{"id":"$id","playlistId":"${testUuid(9)}","position":$position,"hymnType":"hymn_db","hymnNo":1,"isFu":false,""" +
+                """"createdAt":1,"updatedAt":1,"deletedAt":null,"updatedBy":"$DEVICE_A"}"""
+        val rows = listOf(item(testUuid(1), "2147483647"), item(testUuid(2), "4294967296"), item(testUuid(3), "1000000000"))
+        val decoded = decodeOk(doc("playlistItems" to rows.joinToString(",", "[", "]")))
+        assertThat(decoded.snapshot.tables.playlistItems.map { it.id }).containsExactly(testUuid(3))
+        assertThat(decoded.skipped).isEqualTo(SkippedRows(invalid = 2))
+    }
 }

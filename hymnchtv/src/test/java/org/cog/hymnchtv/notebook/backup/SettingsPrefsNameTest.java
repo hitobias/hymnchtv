@@ -7,10 +7,10 @@ import org.junit.Test;
 
 /** The backup rules name the legacy settings file literally; fail if MainActivity renames it. */
 public class SettingsPrefsNameTest {
-  public static final String SETTINGS_FILE = "Settings";
+    public static final String SETTINGS_FILE = "Settings";
 
-  @Test
-  public void settingsFileMatchesMainActivity() {
-      assertThat(MainActivity.PREF_SETTINGS).isEqualTo(SETTINGS_FILE);
-  }
+    @Test
+    public void settingsFileMatchesMainActivity() {
+        assertThat(MainActivity.PREF_SETTINGS).isEqualTo(SETTINGS_FILE);
+    }
 }

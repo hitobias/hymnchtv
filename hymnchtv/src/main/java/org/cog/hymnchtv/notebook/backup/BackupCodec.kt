@@ -23,6 +23,9 @@ object BackupCodec {
     const val FORMAT = "hymnchtv-notebook"
     const val CURRENT_SCHEMA_VERSION = 1
 
+    /** Upper bound for imported playlist positions, so re-slotting after the highest slot cannot overflow Int. */
+    const val MAX_POSITION = 1_000_000_000L
+
     private const val KEY_FORMAT = "format"
     private const val KEY_SCHEMA_VERSION = "schemaVersion"
     private const val KEY_EXPORTED_AT = "exportedAt"
@@ -251,12 +254,12 @@ object BackupCodec {
 
     private fun playlistItemFromJson(json: JSONObject, maxTime: Long): PlaylistItemEntity {
         val sync = json.sync(maxTime)
-        val position = json.getInt("position")
-        require(position >= 0) { "Negative position" }
+        val position = json.getLong("position")
+        require(position in 0..MAX_POSITION) { "Position out of range" }
         return PlaylistItemEntity(
             id = NotebookValidation.uuid(sync.id),
             playlistId = NotebookValidation.uuid(json.getString("playlistId")),
-            position = position,
+            position = position.toInt(),
             hymn = json.hymn(),
             createdAt = sync.createdAt,
             updatedAt = sync.updatedAt,
