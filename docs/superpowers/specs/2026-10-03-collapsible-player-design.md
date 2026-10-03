@@ -1,6 +1,6 @@
 # 可收合播放列（1.1）
 
-> 狀態：rev 2（2026-10-03）。Codex r1：P1×3、P2×3、P3×1 已修正（隱藏／收合拆成兩個狀態、單一 inset 公式、橫向規則、膠囊宿主、inset 通知、狀態保存、無障礙描述）。使用者要求：播放列可以點擊或下滑隱藏，縮到右下角，再點就恢復；請參考成熟設計、做得優雅。
+> 狀態：**rev 3 定案**（2026-10-03）。r2 Codex：P1×1（overlay 幾何與既有 pager 約束重複保留底部）、P2×3、P3×1，均照建議修正；審查輪數已達上限，依「P1 修法明確」定案。前次：rev 2。Codex r1：P1×3、P2×3、P3×1 已修正（隱藏／收合拆成兩個狀態、單一 inset 公式、橫向規則、膠囊宿主、inset 通知、狀態保存、無障礙描述）。使用者要求：播放列可以點擊或下滑隱藏，縮到右下角，再點就恢復；請參考成熟設計、做得優雅。
 
 ## 1. 參考與取捨
 
@@ -30,11 +30,19 @@
 - **手勢衝突**：向下拖曳收合只在卡片的「非控制區」（把手、標題列空白處）起手才生效；在進度條、按鈕上起手的拖曳交給該控制項；與歌詞捲動、左右翻頁（`NestedScrollableHost`）互不干擾：卡片在歌詞捲動層之外，手勢不穿透。
 - **轉場**：Container transform（卡片 ↔ 膠囊同一容器連續變形，300ms，M3 emphasized easing）；系統「移除動畫」時直接切換。展開／收合完成時觸覺回饋一次。
 
+## 3a. 版面幾何（overlay）
+
+- `content_main.xml`：`ViewPager2` 改為占滿到螢幕底部（移除其對 `mediaPlayer` 的 `layout_above` 關係，也不再由 `LyricsWindowInsets` 以 `insetBottom` 把 pager 推開）；播放層（展開卡片的宿主與膠囊）成為疊在 pager 之上、貼齊底部的 overlay。
+- 系統底部 inset 只在兩處使用：§4 的歌詞 padding 公式，與播放層本身的 bottom margin；不得在 pager 上再保留一次。
+- 底部 inset 一律取 `max(systemBottomInset, imeBottomInset)`（播放卡內有可輸入的重播次數欄位，鍵盤出現時播放層上移、歌詞 padding 同步增加）。
+
 ## 4. 狀態與生命週期
 
-- **兩個獨立狀態**（由新的 `PlayerSheetController` 持有，`ContentHandler.onSaveInstanceState` 保存，冷啟動預設值如下）：
+- **唯一顯示入口**：`PlayerSheetController.render()`。既有的 `isShowPlayerUi`／`showPlayerUi()`（`onResume()`、旋轉、關閉影片後的延遲回復、⋮ 選單等路徑，`ContentHandler.java` 約 414、655、691、1834 行）全部改為更新 controller 狀態後呼叫 `render()`，不再直接改播放卡可見性。
+- **狀態**（由 `PlayerSheetController` 持有，`ContentHandler.onSaveInstanceState` 保存，冷啟動預設值如下）：
   - `userHidden: Boolean`——使用者用 ⋮「隱藏／顯示播放條」切換；冷啟動預設 `false`。為 true 時卡片與膠囊都不顯示。
-  - `collapsed: Boolean`——展開或收合；冷啟動預設 `false`（展開）。
+  - `collapsed: Boolean`——直向的展開或收合；冷啟動預設 `false`（展開）。
+  - `landscapeExpanded: Boolean`——橫向時暫時展開的暫態；橫向的展開／收合（點 ⌃、收合鈕、拖曳）只改它，不寫 `collapsed`；轉回直向時清除。
   - ⋮ 選單「隱藏／顯示播放條」的文字與動作只讀寫 `userHidden`，**不再**以 `MediaGuiController.isShown()`（卡片可見性）判斷（`ContentHandler.java` 約 691 行需改）；顯示時回到 `collapsed` 記錄的形態。
 - 換首、翻頁時兩個狀態都保持。換首停止播放（PR #17）後，若為收合，膠囊變為未播放的「♪」形態，不自動展開。
 - **橫向**：現行 `onConfigurationChanged()`（約 1834 行）在橫向一律隱藏播放列以騰出歌詞空間。新規則：橫向時強制顯示為膠囊（不顯示展開卡片），但不改寫 `collapsed`；使用者在橫向點 ⌃ 可暫時展開卡片（浮在歌詞上），轉回直向後恢復直向時記錄的 `collapsed` 形態。`userHidden` 為 true 時橫向也不顯示膠囊。
@@ -50,7 +58,7 @@
 ## 6. 實作位置（建議）
 
 - 膠囊只放在 activity 級的 `content_main.xml`（CRLF）overlay，**不可**放在 `content_lyrics.xml`（那是每個 ViewPager2 頁面的版面，會產生多個膠囊）；把手與收合鈕放在播放卡（`MediaGuiController` 的版面）；新增純邏輯 `PlayerSheetState`（展開／收合、拖曳吸附判斷，可單元測試）與 `PlayerSheetController`（綁定 view、動畫、inset、與 `ChromeController` 協作）。
-- 進度環由播放器既有的進度更新驅動（不新增計時器）。
+- 進度環：新增 `PlaybackUiState(isPlaying, positionMs, durationMs, hymnInfo)` 與 listener 介面；`MediaGuiController` 既有的 BroadcastReceiver（約 819–908 行）每次更新播放狀態／進度時發送給 listener；膠囊訂閱它，不另設計時器。
 
 ## 7. 測試
 
