@@ -25,31 +25,37 @@ class ChromeController(
     private var held = false
     private var alwaysVisible = false
     private var pending: Any? = null
+    private var released = false
 
     /** The screen opens with the toolbars shown, then they fade. */
     fun start() {
+        if (released) return
         scheduleHide(INITIAL_VISIBLE_MS)
     }
 
     /** After recreation (rotation, theme change): keep what the reader had, without replaying the opening. */
     fun restore(visible: Boolean) {
+        if (released) return
         isVisible = visible || alwaysVisible
         if (isVisible) scheduleHide(IDLE_HIDE_MS) else cancelPending()
     }
 
     /** A single tap in the middle of the page. */
     fun toggle() {
+        if (released) return
         if (alwaysVisible) return
         if (isVisible) hide() else show()
     }
 
     /** Any use of a toolbar button restarts the idle timer. */
     fun onInteraction() {
+        if (released) return
         if (isVisible) scheduleHide(IDLE_HIDE_MS)
     }
 
     /** True while the Aa sheet or the overflow menu is open: no fading underneath it. */
     fun setHeld(value: Boolean) {
+        if (released) return
         if (held == value) return
         held = value
         if (isVisible) scheduleHide(IDLE_HIDE_MS)
@@ -57,12 +63,15 @@ class ChromeController(
 
     /** TalkBack (touch exploration): the toolbars stay, because a hidden control cannot be found by touch. */
     fun setAlwaysVisible(value: Boolean) {
+        if (released) return
         if (alwaysVisible == value) return
         alwaysVisible = value
         if (value) show() else if (isVisible) scheduleHide(IDLE_HIDE_MS)
     }
 
+    /** After this the controller ignores every call: a dialog or menu dismissed late must not re-arm the timer and keep the activity alive. */
     fun release() {
+        released = true
         cancelPending()
     }
 

@@ -66,26 +66,6 @@
         <item>EN</item>
     </string-array>
 
-    <string-array name="c_font_colors">
-        <item>@string/red</item>
-        <item>@string/blue</item>
-        <item>@string/white</item>
-        <item>@string/grey</item>
-        <item>@string/cyan</item>
-        <item>@string/yellow</item>
-        <item>@string/green</item>
-        <item>@string/black</item>
-    </string-array>
 
-    <string-array name="c_font_color_values" translatable="false">
-        <item>red</item>
-        <item>blue</item>
-        <item>white</item>
-        <item>grey</item>
-        <item>cyan</item>
-        <item>yellow</item>
-        <item>green</item>
-        <item>black</item>
-    </string-array>
 
 </resources>

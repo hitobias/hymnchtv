@@ -25,7 +25,6 @@ import org.cog.hymnchtv.reading.background.BackgroundChoice
 import org.cog.hymnchtv.reading.background.BackgroundPolicy
 import org.cog.hymnchtv.reading.background.BackgroundPreset
 import org.cog.hymnchtv.reading.background.BackgroundSlot
-import org.cog.hymnchtv.reading.background.MainScreenColors
 import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
 import org.cog.hymnchtv.reading.background.UiTokens
 import org.cog.hymnchtv.reading.background.Wcag
@@ -98,7 +97,7 @@ class PhotoBackdropTest {
                     val color = it.findViewById<TextView>(id).currentTextColor
                     for (swatch in swatches) {
                         for (backdrop in UiTokens.backdropsOver(swatch, photoTokens.surface, photoTokens.surfaceTone)) {
-                            assertThat(Wcag.contrast(color, backdrop)).isAtLeast(MainScreenColors.MIN_TEXT_CONTRAST)
+                            assertThat(Wcag.contrast(color, backdrop)).isAtLeast(UiTokens.MIN_TEXT_CONTRAST)
                         }
                     }
                 }

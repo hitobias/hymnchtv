@@ -57,7 +57,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
         this.views = views
         keypadSizer = KeypadSizer(views, view.findViewById(R.id.viewMain)).also { it.attach() }
         recent = RecentChips(views, ::openFromHistory)
-        applyHomeTheme()
+        // The background and tokens are applied in onResume (always follows), once, so a photo is decoded only once
         controller = HymnPickerController(views, this, PickerMode.HOME, vm, prefs, ::currentTitleSource, ::titleIsTraditional)
     }
 

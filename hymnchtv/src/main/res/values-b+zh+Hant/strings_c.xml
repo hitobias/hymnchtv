@@ -10,7 +10,6 @@
     <string name="c_history_delete">從歷史移除</string>
     <string name="c_toc_empty">沒有條目</string>
     <string name="c_cat_appearance">介面</string>
-    <string name="c_cat_home">主面版</string>
     <string name="c_cat_reading">閱讀</string>
     <string name="c_cat_media">媒體</string>
     <string name="c_cat_other">其他</string>
@@ -75,4 +74,9 @@
     <string name="c_date_today">今天</string>
     <string name="c_date_yesterday">昨天</string>
     <string name="c_when_desc">%1$s，%2$s</string>
+    <string name="c_play">播放</string>
+    <string name="c_pause">暫停</string>
+    <string name="c_repeat">重複</string>
+    <string name="c_repeat_count">重複次數</string>
+    <string name="c_search_youtube">在 YouTube 搜尋這首詩歌</string>
 </resources>

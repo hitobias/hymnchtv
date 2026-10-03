@@ -118,6 +118,7 @@
     <!-- Five buttons at any width (5 x 48dp fits 320dp); A-/A+ moved into the Aa panel, tint into the overflow -->
     <LinearLayout
         android:id="@+id/lyrics_top_bar"
+        android:accessibilityTraversalBefore="@id/lyrics_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"

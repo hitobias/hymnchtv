@@ -29,29 +29,6 @@
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
-        app:title="@string/c_cat_home">
-
-        <SeekBarPreference
-            android:max="50"
-            app:iconSpaceReserved="false"
-            app:key="TextSize"
-            app:min="25"
-            app:persistent="false"
-            app:showSeekBarValue="true"
-            app:title="@string/fontSize" />
-
-        <ListPreference
-            app:entries="@array/c_font_colors"
-            app:entryValues="@array/c_font_color_values"
-            app:iconSpaceReserved="false"
-            app:key="TextColor"
-            app:persistent="false"
-            app:title="@string/fontColor"
-            app:useSimpleSummaryProvider="true" />
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        app:iconSpaceReserved="false"
         app:title="@string/c_cat_reading">
 
         <!-- Lyrics language, fonts, backgrounds, ...: the reading settings screen (plan A2) -->

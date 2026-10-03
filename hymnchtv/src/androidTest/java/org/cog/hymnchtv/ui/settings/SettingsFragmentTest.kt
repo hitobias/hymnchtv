@@ -1,11 +1,9 @@
 package org.cog.hymnchtv.ui.settings
 
 import android.content.Context
-import android.graphics.Color
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
-import androidx.preference.SeekBarPreference
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
@@ -22,7 +20,6 @@ import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.reading.ReadingSettingsActivity
 import org.cog.hymnchtv.ui.FragmentHost
-import org.cog.hymnchtv.ui.home.HomePrefs
 import org.cog.hymnchtv.ui.theme.NightMode
 import org.cog.hymnchtv.ui.theme.ThemePrefs
 import org.junit.After
@@ -48,7 +45,7 @@ class SettingsFragmentTest {
     }
 
     private fun clean() {
-        prefs.edit().remove(ThemePrefs.PREF_THEME).remove(HomePrefs.TEXT_SIZE).remove(HomePrefs.TEXT_COLOR).commit()
+        prefs.edit().remove(ThemePrefs.PREF_THEME).commit()
     }
 
     private fun withSettings(block: (SettingsFragment, ActivityScenario<MainActivity>) -> Unit) {
@@ -68,10 +65,8 @@ class SettingsFragmentTest {
     @Test
     fun showsEffectiveValuesWithoutWritingThem() = withSettings { fragment, scenario ->
         assertThat(scenario.pref<ListPreference>(fragment, "Theme").value).isEqualTo(NightMode.DEFAULT.name)
-        assertThat(scenario.pref<SeekBarPreference>(fragment, "TextSize").value).isEqualTo(HomePrefs.TEXT_SIZE_DEFAULT)
         // Opening the screen froze nothing
         assertThat(prefs.contains(ThemePrefs.PREF_THEME)).isFalse()
-        assertThat(prefs.contains(HomePrefs.TEXT_SIZE)).isFalse()
     }
 
     @Test
@@ -82,13 +77,11 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun textSizeAndColorChangesAreWrittenForTheHomeTab() = withSettings { fragment, scenario ->
+    fun homeTextSizeAndColorSettingsAreGone() = withSettings { fragment, scenario ->
         scenario.onActivity {
-            assertThat(fragment.findPreference<SeekBarPreference>("TextSize")!!.callChangeListener(40)).isTrue()
-            assertThat(fragment.findPreference<ListPreference>("TextColor")!!.callChangeListener("red")).isTrue()
+            assertThat(fragment.findPreference<Preference>("TextSize")).isNull()
+            assertThat(fragment.findPreference<Preference>("TextColor")).isNull()
         }
-        assertThat(HomePrefs.textSize(prefs)).isEqualTo(40)
-        assertThat(prefs.getInt(HomePrefs.TEXT_COLOR, 0)).isEqualTo(Color.RED)
     }
 
     @Test

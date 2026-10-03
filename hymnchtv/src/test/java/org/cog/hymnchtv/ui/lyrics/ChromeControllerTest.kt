@@ -137,6 +137,19 @@ class ChromeControllerTest {
         timer.advance(1)
         assertThat(chrome.isVisible).isFalse()
     }
+
+    @Test
+    fun afterReleaseNothingIsScheduledAgain() {
+        chrome.start()
+        chrome.setHeld(true)
+        chrome.release()
+        chrome.setHeld(false) // the Aa sheet or menu is dismissed after the activity is gone
+        chrome.onInteraction()
+        chrome.toggle()
+        chrome.restore(true)
+        chrome.setAlwaysVisible(false)
+        assertThat(timer.pendingCount).isEqualTo(0)
+    }
 }
 
 /** Deterministic [ChromeTimer]: time only moves in [advance]. */
@@ -145,6 +158,8 @@ class FakeChromeTimer : ChromeTimer {
 
     private var now = 0L
     private val tasks = mutableListOf<Task>()
+
+    val pendingCount: Int get() = tasks.size
 
     override fun postDelayed(delayMs: Long, action: Runnable): Any = Task(now + delayMs, action).also { tasks += it }
 

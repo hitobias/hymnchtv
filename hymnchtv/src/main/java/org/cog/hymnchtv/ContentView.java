@@ -517,7 +517,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         applyScoreFilter();
         ChromeButtonStyle.styleBar((ViewGroup) topBar, tokens);
         ChromeButtonStyle.styleBar((ViewGroup) buttonBar, tokens);
-        if (hasEnglishLyrics) {
+        if (DisplayModePolicy.refreshEnglishOnTheme(hasEnglishLyrics, currentDisplayMode(), mHasLyricsText)) {
             toggleLyricsView(); // the English HTML is generated for the background brightness
         }
     }

@@ -42,6 +42,9 @@ class LyricsTopBarTest {
 
     @Before
     fun setUp() {
+        // The toolbars fade 3 s after opening; on a loaded machine the test body can start later than that, so the
+        // clock is fake (never advanced): these tests are about the buttons, not the fade
+        ContentHandler.sChromeTimerForTest = ManualChromeTimer()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             TestPermissions.grantLaunchPermission(ctx.packageName)
             mainScenario = ActivityScenario.launch(MainActivity::class.java)
@@ -50,6 +53,7 @@ class LyricsTopBarTest {
 
     @After
     fun tearDown() {
+        ContentHandler.sChromeTimerForTest = null
         mainScenario?.close()
     }
 
@@ -61,7 +65,6 @@ class LyricsTopBarTest {
         return ActivityScenario.launch<ContentHandler>(Intent(ctx, ContentHandler::class.java).putExtras(extras))
             .also {
                 it.waitForPage()
-                // The toolbars fade after 3 s; these tests are about what the buttons do, not about the fade
                 it.onActivity { activity -> activity.setChromeHeld(true) }
             }
     }

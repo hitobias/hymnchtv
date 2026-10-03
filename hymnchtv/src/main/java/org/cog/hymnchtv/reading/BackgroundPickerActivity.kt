@@ -105,6 +105,9 @@ class BackgroundPickerActivity : BaseActivity() {
     }
 
     private inner class Adapter(private val current: BackgroundChoice) : BaseAdapter() {
+        // Tokens depend only on the (fixed) choice at a position; a cell is re-bound on every scroll
+        private val tokenCache = HashMap<Int, UiTokens>()
+
         // System font first; the lyrics face replaces it (and the grid refreshes) once it has loaded off the main thread
         private var sampleFont: Typeface = Typeface.DEFAULT
 
@@ -127,7 +130,7 @@ class BackgroundPickerActivity : BaseActivity() {
             val view = convertView ?: layoutInflater.inflate(R.layout.background_picker_item, parent, false)
             val choice = choices[position]
             val palette = bind(position, view.findViewById(R.id.bgImage), choice)
-            val tokens = UiTokens.from(BackgroundPolicy.tokenInput(choice))
+            val tokens = tokenCache.getOrPut(position) { UiTokens.from(BackgroundPolicy.tokenInput(choice)) }
             bindMiniCard(view, tokens, choice is BackgroundChoice.Photo)
             view.findViewById<TextView>(R.id.bgSample).apply {
                 setTextColor(tokens.onSurface)

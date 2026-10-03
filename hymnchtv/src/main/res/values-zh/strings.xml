@@ -187,9 +187,9 @@
 
     <!-- hymnchtv media player interface gui names -->
     <string name="hymn_media_banzou">伴奏</string>
-    <string name="hymn_media_changshi"><u>唱诗</u></string>
-    <string name="hymn_media_jiaochang"><u>教唱</u></string>
-    <string name="hymn_media_media"><u>媒体</u></string>
+    <string name="hymn_media_changshi">唱诗</string>
+    <string name="hymn_media_jiaochang">教唱</string>
+    <string name="hymn_media_media">媒体</string>
 
     <!-- Hymn info for media controller title -->
     <string name="hymn_title_mc_bb">补充 %1$d: %2$s</string>
@@ -226,7 +226,6 @@
     <string name="play">播放</string>
     <string name="home">主页</string>
 
-    <string name="fontSize">设置主面版文字大小</string>
     <string name="small">小</string>
     <string name="lager">大</string>
     <string name="normal">默认</string>
@@ -235,15 +234,6 @@
     <string name="dec">减小</string>
 
     <!-- 文字颜色 -->
-    <string name="fontColor">设置主面版字体颜色</string>
-    <string name="red">红色</string>
-    <string name="blue">蓝色</string>
-    <string name="grey">灰色</string>
-    <string name="black">黑色</string>
-    <string name="white">白色</string>
-    <string name="cyan">青色</string>
-    <string name="yellow">黄色</string>
-    <string name="green">绿色</string>
 
     <!-- 背景颜色 -->
 
