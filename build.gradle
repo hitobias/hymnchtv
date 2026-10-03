@@ -23,6 +23,11 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // BlurView (frosted player) is only published on JitPack
+        maven {
+            url 'https://jitpack.io'
+            content { includeGroup 'com.github.Dimezis' }
+        }
     }
 }
 

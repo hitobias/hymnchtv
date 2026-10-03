@@ -123,12 +123,15 @@ import org.cog.hymnchtv.reading.background.BackgroundSlot;
 import org.cog.hymnchtv.reading.BackgroundPickerActivity;
 import org.cog.hymnchtv.reading.background.BackgroundChoice;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
+import org.cog.hymnchtv.reading.background.GlassMode;
+import org.cog.hymnchtv.reading.background.TokenInput;
 import org.cog.hymnchtv.reading.background.UiTokens;
 import org.cog.hymnchtv.ui.lyrics.ReadingPanelSheet;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
 import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
 import org.cog.hymnchtv.ui.lyrics.LyricsWindowInsets;
 import org.cog.hymnchtv.ui.player.PlaybackUiListener;
+import org.cog.hymnchtv.ui.player.GlassPolicy;
 import org.cog.hymnchtv.ui.player.PlayerSheetCallbacks;
 import org.cog.hymnchtv.ui.player.PlayerSheetController;
 import org.cog.hymnchtv.ui.player.PlayerSheetState;
@@ -291,6 +294,19 @@ public class ContentHandler extends BaseActivity {
     /** Surface/text/accent tokens derived from the same background (visual redesign spec section 4). */
     private UiTokens mLyricsTokens;
 
+    /** The same background's tokens for the frosted player (card and capsule): their surface is the glass tint. */
+    private TokenInput mTokenInput;
+    private UiTokens mPlayerTokens;
+    private GlassMode mGlassMode;
+
+    private final android.database.ContentObserver mHighContrastObserver =
+            new android.database.ContentObserver(new android.os.Handler(android.os.Looper.getMainLooper())) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    onHighContrastChanged();
+                }
+            };
+
     private final ActivityResultLauncher<Intent> mBackgroundPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> applyReadingTheme());
 
@@ -425,6 +441,8 @@ public class ContentHandler extends BaseActivity {
         super.onResume();
         onUserLeaveHint = false;
         mPlayerSheet.render();
+        getContentResolver().registerContentObserver(GlassPolicy.highTextContrastUri(), false, mHighContrastObserver);
+        onHighContrastChanged();
         // Keep the screen on while lyrics/score are shown (plan A.1.7); window-level so pager changes never drop it
         if (ReadingPrefs.keepScreenOn(sPreference)) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -436,6 +454,7 @@ public class ContentHandler extends BaseActivity {
 
     @Override
     protected void onPause() {
+        getContentResolver().unregisterContentObserver(mHighContrastObserver);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         super.onPause();
     }
@@ -588,6 +607,42 @@ public class ContentHandler extends BaseActivity {
         return mLyricsTokens;
     }
 
+    /** Glass tokens of the player card and capsule for the lyrics background on screen. */
+    public UiTokens getPlayerTokens() {
+        if (mPlayerTokens == null) {
+            derivePlayerTokens(BackgroundPolicy.tokenInput(
+                    BackgroundPrefs.resolve(getSharedPreferences(PREF_SETTINGS, 0), BackgroundSlot.LYRICS)));
+        }
+        return mPlayerTokens;
+    }
+
+    public GlassMode getGlassMode() {
+        getPlayerTokens();
+        return mGlassMode;
+    }
+
+    private void derivePlayerTokens(TokenInput input) {
+        mTokenInput = input;
+        mGlassMode = GlassPolicy.mode(this);
+        mPlayerTokens = UiTokens.Companion.glass(input, mGlassMode);
+    }
+
+    /** Paints the card and the capsule with the current glass tokens. */
+    private void applyPlayerGlass() {
+        if (mMediaGuiController != null) {
+            mMediaGuiController.applyTokens(mPlayerTokens, mGlassMode);
+        }
+        mPlayerSheet.applyTokens(mPlayerTokens, mGlassMode);
+    }
+
+    /** The system's high-contrast text setting may have changed: the glass turns opaque (or back) at once. */
+    private void onHighContrastChanged() {
+        if (mTokenInput != null && GlassPolicy.mode(this) != mGlassMode) {
+            derivePlayerTokens(mTokenInput);
+            applyPlayerGlass();
+        }
+    }
+
     /**
      * The single propagation point of the lyrics theme (visual redesign 6): apply the LYRICS background, derive the
      * palette and tokens once, and hand them to every page that has a view and to the player card. Called from
@@ -596,17 +651,16 @@ public class ContentHandler extends BaseActivity {
     public void applyReadingTheme() {
         BackgroundChoice choice = BackgroundPrefs.applyChoiceTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
         mLyricsPalette = BackgroundPolicy.palette(choice);
-        mLyricsTokens = UiTokens.Companion.from(BackgroundPolicy.tokenInput(choice));
+        TokenInput tokenInput = BackgroundPolicy.tokenInput(choice);
+        mLyricsTokens = UiTokens.Companion.from(tokenInput);
+        derivePlayerTokens(tokenInput);
         LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
         SystemBars.styleIcons(this, mLyricsPalette.isDark(), SystemBars.legacyNavColor(mLyricsPalette.isDark(),
                 UiTokens.over(mLyricsPalette.getPaperColor(), mLyricsTokens.getSurface()), mLyricsTokens.getOnSurface()));
         for (ContentView page : livePages()) {
             page.applyTheme(mLyricsPalette, mLyricsTokens);
         }
-        if (mMediaGuiController != null) {
-            mMediaGuiController.applyTokens(mLyricsTokens);
-        }
-        mPlayerSheet.applyTokens(mLyricsTokens, mLyricsPalette.getPaperColor());
+        applyPlayerGlass();
     }
 
     /**

@@ -5,39 +5,54 @@
     android:layout_height="match_parent"
     android:background="?attr/colorPrimary">
 
-    <!-- Reading-settings background (plan A2); its own view so a photo can be blurred without blurring the lyrics -->
-    <ImageView
-        android:id="@+id/lyricsBackground"
+    <!-- Everything the frosted player card and capsule blur: the lyrics background and the pager. The card host and the
+         capsule below are siblings of this target, never inside it. Its RelativeLayout keeps the spacer rules as before. -->
+    <eightbitlab.com.blurview.BlurTarget
+        android:id="@+id/blurTarget"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:importantForAccessibility="no"
-        android:scaleType="centerCrop" />
+        android:layout_height="match_parent">
 
-    <!-- System bar spacers: the background above stays behind the bars, everything else keeps clear (LyricsWindowInsets) -->
-    <View
-        android:id="@+id/insetTop"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_alignParentTop="true"
-        android:importantForAccessibility="no" />
+        <RelativeLayout
+            android:id="@+id/lyricsLayer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
-    <View
-        android:id="@+id/insetBottom"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_alignParentBottom="true"
-        android:importantForAccessibility="no" />
+            <!-- Reading-settings background (plan A2); its own view so a photo can be blurred without blurring the lyrics -->
+            <ImageView
+                android:id="@+id/lyricsBackground"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop" />
 
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPager"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentStart="true"
-        android:layout_below="@id/insetTop"
-        android:layout_marginStart="5dp"
-        android:layout_marginTop="5dp"
-        android:layout_marginEnd="5dp"
-        android:spacing="20dp" />
+            <!-- System bar spacers: the background above stays behind the bars, everything else keeps clear (LyricsWindowInsets) -->
+            <View
+                android:id="@+id/insetTop"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_alignParentTop="true"
+                android:importantForAccessibility="no" />
+
+            <View
+                android:id="@+id/insetBottom"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_alignParentBottom="true"
+                android:importantForAccessibility="no" />
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/viewPager"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_alignParentStart="true"
+                android:layout_below="@id/insetTop"
+                android:layout_marginStart="5dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginEnd="5dp"
+                android:spacing="20dp" />
+
+        </RelativeLayout>
+    </eightbitlab.com.blurview.BlurTarget>
 
     <!-- Empty slot for the notebook bar (sub-project D-1 fills it and makes it visible); C only reserves it (C-5) -->
     <FrameLayout
@@ -69,38 +84,50 @@
         android:layout_alignParentBottom="true"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
         android:visibility="gone">
 
-        <org.cog.hymnchtv.ui.player.ProgressRingButton
-            android:id="@+id/capsulePlay"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="4dp"
-            android:contentDescription="@string/c_play"
-            android:padding="12dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_player_play_arrow" />
+        <!-- Frosted layer (API 31+), see GlassFrameLayout -->
+        <eightbitlab.com.blurview.BlurView
+            android:id="@+id/capsuleBlur"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no" />
 
-        <ImageView
-            android:id="@+id/capsuleExpand"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
-            android:contentDescription="@string/c_player_expand"
-            android:padding="12dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_player_expand_less" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <ImageView
-            android:id="@+id/capsuleNote"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:contentDescription="@string/c_player_expand"
-            android:padding="16dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_player_note" />
+            <org.cog.hymnchtv.ui.player.ProgressRingButton
+                android:id="@+id/capsulePlay"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="4dp"
+                android:contentDescription="@string/c_play"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_player_play_arrow" />
+
+            <ImageView
+                android:id="@+id/capsuleExpand"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/c_player_expand"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_player_expand_less" />
+
+            <ImageView
+                android:id="@+id/capsuleNote"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:contentDescription="@string/c_player_expand"
+                android:padding="16dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_player_note" />
+        </LinearLayout>
     </org.cog.hymnchtv.ui.player.PlayerCapsuleView>
 
     <LinearLayout
@@ -116,7 +143,7 @@
         android:id="@+id/webView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/viewPager"
+        android:layout_alignTop="@id/blurTarget"
         android:layout_marginStart="5dp"
         android:layout_marginEnd="5dp"
         android:orientation="vertical" />

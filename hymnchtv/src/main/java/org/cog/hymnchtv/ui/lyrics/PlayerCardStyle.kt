@@ -14,10 +14,12 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.widget.CompoundButtonCompat
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.reading.background.GlassMode
 import org.cog.hymnchtv.reading.background.UiTokens
+import org.cog.hymnchtv.ui.player.GlassFrameLayout
 
 /**
- * Paints the lyrics page player card from [UiTokens] (visual redesign spec section 6): `surface` card, `accent` play
+ * Paints the lyrics page player card from [UiTokens] (visual redesign spec section 6): `surface` (the glass tint) card, `accent` play
  * disc, repeat and speed as `surfaceTone` chips, source selector as segmented buttons (unselected `surfaceTone`/`onSurface`,
  * selected `accent`/`onAccent`, unavailable outlined with the disabled text colour), seek bar `accent` over an
  * `onSurfaceMuted` track at alpha 0.3.
@@ -30,16 +32,12 @@ object PlayerCardStyle {
     private val SOURCE_IDS = intArrayOf(R.id.btn_media, R.id.btn_jiaochang, R.id.btn_changshi, R.id.btn_banzhou)
 
     /**
+     * @param tokens the glass tokens of [mode] ([UiTokens.glass]): `surface` is the card's translucent tint
      * @param sourceAvailable whether media exists per source (media, jiaochang, changshi, banzhou); missing media reads as disabled
-     * @param paper the lyrics paper colour: the card floats over the lyrics, so its `surface` is painted over it to be opaque
      */
     @JvmStatic
-    fun apply(card: View, tokens: UiTokens, sourceAvailable: BooleanArray, paper: Int) {
-        val density = card.resources.displayMetrics.density
-        card.background = GradientDrawable().apply {
-            setColor(UiTokens.over(paper, tokens.surface))
-            cornerRadius = CARD_RADIUS_DP * density
-        }
+    fun apply(card: GlassFrameLayout, tokens: UiTokens, sourceAvailable: BooleanArray, mode: GlassMode) {
+        card.applyGlass(tokens.surface, mode, CARD_RADIUS_DP)
         card.findViewById<View>(R.id.player_card)?.background = null
 
         card.findViewById<TextView>(R.id.hymn_info).setTextColor(tokens.onSurface)

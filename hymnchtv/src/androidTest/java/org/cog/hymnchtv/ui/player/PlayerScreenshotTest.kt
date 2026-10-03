@@ -33,7 +33,7 @@ import java.nio.ByteOrder
 @RunWith(AndroidJUnit4::class)
 class PlayerScreenshotTest : LyricsTestBase() {
     private val prefs get() = ctx.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
-    private val looks = listOf("light" to "xuan", "dark" to "nightread", "photo" to BackgroundPolicy.PHOTO)
+    private val looks = listOf("light" to "xuan", "dark" to "nightread", "photo" to BackgroundPolicy.PHOTO, "reading" to "parchment")
 
     private fun shoot(file: File) {
         val pfd = instrumentation.uiAutomation.executeShellCommand("screencap -p ${file.absolutePath}")
