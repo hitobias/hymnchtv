@@ -37,6 +37,10 @@ data class PlayerSheetState(
         if (portrait && landscapeExpanded) copy(landscapeExpanded = false) else this
 
     companion object {
+        /** Portrait from a configuration orientation value; read it from the live configuration, never a cached flag. */
+        @JvmStatic
+        fun isPortrait(orientation: Int): Boolean = orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
+
         const val SNAP_DISTANCE_FRACTION = 0.4f
         const val SNAP_VELOCITY_DP_PER_SEC = 1000f
         const val EXPAND_DISTANCE_DP = 40f
