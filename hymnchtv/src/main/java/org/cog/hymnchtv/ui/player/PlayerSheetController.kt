@@ -15,6 +15,7 @@ import android.view.accessibility.AccessibilityManager
 import android.view.animation.PathInterpolator
 import android.widget.ImageView
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.reading.background.GlassMode
 import org.cog.hymnchtv.reading.background.UiTokens
 import org.cog.hymnchtv.ui.lyrics.ContentInsets
 
@@ -64,7 +65,7 @@ class PlayerSheetController(
     var rendered: SheetDisplay? = null
         private set
 
-    private var card: SheetDragLinearLayout? = null
+    private var card: GlassFrameLayout? = null
     private var playback = PlaybackUiState()
     private var tokens: UiTokens? = null
     private var animator: ValueAnimator? = null
@@ -131,9 +132,9 @@ class PlayerSheetController(
     // ---- views ----
 
     /** The audio player fragment created its card (again, after a video). */
-    fun attachCard(view: SheetDragLinearLayout) {
+    fun attachCard(view: GlassFrameLayout) {
         card = view
-        view.dragListener = this
+        body()?.dragListener = this
         view.findViewById<View>(R.id.btn_player_collapse)?.setOnClickListener { collapse(animate = true) }
         applyDragEnabled()
         tokens?.let { styleHandle(it) }
@@ -149,15 +150,14 @@ class PlayerSheetController(
         }
     }
 
-    /** @param paper the lyrics paper colour; the capsule floats over the lyrics, so its `surface` is painted over it to be opaque */
-    fun applyTokens(tokens: UiTokens, paper: Int) {
+    /**
+     * @param tokens the glass tokens of [mode]: their `surface` is the glass tint of the capsule and of the card
+     * (the card paints itself in [org.cog.hymnchtv.ui.lyrics.PlayerCardStyle]; only the handle and the collapse key here)
+     */
+    fun applyTokens(tokens: UiTokens, mode: GlassMode) {
         this.tokens = tokens
-        val d = density
-        capsule.background = GradientDrawable().apply {
-            setColor(UiTokens.over(paper, tokens.surface))
-            cornerRadius = CAPSULE_RADIUS_DP * d
-        }
-        capsule.elevation = CAPSULE_ELEVATION_DP * d
+        capsule.applyGlass(tokens.surface, mode, CAPSULE_RADIUS_DP)
+        capsule.elevation = CAPSULE_ELEVATION_DP * density
         playButton.applyColors(tokens.accent, tokens.onAccent, tokens.surfaceTone)
         val tint = ColorStateList.valueOf(tokens.onSurface)
         expandButton.imageTintList = tint
@@ -255,7 +255,7 @@ class PlayerSheetController(
         return Geometry(capW / w, capH / h, (capRight - host.right).toFloat(), (capBottom - host.bottom).toFloat())
     }
 
-    private fun transition(cardView: SheetDragLinearLayout, toCard: Boolean) {
+    private fun transition(cardView: GlassFrameLayout, toCard: Boolean) {
         val to = if (toCard) SheetDisplay.CARD else SheetDisplay.CAPSULE
         rendered = to
         if (toCard) {
@@ -389,8 +389,15 @@ class PlayerSheetController(
     private fun applyDragEnabled() {
         val enabled = accessibility?.isTouchExplorationEnabled != true
         capsule.dragEnabled = enabled
-        card?.dragEnabled = enabled
+        body()?.dragEnabled = enabled
     }
+
+    private fun body(): SheetDragLinearLayout? = card?.findViewById(R.id.playerBody)
+
+    /** Whether the card's, and the capsule's, blur is running now (for tests and the performance check). */
+    fun cardBlurActive(): Boolean = card?.glass?.blurActive == true
+
+    fun capsuleBlurActive(): Boolean = capsule.glass?.blurActive == true
 
     // ---- insets for the lyrics ----
 

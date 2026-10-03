@@ -5,11 +5,13 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.ViewConfiguration
-import android.widget.LinearLayout
 
-/** The floating capsule. Taps go to its buttons; an upward drag anywhere on it asks to expand the player. */
+/**
+ * The floating capsule: a frosted [GlassFrameLayout] holding a row of buttons. Taps go to its buttons; an upward drag
+ * anywhere on it asks to expand the player.
+ */
 class PlayerCapsuleView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
-    LinearLayout(context, attrs) {
+    GlassFrameLayout(context, attrs) {
     /** Called once when an upward drag or fling is released far or fast enough. */
     var onExpandGesture: (() -> Unit)? = null
 

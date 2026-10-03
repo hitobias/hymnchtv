@@ -58,6 +58,21 @@ object LyricsWindowInsets {
                 view.layoutParams = lp
             }
         }
+        alignWebLayerWithPager(root, base, insets)
+    }
+
+    /**
+     * The web layer starts where the pager does: below the top bar spacer and the pager's own margin. The pager lives in
+     * the blur target now, so the layer is anchored to the target's top and takes the same offset as a margin.
+     */
+    private fun alignWebLayerWithPager(root: View, base: Int, insets: ContentInsets) {
+        val view = root.findViewById<View>(R.id.webView) ?: return
+        val lp = view.layoutParams as? ViewGroup.MarginLayoutParams ?: return
+        val top = base + insets.top
+        if (lp.topMargin != top) {
+            lp.topMargin = top
+            view.layoutParams = lp
+        }
     }
 
     private fun setHeight(view: View?, height: Int) {

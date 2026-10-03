@@ -61,11 +61,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.cog.hymnchtv.reading.background.GlassMode;
 import org.cog.hymnchtv.reading.background.UiTokens;
 import org.cog.hymnchtv.ui.lyrics.PlayerCardStyle;
 import org.cog.hymnchtv.ui.player.PlaybackUiListener;
 import org.cog.hymnchtv.ui.player.PlaybackUiState;
-import org.cog.hymnchtv.ui.player.SheetDragLinearLayout;
+import org.cog.hymnchtv.ui.player.GlassFrameLayout;
 
 import org.cog.hymnchtv.mediaplayer.AudioBgService;
 import org.cog.hymnchtv.utils.DialogActivity;
@@ -255,8 +256,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         mBtnChangShi = convertView.findViewById(R.id.btn_changshi);
 
         mBtnBanZhou = convertView.findViewById(R.id.btn_banzhou);
-        applyTokens(mContentHandler.getLyricsTokens());
-        mContentHandler.getPlayerSheet().attachCard((SheetDragLinearLayout) playerUi);
+        applyTokens(mContentHandler.getPlayerTokens(), mContentHandler.getGlassMode());
+        mContentHandler.getPlayerSheet().attachCard((GlassFrameLayout) playerUi);
         publishPlaybackUi();
         return convertView;
     }
@@ -405,11 +406,11 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         }
     }
 
-    /** Colours of the player card from the lyrics background's tokens (single call site: ContentHandler.applyReadingTheme). */
-    public void applyTokens(UiTokens tokens) {
+    /** Colours of the player card from the glass tokens of the lyrics background (ContentHandler.applyPlayerGlass). */
+    public void applyTokens(UiTokens tokens, GlassMode mode) {
         mTokens = tokens;
         if (playerUi != null) {
-            PlayerCardStyle.apply(playerUi, tokens, mSourceAvailable, mContentHandler.getLyricsPalette().getPaperColor());
+            PlayerCardStyle.apply((GlassFrameLayout) playerUi, tokens, mSourceAvailable, mode);
         }
     }
 
