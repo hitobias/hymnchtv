@@ -10,8 +10,8 @@ import org.cog.hymnchtv.ui.picker.UniformFit
 
 /**
  * Gives all eight book cells one text size: the largest (up to [maxSp]) at which every label fits its cell on one line.
- * Each cell fitting by itself would leave neighbours in different sizes when the system font is enlarged. The size never
- * falls below [MIN_SP]; text that still did not fit would be cut off, and the tests prove it does not at 320dp.
+ * Each cell fitting by itself would leave neighbours in different sizes when the system font is enlarged. Only an enlarged system font on a narrow screen
+ * takes the size below 16sp; it never falls below [MIN_SP]; text that still did not fit would be cut off, and the tests prove it does not at 320dp.
  */
 class BookLabelFitter(private val views: HymnPickerViews, private val maxSp: Float) {
     private val cells: List<MaterialButton> = views.books.values.toList() + views.toc

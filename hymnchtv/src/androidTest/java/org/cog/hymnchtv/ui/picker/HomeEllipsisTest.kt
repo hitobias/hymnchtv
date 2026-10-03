@@ -118,10 +118,24 @@ class HomeEllipsisTest {
         val cells = views.books.values.toList() + views.toc
         assertThat(cells.map { it.width }.toSet().size).isAtMost(2) // equal up to a rounding pixel
         assertThat(cells.map { it.height }.toSet()).hasSize(1)
-        assertThat(cells.first().height).isEqualTo((44 * target.resources.displayMetrics.density).toInt())
+        assertThat(cells.first().height).isEqualTo((52 * target.resources.displayMetrics.density).toInt())
+    }
+
+    @Test
+    fun chineseBookLabelsAreAtLeast19spAt360dp() {
+        loadKai()
+        for (tag in listOf("zh-Hans-CN", "zh-Hant-TW")) {
+            val views = inflate(tag, CONTENT_DP_AT_360, 1.0f)
+            val dm = target.resources.displayMetrics
+            for (b in views.books.values + views.toc) {
+                assertWithMessage("$tag '${b.text}' size in sp").that(b.textSize / dm.scaledDensity).isAtLeast(19f)
+            }
+            assertWhole(views, "$tag @360dp")
+        }
     }
 
     private companion object {
+        const val CONTENT_DP_AT_360 = 328
         const val CONTENT_DP_AT_320 = 288
     }
 }
