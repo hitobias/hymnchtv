@@ -6,6 +6,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import org.cog.hymnchtv.R
 
+/** Told the resolved insets every time they change. */
+fun interface InsetsListener {
+    fun onInsets(insets: ContentInsets)
+}
+
 /** Space the lyrics screen keeps free around its content, in pixels. */
 data class ContentInsets(val left: Int, val top: Int, val right: Int, val bottom: Int)
 
@@ -24,14 +29,18 @@ object LyricsWindowInsets {
     /** Layers laid out with the 5dp side margins of content_main.xml; their margins grow by the side insets. */
     private val SIDE_LAYERS = intArrayOf(R.id.viewPager, R.id.notebookBar, R.id.mediaPlayer, R.id.filexferGui, R.id.webView)
 
+    /** @param onInsets told the resolved insets every time they change (the player layer places itself with them) */
     @JvmStatic
-    fun install(root: View) {
+    @JvmOverloads
+    fun install(root: View, onInsets: InsetsListener? = null) {
         val density = root.resources.displayMetrics.density
         val base = (BASE_MARGIN_DP * density + 0.5f).toInt()
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, windowInsets ->
             val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-            apply(root, base, resolve(bars.left, bars.top, bars.right, bars.bottom, ime.bottom))
+            val insets = resolve(bars.left, bars.top, bars.right, bars.bottom, ime.bottom)
+            apply(root, base, insets)
+            onInsets?.onInsets(insets)
             WindowInsetsCompat.CONSUMED
         }
         ViewCompat.requestApplyInsets(root)

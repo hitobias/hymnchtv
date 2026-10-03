@@ -76,6 +76,10 @@
     <string name="c_when_desc">%1$s, %2$s</string>
     <string name="c_play">Play</string>
     <string name="c_pause">Pause</string>
+    <string name="c_player_collapse">Collapse player</string>
+    <string name="c_player_expand">Expand player</string>
+    <string name="c_player_play_named">Play %1$s</string>
+    <string name="c_player_pause_named">Pause %1$s</string>
     <string name="c_repeat">Repeat</string>
     <string name="c_repeat_count">Repeat count</string>
     <string name="c_search_youtube">Search YouTube for this hymn</string>

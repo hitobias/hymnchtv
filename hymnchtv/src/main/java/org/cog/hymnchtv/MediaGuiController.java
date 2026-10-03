@@ -63,6 +63,9 @@ import java.util.Map;
 
 import org.cog.hymnchtv.reading.background.UiTokens;
 import org.cog.hymnchtv.ui.lyrics.PlayerCardStyle;
+import org.cog.hymnchtv.ui.player.PlaybackUiListener;
+import org.cog.hymnchtv.ui.player.PlaybackUiState;
+import org.cog.hymnchtv.ui.player.SheetDragLinearLayout;
 
 import org.cog.hymnchtv.mediaplayer.AudioBgService;
 import org.cog.hymnchtv.utils.DialogActivity;
@@ -145,6 +148,9 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     private boolean isJiaoChangAvailable = false;
     private boolean isSeeking = false;
     private int positionSeek;
+    /** Last position and duration reported by the audio service, for the capsule's progress ring. */
+    private int mLastPositionMs;
+    private int mLastDurationMs;
 
     private MediaType mMediaType;
     private SharedPreferences mSharedPref;
@@ -250,7 +256,28 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
         mBtnBanZhou = convertView.findViewById(R.id.btn_banzhou);
         applyTokens(mContentHandler.getLyricsTokens());
+        mContentHandler.getPlayerSheet().attachCard((SheetDragLinearLayout) playerUi);
+        publishPlaybackUi();
         return convertView;
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (mContentHandler != null && mContentHandler.getPlayerSheet() != null && playerUi != null) {
+            mContentHandler.getPlayerSheet().detachCard(playerUi);
+        }
+        super.onDestroyView();
+    }
+
+    /** The capsule's view of the player: sent whenever the state, the position or the title changes. */
+    private void publishPlaybackUi() {
+        PlaybackUiListener listener = mContentHandler == null ? null : mContentHandler.getPlaybackUiListener();
+        if (listener == null || hymnInfo == null) {
+            return;
+        }
+        boolean active = playerState == STATE_PLAY || playerState == STATE_PAUSE;
+        listener.onPlaybackUiState(new PlaybackUiState(playerState == STATE_PLAY, mLastPositionMs, mLastDurationMs,
+                hymnInfo.getText().toString(), active));
     }
 
     @Override
@@ -329,11 +356,14 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
      * @param isShow show player UI if true
      */
     public void initPlayerUi(boolean isShow) {
+        if (playerUi == null) {
+            return; // no view yet: attachCard() applies the visibility when it is created
+        }
         playerUi.setVisibility(isShow ? View.VISIBLE : View.GONE);
     }
 
     public boolean isShown() {
-        return (playerUi.getVisibility() == View.VISIBLE);
+        return playerUi != null && (playerUi.getVisibility() == View.VISIBLE);
     }
 
     public boolean isPlaying() {
@@ -365,6 +395,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         isJiaoChangAvailable = isAvailable[1];
         if (STATE_STOP == playerState) {
             hymnInfo.setText(info);
+            publishPlaybackUi();
             mediaHymns.clear();
             // Available: the theme's text colour (readable in day and night mode); else gray
             mSourceAvailable = isAvailable.clone();
@@ -378,7 +409,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     public void applyTokens(UiTokens tokens) {
         mTokens = tokens;
         if (playerUi != null) {
-            PlayerCardStyle.apply(playerUi, tokens, mSourceAvailable);
+            PlayerCardStyle.apply(playerUi, tokens, mSourceAvailable, mContentHandler.getLyricsPalette().getPaperColor());
         }
     }
 
@@ -482,12 +513,16 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         playbackPosition.setText(formatTime(0));
         playbackDuration.setText(formatTime(0));
         playbackSeekBar.setProgress(0);
+        mLastPositionMs = 0;
+        mLastDurationMs = 0;
+        publishPlaybackUi();
     }
 
     /** Play arrow when a tap starts or resumes playback, pause bars while playing. */
     public void showPlayIcon(boolean playArrow) {
         playbackPlay.setImageResource(playArrow ? R.drawable.ic_player_play_arrow : R.drawable.ic_player_pause);
         playbackPlay.setContentDescription(getString(playArrow ? R.string.c_play : R.string.c_pause));
+        publishPlaybackUi();
     }
 
     /**
@@ -819,6 +854,11 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     private class MpBroadcastReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
+            handle(intent);
+            publishPlaybackUi();
+        }
+
+        private void handle(Intent intent) {
             // proceed only if it is the playback of the current Uri
             Uri uri = IntentCompat.getParcelableExtra(intent, AudioBgService.PLAYBACK_URI, Uri.class);
             // Timber.d("Audio playback state: %s: %s", intent.getAction(), uri.getPath());
@@ -827,6 +867,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
             int position = intent.getIntExtra(AudioBgService.PLAYBACK_POSITION, 0);
             int audioDuration = intent.getIntExtra(AudioBgService.PLAYBACK_DURATION, 0);
+            mLastPositionMs = position;
+            mLastDurationMs = audioDuration;
 
             if ((playerState == STATE_PLAY) && AudioBgService.PLAYBACK_STATUS.equals(intent.getAction())) {
                 if (!isSeeking)

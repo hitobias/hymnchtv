@@ -88,9 +88,9 @@ class PlaybackStopsOnHymnChangeTest : LyricsTestBase() {
         launch().use { s ->
             val ctl = playing(s)
             val before = s.item()
-            val c = s.hostPoint(0.75f, 0.5f)
+            val c = s.hostPoint(0.9f, 0.5f)
             val w = s.read { it.findViewById<ViewPager2>(R.id.viewPager).width }
-            drag(c[0], c[1], -w / 2, 0)
+            drag(c[0], c[1], -(w * 17 / 20), 0)   // long enough to pass the half-page mark even after the pager takes over late
             s.await("the page to turn", 10_000) { it.findViewById<ViewPager2>(R.id.viewPager).currentItem == before + 1 }
             awaitState(s, ctl, STOP, "playback to stop")
             assertBarIsReset(s, ctl)

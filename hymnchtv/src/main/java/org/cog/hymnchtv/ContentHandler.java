@@ -128,6 +128,10 @@ import org.cog.hymnchtv.ui.lyrics.ReadingPanelSheet;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
 import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
 import org.cog.hymnchtv.ui.lyrics.LyricsWindowInsets;
+import org.cog.hymnchtv.ui.player.PlaybackUiListener;
+import org.cog.hymnchtv.ui.player.PlayerSheetCallbacks;
+import org.cog.hymnchtv.ui.player.PlayerSheetController;
+import org.cog.hymnchtv.ui.player.PlayerSheetState;
 import org.cog.hymnchtv.ui.theme.SystemBars;
 import org.cog.hymnchtv.utils.DepthPageTransformer;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
@@ -202,7 +206,8 @@ public class ContentHandler extends BaseActivity {
     private MediaContentHandler mMediaContentHandler;
 
     private boolean onUserLeaveHint = false;
-    private boolean isShowPlayerUi;
+    /** The only owner of what the player layer shows (card, capsule or nothing); see PlayerSheetController.render(). */
+    private PlayerSheetController mPlayerSheet;
 
     // True if either YouTube or exoPlayer is playing
     private boolean isMediaPlayerUi = false;
@@ -267,6 +272,8 @@ public class ContentHandler extends BaseActivity {
     private static final String STATE_LYRICS_OVERRIDE = "state_lyrics_override"; // -1 none, 0 simplified, 1 traditional
     private static final String STATE_DISPLAY_OVERRIDE = "state_display_override"; // DisplayMode name; absent = none
     private static final String STATE_CHROME_VISIBLE = "state_chrome_visible"; // lyrics toolbars shown or faded away
+    private static final String STATE_PLAYER_HIDDEN = "state_player_hidden"; // player bar hidden from the overflow menu
+    private static final String STATE_PLAYER_COLLAPSED = "state_player_collapsed"; // portrait: capsule instead of the card
 
     /** Tests install a manual timer here so the 3 s / 4 s fades do not depend on emulator speed; null in production. */
     @VisibleForTesting
@@ -307,7 +314,15 @@ public class ContentHandler extends BaseActivity {
         setContentView(R.layout.content_main);
         // The background runs behind the status and navigation bars; the layers keep clear of them (LyricsWindowInsets)
         SystemBars.enable(this);
-        LyricsWindowInsets.install(findViewById(R.id.linear));
+        // Cold start: the "show the player by default" setting decides; a recreation restores the saved choice
+        SharedPreferences settings = getSharedPreferences(PREF_SETTINGS, 0);
+        PlayerSheetState sheetState = savedInstanceState == null
+                ? new PlayerSheetState(!settings.getBoolean(PREF_MENU_SHOW, true), false, false)
+                : new PlayerSheetState(savedInstanceState.getBoolean(STATE_PLAYER_HIDDEN, false),
+                        savedInstanceState.getBoolean(STATE_PLAYER_COLLAPSED, false), false);
+        mPlayerSheet = new PlayerSheetController(findViewById(R.id.mediaPlayer), findViewById(R.id.playerCapsule),
+                sheetState, mPlayerSheetCallbacks);
+        LyricsWindowInsets.install(findViewById(R.id.linear), insets -> mPlayerSheet.onContentInsets(insets));
 
         // Reading settings (plan A2): background first, so pages created below read the matching palette
         sPreference = getSharedPreferences(PREF_SETTINGS, 0);
@@ -342,8 +357,6 @@ public class ContentHandler extends BaseActivity {
         mWebView = findViewById(R.id.webView);
         mWebView.setVisibility(View.INVISIBLE);
 
-        // Always start with UiPlayer hidden if in landscape mode
-        isShowPlayerUi = sPreference.getBoolean(PREF_MENU_SHOW, true);
         mAutoJC = true;
 
         Bundle bundle = getIntent().getExtras();
@@ -411,7 +424,7 @@ public class ContentHandler extends BaseActivity {
     protected void onResume() {
         super.onResume();
         onUserLeaveHint = false;
-        showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait);
+        mPlayerSheet.render();
         // Keep the screen on while lyrics/score are shown (plan A.1.7); window-level so pager changes never drop it
         if (ReadingPrefs.keepScreenOn(sPreference)) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -431,6 +444,7 @@ public class ContentHandler extends BaseActivity {
     protected void onDestroy() {
         super.onDestroy();
         mChromeHost.stop();
+        mPlayerSheet.release();
     }
 
     /** A lyrics page follows the toolbar show/hide state from now on (plan 6c). */
@@ -468,6 +482,8 @@ public class ContentHandler extends BaseActivity {
         super.onSaveInstanceState(outState);
         outState.putInt(STATE_PAGE, mPager.getCurrentItem());
         outState.putBoolean(STATE_CHROME_VISIBLE, mChromeHost.isVisible());
+        outState.putBoolean(STATE_PLAYER_HIDDEN, mPlayerSheet.getState().getUserHidden());
+        outState.putBoolean(STATE_PLAYER_COLLAPSED, mPlayerSheet.getState().getCollapsed());
         outState.putInt(STATE_LYRICS_OVERRIDE, lyricsViewOverride == null ? -1 : (lyricsViewOverride ? 1 : 0));
         if (displayModeOverride != null) {
             outState.putString(STATE_DISPLAY_OVERRIDE, displayModeOverride.name());
@@ -493,13 +509,62 @@ public class ContentHandler extends BaseActivity {
         setAutoStream(false);
     }
 
-    public void showPlayerUi(boolean show) {
-        mMediaGuiController.initPlayerUi(show);
+    /** A video (YouTube or exoPlayer) takes the player layer: the card and the capsule give way to it. */
+    public void showMediaPlayerUi() {
+        isMediaPlayerUi = true;
+        mPlayerSheet.setVideoActive(true);
     }
 
-    public void showMediaPlayerUi() {
-        mMediaGuiController.initPlayerUi(false);
-        isMediaPlayerUi = true;
+    /** The video is gone and the audio card is back in the player layer; render() shows it in its recorded form. */
+    private void onVideoClosed() {
+        isMediaPlayerUi = false;
+        mPlayerSheet.setVideoActive(false);
+    }
+
+    private final PlayerSheetCallbacks mPlayerSheetCallbacks = new PlayerSheetCallbacks() {
+        @Override
+        public boolean isPortrait() {
+            return HymnsApp.isPortrait;
+        }
+
+        @Override
+        public void setCardVisible(boolean visible) {
+            if (mMediaGuiController != null) {
+                mMediaGuiController.initPlayerUi(visible);
+            }
+        }
+
+        @Override
+        public void togglePlayback() {
+            mMediaGuiController.startPlay();
+        }
+
+        @Override
+        public void onPlayerInsetsChanged() {
+            for (ContentView page : livePages()) {
+                page.onPlayerInsetsChanged();
+            }
+        }
+    };
+
+    /** The player layer's controller (card, capsule, insets). */
+    public PlayerSheetController getPlayerSheet() {
+        return mPlayerSheet;
+    }
+
+    /** Pixels the lyrics keep clear for the player layer: the card's height, the capsule's, or 0. */
+    public int getPlayerReserve() {
+        return mPlayerSheet == null ? 0 : mPlayerSheet.playerReserve();
+    }
+
+    /** System bottom (or keyboard) inset in pixels, counted once for the lyrics padding. */
+    public int getSystemBottomInset() {
+        return mPlayerSheet == null ? 0 : mPlayerSheet.getSystemBottom();
+    }
+
+    /** Receives the audio player's state for the capsule. */
+    public PlaybackUiListener getPlaybackUiListener() {
+        return mPlayerSheet;
     }
 
     /**
@@ -541,6 +606,7 @@ public class ContentHandler extends BaseActivity {
         if (mMediaGuiController != null) {
             mMediaGuiController.applyTokens(mLyricsTokens);
         }
+        mPlayerSheet.applyTokens(mLyricsTokens, mLyricsPalette.getPaperColor());
     }
 
     /**
@@ -623,7 +689,7 @@ public class ContentHandler extends BaseActivity {
                 pop.dismiss();
                 pop = null;
             }
-            isShowPlayerUi = !isShowPlayerUi;
+            mPlayerSheet.toggleUserHidden();
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -645,15 +711,10 @@ public class ContentHandler extends BaseActivity {
                     mMediaContentHandler.releasePlayer();
                     // Must do this only after mMediaContentHandler.releasePlayer()
                     mMediaGuiController.initPlaybackSpeed();
-                    isMediaPlayerUi = false;
 
-                    // Restore the default MediaGuiController UI
+                    // Restore the default MediaGuiController UI; its card shows itself in the recorded form once created
                     getSupportFragmentManager().beginTransaction().replace(R.id.mediaPlayer, mMediaGuiController).commit();
-
-                    // Need some delay for Transaction()
-                    runOnUiThread(() -> new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait);
-                    }, 100));
+                    onVideoClosed();
                 }
                 else {
                     mMediaContentHandler.setPlayerVisible(true);
@@ -689,8 +750,7 @@ public class ContentHandler extends BaseActivity {
             return true;
         }
         else if (itemId == R.id.menutoggle) {
-            isShowPlayerUi = !(isShowPlayerUi && mMediaGuiController.isShown());
-            showPlayerUi(isShowPlayerUi);
+            mPlayerSheet.toggleUserHidden();
             return true;
         }
         else if (itemId == R.id.scoreColorChange) {
@@ -1003,10 +1063,10 @@ public class ContentHandler extends BaseActivity {
         Timber.w("AutoStream: %s; %s", mAutoStream, statusText);
         if (mAutoStream && advanceByAutoStream()) {
             if (isMediaPlayerUi) {
-                isMediaPlayerUi = false;
                 mMediaContentHandler.releasePlayer();
                 // Restore the default MediaGuiController UI
                 getSupportFragmentManager().beginTransaction().replace(R.id.mediaPlayer, mMediaGuiController).commit();
+                onVideoClosed();
             }
 
             // Allow some delay for the player and scrolled UI to settle before proceed
@@ -1806,9 +1866,8 @@ public class ContentHandler extends BaseActivity {
     private void closeMediaPlayerUi() {
         mMediaContentHandler.releasePlayer();
         mMediaGuiController.initPlaybackSpeed();
-        isMediaPlayerUi = false;
         getSupportFragmentManager().beginTransaction().replace(R.id.mediaPlayer, mMediaGuiController).commit();
-        new Handler(Looper.getMainLooper()).postDelayed(() -> showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait), 100);
+        onVideoClosed();
     }
 
     /**
@@ -1831,11 +1890,7 @@ public class ContentHandler extends BaseActivity {
         if (contentView != null)
             contentView.setLyricsTextScale();
 
-        if (HymnsApp.isPortrait) {
-            showPlayerUi(!isMediaPlayerUi && isShowPlayerUi);
-        }
-        else {
-            showPlayerUi(false);
-        }
+        // Portrait: the card or the capsule as recorded; landscape: the capsule, the card only while expanded by hand
+        mPlayerSheet.onOrientationChanged();
     }
 }

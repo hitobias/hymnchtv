@@ -29,12 +29,15 @@ object PlayerCardStyle {
 
     private val SOURCE_IDS = intArrayOf(R.id.btn_media, R.id.btn_jiaochang, R.id.btn_changshi, R.id.btn_banzhou)
 
-    /** @param sourceAvailable whether media exists per source (media, jiaochang, changshi, banzhou); missing media reads as disabled */
+    /**
+     * @param sourceAvailable whether media exists per source (media, jiaochang, changshi, banzhou); missing media reads as disabled
+     * @param paper the lyrics paper colour: the card floats over the lyrics, so its `surface` is painted over it to be opaque
+     */
     @JvmStatic
-    fun apply(card: View, tokens: UiTokens, sourceAvailable: BooleanArray) {
+    fun apply(card: View, tokens: UiTokens, sourceAvailable: BooleanArray, paper: Int) {
         val density = card.resources.displayMetrics.density
         card.background = GradientDrawable().apply {
-            setColor(tokens.surface)
+            setColor(UiTokens.over(paper, tokens.surface))
             cornerRadius = CARD_RADIUS_DP * density
         }
         card.findViewById<View>(R.id.player_card)?.background = null
