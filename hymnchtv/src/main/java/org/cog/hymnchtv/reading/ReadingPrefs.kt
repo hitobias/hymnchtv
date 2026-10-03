@@ -14,6 +14,9 @@ object ReadingPrefs {
     fun lyricsFont(sp: SharedPreferences): LyricsFont = LyricsFont.fromPref(string(sp, ReadingPrefKeys.LYRICS_FONT))
 
     @JvmStatic
+    fun lyricsWeight(sp: SharedPreferences): LyricsWeight = LyricsWeight.fromPref(string(sp, ReadingPrefKeys.LYRICS_FONT_WEIGHT))
+
+    @JvmStatic
     fun pageAnimation(sp: SharedPreferences): Boolean = bool(sp, ReadingPrefKeys.PAGE_ANIMATION, true)
 
     @JvmStatic

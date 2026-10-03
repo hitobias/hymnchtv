@@ -320,7 +320,8 @@ public class ContentHandler extends BaseActivity {
             // Only the script the first page will show; the other one loads when first needed
             LyricsTypefaces.preload(this, LyricsLanguagePolicy.resolveShowTraditional(
                     LyricsLang.fromPref(sPreference.getString(LyricsLanguagePolicy.PREF_LYRICS_DEFAULT, null)),
-                    getResources().getConfiguration().getLocales().get(0)));
+                    getResources().getConfiguration().getLocales().get(0)),
+                    ReadingPrefs.lyricsWeight(sPreference) != org.cog.hymnchtv.reading.LyricsWeight.REGULAR);
         }
 
         // Attach the media controller player UI; Reuse the fragment if found;

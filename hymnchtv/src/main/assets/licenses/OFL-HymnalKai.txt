@@ -1,5 +1,5 @@
 HymnalKai SC and HymnalKai TC, the lyrics fonts of this app, are Modified Versions
-(character subsets, renamed) of LXGW WenKai and LXGW WenKai TC v1.522.
+(character subsets, renamed) of LXGW WenKai and LXGW WenKai TC v1.522, in the Regular and Medium weights.
 Sources: https://github.com/lxgw/LxgwWenKai and https://github.com/lxgw/LxgwWenkaiTC
 They are distributed under the SIL Open Font License 1.1, reproduced below.
 

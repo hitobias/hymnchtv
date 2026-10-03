@@ -32,6 +32,7 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -71,7 +72,9 @@ import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.reading.DisplayMode;
 import org.cog.hymnchtv.reading.DisplayModePolicy;
+import org.cog.hymnchtv.reading.LyricsFaceSpec;
 import org.cog.hymnchtv.reading.LyricsFont;
+import org.cog.hymnchtv.reading.LyricsWeight;
 import org.cog.hymnchtv.reading.LyricsScale;
 import org.cog.hymnchtv.reading.LyricsTypefaces;
 import org.cog.hymnchtv.reading.ReadingPrefKeys;
@@ -586,24 +589,38 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      */
     private void applyFont(boolean traditional) {
         ZoomTextView view = traditional ? lyricsTraditional : lyricsSimplify;
-        if (ReadingPrefs.lyricsFont(mSharedPref) != LyricsFont.KAI) {
-            view.setTypeface(Typeface.DEFAULT);
+        LyricsWeight weight = ReadingPrefs.lyricsWeight(mSharedPref);
+        LyricsFaceSpec spec = LyricsFaceSpec.choose(ReadingPrefs.lyricsFont(mSharedPref), weight, traditional);
+        if (spec instanceof LyricsFaceSpec.System) {
+            applyFace(view, LyricsTypefaces.systemFace(((LyricsFaceSpec.System) spec).getWeight(), Build.VERSION.SDK_INT), false);
             meterKeyView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             return;
         }
-        Typeface ready = LyricsTypefaces.peek(traditional);
+        boolean medium = weight != LyricsWeight.REGULAR;
+        boolean fakeBold = ((LyricsFaceSpec.Kai) spec).getFakeBold();
+        Typeface ready = LyricsTypefaces.peek(traditional, medium);
         if (ready != null) {
-            view.setTypeface(ready);
+            applyFace(view, ready, fakeBold);
             meterKeyView.setTypeface(ready, Typeface.BOLD);
             return;
         }
-        view.setTypeface(Typeface.DEFAULT);
-        LyricsTypefaces.request(mContentHandler, traditional, face -> {
+        applyFace(view, Typeface.DEFAULT, false);
+        LyricsTypefaces.request(mContentHandler, traditional, medium, face -> {
             if (isAdded()) {
-                view.setTypeface(face);
+                applyFace(view, face, fakeBold);
                 meterKeyView.setTypeface(face, Typeface.BOLD);
             }
         });
+    }
+
+    /** Lyrics text only (never the score images): the typeface plus the Bold step's fake-bold stroke. */
+    private static void applyFace(ZoomTextView view, Typeface face, boolean fakeBold) {
+        view.setTypeface(face);
+        if (view.getPaint().isFakeBoldText() != fakeBold) {
+            view.getPaint().setFakeBoldText(fakeBold);
+            view.requestLayout();
+            view.invalidate();
+        }
     }
 
     private void styleLyrics(ZoomTextView view) {

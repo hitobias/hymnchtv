@@ -20,6 +20,7 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.reading.DisplayMode
 import org.cog.hymnchtv.reading.LyricsFont
 import org.cog.hymnchtv.reading.LyricsFontSize
+import org.cog.hymnchtv.reading.LyricsWeight
 import org.cog.hymnchtv.reading.ReadingPrefs
 import org.cog.hymnchtv.reading.background.BackgroundCategory
 import org.cog.hymnchtv.reading.background.BackgroundChoice
@@ -46,6 +47,7 @@ class ReadingPanelSheet : BottomSheetDialogFragment() {
         buildThemeRow(view)
         bindSize(view)
         bindFont(view)
+        bindWeight(view)
         bindMode(view)
         view.findViewById<Button>(R.id.aa_open_settings).setOnClickListener {
             dismiss()
@@ -157,6 +159,22 @@ class ReadingPanelSheet : BottomSheetDialogFragment() {
         group.addOnButtonCheckedListener { _, id, checked ->
             if (!checked) return@addOnButtonCheckedListener
             ReadingPanelPrefs.setFont(prefs(), if (id == R.id.aa_font_kai) LyricsFont.KAI else LyricsFont.SYSTEM)
+            host.applyReadingPrefsToPages(false)
+        }
+    }
+
+    private val weightButtons = mapOf(
+        R.id.aa_weight_regular to LyricsWeight.REGULAR,
+        R.id.aa_weight_medium to LyricsWeight.MEDIUM,
+        R.id.aa_weight_bold to LyricsWeight.BOLD,
+    )
+
+    private fun bindWeight(view: View) {
+        val group = view.findViewById<MaterialButtonToggleGroup>(R.id.aa_weight_group)
+        group.check(weightButtons.entries.first { it.value == ReadingPrefs.lyricsWeight(prefs()) }.key)
+        group.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            ReadingPanelPrefs.setWeight(prefs(), weightButtons.getValue(id))
             host.applyReadingPrefsToPages(false)
         }
     }

@@ -41,6 +41,7 @@ class ReadingPreferencesXmlTest {
             "ConversionType", // ContentView.PREF_CONVERSION_TYPE (Java constant, not visible to JVM tests)
             ReadingPrefKeys.LYRICS_FONT_SIZE,
             ReadingPrefKeys.LYRICS_FONT,
+            ReadingPrefKeys.LYRICS_FONT_WEIGHT,
             BackgroundSlot.MAIN.prefKey,
             BackgroundSlot.LYRICS.prefKey,
             PhotoBackground.PREF_DIM,
@@ -76,13 +77,14 @@ class ReadingPreferencesXmlTest {
         assertThat(array("display_mode_values")).containsExactlyElementsIn(DisplayMode.entries.map { it.name }).inOrder()
         assertThat(array("font_size_values")).containsExactlyElementsIn(LyricsFontSize.entries.map { it.name }).inOrder()
         assertThat(array("lyrics_font_values")).containsExactlyElementsIn(LyricsFont.entries.map { it.name }).inOrder()
+        assertThat(array("lyrics_weight_values")).containsExactlyElementsIn(LyricsWeight.entries.map { it.prefValue }).inOrder()
         assertThat(array("lyrics_lang_values")).containsExactlyElementsIn(LyricsLang.entries.map { it.name }).inOrder()
         assertThat(array("conversion_values")).containsExactlyElementsIn(HantVariant.entries.map { it.prefValue }).inOrder()
     }
 
     @Test
     fun everyListHasOneLabelPerValue() {
-        listOf("display_mode", "font_size", "lyrics_font", "lyrics_lang", "conversion").forEach {
+        listOf("display_mode", "font_size", "lyrics_font", "lyrics_weight", "lyrics_lang", "conversion").forEach {
             assertThat(array("${it}_entries")).hasSize(array("${it}_values").size)
         }
     }

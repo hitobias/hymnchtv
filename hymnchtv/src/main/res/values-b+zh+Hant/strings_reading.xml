@@ -16,6 +16,10 @@
     <string name="pref_lyrics_font">歌詞字型</string>
     <string name="lyrics_font_system">系統字型</string>
     <string name="lyrics_font_kai">文楷</string>
+    <string name="pref_lyrics_weight">字重</string>
+    <string name="lyrics_weight_regular">標準</string>
+    <string name="lyrics_weight_medium">中粗</string>
+    <string name="lyrics_weight_bold">粗</string>
     <string name="pref_main_background">主頁背景</string>
     <string name="pref_lyrics_background">歌詞頁背景</string>
     <string name="pref_photo_dim">照片變暗</string>
