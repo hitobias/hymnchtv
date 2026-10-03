@@ -58,6 +58,9 @@ class HymnPickerViews(val root: View) {
     /** What the home theme last applied; null on the jump panel, which keeps the app theme. Items created later take it too. */
     var theme: HomeColors? = null
 
+    /** Keeps the book labels one size; replaced whenever the theme is applied. */
+    var bookFitter: org.cog.hymnchtv.ui.home.BookLabelFitter? = null
+
     /** Gives a recent-hymn item the picker's colours (its small time line is dimmer than the label). */
     fun styleRecent(item: View) {
         theme?.styleRecent(item)

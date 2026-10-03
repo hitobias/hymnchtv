@@ -24,8 +24,8 @@ import java.io.File
 
 /**
  * Not a check: takes the home screenshots of spec 7.3 into the app's external files (pull with adb). Runs only with
- * `-e screenshotTag <name>`, which also prefixes the files, because screen size, font scale and rotation are device
- * settings the caller changes between runs.
+ * `-e screenshotTag <name>`, which also prefixes the files, because screen size and rotation are device settings the
+ * caller changes between runs; `-e fontScale 1.3` sets (and afterwards restores) the system font scale.
  */
 @RunWith(AndroidJUnit4::class)
 class HomeScreenshotTest {
@@ -43,6 +43,10 @@ class HomeScreenshotTest {
         Look("reading-black", "true_black"),
     )
 
+    private companion object {
+        const val SETTLE_MS = 3000L
+    }
+
     private val languages = listOf("hant" to AppLanguage.ZH_HANT, "en" to AppLanguage.EN)
 
     private fun importPhoto() {
@@ -51,10 +55,14 @@ class HomeScreenshotTest {
         check(PhotoBackgroundImporter.import(ctx, Uri.fromFile(file))) { "test photo import failed" }
     }
 
+    private fun shell(command: String) {
+        val pfd = instrumentation.uiAutomation.executeShellCommand(command)
+        ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
+    }
+
     /** The shell's screencap (UiAutomation.takeScreenshot returns null while a dialog or the keyguard has the focus on API 24). */
     private fun shoot(file: File) {
-        val pfd = instrumentation.uiAutomation.executeShellCommand("screencap -p ${file.absolutePath}")
-        ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
+        shell("screencap -p ${file.absolutePath}")
         check(file.length() > 0) { "screencap wrote nothing to $file" }
     }
 
@@ -65,6 +73,8 @@ class HomeScreenshotTest {
         FragmentHost.grantLaunchPermissions(ctx.packageName)
         val dir = File(checkNotNull(ctx.getExternalFilesDir(null)), "vis-home").apply { mkdirs() }
         importPhoto()
+        val fontScale = InstrumentationRegistry.getArguments().getString("fontScale")
+        if (fontScale != null) shell("settings put system font_scale $fontScale").also { SystemClock.sleep(SETTLE_MS) }
         try {
             for ((langName, language) in languages) {
                 LocaleStore.set(ctx, language)
@@ -84,6 +94,7 @@ class HomeScreenshotTest {
                 }
             }
         } finally {
+            if (fontScale != null) shell("settings put system font_scale 1.0")
             prefs.edit().remove(BackgroundSlot.MAIN.prefKey).commit()
             PhotoBackgroundImporter.photoFileIn(ctx.filesDir).delete()
             LocaleStore.set(ctx, AppLanguage.SYSTEM)
