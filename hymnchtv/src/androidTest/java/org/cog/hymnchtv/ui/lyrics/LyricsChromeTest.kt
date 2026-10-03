@@ -162,7 +162,8 @@ class LyricsChromeTest : LyricsTestBase() {
     fun lyricsPaddingFollowsTheOverlays() {
         launch().use { s ->
             s.onActivity { it.setChromeHeld(true) }   // measure while shown, whatever the launch took
-            val extra = dp(8)
+            // The player layer floats over the pager: its reserve and the system bottom inset are part of the padding
+            val extra = dp(8) + s.read { it.playerReserve + it.systemBottomInset }
             // shown
             val top = s.pageView(R.id.lyrics_top_bar).height
             val bottom = s.pageView(R.id.lyricsButtonBar).height

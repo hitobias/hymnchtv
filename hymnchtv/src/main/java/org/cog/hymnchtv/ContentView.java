@@ -872,18 +872,30 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         return Settings.Global.getFloat(requireContext().getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f;
     }
 
+    /** The player layer changed size or the system bottom inset changed: pad the lyrics again. */
+    public void onPlayerInsetsChanged() {
+        applyLyricsInsets();
+    }
+
     /**
-     * Lyrics padding = the overlays shown right now (top bar; three buttons + system bottom inset + 8dp).
-     * The activity pads the content area by the system bars itself, so the bottom inset here is 0; the play card
-     * sits below the pager, not over it, so it adds nothing either.
+     * Lyrics padding = the overlays shown right now (top bar; three buttons + player layer + system bottom inset + 8dp).
+     * The pager fills the screen and the player layer floats over it, so the player's reserve and the system bottom
+     * inset are counted here once; the three buttons sit above both.
      */
     private void applyLyricsInsets() {
         if (lyricsScroll == null) {
             return;
         }
         int extra = (int) (LYRICS_BOTTOM_EXTRA_DP * getResources().getDisplayMetrics().density + 0.5f);
+        int reserve = mContentHandler == null ? 0 : mContentHandler.getPlayerReserve();
+        int systemBottom = mContentHandler == null ? 0 : mContentHandler.getSystemBottomInset();
+        ViewGroup.MarginLayoutParams barParams = (ViewGroup.MarginLayoutParams) buttonBar.getLayoutParams();
+        if (barParams.bottomMargin != reserve + systemBottom) {
+            barParams.bottomMargin = reserve + systemBottom;
+            buttonBar.setLayoutParams(barParams);
+        }
         LyricsPadding padding = LyricsInsets.padding(topBar.getHeight(), mChromeVisible,
-                buttonBar.getHeight(), mChromeVisible, 0, 0, extra);
+                buttonBar.getHeight(), mChromeVisible, reserve, systemBottom, extra);
         int oldTop = lyricsScroll.getPaddingTop();
         if (oldTop == padding.getTop() && lyricsScroll.getPaddingBottom() == padding.getBottom()) {
             return;

@@ -32,10 +32,11 @@
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/notebookBar"
         android:layout_alignParentStart="true"
         android:layout_below="@id/insetTop"
-        android:layout_margin="5dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="5dp"
         android:spacing="20dp" />
 
     <!-- Empty slot for the notebook bar (sub-project D-1 fills it and makes it visible); C only reserves it (C-5) -->
@@ -48,15 +49,59 @@
         android:layout_marginEnd="5dp"
         android:visibility="gone" />
 
+    <!-- Player layer (collapsible player): overlays the bottom of the pager, which fills the screen. The card (or a video)
+         lives in this host; PlayerSheetController sets its bottom margin to the system / keyboard inset, once. -->
     <LinearLayout
         android:id="@+id/mediaPlayer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/insetBottom"
+        android:layout_alignParentBottom="true"
         android:layout_marginStart="5dp"
         android:layout_marginEnd="5dp"
-        android:layout_marginBottom="5dp"
         android:orientation="vertical" />
+
+    <!-- The collapsed player: 56dp capsule at the bottom end (play key with progress ring + expand), or a bare note button -->
+    <org.cog.hymnchtv.ui.player.PlayerCapsuleView
+        android:id="@+id/playerCapsule"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <org.cog.hymnchtv.ui.player.ProgressRingButton
+            android:id="@+id/capsulePlay"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:contentDescription="@string/c_play"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_player_play_arrow" />
+
+        <ImageView
+            android:id="@+id/capsuleExpand"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:contentDescription="@string/c_player_expand"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_player_expand_less" />
+
+        <ImageView
+            android:id="@+id/capsuleNote"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/c_player_expand"
+            android:padding="16dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_player_note" />
+    </org.cog.hymnchtv.ui.player.PlayerCapsuleView>
 
     <LinearLayout
         android:id="@+id/filexferGui"
