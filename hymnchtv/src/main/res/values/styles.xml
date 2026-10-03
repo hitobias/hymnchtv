@@ -53,6 +53,22 @@
         <item name="android:layout_height">44dp</item>
     </style>
 
+    <!-- Media source segment of the player card: even width, 48dp high, label centred, no radio dot (PlayerCardStyle colours it) -->
+    <style name="PlayerSourceButton" parent="Widget.AppCompat.CompoundButton.RadioButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:button">@null</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
     <style name="TinyFont" parent="@android:style/TextAppearance.Small">
         <item name="android:textSize">12sp</item>
     </style>

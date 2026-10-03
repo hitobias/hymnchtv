@@ -30,7 +30,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.graphics.drawable.AnimationDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -117,7 +116,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
     private int playerState;
     ArrayList<String> playerUris = new ArrayList<>();
-    private AnimationDrawable mPlayerAnimate;
+    /** The reader moved to another hymn: the next stop broadcast is ours, not a finished track (no auto-next, no toast). */
+    private boolean mStoppedByHymnChange = false;
 
     private static final Map<Uri, BroadcastReceiver> bcRegisters = new HashMap<>();
 
@@ -236,8 +236,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         playbackPlay = convertView.findViewById(R.id.playback_play);
         playbackPlay.setOnClickListener(this);
 
-        mPlayerAnimate = (AnimationDrawable) playbackPlay.getBackground();
-        Button mBtnHymnSearch = convertView.findViewById(R.id.btn_hymnSearch);
+        View mBtnHymnSearch = convertView.findViewById(R.id.btn_hymnSearch);
         // mBtnHymnSearch.setOnTouchListener(touchListener);
         mBtnHymnSearch.setOnClickListener(this);
 
@@ -462,6 +461,50 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         // mContentHandler.initMediaPlayerInfo();
     }
 
+    /**
+     * The reader moved to another hymn (swipe, "next", any route): whatever is playing stops and the bar resets.
+     * Auto-next advancing by itself does not come through here.
+     *
+     * @return true if something was playing or paused and has been stopped
+     */
+    public boolean stopForHymnChange() {
+        if (playerState != STATE_PLAY && playerState != STATE_PAUSE) {
+            return false;
+        }
+        mStoppedByHymnChange = true;
+        stopPlay();
+        showPlayIcon(true);
+        resetPlaybackBar();
+        return true;
+    }
+
+    private void resetPlaybackBar() {
+        playbackPosition.setText(formatTime(0));
+        playbackDuration.setText(formatTime(0));
+        playbackSeekBar.setProgress(0);
+    }
+
+    /** Play arrow when a tap starts or resumes playback, pause bars while playing. */
+    public void showPlayIcon(boolean playArrow) {
+        playbackPlay.setImageResource(playArrow ? R.drawable.ic_player_play_arrow : R.drawable.ic_player_pause);
+        playbackPlay.setContentDescription(getString(playArrow ? R.string.c_play : R.string.c_pause));
+    }
+
+    /**
+     * Starts playing a local file as if the reader had pressed play on it; for instrumentation tests only.
+     */
+    @androidx.annotation.VisibleForTesting
+    public void playUriForTest(Uri uri) {
+        mediaHymns = new ArrayList<>(List.of(uri));
+        mUri = uri;
+        playStart();
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public int playerStateForTest() {
+        return playerState;
+    }
+
     @Override
     public void onCheckedChanged(RadioGroup group, int checkedId) {
         RadioButton rb = group.findViewById(checkedId);
@@ -652,6 +695,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
      * Proceed to open the file for VIEW if this is not an audio file
      */
     private void playStart() {
+        mStoppedByHymnChange = false;
         Intent intent = new Intent(mContentHandler, AudioBgService.class);
         if (isMediaAudio) {
             if (playerState == STATE_PLAY) {
@@ -796,6 +840,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 final PlaybackState playbackState = IntentCompat.getSerializableExtra(intent, AudioBgService.PLAYBACK_STATE, PlaybackState.class);
                 Timber.d("Audio playback state: %s (%s/%s): %s", playbackState, position, audioDuration, uri.getPath());
 
+                boolean byHymnChange = false;
                 switch (playbackState) {
                 case init:
                     playerState = STATE_IDLE;
@@ -804,8 +849,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     playbackSeekBar.setMax(audioDuration);
                     playbackSeekBar.setProgress(0);
 
-                    mPlayerAnimate.stop();
-                    playbackPlay.setImageResource(R.drawable.ic_play_stop);
+                    showPlayIcon(true);
                     break;
 
                 case play:
@@ -813,8 +857,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     playbackSeekBar.setMax(audioDuration);
                     playerUi.clearAnimation();
 
-                    playbackPlay.setImageDrawable(null);
-                    mPlayerAnimate.start();
+                    showPlayIcon(false);
                     break;
 
                 case stop:
@@ -837,8 +880,12 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     LocalBroadcastManager.getInstance(mContentHandler).unregisterReceiver(mReceiver);
                     mContentHandler.updateMediaPlayerInfo();
 
-                    // Auto next media if enabled via longPress playButton
-                    mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                    // Auto next media if enabled via longPress playButton; not when the reader left the hymn
+                    byHymnChange = mStoppedByHymnChange;
+                    mStoppedByHymnChange = false;
+                    if (!byHymnChange) {
+                        mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                    }
                     // flow through to reset player state
 
                 case pause:
@@ -851,9 +898,10 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     playbackSeekBar.setMax(audioDuration);
                     playbackSeekBar.setProgress(position);
 
-                    mPlayerAnimate.stop();
-                    playbackPlay.setImageResource((playerState == STATE_PAUSE)
-                            ? R.drawable.ic_play_pause : R.drawable.ic_play_stop);
+                    showPlayIcon(true);
+                    if (byHymnChange) {
+                        resetPlaybackBar();
+                    }
                     break;
                 }
             }

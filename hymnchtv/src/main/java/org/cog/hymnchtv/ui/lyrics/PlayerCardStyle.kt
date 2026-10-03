@@ -3,6 +3,9 @@ package org.cog.hymnchtv.ui.lyrics
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
+import android.view.Gravity
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.view.View
 import android.widget.CheckBox
 import android.widget.CompoundButton
@@ -10,19 +13,18 @@ import android.widget.EditText
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.widget.CompoundButtonCompat
-import com.google.android.material.button.MaterialButton
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.reading.background.UiTokens
 
 /**
- * Paints the lyrics page player card from [UiTokens] (visual redesign spec section 6): `surface` card, source
- * selector as segmented buttons (unselected `surfaceTone`/`onSurface`, selected `accent`/`onAccent`), checkboxes and
- * speed in `onSurface`, seek bar `accent` over an `onSurfaceMuted` track at alpha 0.3.
+ * Paints the lyrics page player card from [UiTokens] (visual redesign spec section 6): `surface` card, `accent` play
+ * disc, repeat and speed as `surfaceTone` chips, source selector as segmented buttons (unselected `surfaceTone`/`onSurface`,
+ * selected `accent`/`onAccent`, unavailable outlined with the disabled text colour), seek bar `accent` over an
+ * `onSurfaceMuted` track at alpha 0.3.
  */
 object PlayerCardStyle {
     private const val CARD_RADIUS_DP = 16f
     private const val CHIP_RADIUS_DP = 12f
-    private const val SOURCE_TEXT_SP = 14f
     private const val TRACK_ALPHA = 0x4D // 0.3
 
     private val SOURCE_IDS = intArrayOf(R.id.btn_media, R.id.btn_jiaochang, R.id.btn_changshi, R.id.btn_banzhou)
@@ -50,6 +52,8 @@ object PlayerCardStyle {
             thumbTintList = ColorStateList.valueOf(tokens.accent)
             progressBackgroundTintList = ColorStateList.valueOf((tokens.onSurfaceMuted and 0xFFFFFF) or (TRACK_ALPHA shl 24))
         }
+        stylePlay(card, tokens)
+        styleChips(card, tokens)
         styleSpeed(card, tokens)
         styleSources(card, tokens, sourceAvailable)
     }
@@ -58,45 +62,56 @@ object PlayerCardStyle {
     @JvmStatic
     fun styleSources(card: View, tokens: UiTokens, available: BooleanArray) {
         val density = card.resources.displayMetrics.density
-        card.findViewById<TextView>(R.id.btn_hymnSearch).apply {
-            // A Button inflated under a Material theme is a MaterialButton, which paints from its tint, not its background
-            if (this is MaterialButton) {
-                backgroundTintList = ColorStateList.valueOf(tokens.surfaceTone)
-                cornerRadius = (CHIP_RADIUS_DP * density).toInt()
-            } else {
-                background = chip(tokens.surfaceTone, tokens.surfaceTone, density)
-            }
-            setTextColor(tokens.onSurface)
-            compoundDrawableTintList = ColorStateList.valueOf(tokens.onSurface)
+        card.findViewById<ImageButton>(R.id.btn_hymnSearch).apply {
+            background = shape(tokens.surfaceTone, density)
+            imageTintList = ColorStateList.valueOf(tokens.onSurface)
         }
         SOURCE_IDS.forEachIndexed { i, id ->
+            val usable = available.getOrElse(i) { true }
             card.findViewById<TextView>(id).apply {
-                background = chip(tokens.surfaceTone, tokens.accent, density)
-                // Segmented look: no radio dot, label centred at the lyrics page button size
+                // Unavailable sources are flat outlined chips with the disabled text colour; no underline either way
+                background = chip(if (usable) tokens.surfaceTone else tokens.disabledSurface, tokens.accent, density,
+                    if (usable) null else tokens.outline)
                 (this as? CompoundButton)?.buttonDrawable = null
-                gravity = android.view.Gravity.CENTER
-                setPadding(0, 0, 0, 0)
-                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, SOURCE_TEXT_SP)
+                gravity = Gravity.CENTER
                 paint.isUnderlineText = false
-                val idle = if (available.getOrElse(i) { true }) tokens.onSurface else tokens.disabledOnSurface
                 setTextColor(
                     ColorStateList(
                         arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                        intArrayOf(tokens.onAccent, idle),
+                        intArrayOf(tokens.onAccent, if (usable) tokens.onSurface else tokens.disabledOnSurface),
                     ),
                 )
             }
         }
     }
 
-    private fun chip(idle: Int, checked: Int, density: Float) = StateListDrawable().apply {
-        addState(intArrayOf(android.R.attr.state_checked), shape(checked, density))
-        addState(intArrayOf(), shape(idle, density))
+    /** The play button: `accent` disc with the `onAccent` play or pause icon. */
+    private fun stylePlay(card: View, tokens: UiTokens) {
+        card.findViewById<ImageView>(R.id.playback_play).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(tokens.accent)
+            }
+            imageTintList = ColorStateList.valueOf(tokens.onAccent)
+        }
     }
 
-    private fun shape(color: Int, density: Float) = GradientDrawable().apply {
+    /** Repeat (icon + count) and speed are `surfaceTone` chips of the same height, either side of the play button. */
+    private fun styleChips(card: View, tokens: UiTokens) {
+        val density = card.resources.displayMetrics.density
+        card.findViewById<View>(R.id.mp_repeat_chip).background = shape(tokens.surfaceTone, density)
+        card.findViewById<View>(R.id.playback_speed).background = shape(tokens.surfaceTone, density)
+    }
+
+    private fun chip(idle: Int, checked: Int, density: Float, idleStroke: Int?) = StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_checked), shape(checked, density))
+        addState(intArrayOf(), shape(idle, density, idleStroke))
+    }
+
+    private fun shape(color: Int, density: Float, stroke: Int? = null) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = CHIP_RADIUS_DP * density
+        if (stroke != null) setStroke(density.toInt().coerceAtLeast(1), stroke)
     }
 
     private fun tintCheck(box: CompoundButton, tokens: UiTokens, color: Int) {

@@ -58,6 +58,7 @@ import org.cog.hymnchtv.reading.ReadingPrefKeys;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
 import org.cog.hymnchtv.toc.YbCrossRef;
+import org.cog.hymnchtv.ui.host.MainChrome;
 import org.cog.hymnchtv.ui.host.MainHost;
 import org.cog.hymnchtv.ui.host.MainNavigator;
 import org.cog.hymnchtv.utils.DialogActivity;
@@ -130,10 +131,11 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         mInstance = this;
         // DayNight is applied globally by HymnsApp (ThemePrefs.applyStored)
         super.onCreate(savedInstanceState);
-        org.cog.hymnchtv.ui.theme.EdgeToEdge.INSTANCE.enable(this);
+        org.cog.hymnchtv.ui.theme.SystemBars.enable(this);
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 
         setContentView(R.layout.activity_main_host);
+        MainChrome.installInsets(findViewById(R.id.viewMain));
         setSupportActionBar(findViewById(R.id.toolbar));
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -145,6 +147,7 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         int savedTab = (savedInstanceState == null) ? R.id.nav_home
                 : savedInstanceState.getInt(MainHost.EXTRA_TAB, R.id.nav_home);
         mainHost.attach(bottomNav, savedTab);
+        MainChrome.apply(this, getSharedPreferences(PREF_SETTINGS, 0));
 
         AppExecutors.io("yb-xref-prewarm", YbCrossRef::prewarm);
 
@@ -246,6 +249,8 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
     @Override
     protected void onResume() {
         super.onResume();
+        // The home background or the theme may have changed in the settings tab or a picker meanwhile
+        MainChrome.apply(this, getSharedPreferences(PREF_SETTINGS, 0));
         // An update found by the checker is flagged on the settings tab, where "check for updates" lives
         if (mHasUpdate) {
             bottomNav.getOrCreateBadge(R.id.nav_settings);

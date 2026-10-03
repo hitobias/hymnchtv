@@ -124,8 +124,9 @@ class MainHostTest {
         onView(withId(R.id.btn_open)).perform(scrollTo()).check(matches(isDisplayed())).check(matches(not(isEnabled())))
     }
 
+    /** The toolbar and the bottom navigation reach behind the system bars (same colour to the screen edge) and pad for them. */
     @Test
-    fun toolbarSitsBelowTheStatusBarAndNavSitsAboveTheGestureArea() = launch { scenario ->
+    fun toolbarAndNavReachBehindTheBarsAndPadForThem() = launch { scenario ->
         scenario.onActivity { a ->
             val root = a.window.decorView
             val insets = androidx.core.view.ViewCompat.getRootWindowInsets(root)!!
@@ -134,9 +135,16 @@ class MainHostTest {
             val nav = a.findViewById<View>(R.id.bottom_nav)
             val loc = IntArray(2)
             toolbar.getLocationOnScreen(loc)
-            assertThat(loc[1]).isAtLeast(insets.top)
+            assertThat(loc[1]).isAtMost(0)
+            assertThat(toolbar.paddingTop).isAtLeast(insets.top)
             nav.getLocationOnScreen(loc)
-            assertThat(loc[1] + nav.height).isAtMost(root.height - insets.bottom)
+            assertThat(loc[1] + nav.height).isAtLeast(root.height)
+            assertThat(nav.paddingBottom).isAtLeast(insets.bottom)
+            // Transparent bars: the frame colour behind them is the toolbar's / navigation's own
+            assertThat(a.window.statusBarColor).isEqualTo(android.graphics.Color.TRANSPARENT)
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                assertThat(a.window.navigationBarColor).isEqualTo(android.graphics.Color.TRANSPARENT)
+            }
         }
     }
 
