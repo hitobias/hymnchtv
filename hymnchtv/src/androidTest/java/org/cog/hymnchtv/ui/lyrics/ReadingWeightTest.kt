@@ -1,6 +1,10 @@
 package org.cog.hymnchtv.ui.lyrics
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.widget.TextView
 import androidx.preference.ListPreference
@@ -62,22 +66,48 @@ class ReadingWeightTest : LyricsTestBase() {
 
     private fun regularFace(): Typeface? = LyricsTypefaces.peek(false, false)
 
-    private fun boldFace(): Typeface? = LyricsTypefaces.peek(false, true)
+    private fun mediumFace(): Typeface? = LyricsTypefaces.peek(false, true)
+
+    /** Ink (non-white pixels) of one glyph drawn with the view's own typeface and fake-bold flag, at a fixed size. */
+    private fun ink(view: TextView): Int {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = view.typeface; isFakeBoldText = view.paint.isFakeBoldText; textSize = 120f; color = Color.BLACK
+        }
+        val bmp = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
+        Canvas(bmp).drawText("讚", 20f, 150f, paint)
+        val px = IntArray(200 * 200).also { bmp.getPixels(it, 0, 200, 0, 0, 200, 200) }
+        return px.sumOf { 255 - Color.green(it) }   // coverage-weighted, so anti-aliased edges count proportionally
+    }
+
+    private fun pick(s: ActivityScenario<ContentHandler>, button: Int) {
+        onView(withId(button)).perform(click())
+        instrumentation.waitForIdleSync()
+    }
 
     @Test
-    fun panelBoldSwitchesToTheMediumFileAndBackToRegular() {
+    fun threeStepsSwitchAndEachIsHeavierThanTheLast() {
         launch().use { s ->
-            s.await("regular face") { lyrics(s).typeface === regularFace() && regularFace() != null }
+            s.await("regular face") { regularFace() != null && lyrics(s).typeface === regularFace() }
             s.openPanel()
-            onView(withId(R.id.aa_weight_bold)).perform(click())
-            assertThat(ReadingPrefs.lyricsWeight(prefs)).isEqualTo(LyricsWeight.BOLD)
+            val regularInk = ink(lyrics(s))
+            assertThat(lyrics(s).paint.isFakeBoldText).isFalse()
+
+            pick(s, R.id.aa_weight_medium)
+            assertThat(prefs.getString("lyrics_font_weight", null)).isEqualTo("medium")
+            s.await("Medium face applied") { mediumFace() != null && lyrics(s).typeface === mediumFace() }
+            assertThat(lyrics(s).paint.isFakeBoldText).isFalse()
+            val mediumInk = ink(lyrics(s))
+
+            pick(s, R.id.aa_weight_bold)
             assertThat(prefs.getString("lyrics_font_weight", null)).isEqualTo("bold")
-            s.await("Medium face applied") { boldFace() != null && lyrics(s).typeface === boldFace() }
-            assertThat(boldFace()).isNotSameInstanceAs(regularFace())
-            // A real weight, not synthetic bolding: the Medium face is drawn as-is
-            assertThat(lyrics(s).typeface.style).isEqualTo(Typeface.NORMAL)
-            onView(withId(R.id.aa_weight_regular)).perform(click())
-            s.await("Regular face applied") { lyrics(s).typeface === regularFace() }
+            s.await("Bold applied") { lyrics(s).typeface === mediumFace() && lyrics(s).paint.isFakeBoldText }
+            val boldInk = ink(lyrics(s))
+
+            assertThat(mediumInk).isGreaterThan(regularInk)
+            assertThat(boldInk).isGreaterThan(mediumInk)
+
+            pick(s, R.id.aa_weight_regular)
+            s.await("Regular again") { lyrics(s).typeface === regularFace() && !lyrics(s).paint.isFakeBoldText }
         }
     }
 
@@ -86,12 +116,16 @@ class ReadingWeightTest : LyricsTestBase() {
         launch().use { s ->
             s.openPanel()
             onView(withId(R.id.aa_font_system)).perform(click())
-            onView(withId(R.id.aa_weight_bold)).perform(click())
-            instrumentation.waitForIdleSync()
-            assertThat(lyrics(s).typeface.isBold).isTrue()
-            onView(withId(R.id.aa_weight_regular)).perform(click())
-            instrumentation.waitForIdleSync()
-            assertThat(lyrics(s).typeface.isBold).isFalse()
+            val regular = ink(lyrics(s))
+            pick(s, R.id.aa_weight_medium)
+            val medium = ink(lyrics(s))
+            pick(s, R.id.aa_weight_bold)
+            val bold = ink(lyrics(s))
+            assertThat(lyrics(s).typeface).isSameInstanceAs(Typeface.DEFAULT_BOLD)
+            assertThat(medium).isAtLeast(regular)
+            assertThat(bold).isGreaterThan(regular)
+            pick(s, R.id.aa_weight_regular)
+            assertThat(lyrics(s).typeface).isSameInstanceAs(Typeface.DEFAULT)
         }
     }
 
@@ -99,14 +133,14 @@ class ReadingWeightTest : LyricsTestBase() {
     fun theAdjacentPageFollowsTheChange() {
         launch().use { s ->
             s.openPanel()
-            onView(withId(R.id.aa_weight_bold)).perform(click())
-            s.await("Medium face applied") { boldFace() != null && lyrics(s).typeface === boldFace() }
+            pick(s, R.id.aa_weight_bold)
+            s.await("Bold applied") { mediumFace() != null && lyrics(s).typeface === mediumFace() && lyrics(s).paint.isFakeBoldText }
             s.onActivity {
                 val pager = it.findViewById<ViewPager2>(R.id.viewPager)
                 pager.setCurrentItem(pager.currentItem + 1, false)
             }
             s.awaitPage()
-            s.await("next page in Medium") { lyrics(s).typeface === boldFace() }
+            s.await("next page in Bold") { lyrics(s).typeface === mediumFace() && lyrics(s).paint.isFakeBoldText }
         }
     }
 
@@ -117,14 +151,14 @@ class ReadingWeightTest : LyricsTestBase() {
                 val fragment = activity.supportFragmentManager.fragments.filterIsInstance<ReadingSettingsFragment>().single()
                 val pref = fragment.findPreference<ListPreference>(ReadingPrefKeys.LYRICS_FONT_WEIGHT)!!
                 assertThat(pref.value).isEqualTo("regular")
-                assertThat(pref.callChangeListener("bold")).isTrue()
+                assertThat(pref.callChangeListener("medium")).isTrue()
             }
         }
-        assertThat(ReadingPrefs.lyricsWeight(prefs)).isEqualTo(LyricsWeight.BOLD)
+        assertThat(ReadingPrefs.lyricsWeight(prefs)).isEqualTo(LyricsWeight.MEDIUM)
         launch().use { s ->
             s.onActivity { it.onReadingSettingsReturned(true) }
             s.awaitPage()
-            s.await("Medium face after settings") { boldFace() != null && lyrics(s).typeface === boldFace() }
+            s.await("Medium face after settings") { mediumFace() != null && lyrics(s).typeface === mediumFace() }
         }
     }
 }

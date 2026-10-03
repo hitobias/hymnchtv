@@ -32,6 +32,7 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -591,24 +592,35 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         LyricsWeight weight = ReadingPrefs.lyricsWeight(mSharedPref);
         LyricsFaceSpec spec = LyricsFaceSpec.choose(ReadingPrefs.lyricsFont(mSharedPref), weight, traditional);
         if (spec instanceof LyricsFaceSpec.System) {
-            view.setTypeface(Typeface.DEFAULT, ((LyricsFaceSpec.System) spec).getStyle());
+            applyFace(view, LyricsTypefaces.systemFace(((LyricsFaceSpec.System) spec).getWeight(), Build.VERSION.SDK_INT), false);
             meterKeyView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             return;
         }
-        boolean bold = weight == LyricsWeight.BOLD;
-        Typeface ready = LyricsTypefaces.peek(traditional, bold);
+        boolean medium = weight != LyricsWeight.REGULAR;
+        boolean fakeBold = ((LyricsFaceSpec.Kai) spec).getFakeBold();
+        Typeface ready = LyricsTypefaces.peek(traditional, medium);
         if (ready != null) {
-            view.setTypeface(ready);
+            applyFace(view, ready, fakeBold);
             meterKeyView.setTypeface(ready, Typeface.BOLD);
             return;
         }
-        view.setTypeface(Typeface.DEFAULT);
-        LyricsTypefaces.request(mContentHandler, traditional, bold, face -> {
+        applyFace(view, Typeface.DEFAULT, false);
+        LyricsTypefaces.request(mContentHandler, traditional, medium, face -> {
             if (isAdded()) {
-                view.setTypeface(face);
+                applyFace(view, face, fakeBold);
                 meterKeyView.setTypeface(face, Typeface.BOLD);
             }
         });
+    }
+
+    /** Lyrics text only (never the score images): the typeface plus the Bold step's fake-bold stroke. */
+    private static void applyFace(ZoomTextView view, Typeface face, boolean fakeBold) {
+        view.setTypeface(face);
+        if (view.getPaint().isFakeBoldText() != fakeBold) {
+            view.getPaint().setFakeBoldText(fakeBold);
+            view.requestLayout();
+            view.invalidate();
+        }
     }
 
     private void styleLyrics(ZoomTextView view) {

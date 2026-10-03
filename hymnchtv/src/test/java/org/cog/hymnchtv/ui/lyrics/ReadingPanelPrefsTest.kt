@@ -41,6 +41,8 @@ class ReadingPanelPrefsTest {
         ReadingPanelPrefs.setWeight(prefs, LyricsWeight.BOLD)
         assertThat(prefs.getString("lyrics_font_weight", null)).isEqualTo("bold")
         assertThat(ReadingPrefs.lyricsWeight(prefs)).isEqualTo(LyricsWeight.BOLD)
+        ReadingPanelPrefs.setWeight(prefs, LyricsWeight.MEDIUM)
+        assertThat(prefs.getString("lyrics_font_weight", null)).isEqualTo("medium")
         ReadingPanelPrefs.setWeight(prefs, LyricsWeight.REGULAR)
         assertThat(prefs.getString(ReadingPrefKeys.LYRICS_FONT_WEIGHT, null)).isEqualTo("regular")
     }

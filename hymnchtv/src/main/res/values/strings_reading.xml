@@ -19,6 +19,7 @@
     <string name="lyrics_font_kai">Kai (brush script)</string>
     <string name="pref_lyrics_weight">Weight</string>
     <string name="lyrics_weight_regular">Regular</string>
+    <string name="lyrics_weight_medium">Medium</string>
     <string name="lyrics_weight_bold">Bold</string>
     <string name="pref_main_background">Home screen background</string>
     <string name="pref_lyrics_background">Lyrics page background</string>
