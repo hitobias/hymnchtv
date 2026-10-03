@@ -637,6 +637,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      * Update the lyrics text view default size and the stored scale factor
      * Also being used onConfiguration change
      */
+    /** Read the live configuration: HymnsApp.isPortrait may not be updated yet while the activity rotates. */
+    private boolean isPortraitNow() {
+        return getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT;
+    }
+
     public void setLyricsTextScale() {
         if (lyricsEnglish == null || lyricsSimplify == null || lyricsTraditional == null) {
             Timber.e(new Exception("Lyrics content view is null"));
@@ -646,7 +651,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         // English lyrics text size in webSettings
         final WebSettings webSettings = lyricsEnglish.getSettings();
 
-        if (HymnsApp.isPortrait) {
+        if (isPortraitNow()) {
             lyricsSimplify.scaleTextSize(LyricsScale.BASE_SP_PORTRAIT, lyricsScaleP);
             lyricsTraditional.scaleTextSize(LyricsScale.BASE_SP_PORTRAIT, lyricsScaleP);
             webSettings.setDefaultFontSize((int) (18 * lyricsScaleEP));
@@ -678,7 +683,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private void setLyricsEnglishTextScale(boolean stepInc) {
         float tmpScale = stepInc ? STEP_SCALE_FACTOR : -STEP_SCALE_FACTOR;
 
-        if (HymnsApp.isPortrait) {
+        if (isPortraitNow()) {
             lyricsScaleEP += tmpScale;
             mEditor.putFloat(PREF_LYRICS_ENGLISH_SCALE_P, lyricsScaleEP);
         }
@@ -697,7 +702,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      */
     @Override
     public void updateTextScale(Float scaleFactor) {
-        if (HymnsApp.isPortrait) {
+        if (isPortraitNow()) {
             lyricsScaleP = scaleFactor;
             mEditor.putFloat(PREF_LYRICS_SCALE_P, scaleFactor);
         }

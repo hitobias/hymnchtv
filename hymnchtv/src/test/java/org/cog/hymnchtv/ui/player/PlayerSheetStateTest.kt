@@ -39,6 +39,17 @@ class PlayerSheetStateTest {
     }
 
     @Test
+    fun portraitOrientationAlwaysClearsLandscapeExpansion() {
+        val expanded = start.collapse(true).expand(portrait = false)
+        val portrait = PlayerSheetState.isPortrait(android.content.res.Configuration.ORIENTATION_PORTRAIT)
+        val landscape = PlayerSheetState.isPortrait(android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+        assertThat(portrait).isTrue()
+        assertThat(landscape).isFalse()
+        assertThat(expanded.onOrientationChanged(portrait).landscapeExpanded).isFalse()
+        assertThat(expanded.onOrientationChanged(landscape).landscapeExpanded).isTrue()
+    }
+
+    @Test
     fun landscapeRoundTripKeepsAnExpandedCard() {
         val landscape = start.onOrientationChanged(portrait = false)
         assertThat(landscape.display(false)).isEqualTo(SheetDisplay.CAPSULE)

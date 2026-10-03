@@ -524,7 +524,7 @@ public class ContentHandler extends BaseActivity {
     private final PlayerSheetCallbacks mPlayerSheetCallbacks = new PlayerSheetCallbacks() {
         @Override
         public boolean isPortrait() {
-            return HymnsApp.isPortrait;
+            return PlayerSheetState.isPortrait(getResources().getConfiguration().orientation);
         }
 
         @Override
@@ -1891,6 +1891,6 @@ public class ContentHandler extends BaseActivity {
             contentView.setLyricsTextScale();
 
         // Portrait: the card or the capsule as recorded; landscape: the capsule, the card only while expanded by hand
-        mPlayerSheet.onOrientationChanged();
+        mPlayerSheet.onOrientationChanged(PlayerSheetState.isPortrait(newConfig.orientation));
     }
 }

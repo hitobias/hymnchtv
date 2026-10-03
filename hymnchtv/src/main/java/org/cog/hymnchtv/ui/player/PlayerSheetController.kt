@@ -112,8 +112,9 @@ class PlayerSheetController(
         render()
     }
 
-    fun onOrientationChanged() {
-        state = state.onOrientationChanged(callbacks.isPortrait())
+    /** [portrait] comes from the new configuration, as the application's cached flag may not be updated yet. */
+    fun onOrientationChanged(portrait: Boolean) {
+        state = state.onOrientationChanged(portrait)
         render()
     }
 
