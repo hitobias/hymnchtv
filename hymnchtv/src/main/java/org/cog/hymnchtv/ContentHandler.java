@@ -606,7 +606,7 @@ public class ContentHandler extends BaseActivity {
         if (mMediaGuiController != null) {
             mMediaGuiController.applyTokens(mLyricsTokens);
         }
-        mPlayerSheet.applyTokens(mLyricsTokens);
+        mPlayerSheet.applyTokens(mLyricsTokens, mLyricsPalette.getPaperColor());
     }
 
     /**

@@ -148,11 +148,12 @@ class PlayerSheetController(
         }
     }
 
-    fun applyTokens(tokens: UiTokens) {
+    /** @param paper the lyrics paper colour; the capsule floats over the lyrics, so its `surface` is painted over it to be opaque */
+    fun applyTokens(tokens: UiTokens, paper: Int) {
         this.tokens = tokens
         val d = density
         capsule.background = GradientDrawable().apply {
-            setColor((CAPSULE_MIN_ALPHA shl 24) or (tokens.surface and 0xFFFFFF))
+            setColor(UiTokens.over(paper, tokens.surface))
             cornerRadius = CAPSULE_RADIUS_DP * d
         }
         capsule.elevation = CAPSULE_ELEVATION_DP * d
@@ -418,8 +419,6 @@ class PlayerSheetController(
         const val CAPSULE_RADIUS_DP = 28f
         const val CAPSULE_ELEVATION_DP = 6f
         const val CAPSULE_ENTER_SCALE = 0.8f
-        /** The capsule floats over text: its surface is near opaque. */
-        const val CAPSULE_MIN_ALPHA = 0xF2
         const val HANDLE_HEIGHT_DP = 4
         const val DRAG_SHRINK = 0.12f
         const val DRAG_FADE = 0.3f

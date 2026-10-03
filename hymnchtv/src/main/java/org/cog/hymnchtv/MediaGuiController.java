@@ -409,7 +409,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     public void applyTokens(UiTokens tokens) {
         mTokens = tokens;
         if (playerUi != null) {
-            PlayerCardStyle.apply(playerUi, tokens, mSourceAvailable);
+            PlayerCardStyle.apply(playerUi, tokens, mSourceAvailable, mContentHandler.getLyricsPalette().getPaperColor());
         }
     }
 
