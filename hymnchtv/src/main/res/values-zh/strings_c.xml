@@ -76,7 +76,7 @@
     <string name="c_when_desc">%1$s，%2$s</string>
     <string name="c_play">播放</string>
     <string name="c_pause">暂停</string>
-    <string name="c_repeat">重复</string>
-    <string name="c_repeat_count">重复次数</string>
+    <string name="c_repeat">重播</string>
+    <string name="c_repeat_count">重播次数</string>
     <string name="c_search_youtube">在 YouTube 搜索这首诗歌</string>
 </resources>
