@@ -6,6 +6,7 @@ import android.graphics.Typeface
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.res.ResourcesCompat
 import timber.log.Timber
 import java.util.concurrent.Executors
@@ -71,6 +72,16 @@ object LyricsTypefaces {
         }
         synchronized(this) { faces[i] = face }
         return face
+    }
+
+    /** Tests only: forget one face so the next request loads it again in the background (a "first use" on demand). */
+    @VisibleForTesting
+    @JvmStatic
+    @Synchronized
+    fun forgetForTest(traditionalScript: Boolean, medium: Boolean) {
+        val i = slot(traditionalScript, medium)
+        faces[i] = null
+        attempted[i] = false
     }
 
     /** The device font for a [LyricsFaceSpec.System] weight; Medium (500) needs API 28, older devices show it as bold. */
