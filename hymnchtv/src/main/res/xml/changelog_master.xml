@@ -2,6 +2,17 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.1.0 (10/03/2026)" versioncode="101000">
+        <change>首頁改版：先選詩歌本再輸入號碼，即時顯示詩名；輸入時按鍵位置固定不跳動。最近詩歌附日期，「全部記錄」依日期分組。</change>
+        <change>新的搜尋頁：可搜尋詩名與歌詞，結果顯示命中的片段，也可以只搜目前的詩歌本。</change>
+        <change>全新視覺：配色隨背景變化，新增 8 種閱讀色（素白、米黃、豆沙綠、淺藍、淡粉、淺灰、深灰、墨黑），畫面延伸到螢幕邊緣。</change>
+        <change>歌詞頁：頂列精簡為分享、媒體、Aa、下一首、⋮。Aa 面板可快速調整主題色、字級、字型、字重（標準／中粗／粗）與顯示模式。工具列平常隱藏，點畫面中間才出現。</change>
+        <change>播放：播放列重新設計，可以收合成右下角的小膠囊；切換詩歌時自動停止播放。</change>
+        <change>繁體：目錄、詩名、播放列依歌詞語言顯示繁體，用字依恢復本，例如「甚麼」。</change>
+        <change>上下捲動歌詞時，不再誤翻到上一首或下一首。</change>
+        <change>支援 Android 自動備份，換手機時可以還原設定與紀錄。</change>
+        <change>其他修正：資料庫存取全部移到背景執行；修正兒童詩歌刪除英文歌詞時刪錯首；修正英文 1099 首的中英對照。</change>
+    </release>
     <release version="1.0.0 (10/02/2026)" versioncode="100000">
         <change>新身分「詩歌」第一版（com.ziontkec.hymnal），以 hymnchtv 2.9.2 為基礎，可和原版同時安裝。</change>
         <change>全新介面：首頁、目錄、設定三個分頁加底部導覽；有淺色和深色主題。</change>

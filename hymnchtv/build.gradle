@@ -12,8 +12,8 @@ android {
         applicationId = 'com.ziontkec.hymnal'
 
         // versionCode = X*100000 + Y*1000 + Z*10 + n; the end digit n forces an update with the same version number
-        versionCode 100000
-        versionName "1.0.0"
+        versionCode 101000
+        versionName "1.1.0"
 
         minSdkVersion rootProject.minSdk
         targetSdkVersion rootProject.compileSdk
