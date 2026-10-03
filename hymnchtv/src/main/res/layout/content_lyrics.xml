@@ -1,144 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Overlay layout (visual redesign 6c): the scrolling lyrics fill the page, the top bar and the three
+     buttons float above them and fade away (ChromeController). Scroll padding follows them (LyricsInsets). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     tools:ignore="ContentDescription">
-
-    <!-- Replaces the old long-press context menu (plan C-4); stays put while the lyrics scroll -->
-    <LinearLayout
-        android:id="@+id/lyrics_top_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="2dp"
-        android:paddingEnd="2dp">
-
-        <HorizontalScrollView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:fadingEdgeLength="24dp"
-            android:requiresFadingEdge="horizontal"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btn_score_color"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:insetLeft="0dp"
-                    android:insetRight="0dp"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="48dp"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
-                    android:text="@string/c_lyrics_score_color"
-                    android:textSize="12sp" />
-
-                <Button
-                    android:id="@+id/btn_font_dec"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:insetLeft="0dp"
-                    android:insetRight="0dp"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="48dp"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
-                    android:text="@string/c_lyrics_font_dec"
-                    android:textSize="12sp" />
-
-                <Button
-                    android:id="@+id/btn_font_inc"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:insetLeft="0dp"
-                    android:insetRight="0dp"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="48dp"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
-                    android:text="@string/c_lyrics_font_inc"
-                    android:textSize="12sp" />
-
-                <Button
-                    android:id="@+id/btn_share"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:insetLeft="0dp"
-                    android:insetRight="0dp"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="48dp"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
-                    android:text="@string/c_lyrics_share"
-                    android:textSize="12sp" />
-
-                <Button
-                    android:id="@+id/btn_lyrics_media"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:insetLeft="0dp"
-                    android:insetRight="0dp"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="48dp"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
-                    android:text="@string/c_lyrics_media"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <Button
-            android:id="@+id/btn_next"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:insetLeft="0dp"
-            android:insetRight="0dp"
-            android:maxLines="1"
-            android:minWidth="0dp"
-            android:minHeight="48dp"
-            android:paddingStart="2dp"
-            android:paddingEnd="2dp"
-            android:text="@string/c_next_hymn"
-            android:textSize="12sp" />
-
-        <ImageButton
-            android:id="@+id/btn_more"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:contentDescription="@string/c_lyrics_more"
-            android:src="@drawable/ic_lyrics_more" />
-    </LinearLayout>
 
     <!-- Keeps a slightly diagonal scroll from turning the ViewPager2 page; see NestedScrollableHost -->
     <org.cog.hymnchtv.utils.NestedScrollableHost
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-    <ScrollView
+        android:id="@+id/lyrics_scroll_host"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+
+    <ScrollView
+        android:id="@+id/lyrics_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:id="@+id/lyricsView"
@@ -189,44 +69,6 @@
                     android:scaleType="fitStart" />
             </LinearLayout>
 
-            <!-- Buttons grow with their text (two lines on 320dp screens) but never below the 48dp touch target -->
-            <LinearLayout
-                android:id="@+id/lyricsButtonBar"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="3dp">
-
-                <Button
-                    android:id="@+id/button_ts"
-                    style="@style/ButtonTop"
-                    android:layout_height="match_parent"
-                    android:minHeight="48dp"
-                    android:layout_weight="1"
-                    android:text="@string/lyrics_chinese_traditional"
-                    android:textSize="16sp" />
-
-                <Button
-                    android:id="@+id/button_english"
-                    style="@style/ButtonTop"
-                    android:layout_height="match_parent"
-                    android:minHeight="48dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/lyrics_chinese_english"
-                    android:textSize="16sp" />
-
-                <Button
-                    android:id="@+id/button_mode"
-                    style="@style/ButtonTop"
-                    android:layout_height="match_parent"
-                    android:minHeight="48dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/display_mode_both"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
             <!-- Key and time signature from the lyrics header (LyricsMeta); hidden when the file has none -->
             <TextView
                 android:id="@+id/meter_key"
@@ -272,4 +114,90 @@
         </LinearLayout>
     </ScrollView>
     </org.cog.hymnchtv.utils.NestedScrollableHost>
-</LinearLayout>
+
+    <!-- Five buttons at any width (5 x 48dp fits 320dp); A-/A+ moved into the Aa panel, tint into the overflow -->
+    <LinearLayout
+        android:id="@+id/lyrics_top_bar"
+        android:accessibilityTraversalBefore="@id/lyrics_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_share"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="@string/c_lyrics_share" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_lyrics_media"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="@string/c_lyrics_media" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_aa"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="@string/c_lyrics_aa" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_next"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="@string/c_next_hymn" />
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/btn_more"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/c_lyrics_more"
+            android:src="@drawable/ic_lyrics_more" />
+    </LinearLayout>
+
+    <!-- Same height and style as the top bar buttons; three equal columns, one line each, also at 320dp -->
+    <LinearLayout
+        android:id="@+id/lyricsButtonBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/button_ts"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/c_cd_script"
+            android:text="@string/c_btn_script" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/button_english"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/c_cd_cn_en"
+            android:text="@string/c_btn_cn_en" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/button_mode"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/c_cd_mode"
+            android:text="@string/c_btn_mode_both" />
+    </LinearLayout>
+</FrameLayout>

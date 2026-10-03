@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Main host (sub-project C): toolbar + tab container + bottom navigation. The host owns the system-bar insets; the tab fragments do not. -->
+<!-- Main host (sub-project C): toolbar + tab container + bottom navigation. MainChrome pads the toolbar and the bottom navigation for the system bars; the tab fragments do not. -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/viewMain"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fitsSystemWindows="true">
+    android:layout_height="match_parent">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"

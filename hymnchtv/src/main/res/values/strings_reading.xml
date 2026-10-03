@@ -30,6 +30,14 @@
     <string name="bg_photo_import_failed">Could not use that photo. Your previous background is unchanged.</string>
     <string name="bg_selected_mark" translatable="false">✓</string>
 
+    <string name="bg_name_paper_white">Paper white</string>
+    <string name="bg_name_parchment_beige">Beige</string>
+    <string name="bg_name_eye_green">Soft green</string>
+    <string name="bg_name_pale_blue">Pale blue</string>
+    <string name="bg_name_pale_pink">Pale pink</string>
+    <string name="bg_name_soft_grey">Light grey</string>
+    <string name="bg_name_dim_grey">Dim grey</string>
+    <string name="bg_name_true_black">True black</string>
     <string name="bg_name_xuan">Rice paper</string>
     <string name="bg_name_linen">Linen grey</string>
     <string name="bg_name_parchment">Parchment</string>

@@ -10,7 +10,6 @@
     <string name="c_history_delete">从历史移除</string>
     <string name="c_toc_empty">没有条目</string>
     <string name="c_cat_appearance">界面</string>
-    <string name="c_cat_home">主面版</string>
     <string name="c_cat_reading">阅读</string>
     <string name="c_cat_media">媒体</string>
     <string name="c_cat_other">其他</string>
@@ -57,7 +56,7 @@
     <string name="c_key_fu_desc">附录诗歌</string>
     <string name="c_key_delete_desc">删除一位</string>
     <string name="c_recent_label">最近</string>
-    <string name="c_recent_more">更多</string>
+    <string name="c_recent_more">全部记录</string>
     <string name="c_history_title">最近打开过</string>
     <string name="c_history_empty">还没有打开过诗歌</string>
     <string name="c_chip_desc">%1$s，%2$s，%3$s</string>
@@ -75,4 +74,9 @@
     <string name="c_date_today">今天</string>
     <string name="c_date_yesterday">昨天</string>
     <string name="c_when_desc">%1$s，%2$s</string>
+    <string name="c_play">播放</string>
+    <string name="c_pause">暂停</string>
+    <string name="c_repeat">重播</string>
+    <string name="c_repeat_count">重播次数</string>
+    <string name="c_search_youtube">在 YouTube 搜索这首诗歌</string>
 </resources>

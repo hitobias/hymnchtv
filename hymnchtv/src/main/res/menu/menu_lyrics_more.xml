@@ -3,6 +3,10 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
+        android:id="@+id/scoreColorChange"
+        android:title="@string/c_lyrics_score_color" />
+
+    <item
         android:id="@+id/readingSettings"
         android:title="@string/reading_settings" />
 

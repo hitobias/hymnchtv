@@ -178,8 +178,8 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
                 }
 
                 public void onActivityPostCreated(@NonNull Activity activity, Bundle savedInstanceState) {
-                    // MainActivity handles edge-to-edge itself; do not stack a second insets padding on it
-                    if (activity instanceof MainActivity) {
+                    // MainActivity and ContentHandler handle edge-to-edge themselves; do not stack a second insets padding
+                    if (activity instanceof MainActivity || activity instanceof ContentHandler) {
                         return;
                     }
                     // must not use getRootView(), else toolbar overlays content;

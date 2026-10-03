@@ -21,10 +21,12 @@ import org.cog.hymnchtv.ContentView
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.TestPermissions
+import org.cog.hymnchtv.reading.background.BackgroundChoice
 import org.cog.hymnchtv.reading.background.BackgroundPolicy
+import org.cog.hymnchtv.reading.background.BackgroundPreset
 import org.cog.hymnchtv.reading.background.BackgroundSlot
-import org.cog.hymnchtv.reading.background.MainScreenColors
 import org.cog.hymnchtv.reading.background.PhotoBackgroundImporter
+import org.cog.hymnchtv.reading.background.UiTokens
 import org.cog.hymnchtv.reading.background.Wcag
 import org.junit.After
 import org.junit.Before
@@ -75,17 +77,29 @@ class PhotoBackdropTest {
         return ref.get()
     }
 
+    private val photoTokens = UiTokens.from(BackgroundPolicy.tokenInput(BackgroundChoice.Photo))
+
+    /** The home cards sit on the photo tokens' translucent dark surface (spec 4), the lyrics page on the backdrop panel. */
+    private fun assertSurface(view: View, what: String) {
+        val panel = view.background
+        assertWithMessage(what).that(panel).isInstanceOf(GradientDrawable::class.java)
+        assertWithMessage(what).that((panel as GradientDrawable).color?.defaultColor).isEqualTo(photoTokens.surface)
+    }
+
     @Test
-    fun mainScreenEntryAndSearchTextAreReadableOnThePanel() {
+    fun mainScreenEntryAndSearchTextAreReadableOnTheSurface() {
+        val swatches = BackgroundPolicy.tokenInput(BackgroundChoice.Photo).swatches
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
-                assertPanel(it.findViewById<View>(R.id.previewArea), "previewArea")
-                assertPanel(it.findViewById<TextView>(R.id.tv_search), "tv_search")
-                assertPanel(it.findViewById<View>(R.id.keypadArea), "keypadArea")
+                assertSurface(it.findViewById<View>(R.id.previewArea), "previewArea")
+                assertSurface(it.findViewById<TextView>(R.id.tv_search), "tv_search")
                 for (id in listOf(R.id.tv_entry, R.id.tv_search, R.id.n1)) {
                     val color = it.findViewById<TextView>(id).currentTextColor
-                    assertThat(Wcag.contrast(color, BackgroundPolicy.PHOTO_PALETTE.paperColor))
-                        .isAtLeast(MainScreenColors.MIN_TEXT_CONTRAST)
+                    for (swatch in swatches) {
+                        for (backdrop in UiTokens.backdropsOver(swatch, photoTokens.surface, photoTokens.surfaceTone)) {
+                            assertThat(Wcag.contrast(color, backdrop)).isAtLeast(UiTokens.MIN_TEXT_CONTRAST)
+                        }
+                    }
                 }
             }
         }
@@ -118,7 +132,7 @@ class PhotoBackdropTest {
     fun mainScreenPreviewSitsOnThePanel() {
         // MainActivity may show its changelog dialog; the preview is still in the activity's own window
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { assertPanel(it.findViewById<View>(R.id.previewArea), "previewArea") }
+            scenario.onActivity { assertSurface(it.findViewById<View>(R.id.previewArea), "previewArea") }
         }
     }
 
@@ -130,9 +144,11 @@ class PhotoBackdropTest {
                 val grid = it.findViewById<GridView>(R.id.backgroundGrid)
                 val adapter = grid.adapter
                 val photoCell = adapter.getView(adapter.count - 1, null, grid)   // "your photo" is the last cell
-                assertPanel(photoCell.findViewById(R.id.bgSample), "picker photo sample")
+                // the thumbnail's mini card carries the photo tokens' surface, which keeps the sample text readable
+                assertSurface(photoCell.findViewById(R.id.bgMiniCard), "picker photo mini card")
                 val presetCell = adapter.getView(0, null, grid)
-                assertThat(presetCell.findViewById<View>(R.id.bgSample).background).isNull()
+                val presetSurface = UiTokens.from(BackgroundPolicy.tokenInput(BackgroundChoice.Preset(BackgroundPreset.entries[0]))).surface
+                assertThat(((presetCell.findViewById<View>(R.id.bgMiniCard).background) as GradientDrawable).color?.defaultColor).isEqualTo(presetSurface)
             }
         }
     }

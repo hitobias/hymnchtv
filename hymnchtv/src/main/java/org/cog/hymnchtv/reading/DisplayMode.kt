@@ -30,4 +30,9 @@ object DisplayModePolicy {
     @JvmStatic
     fun effective(mode: DisplayMode, hasLyricsText: Boolean): DisplayMode =
         if (mode == DisplayMode.LYRICS_ONLY && !hasLyricsText) DisplayMode.SCORE_AND_LYRICS else mode
+
+    /** A theme change regenerates the English HTML only when the English page is on screen, never in "score only". */
+    @JvmStatic
+    fun refreshEnglishOnTheme(hasEnglish: Boolean, mode: DisplayMode, hasLyricsText: Boolean): Boolean =
+        hasEnglish && effective(mode, hasLyricsText).showLyrics
 }

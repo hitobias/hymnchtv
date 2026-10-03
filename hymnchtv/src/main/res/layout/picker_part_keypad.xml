@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home picker, keypad: 3 x 4 keys; the row height is computed from the screen in code (KeypadMetrics), 56dp until then -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/keypadArea"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/key_row0"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:baselineAligned="false"
+        android:layout_marginStart="-4dp"
+        android:layout_marginEnd="-4dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n7"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn7" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n8"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn8" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n9"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn9" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/key_row1"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:baselineAligned="false"
+        android:layout_marginStart="-4dp"
+        android:layout_marginEnd="-4dp"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n4"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn4" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n5"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn5" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n6"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn6" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/key_row2"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:baselineAligned="false"
+        android:layout_marginStart="-4dp"
+        android:layout_marginEnd="-4dp"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n1"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn1" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n2"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn2" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n3"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn3" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/key_row3"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:baselineAligned="false"
+        android:layout_marginStart="-4dp"
+        android:layout_marginEnd="-4dp"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n10"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:textSize="18sp"
+            android:text="@string/nn10" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n0"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:text="@string/nn0" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/n11"
+            style="@style/Widget.Hymnal.KeyButton"
+            android:contentDescription="@string/c_key_delete_desc"
+            app:icon="@drawable/ic_backspace"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="24dp" />
+    </LinearLayout>
+</LinearLayout>

@@ -78,6 +78,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.viewpager2.widget.ViewPager2;
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback;
@@ -119,7 +120,15 @@ import org.cog.hymnchtv.reading.ReadingSettingsActivity;
 import org.cog.hymnchtv.reading.background.BackgroundPolicy;
 import org.cog.hymnchtv.reading.background.BackgroundPrefs;
 import org.cog.hymnchtv.reading.background.BackgroundSlot;
+import org.cog.hymnchtv.reading.BackgroundPickerActivity;
+import org.cog.hymnchtv.reading.background.BackgroundChoice;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
+import org.cog.hymnchtv.reading.background.UiTokens;
+import org.cog.hymnchtv.ui.lyrics.ReadingPanelSheet;
+import org.cog.hymnchtv.ui.lyrics.ChromePage;
+import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
+import org.cog.hymnchtv.ui.lyrics.LyricsWindowInsets;
+import org.cog.hymnchtv.ui.theme.SystemBars;
 import org.cog.hymnchtv.utils.DepthPageTransformer;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
 import org.cog.hymnchtv.utils.HymnNo2IdxConvert;
@@ -211,6 +220,8 @@ public class ContentHandler extends BaseActivity {
     public String mHymnType;
     private int mHymnNo;
     private int hymnIdx = -1;
+    /** True while auto-next moves to the next hymn by itself: that page change must not stop the playback. */
+    private boolean mAutoAdvancing = false;
 
     private String mDir = "";
     private String mFileName = "";
@@ -255,12 +266,26 @@ public class ContentHandler extends BaseActivity {
     private static final String STATE_PAGE = "state_page"; // fallback; ViewPager2 also restores its own item
     private static final String STATE_LYRICS_OVERRIDE = "state_lyrics_override"; // -1 none, 0 simplified, 1 traditional
     private static final String STATE_DISPLAY_OVERRIDE = "state_display_override"; // DisplayMode name; absent = none
+    private static final String STATE_CHROME_VISIBLE = "state_chrome_visible"; // lyrics toolbars shown or faded away
+
+    /** Tests install a manual timer here so the 3 s / 4 s fades do not depend on emulator speed; null in production. */
+    @VisibleForTesting
+    public static org.cog.hymnchtv.ui.lyrics.ChromeTimer sChromeTimerForTest = null;
+
+    /** Show/hide state of the lyrics toolbars shared by all pager pages (plan 6c). */
+    private LyricsChromeHost mChromeHost;
 
     /** Per-session display mode chosen with button_mode; null = the default from the reading settings (plan A2). */
     public DisplayMode displayModeOverride = null;
 
     /** Colours matching the lyrics background actually shown; read by every ContentView page. */
     private ReadingPalette mLyricsPalette;
+
+    /** Surface/text/accent tokens derived from the same background (visual redesign spec section 4). */
+    private UiTokens mLyricsTokens;
+
+    private final ActivityResultLauncher<Intent> mBackgroundPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> applyReadingTheme());
 
     private final ActivityResultLauncher<Intent> mReadingSettingsLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -280,11 +305,17 @@ public class ContentHandler extends BaseActivity {
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         // getWindow().setFlags(FLAG_FULLSCREEN, FLAG_FULLSCREEN); // will hide android notification bar
         setContentView(R.layout.content_main);
+        // The background runs behind the status and navigation bars; the layers keep clear of them (LyricsWindowInsets)
+        SystemBars.enable(this);
+        LyricsWindowInsets.install(findViewById(R.id.linear));
 
         // Reading settings (plan A2): background first, so pages created below read the matching palette
         sPreference = getSharedPreferences(PREF_SETTINGS, 0);
-        mLyricsPalette = BackgroundPrefs.applyTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
-        LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
+        mChromeHost = new LyricsChromeHost(this, sPreference,
+                sChromeTimerForTest != null ? sChromeTimerForTest : new org.cog.hymnchtv.ui.lyrics.HandlerChromeTimer());
+        mChromeHost.start(savedInstanceState != null && savedInstanceState.containsKey(STATE_CHROME_VISIBLE)
+                ? savedInstanceState.getBoolean(STATE_CHROME_VISIBLE) : null);
+        applyReadingTheme();
         if (ReadingPrefs.lyricsFont(sPreference) == LyricsFont.KAI) {
             // Only the script the first page will show; the other one loads when first needed
             LyricsTypefaces.preload(this, LyricsLanguagePolicy.resolveShowTraditional(
@@ -396,9 +427,46 @@ public class ContentHandler extends BaseActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mChromeHost.stop();
+    }
+
+    /** A lyrics page follows the toolbar show/hide state from now on (plan 6c). */
+    public void registerChromePage(ChromePage page) {
+        mChromeHost.register(page);
+    }
+
+    public void unregisterChromePage(ChromePage page) {
+        mChromeHost.unregister(page);
+    }
+
+    /** Single tap in the middle of a lyrics page. */
+    public void onLyricsCenterTap() {
+        mChromeHost.toggle();
+    }
+
+    /** A toolbar button was used: the 4 s idle timer restarts. */
+    public void onChromeInteraction() {
+        mChromeHost.onInteraction();
+    }
+
+    /** TalkBack on/off for the toolbars; public so ContentHandler tests can drive it without a screen reader. */
+    @VisibleForTesting
+    public void setChromeAlwaysVisible(boolean always) {
+        mChromeHost.setAlwaysVisible(always);
+    }
+
+    /** True while the Aa sheet or the overflow menu is open: the toolbars stay. */
+    public void setChromeHeld(boolean held) {
+        mChromeHost.setHeld(held);
+    }
+
+    @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(STATE_PAGE, mPager.getCurrentItem());
+        outState.putBoolean(STATE_CHROME_VISIBLE, mChromeHost.isVisible());
         outState.putInt(STATE_LYRICS_OVERRIDE, lyricsViewOverride == null ? -1 : (lyricsViewOverride ? 1 : 0));
         if (displayModeOverride != null) {
             outState.putString(STATE_DISPLAY_OVERRIDE, displayModeOverride.name());
@@ -443,6 +511,74 @@ public class ContentHandler extends BaseActivity {
                     BackgroundPrefs.resolve(getSharedPreferences(PREF_SETTINGS, 0), BackgroundSlot.LYRICS));
         }
         return mLyricsPalette;
+    }
+
+    /** UI tokens for the lyrics background on screen; same fallback rule as {@link #getLyricsPalette()}. */
+    public UiTokens getLyricsTokens() {
+        if (mLyricsTokens == null) {
+            mLyricsTokens = UiTokens.Companion.from(BackgroundPolicy.tokenInput(
+                    BackgroundPrefs.resolve(getSharedPreferences(PREF_SETTINGS, 0), BackgroundSlot.LYRICS)));
+        }
+        return mLyricsTokens;
+    }
+
+    /**
+     * The single propagation point of the lyrics theme (visual redesign 6): apply the LYRICS background, derive the
+     * palette and tokens once, and hand them to every page that has a view and to the player card. Called from
+     * onCreate (also after a recreation), when the Aa panel or the background picker changes the theme.
+     */
+    public void applyReadingTheme() {
+        BackgroundChoice choice = BackgroundPrefs.applyChoiceTo(findViewById(R.id.lyricsBackground), sPreference, BackgroundSlot.LYRICS);
+        mLyricsPalette = BackgroundPolicy.palette(choice);
+        mLyricsTokens = UiTokens.Companion.from(BackgroundPolicy.tokenInput(choice));
+        LyricsEnglishRecord.setDarkBackground(mLyricsPalette.isDark());
+        SystemBars.styleIcons(this, mLyricsPalette.isDark(), SystemBars.legacyNavColor(mLyricsPalette.isDark(),
+                UiTokens.over(mLyricsPalette.getPaperColor(), mLyricsTokens.getSurface()), mLyricsTokens.getOnSurface()));
+        for (ContentView page : livePages()) {
+            page.applyTheme(mLyricsPalette, mLyricsTokens);
+        }
+        if (mMediaGuiController != null) {
+            mMediaGuiController.applyTokens(mLyricsTokens);
+        }
+    }
+
+    /**
+     * Size, typeface or display mode changed in the Aa panel: apply to the pages that have a view now; a page without
+     * one (not created yet, or destroyed) reads the stored values in onCreateView.
+     *
+     * @param modeChanged true when the display mode changed: the session override is dropped so the new default shows
+     */
+    public void applyReadingPrefsToPages(boolean modeChanged) {
+        if (modeChanged) {
+            displayModeOverride = null;
+        }
+        for (ContentView page : livePages()) {
+            page.applyReadingPrefs();
+        }
+    }
+
+    /** The lyrics pages whose view exists (FragmentManager order); destroyed or not yet created ones are skipped. */
+    private List<ContentView> livePages() {
+        List<ContentView> pages = new ArrayList<>();
+        for (Fragment fragment : getSupportFragmentManager().getFragments()) {
+            if (fragment instanceof ContentView && fragment.isAdded() && fragment.getView() != null) {
+                pages.add((ContentView) fragment);
+            }
+        }
+        return pages;
+    }
+
+    /** The "Aa" button: quick reading-style panel. */
+    public void showReadingPanel() {
+        if (getSupportFragmentManager().findFragmentByTag(ReadingPanelSheet.TAG) == null && !isFinishing()
+                && !getSupportFragmentManager().isStateSaved()) {
+            new ReadingPanelSheet().show(getSupportFragmentManager(), ReadingPanelSheet.TAG);
+        }
+    }
+
+    /** "More..." of the Aa panel: the full background picker for the lyrics slot. */
+    public void openBackgroundPicker() {
+        mBackgroundPickerLauncher.launch(BackgroundPickerActivity.intent(this, BackgroundSlot.LYRICS));
     }
 
     /** Opens the reading settings; on return with changes all pages are rebuilt (see onReadingSettingsReturned). */
@@ -777,6 +913,8 @@ public class ContentHandler extends BaseActivity {
                 int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, position)[0];
                 if (tmp != mHymnNo) {
                     mHymnNo = tmp;
+                    hymnIdx = position;
+                    stopPlaybackForHymnChange();
                     updateMediaPlayerInfo();
 
                     // Will be handled in ContentView.onCreateView()
@@ -849,10 +987,20 @@ public class ContentHandler extends BaseActivity {
         return mAutoStream;
     }
 
+    private boolean advanceByAutoStream() {
+        mAutoAdvancing = true;
+        try {
+            return scrollNextHymn();
+        }
+        finally {
+            mAutoAdvancing = false;
+        }
+    }
+
     // Media file playback ended or file download error
     public void onEndOrError(String statusText) {
         Timber.w("AutoStream: %s; %s", mAutoStream, statusText);
-        if (mAutoStream && scrollNextHymn()) {
+        if (mAutoStream && advanceByAutoStream()) {
             if (isMediaPlayerUi) {
                 isMediaPlayerUi = false;
                 mMediaContentHandler.releasePlayer();
@@ -865,7 +1013,7 @@ public class ContentHandler extends BaseActivity {
         }
         else {
             HymnsApp.showToastMessage(statusText);
-            mMediaGuiController.playbackPlay.setImageResource(R.drawable.ic_play_stop);
+            mMediaGuiController.showPlayIcon(true);
             setAutoStream(false);
         }
     }
@@ -1625,14 +1773,41 @@ public class ContentHandler extends BaseActivity {
         return idx < 0 ? mHymnType : MediaConfig.hymnTypeEntries(context).get(idx);
     }
 
+    /** The "next" button and auto-next: one page forward from the page on screen (a swipe moves it too). */
     public boolean scrollNextHymn() {
-        int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, ++hymnIdx)[0];
+        int nextIdx = mPager.getCurrentItem() + 1;
+        int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, nextIdx)[0];
         if (tmp != -1) {
             Timber.e("Scroll next hymn: %s: (AutoStream: %s)", tmp, mAutoStream);
-            mPager.setCurrentItem(hymnIdx);
+            hymnIdx = nextIdx;
+            mPager.setCurrentItem(nextIdx);
             return true;
         }
         return false;
+    }
+
+    /**
+     * Anything playing stops when the reader moves to another hymn, and so does auto-next (the reader took over).
+     * A video or YouTube player is closed the way the back key does. Auto-next's own advance is exempt.
+     */
+    private void stopPlaybackForHymnChange() {
+        if (mAutoAdvancing) {
+            return;
+        }
+        if (isMediaPlayerUi) {
+            closeMediaPlayerUi();
+        }
+        mMediaGuiController.stopForHymnChange();
+        setAutoStream(false);
+    }
+
+    /** Leaves the video / YouTube player and restores the audio player card. */
+    private void closeMediaPlayerUi() {
+        mMediaContentHandler.releasePlayer();
+        mMediaGuiController.initPlaybackSpeed();
+        isMediaPlayerUi = false;
+        getSupportFragmentManager().beginTransaction().replace(R.id.mediaPlayer, mMediaGuiController).commit();
+        new Handler(Looper.getMainLooper()).postDelayed(() -> showPlayerUi(isShowPlayerUi && HymnsApp.isPortrait), 100);
     }
 
     /**

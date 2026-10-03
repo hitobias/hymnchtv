@@ -195,14 +195,14 @@
 
     <!-- hymnchtv media player interface gui names -->
     <string name="hymn_media_banzou">伴奏</string>
-    <string name="hymn_media_changshi"><u>唱诗</u></string>
-    <string name="hymn_media_jiaochang"><u>教唱</u></string>
-    <string name="hymn_media_media"><u>媒体</u></string>
+    <string name="hymn_media_changshi">唱诗</string>
+    <string name="hymn_media_jiaochang">教唱</string>
+    <string name="hymn_media_media">媒体</string>
     <!--
     <string name="hymn_media_banzou">BanZou</string>
-    <string name="hymn_media_changshi"><u>ChangShi</u></string>
-    <string name="hymn_media_jiaochang"><u>JiaChang</u></string>
-    <string name="hymn_media_media"><u>Media</u></string>
+    <string name="hymn_media_changshi">ChangShi</string>
+    <string name="hymn_media_jiaochang">JiaChang</string>
+    <string name="hymn_media_media">Media</string>
     -->
 
     <!-- Hymn info for media controller title -->
@@ -249,7 +249,6 @@
     <string name="play">play</string>
     <string name="home">home</string>
 
-    <string name="fontSize">Font Size</string>
     <string name="small">Small</string>
     <string name="lager">Big</string>
     <string name="normal">Default</string>
@@ -258,15 +257,6 @@
     <string name="dec">Decrease</string>
 
     <!--  text color -->
-    <string name="fontColor">Font Color</string>
-    <string name="red">Red</string>
-    <string name="blue">Blue</string>
-    <string name="grey">Grey</string>
-    <string name="black">Black</string>
-    <string name="white">White</string>
-    <string name="cyan">Cyan</string>
-    <string name="yellow">Yellow</string>
-    <string name="green">Green</string>
 
     <!--  background color -->
 
@@ -315,12 +305,12 @@
     <string name="permission_app_rational">%1$s was denied. App may be inoperative until you grant permission in [App info | Permissions]</string>
 
     <!-- Display names (media config spinners, auto-stream prompts) -->
-    <string name="hymn_type_name_db">大本诗歌</string>
-    <string name="hymn_type_name_bb">补充本</string>
-    <string name="hymn_type_name_xb">新歌颂咏</string>
-    <string name="hymn_type_name_xg">新诗歌本</string>
-    <string name="hymn_type_name_yb">青年诗歌</string>
-    <string name="hymn_type_name_er">儿童诗歌</string>
+    <string name="hymn_type_name_db">Hymns</string>
+    <string name="hymn_type_name_bb">Supplement</string>
+    <string name="hymn_type_name_xb">New Songs</string>
+    <string name="hymn_type_name_xg">New Hymns</string>
+    <string name="hymn_type_name_yb">Youth Hymns</string>
+    <string name="hymn_type_name_er">Children\'s Hymns</string>
     <string name="media_type_name_media">媒体</string>
     <string name="media_type_name_jiaochang">教唱</string>
     <string name="media_type_name_changshi">唱诗</string>

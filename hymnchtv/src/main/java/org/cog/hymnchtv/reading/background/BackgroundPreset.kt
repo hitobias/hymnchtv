@@ -4,8 +4,10 @@ import org.cog.hymnchtv.reading.background.BackgroundCategory.CALM
 import org.cog.hymnchtv.reading.background.BackgroundCategory.GRADIENT
 import org.cog.hymnchtv.reading.background.BackgroundCategory.MOTIF
 import org.cog.hymnchtv.reading.background.BackgroundCategory.NIGHT
+import org.cog.hymnchtv.reading.background.BackgroundCategory.READING
 
-enum class BackgroundCategory { CALM, GRADIENT, MOTIF, NIGHT }
+/** READING: the plain, low-saturation reading colours that lead the picker (spec 6a). */
+enum class BackgroundCategory { READING, CALM, GRADIENT, MOTIF, NIGHT }
 
 /** A translucent layer drawn over the stops (texture grain, motif, light rays); [maxAlpha] is its strongest pixel. */
 data class Overlay(val color: Int, val maxAlpha: Float)
@@ -13,7 +15,7 @@ data class Overlay(val color: Int, val maxAlpha: Float)
 private fun argb(hex: String): Int = (0xFF000000L or hex.removePrefix("#").toLong(16)).toInt()
 
 /**
- * The 20 drawn backgrounds (plan A2). Declaration order is the picker order.
+ * The 28 drawn backgrounds (plan A2 and spec 6a). Declaration order is the picker order.
  * [stops] must appear verbatim in res/drawable/bg_<id>.xml (BackgroundResourcesTest), which
  * tools/gen_backgrounds.py writes from the same values.
  */
@@ -24,7 +26,17 @@ enum class BackgroundPreset(
     overlayHex: List<Pair<String, Float>>,
     textHex: String,
     accentHex: String,
+    /** Brightness of the picture itself; only the night presets and the two dark reading colours are dark. */
+    val isDark: Boolean = category == NIGHT,
 ) {
+    PAPER_WHITE("paper_white", READING, listOf("#ffffff"), emptyList(), "#222222", "#2f5d8a"),
+    PARCHMENT_BEIGE("parchment_beige", READING, listOf("#f5ecd7"), emptyList(), "#3b3226", "#8a5a1f"),
+    EYE_GREEN("eye_green", READING, listOf("#cfe8cf"), emptyList(), "#1f2e22", "#2f6b3d"),
+    PALE_BLUE("pale_blue", READING, listOf("#e3edf6"), emptyList(), "#1e2a36", "#2c5f93"),
+    PALE_PINK("pale_pink", READING, listOf("#f7e8ea"), emptyList(), "#2e2326", "#9b3b55"),
+    SOFT_GREY("soft_grey", READING, listOf("#ececec"), emptyList(), "#262626", "#4a4f57"),
+    DIM_GREY("dim_grey", READING, listOf("#2b2b2d"), emptyList(), "#d8d8da", "#9fc2ff", isDark = true),
+    TRUE_BLACK("true_black", READING, listOf("#000000"), emptyList(), "#b8b8b8", "#e3b77a", isDark = true),
     XUAN("xuan", CALM, listOf("#f8f6f0"), listOf("#594d40" to 0.14f), "#2b2a28", "#7a3b2e"),
     LINEN("linen", CALM, listOf("#ecebe6"), listOf("#000000" to 0.05f), "#2b2a28", "#3d5a73"),
     PARCHMENT("parchment", CALM, listOf("#f6ead0", "#e3cd9e"), listOf("#735226" to 0.2f), "#3a2f22", "#8a4b1f"),
@@ -55,10 +67,15 @@ enum class BackgroundPreset(
 
     /** First stop; on dark backgrounds the score paper is recoloured to this. */
     val baseColor: Int get() = stops.first()
-    val isDark: Boolean get() = category == NIGHT
 
-    /** Every colour a reader can see behind text: each stop, plain and under each overlay at full strength. */
-    fun swatches(): List<Int> = stops + stops.flatMap { s -> overlays.map { Wcag.blend(s, it.color, it.maxAlpha) } }
+    /**
+     * Every colour a reader can see behind text: for each stop, every combination of overlays (each layer absent or at
+     * its strongest alpha, painted in order). A gradient between two stops lies between them; the rasterised check in
+     * androidTest covers the pixels in between.
+     */
+    fun swatches(): List<Int> = stops.flatMap { stop ->
+        overlays.fold(listOf(stop)) { acc, o -> acc + acc.map { Wcag.blend(it, o.color, o.maxAlpha) } }
+    }.distinct()
 
     companion object {
         @JvmStatic

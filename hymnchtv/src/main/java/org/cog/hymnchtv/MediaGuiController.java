@@ -30,8 +30,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.graphics.Color;
-import android.graphics.drawable.AnimationDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -63,7 +61,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.google.android.material.color.MaterialColors;
+import org.cog.hymnchtv.reading.background.UiTokens;
+import org.cog.hymnchtv.ui.lyrics.PlayerCardStyle;
 
 import org.cog.hymnchtv.mediaplayer.AudioBgService;
 import org.cog.hymnchtv.utils.DialogActivity;
@@ -117,7 +116,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
     private int playerState;
     ArrayList<String> playerUris = new ArrayList<>();
-    private AnimationDrawable mPlayerAnimate;
+    /** The reader moved to another hymn: the next stop broadcast is ours, not a finished track (no auto-next, no toast). */
+    private boolean mStoppedByHymnChange = false;
 
     private static final Map<Uri, BroadcastReceiver> bcRegisters = new HashMap<>();
 
@@ -134,6 +134,8 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     private EditText edLoopCount;
 
     private RadioGroup mHymnTypesGroup;
+    private UiTokens mTokens;
+    private boolean[] mSourceAvailable = {true, true, true, true};
     private RadioButton mBtnMedia;
     private RadioButton mBtnJiaoChang;
     private RadioButton mBtnChangShi;
@@ -234,8 +236,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         playbackPlay = convertView.findViewById(R.id.playback_play);
         playbackPlay.setOnClickListener(this);
 
-        mPlayerAnimate = (AnimationDrawable) playbackPlay.getBackground();
-        Button mBtnHymnSearch = convertView.findViewById(R.id.btn_hymnSearch);
+        View mBtnHymnSearch = convertView.findViewById(R.id.btn_hymnSearch);
         // mBtnHymnSearch.setOnTouchListener(touchListener);
         mBtnHymnSearch.setOnClickListener(this);
 
@@ -248,6 +249,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
         mBtnChangShi = convertView.findViewById(R.id.btn_changshi);
 
         mBtnBanZhou = convertView.findViewById(R.id.btn_banzhou);
+        applyTokens(mContentHandler.getLyricsTokens());
         return convertView;
     }
 
@@ -365,11 +367,18 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
             hymnInfo.setText(info);
             mediaHymns.clear();
             // Available: the theme's text colour (readable in day and night mode); else gray
-            int on = MaterialColors.getColor(mBtnMedia, com.google.android.material.R.attr.colorOnSurface, Color.BLACK);
-            mBtnMedia.setTextColor(isAvailable[0] ? on : Color.GRAY);
-            mBtnJiaoChang.setTextColor(isAvailable[1] ? on : Color.GRAY);
-            mBtnChangShi.setTextColor(isAvailable[2] ? on : Color.GRAY);
-            mBtnBanZhou.setTextColor(isAvailable[3] ? on : Color.GRAY);
+            mSourceAvailable = isAvailable.clone();
+            if (mTokens != null) {
+                PlayerCardStyle.styleSources(playerUi, mTokens, mSourceAvailable);
+            }
+        }
+    }
+
+    /** Colours of the player card from the lyrics background's tokens (single call site: ContentHandler.applyReadingTheme). */
+    public void applyTokens(UiTokens tokens) {
+        mTokens = tokens;
+        if (playerUi != null) {
+            PlayerCardStyle.apply(playerUi, tokens, mSourceAvailable);
         }
     }
 
@@ -450,6 +459,50 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
          */
         // mediaHymns.clear();
         // mContentHandler.initMediaPlayerInfo();
+    }
+
+    /**
+     * The reader moved to another hymn (swipe, "next", any route): whatever is playing stops and the bar resets.
+     * Auto-next advancing by itself does not come through here.
+     *
+     * @return true if something was playing or paused and has been stopped
+     */
+    public boolean stopForHymnChange() {
+        if (playerState != STATE_PLAY && playerState != STATE_PAUSE) {
+            return false;
+        }
+        mStoppedByHymnChange = true;
+        stopPlay();
+        showPlayIcon(true);
+        resetPlaybackBar();
+        return true;
+    }
+
+    private void resetPlaybackBar() {
+        playbackPosition.setText(formatTime(0));
+        playbackDuration.setText(formatTime(0));
+        playbackSeekBar.setProgress(0);
+    }
+
+    /** Play arrow when a tap starts or resumes playback, pause bars while playing. */
+    public void showPlayIcon(boolean playArrow) {
+        playbackPlay.setImageResource(playArrow ? R.drawable.ic_player_play_arrow : R.drawable.ic_player_pause);
+        playbackPlay.setContentDescription(getString(playArrow ? R.string.c_play : R.string.c_pause));
+    }
+
+    /**
+     * Starts playing a local file as if the reader had pressed play on it; for instrumentation tests only.
+     */
+    @androidx.annotation.VisibleForTesting
+    public void playUriForTest(Uri uri) {
+        mediaHymns = new ArrayList<>(List.of(uri));
+        mUri = uri;
+        playStart();
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public int playerStateForTest() {
+        return playerState;
     }
 
     @Override
@@ -642,6 +695,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
      * Proceed to open the file for VIEW if this is not an audio file
      */
     private void playStart() {
+        mStoppedByHymnChange = false;
         Intent intent = new Intent(mContentHandler, AudioBgService.class);
         if (isMediaAudio) {
             if (playerState == STATE_PLAY) {
@@ -706,6 +760,9 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         String speed = mpSpeedValues[position];
         setPlaybackSpeed(speed);
+        if (mTokens != null) {
+            PlayerCardStyle.styleSpeedItem(view, mTokens);
+        }
 
         if (mEditor != null) {
             mEditor.putString(PREF_PLAYBACK_SPEED, speed);
@@ -783,6 +840,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                 final PlaybackState playbackState = IntentCompat.getSerializableExtra(intent, AudioBgService.PLAYBACK_STATE, PlaybackState.class);
                 Timber.d("Audio playback state: %s (%s/%s): %s", playbackState, position, audioDuration, uri.getPath());
 
+                boolean byHymnChange = false;
                 switch (playbackState) {
                 case init:
                     playerState = STATE_IDLE;
@@ -791,8 +849,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     playbackSeekBar.setMax(audioDuration);
                     playbackSeekBar.setProgress(0);
 
-                    mPlayerAnimate.stop();
-                    playbackPlay.setImageResource(R.drawable.ic_play_stop);
+                    showPlayIcon(true);
                     break;
 
                 case play:
@@ -800,8 +857,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     playbackSeekBar.setMax(audioDuration);
                     playerUi.clearAnimation();
 
-                    playbackPlay.setImageDrawable(null);
-                    mPlayerAnimate.start();
+                    showPlayIcon(false);
                     break;
 
                 case stop:
@@ -824,8 +880,12 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     LocalBroadcastManager.getInstance(mContentHandler).unregisterReceiver(mReceiver);
                     mContentHandler.updateMediaPlayerInfo();
 
-                    // Auto next media if enabled via longPress playButton
-                    mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                    // Auto next media if enabled via longPress playButton; not when the reader left the hymn
+                    byHymnChange = mStoppedByHymnChange;
+                    mStoppedByHymnChange = false;
+                    if (!byHymnChange) {
+                        mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                    }
                     // flow through to reset player state
 
                 case pause:
@@ -838,9 +898,10 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     playbackSeekBar.setMax(audioDuration);
                     playbackSeekBar.setProgress(position);
 
-                    mPlayerAnimate.stop();
-                    playbackPlay.setImageResource((playerState == STATE_PAUSE)
-                            ? R.drawable.ic_play_pause : R.drawable.ic_play_stop);
+                    showPlayIcon(true);
+                    if (byHymnChange) {
+                        resetPlaybackBar();
+                    }
                     break;
                 }
             }

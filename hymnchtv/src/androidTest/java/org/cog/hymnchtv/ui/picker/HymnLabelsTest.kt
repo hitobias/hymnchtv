@@ -47,6 +47,8 @@ class HymnLabelsTest {
         assertThat(HymnLabels.chip(c, dbFu3)).isEqualTo("Main App.3")
         assertThat(HymnLabels.chip(c, bb37)).isEqualTo("Supp 37")
         assertThat(HymnLabels.headline(c, ybFu1)).contains("Appx. 1")
+        assertThat(HymnLabels.bookName(c, dbFu3)).isEqualTo("Hymns")
+        assertThat(HymnLabels.headline(c, bb37)).isEqualTo("Supplement No. 37")
     }
 
     @Test fun youthFuIsShownAsFuNotAsTwoHundredSeventySix() {

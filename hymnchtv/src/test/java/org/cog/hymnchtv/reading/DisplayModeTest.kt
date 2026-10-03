@@ -54,4 +54,12 @@ class DisplayModeTest {
         assertThat(DisplayModePolicy.hasLyricsText("詞".repeat(39))).isFalse()
         assertThat(DisplayModePolicy.hasLyricsText("詞".repeat(40))).isTrue()
     }
+
+    @Test
+    fun themeChangeRefreshesEnglishOnlyWhenLyricsAreShown() {
+        assertThat(DisplayModePolicy.refreshEnglishOnTheme(true, SCORE_ONLY, true)).isFalse()
+        assertThat(DisplayModePolicy.refreshEnglishOnTheme(true, SCORE_AND_LYRICS, true)).isTrue()
+        assertThat(DisplayModePolicy.refreshEnglishOnTheme(true, LYRICS_ONLY, true)).isTrue()
+        assertThat(DisplayModePolicy.refreshEnglishOnTheme(false, SCORE_AND_LYRICS, true)).isFalse()
+    }
 }

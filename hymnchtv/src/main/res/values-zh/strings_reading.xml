@@ -28,6 +28,14 @@
     <string name="bg_picker_sample">圣哉，圣哉，圣哉</string>
     <string name="bg_photo_import_failed">无法使用该照片，原来的背景没有改变。</string>
 
+    <string name="bg_name_paper_white">素白</string>
+    <string name="bg_name_parchment_beige">米黄</string>
+    <string name="bg_name_eye_green">豆沙绿</string>
+    <string name="bg_name_pale_blue">浅蓝</string>
+    <string name="bg_name_pale_pink">淡粉</string>
+    <string name="bg_name_soft_grey">浅灰</string>
+    <string name="bg_name_dim_grey">深灰</string>
+    <string name="bg_name_true_black">墨黑</string>
     <string name="bg_name_xuan">宣纸白</string>
     <string name="bg_name_linen">亚麻灰</string>
     <string name="bg_name_parchment">羊皮纸</string>

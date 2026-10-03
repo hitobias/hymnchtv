@@ -6,11 +6,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import androidx.core.content.ContextCompat
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.SeekBarPreference
 import org.cog.hymnchtv.About
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
@@ -20,7 +18,6 @@ import org.cog.hymnchtv.locale.LocaleStore
 import org.cog.hymnchtv.mediaconfig.MediaConfig
 import org.cog.hymnchtv.reading.ReadingSettingsActivity
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl
-import org.cog.hymnchtv.ui.home.HomePrefs
 import org.cog.hymnchtv.ui.theme.NightMode
 import org.cog.hymnchtv.ui.theme.ThemePrefs
 import kotlin.concurrent.thread
@@ -35,7 +32,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.c_preferences, rootKey)
         bindAppearance()
-        bindHomeScreen()
         bindActions()
     }
 
@@ -72,25 +68,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         Runtime.getRuntime().exit(0)
     }
 
-    private fun bindHomeScreen() {
-        findPreference<SeekBarPreference>(KEY_TEXT_SIZE)?.apply {
-            value = HomePrefs.textSize(prefs)
-            setOnPreferenceChangeListener { _, newValue ->
-                prefs.edit().putInt(HomePrefs.TEXT_SIZE, newValue as Int).apply()
-                true
-            }
-        }
-        val black = ContextCompat.getColor(requireContext(), R.color.grey900)
-        list(KEY_TEXT_COLOR).apply {
-            // A stored colour that is none of the eight (should not happen) leaves the list without a selection
-            value = HomeTextColors.nameOf(HomePrefs.textColor(prefs, black), black)
-            setOnPreferenceChangeListener { _, newValue ->
-                HomeTextColors.colorOf(newValue as String, black)?.let { prefs.edit().putInt(HomePrefs.TEXT_COLOR, it).apply() }
-                true
-            }
-        }
-    }
-
     private fun bindActions() {
         onClick("reading_settings") { startActivity(Intent(requireContext(), ReadingSettingsActivity::class.java)) }
         onClick("media_config") { startActivity(Intent(requireContext(), MediaConfig::class.java)) }
@@ -121,7 +98,5 @@ class SettingsFragment : PreferenceFragmentCompat() {
     companion object {
         const val KEY_THEME = "Theme"
         const val KEY_LOCALE = "Locale"
-        const val KEY_TEXT_SIZE = "TextSize"
-        const val KEY_TEXT_COLOR = "TextColor"
     }
 }

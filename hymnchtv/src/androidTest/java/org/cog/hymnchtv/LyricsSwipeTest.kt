@@ -174,6 +174,21 @@ class LyricsSwipeTest {
         }
     }
 
+    /** Waits until the pager has settled on [expected]: a page turn animates after the finger lifts, and slower under load. */
+    private fun ActivityScenario<ContentHandler>.awaitItem(expected: Int) {
+        val end = SystemClock.uptimeMillis() + 10_000
+        while (item() != expected || read { it.findViewById<ViewPager2>(R.id.viewPager).scrollState } != ViewPager2.SCROLL_STATE_IDLE) {
+            check(SystemClock.uptimeMillis() < end) { "pager did not settle on page $expected (at ${item()})" }
+            instrumentation.waitForIdleSync()
+            SystemClock.sleep(50)
+        }
+    }
+
+    /**
+     * The swipe covers 70% of the page width, so the page turns by distance alone. A swipe of exactly half the width
+     * (the earlier version) sits on the snap threshold and depends on the fling velocity, which a loaded machine
+     * delivers too slowly to count.
+     */
     @Test
     fun clearHorizontalSwipeTurnsToNextAndPreviousPage() {
         launch().use { s ->
@@ -181,12 +196,12 @@ class LyricsSwipeTest {
             val c = s.scrollCentre()!!
             val w = s.pagerSize()[0]
             val start = s.item()
-            drag(c[0] + w / 4, c[1], -w / 2, 0)
-            assertThat(s.item()).isEqualTo(start + 1)
+            drag(c[0] + w * 35 / 100, c[1], -(w * 70 / 100), 0)
+            s.awaitItem(start + 1)
             s.awaitPage()
             val c2 = s.scrollCentre()!!
-            drag(c2[0] - w / 4, c2[1], w / 2, (w * 0.05).toInt())
-            assertThat(s.item()).isEqualTo(start)
+            drag(c2[0] - w * 35 / 100, c2[1], w * 70 / 100, (w * 0.05).toInt())
+            s.awaitItem(start)
         }
     }
 }

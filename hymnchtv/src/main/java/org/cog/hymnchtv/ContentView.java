@@ -35,6 +35,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -44,6 +45,7 @@ import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -78,8 +80,14 @@ import org.cog.hymnchtv.reading.ScorePages;
 import org.cog.hymnchtv.reading.ScoreTintPolicy;
 import org.cog.hymnchtv.reading.background.BackgroundDrawables;
 import org.cog.hymnchtv.reading.background.ReadingPalette;
+import org.cog.hymnchtv.reading.background.UiTokens;
+import org.cog.hymnchtv.ui.lyrics.ChromeButtonStyle;
 import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
+import org.cog.hymnchtv.ui.lyrics.ChromePage;
+import org.cog.hymnchtv.ui.lyrics.LyricsInsets;
 import org.cog.hymnchtv.ui.lyrics.LyricsMeta;
+import org.cog.hymnchtv.ui.lyrics.LyricsPadding;
+import org.cog.hymnchtv.utils.NestedScrollableHost;
 import org.cog.hymnchtv.utils.ZoomTextView;
 import org.jetbrains.annotations.NotNull;
 
@@ -93,7 +101,7 @@ import timber.log.Timber;
  * @author Eng Chong Meng
  */
 public class ContentView extends Fragment implements ZoomTextView.ZoomTextListener, View.OnClickListener,
-        LyricsEnglishRecord.EnglishLyricsListener {
+        LyricsEnglishRecord.EnglishLyricsListener, ChromePage {
     public static String SCORE_DB_DIR = "lyrics_db_score/";
     public static String SCORE_BB_DIR = "lyrics_bb_score/";
     public static String SCORE_ER_DIR = "lyrics_er_score/";
@@ -109,6 +117,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     public static String LYRICS_YB_DIR = "lyrics_yb_text/";
 
     public static String LYRICS_TOC = "lyrics_toc/";
+
+    private static final long CHROME_FADE_MS = 150;
+    private static final int LYRICS_BOTTOM_EXTRA_DP = 8;
 
     public final static String LYRICS_TYPE = "lyricsType";
     public final static String LYRICS_INDEX = "lyricsIndex";
@@ -132,6 +143,10 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private Button btn_english;
     private Button btn_mode;
     private View mConvertView;
+    private View topBar;
+    private View buttonBar;
+    private ScrollView lyricsScroll;
+    private boolean mChromeVisible = true;
     private View lyricsView;
     private View scoreContainer;
     private ZoomTextView lyricsSimplify;
@@ -140,6 +155,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private WebView lyricsEnglish;
 
     /** Key and time signature per script ("大调" / "大調"); null when the lyrics header has none. */
+    private String mLyricsSimplifiedPlain;
+    private String mLyricsTraditionalPlain;
     private String mMeterKeySimplified;
     private String mMeterKeyTraditional;
 
@@ -195,10 +212,26 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         btn_english = mConvertView.findViewById(R.id.button_english);
         btn_english.setOnClickListener(this);
 
-        for (int id : new int[]{R.id.btn_score_color, R.id.btn_font_dec, R.id.btn_font_inc, R.id.btn_share,
-                R.id.btn_lyrics_media, R.id.btn_next, R.id.btn_more}) {
+        for (int id : new int[]{R.id.btn_share, R.id.btn_lyrics_media, R.id.btn_aa, R.id.btn_next, R.id.btn_more}) {
             mConvertView.findViewById(id).setOnClickListener(this);
         }
+
+        topBar = mConvertView.findViewById(R.id.lyrics_top_bar);
+        buttonBar = mConvertView.findViewById(R.id.lyricsButtonBar);
+        lyricsScroll = mConvertView.findViewById(R.id.lyrics_scroll);
+        // Toolbar heights change with font scale and orientation: keep the lyrics padding in step
+        View.OnLayoutChangeListener insetsFollowBars = (v, l, t, r, b, ol, ot, or, ob) -> {
+            if (b - t != ob - ot) {
+                applyLyricsInsets();
+            }
+        };
+        topBar.addOnLayoutChangeListener(insetsFollowBars);
+        buttonBar.addOnLayoutChangeListener(insetsFollowBars);
+        ((NestedScrollableHost) mConvertView.findViewById(R.id.lyrics_scroll_host))
+                .setOnCenterTapListener(mContentHandler::onLyricsCenterTap);
+        ChromeButtonStyle.styleBar((ViewGroup) topBar, mContentHandler.getLyricsTokens());
+        ChromeButtonStyle.styleBar((ViewGroup) buttonBar, mContentHandler.getLyricsTokens());
+        mContentHandler.registerChromePage(this);
 
         btn_mode = mConvertView.findViewById(R.id.button_mode);
         btn_mode.setOnClickListener(this);
@@ -243,6 +276,12 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     }
 
     @Override
+    public void onDestroyView() {
+        mContentHandler.unregisterChromePage(this);
+        super.onDestroyView();
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
         mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
@@ -269,20 +308,18 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         popup.getMenu().findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);
         popup.getMenu().findItem(R.id.lyrcsEnglishDelete).setVisible(mHymnNoEng != null && hasEnglishLyrics);
         popup.setOnMenuItemClickListener(item -> mContentHandler.onLyricsAction(item.getItemId()));
+        // The toolbars must not fade away under an open menu
+        mContentHandler.setChromeHeld(true);
+        popup.setOnDismissListener(menu -> mContentHandler.setChromeHeld(false));
         popup.show();
     }
 
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        if (id == R.id.btn_score_color) {
-            mContentHandler.onLyricsAction(R.id.scoreColorChange);
-        }
-        else if (id == R.id.btn_font_inc) {
-            mContentHandler.onLyricsAction(R.id.lyrcsTextSizeInc);
-        }
-        else if (id == R.id.btn_font_dec) {
-            mContentHandler.onLyricsAction(R.id.lyrcsTextSizeDec);
+        mContentHandler.onChromeInteraction();
+        if (id == R.id.btn_aa) {
+            mContentHandler.showReadingPanel();
         }
         else if (id == R.id.btn_share) {
             mContentHandler.onLyricsAction(R.id.lyrcsShare);
@@ -442,11 +479,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             String traditional = loadTraditional(resFName, lyrics);
             mMeterKeySimplified = LyricsMeta.parseMeterKey(Arrays.asList(lyrics.split("\n", -1)));
             mMeterKeyTraditional = LyricsMeta.parseMeterKey(Arrays.asList(traditional.split("\n", -1)));
-            // Red on light backgrounds; on dark ones (and photos) red cannot reach AA contrast, so the accent colour
-            int verseColor = mPalette.isDark() ? mPalette.getAccentColor()
-                    : ContextCompat.getColor(mContentHandler, R.color.c_verse_red);
-            lyricsSimplify.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(lyrics), verseColor));
-            lyricsTraditional.setText(LyricsMeta.applyVerseSpans(LyricsMeta.removeMeterLine(traditional), verseColor));
+            mLyricsSimplifiedPlain = LyricsMeta.removeMeterLine(lyrics);
+            mLyricsTraditionalPlain = LyricsMeta.removeMeterLine(traditional);
+            applyVerseColors();
         }
         mHasLyricsText = DisplayModePolicy.hasLyricsText(lyrics);
 
@@ -455,6 +490,53 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         if (!mHasLyricsText && currentDisplayMode() != DisplayMode.SCORE_ONLY) {
             mContentHandler.selectJC();
         }
+    }
+
+    /** Verse numbers: red on light backgrounds; on dark ones (and photos) red cannot reach AA contrast, so the accent colour. */
+    private void applyVerseColors() {
+        if (mLyricsSimplifiedPlain == null || mLyricsTraditionalPlain == null) {
+            return;
+        }
+        int verseColor = mPalette.isDark() ? mPalette.getAccentColor()
+                : ContextCompat.getColor(mContentHandler, R.color.c_verse_red);
+        lyricsSimplify.setText(LyricsMeta.applyVerseSpans(mLyricsSimplifiedPlain, verseColor));
+        lyricsTraditional.setText(LyricsMeta.applyVerseSpans(mLyricsTraditionalPlain, verseColor));
+    }
+
+    /**
+     * The background changed (Aa panel, settings): re-colour this page in place. Single page-level entry of
+     * ContentHandler.applyReadingTheme(); a page created later reads the same palette and tokens in onCreateView.
+     */
+    public void applyTheme(@NonNull ReadingPalette palette, @NonNull UiTokens tokens) {
+        if (mConvertView == null) {
+            return;
+        }
+        mPalette = palette;
+        applyPaletteAndFont();
+        applyVerseColors();
+        applyScoreFilter();
+        ChromeButtonStyle.styleBar((ViewGroup) topBar, tokens);
+        ChromeButtonStyle.styleBar((ViewGroup) buttonBar, tokens);
+        if (DisplayModePolicy.refreshEnglishOnTheme(hasEnglishLyrics, currentDisplayMode(), mHasLyricsText)) {
+            toggleLyricsView(); // the English HTML is generated for the background brightness
+        }
+    }
+
+    /**
+     * Re-read the reading preferences that the Aa panel changes (size, typeface, display mode) and apply them to
+     * the page on screen, without recreating it. Pages whose view does not exist yet read the same values in
+     * onCreateView, so the caller only needs to reach pages that have a view.
+     */
+    public void applyReadingPrefs() {
+        if (mConvertView == null || !isAdded()) {
+            return;
+        }
+        mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
+        lyricsScaleP = ReadingPrefs.lyricsScale(mSharedPref, true);
+        lyricsScaleL = ReadingPrefs.lyricsScale(mSharedPref, false);
+        setLyricsTextScale();
+        applyPaletteAndFont();
+        applyDisplayMode(true);
     }
 
     /** Pre-generated Traditional lyrics (plan A.1.9); the sync test guarantees they exist, Simplified is a last resort. */
@@ -622,7 +704,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private void applyDisplayMode(boolean refreshLyrics) {
         DisplayMode chosen = currentDisplayMode();
         DisplayMode shown = DisplayModePolicy.effective(chosen, mHasLyricsText);
-        btn_mode.setText(displayModeLabel(chosen));
+        btn_mode.setText(displayModeShortLabel(chosen));
+        btn_mode.setContentDescription(getString(R.string.c_cd_mode, getString(displayModeLabel(chosen))));
 
         if (shown.getShowScore() && !mScoreLoaded && mResPrefix != null) {
             showLyricsScore(mResPrefix, mHymnScoreInfo);
@@ -632,8 +715,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         }
         scoreContainer.setVisibility(shown.getShowScore() ? View.VISIBLE : View.GONE);
 
-        btn_ts.setVisibility(shown.getShowLyrics() ? View.VISIBLE : View.GONE);
-        btn_english.setVisibility(shown.getShowLyrics() && mHymnNoEng != null ? View.VISIBLE : View.GONE);
+        // Score only: script and language buttons keep their place (three equal columns) but are disabled
+        setScriptButtonsEnabled(shown.getShowLyrics());
+        btn_english.setVisibility(mHymnNoEng != null ? View.VISIBLE : View.GONE);
         if (!shown.getShowLyrics()) {
             lyricsSimplify.setVisibility(View.GONE);
             lyricsTraditional.setVisibility(View.GONE);
@@ -657,6 +741,24 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             Glide.with(this).clear(view);
         }
         mScoreLoaded = false;
+    }
+
+    private void setScriptButtonsEnabled(boolean enabled) {
+        btn_ts.setEnabled(enabled);
+        btn_english.setEnabled(enabled);
+        btn_ts.setContentDescription(getString(enabled ? R.string.c_cd_script : R.string.c_cd_score_only_na));
+        btn_english.setContentDescription(getString(enabled ? R.string.c_cd_cn_en : R.string.c_cd_score_only_na));
+    }
+
+    private static int displayModeShortLabel(DisplayMode mode) {
+        switch (mode) {
+        case SCORE_ONLY:
+            return R.string.c_btn_mode_score;
+        case LYRICS_ONLY:
+            return R.string.c_btn_mode_lyrics;
+        default:
+            return R.string.c_btn_mode_both;
+        }
     }
 
     private static int displayModeLabel(DisplayMode mode) {
@@ -709,6 +811,71 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
     private Locale uiLocale() {
         return mContentHandler.getResources().getConfiguration().getLocales().get(0);
+    }
+
+    /** Fades the top bar and the three buttons in or out; the lyrics padding follows at once (plan 6c). */
+    @Override
+    public void setChromeVisible(boolean visible, boolean animate) {
+        mChromeVisible = visible;
+        if (topBar == null || buttonBar == null) {
+            return;
+        }
+        fade(topBar, visible, animate);
+        fade(buttonBar, visible, animate);
+        applyLyricsInsets();
+    }
+
+    private void fade(View bar, boolean visible, boolean animate) {
+        bar.animate().cancel();
+        long duration = animate && animationsEnabled() ? CHROME_FADE_MS : 0;
+        if (visible) {
+            bar.setVisibility(View.VISIBLE);
+            if (duration == 0) {
+                bar.setAlpha(1f);
+            }
+            else {
+                bar.animate().alpha(1f).setDuration(duration);
+            }
+        }
+        else if (duration == 0) {
+            bar.setAlpha(0f);
+            bar.setVisibility(View.GONE);
+        }
+        else {
+            bar.animate().alpha(0f).setDuration(duration).withEndAction(() -> {
+                if (!mChromeVisible) {
+                    bar.setVisibility(View.GONE);
+                }
+            });
+        }
+    }
+
+    /** System "remove animations" (animator duration scale 0) shows and hides without a fade. */
+    private boolean animationsEnabled() {
+        return Settings.Global.getFloat(requireContext().getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f;
+    }
+
+    /**
+     * Lyrics padding = the overlays shown right now (top bar; three buttons + system bottom inset + 8dp).
+     * The activity pads the content area by the system bars itself, so the bottom inset here is 0; the play card
+     * sits below the pager, not over it, so it adds nothing either.
+     */
+    private void applyLyricsInsets() {
+        if (lyricsScroll == null) {
+            return;
+        }
+        int extra = (int) (LYRICS_BOTTOM_EXTRA_DP * getResources().getDisplayMetrics().density + 0.5f);
+        LyricsPadding padding = LyricsInsets.padding(topBar.getHeight(), mChromeVisible,
+                buttonBar.getHeight(), mChromeVisible, 0, 0, extra);
+        int oldTop = lyricsScroll.getPaddingTop();
+        if (oldTop == padding.getTop() && lyricsScroll.getPaddingBottom() == padding.getBottom()) {
+            return;
+        }
+        lyricsScroll.setPadding(lyricsScroll.getPaddingLeft(), padding.getTop(), lyricsScroll.getPaddingRight(), padding.getBottom());
+        if (oldTop != padding.getTop()) {
+            int target = LyricsInsets.scrollAfterTopPaddingChange(lyricsScroll.getScrollY(), oldTop, padding.getTop());
+            lyricsScroll.post(() -> lyricsScroll.scrollTo(0, target));
+        }
     }
 
     @Override
