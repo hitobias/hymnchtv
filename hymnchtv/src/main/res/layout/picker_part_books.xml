@@ -11,6 +11,7 @@
         android:id="@+id/books_row1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:baselineAligned="false"
         android:layout_marginStart="-3dp"
         android:layout_marginEnd="-3dp"
         android:orientation="horizontal">
@@ -18,41 +19,26 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bs_db"
             style="@style/Widget.Hymnal.BookButton"
-            android:text="@string/c_src_db"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform" />
+            android:text="@string/c_src_db" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bs_bb"
             style="@style/Widget.Hymnal.BookButton"
-            android:text="@string/c_src_bb"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform" />
+            android:text="@string/c_src_bb" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bs_xb"
             style="@style/Widget.Hymnal.BookButton"
-            android:text="@string/c_src_xb"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform" />
+            android:text="@string/c_src_xb" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bs_xg"
             style="@style/Widget.Hymnal.BookButton"
-            android:text="@string/c_src_xg"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform" />
+            android:text="@string/c_src_xg" />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/books_row2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:baselineAligned="false"
         android:layout_marginStart="-3dp"
         android:layout_marginEnd="-3dp"
         android:layout_marginTop="6dp"
@@ -61,36 +47,20 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bs_yb"
             style="@style/Widget.Hymnal.BookButton"
-            android:text="@string/c_src_yb"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform" />
+            android:text="@string/c_src_yb" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bs_er"
             style="@style/Widget.Hymnal.BookButton"
-            android:text="@string/c_src_er"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform" />
+            android:text="@string/c_src_er" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bs_english"
             style="@style/Widget.Hymnal.BookButton"
-            android:text="@string/c_src_en"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform" />
+            android:text="@string/c_src_en" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_toc"
             style="@style/Widget.Hymnal.BookButton"
             android:checkable="false"
             android:text="@string/c_toc_open"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeMinTextSize="10sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform"
             app:icon="@drawable/ic_chevron_right"
             app:iconGravity="textEnd"
             app:iconPadding="0dp"

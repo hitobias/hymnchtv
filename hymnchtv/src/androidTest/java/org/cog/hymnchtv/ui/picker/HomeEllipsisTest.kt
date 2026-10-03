@@ -55,10 +55,12 @@ class HomeEllipsisTest {
             val tokens = UiTokens.from(BackgroundPolicy.tokenInput(choice))
             HomeColors(ctx, tokens, choice, BackgroundPolicy.palette(choice)).apply(views)
             val px = (widthDp * ctx.resources.displayMetrics.density).toInt()
-            root.measure(View.MeasureSpec.makeMeasureSpec(px, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-            root.layout(0, 0, root.measuredWidth, root.measuredHeight)
-            // Auto-sizing text drops its text layout while it re-fits (in onLayout) and a TextView rebuilds it when drawn:
-            // draw each label once so the layout that gets checked is the one the user would see
+            // The label fitter sets one size for all cells after the first layout, which asks for another pass
+            repeat(3) {
+                root.measure(View.MeasureSpec.makeMeasureSpec(px, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+                root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+            }
+            // A TextView builds its text layout lazily: draw each label once so the layout that gets checked is the one drawn
             (views.books.values + views.toc).forEach {
                 it.draw(android.graphics.Canvas(android.graphics.Bitmap.createBitmap(it.width.coerceAtLeast(1), it.height.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)))
             }
@@ -98,6 +100,16 @@ class HomeEllipsisTest {
         val views = inflate("en-US", CONTENT_DP_AT_320, 1.0f)
         val shown = views.books.values.map { it.text.toString() } + views.toc.text.toString()
         assertThat(shown).containsExactly("Hymns", "Suppl", "NewSg", "NewHy", "Youth", "Child", "Eng", "Index").inOrder()
+    }
+
+    @Test
+    fun allBookLabelsShareOneTextSize() {
+        loadKai()
+        for (scale in listOf(1.0f, 1.3f)) {
+            val views = inflate("zh-Hans-CN", CONTENT_DP_AT_320, scale)
+            val sizes = (views.books.values + views.toc).map { it.textSize }.toSet()
+            assertThat(sizes).hasSize(1)
+        }
     }
 
     @Test
