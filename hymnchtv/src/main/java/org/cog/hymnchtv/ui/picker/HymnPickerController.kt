@@ -51,8 +51,10 @@ class HymnPickerController(
     private var suppress = false
     private var previewRequest = 0
     private var released = false
+    private val heightFitter = PreviewHeightFitter(views, titleTraditional)
 
     init {
+        heightFitter.fit()
         bindKeys()
         bindSources()
         bindActions()
@@ -285,7 +287,7 @@ class HymnPickerController(
         render()
     }
 
-    private companion object {
+    internal companion object {
         const val MIN_TOUCH_DP = 48
         const val EMPTY_NUMBER = "\u2014"
         const val TITLE_SP = 20f
