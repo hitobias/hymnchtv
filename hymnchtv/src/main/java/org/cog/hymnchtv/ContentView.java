@@ -31,6 +31,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -155,6 +156,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private ZoomTextView lyricsSimplify;
     private ZoomTextView lyricsTraditional;
     private TextView meterKeyView;
+    /** Bumped by every applyFont: a background face load only applies if no newer choice was made meanwhile. */
+    private int mFontRequest;
     private WebView lyricsEnglish;
 
     /** Key and time signature per script ("大调" / "大調"); null when the lyrics header has none. */
@@ -588,6 +591,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      * Until the face is ready the system font is used, then it is swapped in on the main thread.
      */
     private void applyFont(boolean traditional) {
+        int request = ++mFontRequest;
         ZoomTextView view = traditional ? lyricsTraditional : lyricsSimplify;
         LyricsWeight weight = ReadingPrefs.lyricsWeight(mSharedPref);
         LyricsFaceSpec spec = LyricsFaceSpec.choose(ReadingPrefs.lyricsFont(mSharedPref), weight, traditional);
@@ -606,21 +610,24 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         }
         applyFace(view, Typeface.DEFAULT, false);
         LyricsTypefaces.request(mContentHandler, traditional, medium, face -> {
-            if (isAdded()) {
+            // A later choice (another weight, font or script) owns the view now; this late face must not undo it
+            if (isAdded() && request == mFontRequest) {
                 applyFace(view, face, fakeBold);
                 meterKeyView.setTypeface(face, Typeface.BOLD);
             }
         });
     }
 
-    /** Lyrics text only (never the score images): the typeface plus the Bold step's fake-bold stroke. */
+    /**
+     * Lyrics text only (never the score images): the typeface plus the Bold step's fake-bold stroke. The stroke goes
+     * through TextView.setPaintFlags, which rebuilds the text layout: the lyrics are selectable, so hardware rendering
+     * draws them from cached text display lists that a paint change plus invalidate() does not refresh (Medium and Bold
+     * share one typeface, so nothing else would rebuild them).
+     */
     private static void applyFace(ZoomTextView view, Typeface face, boolean fakeBold) {
         view.setTypeface(face);
-        if (view.getPaint().isFakeBoldText() != fakeBold) {
-            view.getPaint().setFakeBoldText(fakeBold);
-            view.requestLayout();
-            view.invalidate();
-        }
+        int flags = view.getPaintFlags();
+        view.setPaintFlags(fakeBold ? flags | Paint.FAKE_BOLD_TEXT_FLAG : flags & ~Paint.FAKE_BOLD_TEXT_FLAG);
     }
 
     private void styleLyrics(ZoomTextView view) {
