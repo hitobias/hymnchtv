@@ -152,7 +152,7 @@ class HomeColors(
     private fun applyTypography(views: HymnPickerViews) {
         val english = !KaiText.isChineseUi(context.resources.configuration.locales[0])
         views.books.values.plus(views.toc).forEach { KaiText.applyForUi(it, context, bold = true) }
-        // Chinese labels are 16sp Kai, the English short labels 15sp; both shrink together if the system font is large
+        // Chinese labels are 20sp Kai, the English short labels 17sp; both shrink together if the system font is large
         views.bookFitter?.detach()
         views.bookFitter = BookLabelFitter(views, if (english) ENGLISH_BOOK_SP else BOOK_SP).also { it.attach() }
         views.fu.setTextSize(TypedValue.COMPLEX_UNIT_SP, FU_SP)
@@ -182,8 +182,8 @@ class HomeColors(
         const val DASH_DP = 4f
         const val DASH_GAP_DP = 3f
         const val RIPPLE_ALPHA = 0x1F
-        const val BOOK_SP = 16f
-        const val ENGLISH_BOOK_SP = 15f
+        const val BOOK_SP = 20f
+        const val ENGLISH_BOOK_SP = 17f
         const val FU_SP = 18f
     }
 }

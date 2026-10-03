@@ -21,7 +21,7 @@ class HomeLayoutTest {
 
     @After fun tearDown() = PickerTestSupport.cleanUp()
 
-    /** The 44dp book cells and contents button are sized by the spec (5) and checked separately. */
+    /** The 52dp book cells and contents button are sized by the spec (5) and checked separately. */
     private val bookIds = listOf(R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english, R.id.btn_toc)
 
     private val fixedIds = listOf(
@@ -68,11 +68,11 @@ class HomeLayoutTest {
         }
     }
 
-    @Test fun bookCellsAre44dpHighAndKeysAtLeast48() {
+    @Test fun bookCellsAre52dpHighAndKeysAtLeast48() {
         PickerTestSupport.launch { scenario ->
             scenario.onActivity { a ->
                 val d = a.resources.displayMetrics.density
-                bookIds.forEach { id -> assertThat(a.findViewById<View>(id).height).isEqualTo((44 * d).toInt()) }
+                bookIds.forEach { id -> assertThat(a.findViewById<View>(id).height).isEqualTo((52 * d).toInt()) }
                 assertThat(a.findViewById<View>(R.id.btn_open).height).isEqualTo((52 * d).toInt())
                 listOf(R.id.n0, R.id.n5, R.id.n11).forEach { id ->
                     val h = a.findViewById<View>(id).height
