@@ -74,6 +74,7 @@ class ReadingSettingsFragment : PreferenceFragmentCompat() {
         listValue(ContentView.PREF_CONVERSION_TYPE, LyricsLanguagePolicy.parseVariant(storedString(sp, ContentView.PREF_CONVERSION_TYPE), locale).prefValue)
         listValue(ReadingPrefKeys.LYRICS_FONT_SIZE, ReadingPrefs.fontSize(sp).name)
         listValue(ReadingPrefKeys.LYRICS_FONT, ReadingPrefs.lyricsFont(sp).name)
+        listValue(ReadingPrefKeys.LYRICS_FONT_WEIGHT, ReadingPrefs.lyricsWeight(sp).prefValue)
         switchValue(ReadingPrefKeys.PAGE_ANIMATION, ReadingPrefs.pageAnimation(sp))
         switchValue(ReadingPrefKeys.MENU_SHOW, runCatching { sp.getBoolean(ReadingPrefKeys.MENU_SHOW, true) }.getOrDefault(true))
         switchValue(ReadingPrefKeys.KEEP_SCREEN_ON, ReadingPrefs.keepScreenOn(sp))

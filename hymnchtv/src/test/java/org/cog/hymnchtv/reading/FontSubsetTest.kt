@@ -62,19 +62,30 @@ class FontSubsetTest {
     fun tcCoversBothTraditionalVariantsAndAllStrings() = assertCovers("tc", Regex("lyrics_[a-z]+_text_hant_(tw|hk)"))
 
     @Test
+    fun mediumSubsetsCoverExactlyTheRegularCharacters() {
+        assertThat(covered("sc-medium")).isEqualTo(covered("sc"))
+        assertThat(covered("tc-medium")).isEqualTo(covered("tc"))
+        assertCovers("sc-medium", Regex("lyrics_[a-z]+_text"))
+        assertCovers("tc-medium", Regex("lyrics_[a-z]+_text_hant_(tw|hk)"))
+    }
+
+    @Test
     fun committedFontsAreTheOnesTheManifestDescribes() {
-        for (variant in listOf("sc", "tc")) {
+        for (variant in VARIANTS) {
             val (_, _, path, digest) = row("font", variant)
-            assertThat(path).isEqualTo("hymnchtv/src/main/res/font/hymnal_kai_$variant.ttf")
+            assertThat(path).isEqualTo("hymnchtv/src/main/res/font/hymnal_kai_${variant.replace('-', '_')}.ttf")
             assertWithMessage(path).that(sha256(File(repoRoot, path))).isEqualTo(digest)
         }
     }
 
     @Test
     fun namingRecordsAreHymnalKaiOnly() {
-        for ((variant, family) in listOf("sc" to "HymnalKai SC", "tc" to "HymnalKai TC")) {
+        for (variant in VARIANTS) {
+            val family = if (variant.startsWith("sc")) "HymnalKai SC" else "HymnalKai TC"
             val names = rows.filter { it[0] == "name" && it[1] == variant }
-            assertThat(names.single { it[2] == "1" }[3]).isEqualTo(family)
+            // Medium keeps the weight in the legacy family name; its typographic family (ID 16) is the shared one
+            val typographic = names.singleOrNull { it[2] == "16" }?.get(3) ?: names.single { it[2] == "1" }[3]
+            assertThat(typographic).isEqualTo(family)
             names.forEach { record ->
                 RESERVED.forEach { word -> assertWithMessage(record.joinToString(" ")).that(record[3].lowercase()).doesNotContain(word) }
             }
@@ -94,6 +105,7 @@ class FontSubsetTest {
         MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
 
     private companion object {
+        val VARIANTS = listOf("sc", "tc", "sc-medium", "tc-medium")
         val RESERVED = listOf("lxgw", "霞鹜", "霞鶩", "落霞孤鹜", "落霞孤鶩")
     }
 }

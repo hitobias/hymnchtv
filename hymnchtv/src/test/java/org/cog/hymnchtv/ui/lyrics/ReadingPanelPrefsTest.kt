@@ -5,6 +5,7 @@ import org.cog.hymnchtv.reading.DisplayMode
 import org.cog.hymnchtv.reading.FakeSharedPreferences
 import org.cog.hymnchtv.reading.LyricsFont
 import org.cog.hymnchtv.reading.LyricsFontSize
+import org.cog.hymnchtv.reading.LyricsWeight
 import org.cog.hymnchtv.reading.ReadingPrefKeys
 import org.cog.hymnchtv.reading.ReadingPrefs
 import org.cog.hymnchtv.reading.background.BackgroundChoice
@@ -32,6 +33,16 @@ class ReadingPanelPrefsTest {
         assertThat(prefs.getString(ReadingPrefKeys.DISPLAY_MODE, null)).isEqualTo("LYRICS_ONLY")
         assertThat(ReadingPrefs.lyricsFont(prefs)).isEqualTo(LyricsFont.SYSTEM)
         assertThat(ReadingPrefs.displayMode(prefs)).isEqualTo(DisplayMode.LYRICS_ONLY)
+    }
+
+    @Test
+    fun weightWritesTheSettingsKey() {
+        assertThat(ReadingPrefs.lyricsWeight(prefs)).isEqualTo(LyricsWeight.REGULAR)
+        ReadingPanelPrefs.setWeight(prefs, LyricsWeight.BOLD)
+        assertThat(prefs.getString("lyrics_font_weight", null)).isEqualTo("bold")
+        assertThat(ReadingPrefs.lyricsWeight(prefs)).isEqualTo(LyricsWeight.BOLD)
+        ReadingPanelPrefs.setWeight(prefs, LyricsWeight.REGULAR)
+        assertThat(prefs.getString(ReadingPrefKeys.LYRICS_FONT_WEIGHT, null)).isEqualTo("regular")
     }
 
     @Test

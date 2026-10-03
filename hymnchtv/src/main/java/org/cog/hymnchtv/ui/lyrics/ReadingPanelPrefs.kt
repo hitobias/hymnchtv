@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import org.cog.hymnchtv.reading.DisplayMode
 import org.cog.hymnchtv.reading.LyricsFont
 import org.cog.hymnchtv.reading.LyricsFontSize
+import org.cog.hymnchtv.reading.LyricsWeight
 import org.cog.hymnchtv.reading.ReadingPrefKeys
 import org.cog.hymnchtv.reading.ReadingPrefs
 import org.cog.hymnchtv.reading.background.BackgroundChoice
@@ -30,6 +31,11 @@ object ReadingPanelPrefs {
     @JvmStatic
     fun setFont(prefs: SharedPreferences, font: LyricsFont) {
         prefs.edit().putString(ReadingPrefKeys.LYRICS_FONT, font.name).apply()
+    }
+
+    @JvmStatic
+    fun setWeight(prefs: SharedPreferences, weight: LyricsWeight) {
+        prefs.edit().putString(ReadingPrefKeys.LYRICS_FONT_WEIGHT, weight.prefValue).apply()
     }
 
     @JvmStatic

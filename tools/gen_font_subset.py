@@ -29,14 +29,23 @@ SOURCES = {
            "https://github.com/lxgw/LxgwWenKai/releases/download/v1.522/LXGWWenKai-Regular.ttf"),
     "tc": ("LXGWWenKaiTC-Regular.ttf", "b1a0795862c1415bf3f393ea50b2a4ea6275012cf5bad3f94feeb1222f555731",
            "https://github.com/lxgw/LxgwWenkaiTC/releases/download/v1.522/LXGWWenKaiTC-Regular.ttf"),
+    # The heavier weight ("lyrics weight: bold" in the app). v1.522 ships Light/Regular/Medium for both families, no
+    # Bold, so Medium is the common heaviest real weight (never Android's synthetic bold).
+    "sc-medium": ("LXGWWenKai-Medium.ttf", "d4bdeb38a39151d74d084cba5090f8cb7d20bf83eedb78c35939ae70b9f4e3f6",
+                  "https://github.com/lxgw/LxgwWenKai/releases/download/v1.522/LXGWWenKai-Medium.ttf"),
+    "tc-medium": ("LXGWWenKaiTC-Medium.ttf", "94ca2870022fb8e4f90e2887524603690598142d17b620dfae318f1818ba8e17",
+                  "https://github.com/lxgw/LxgwWenkaiTC/releases/download/v1.522/LXGWWenKaiTC-Medium.ttf"),
 }
-OUTPUTS = {  # variant: (file in res/font, family name, PostScript family)
-    "sc": ("hymnal_kai_sc.ttf", "HymnalKai SC", "HymnalKaiSC"),
-    "tc": ("hymnal_kai_tc.ttf", "HymnalKai TC", "HymnalKaiTC"),
+OUTPUTS = {  # variant: (file in res/font, family name, PostScript family, style)
+    "sc": ("hymnal_kai_sc.ttf", "HymnalKai SC", "HymnalKaiSC", "Regular"),
+    "tc": ("hymnal_kai_tc.ttf", "HymnalKai TC", "HymnalKaiTC", "Regular"),
+    "sc-medium": ("hymnal_kai_sc_medium.ttf", "HymnalKai SC", "HymnalKaiSC", "Medium"),
+    "tc-medium": ("hymnal_kai_tc_medium.ttf", "HymnalKai TC", "HymnalKaiTC", "Medium"),
 }
-LYRIC_DIRS = {"sc": ("lyrics_*_text",), "tc": ("lyrics_*_text_hant_tw", "lyrics_*_text_hant_hk")}
+LYRIC_DIRS = {"sc": ("lyrics_*_text",), "tc": ("lyrics_*_text_hant_tw", "lyrics_*_text_hant_hk")}  # by script, not weight
 RESERVED = ("lxgw", "霞鹜", "霞鶩", "落霞孤鹜", "落霞孤鶩")
 NAMING_IDS = {1, 2, 3, 4, 6, 16, 17, 18, 21, 22, 25}
+SCRIPTS = ("sc", "tc")
 
 
 def sha256(path):
@@ -85,11 +94,16 @@ def check_sources():
             sys.exit(f"{name}: SHA-256 mismatch (expected {digest}); wrong release?")
 
 
-def rename(font, family, ps_family):
+def rename(font, family, ps_family, style):
     table = font["name"]
     table.names = [r for r in table.names if r.nameID not in NAMING_IDS]
     revision = "%.3f" % font["head"].fontRevision
-    values = {1: family, 2: "Regular", 3: f"{revision};{ps_family}-Regular", 4: f"{family} Regular", 6: f"{ps_family}-Regular"}
+    if style == "Regular":
+        values = {1: family, 2: "Regular", 3: f"{revision};{ps_family}-Regular", 4: f"{family} Regular",
+                  6: f"{ps_family}-Regular"}
+    else:  # non-RIBBI weight: legacy family carries the weight, typographic family/subfamily (16/17) are the real ones
+        values = {1: f"{family} {style}", 2: "Regular", 3: f"{revision};{ps_family}-{style}", 4: f"{family} {style}",
+                  6: f"{ps_family}-{style}", 16: family, 17: style}
     for name_id, text in values.items():
         table.setName(text, name_id, 3, 1, 0x409)
     naming = sorted((r.nameID, r.toUnicode()) for r in table.names if r.nameID in NAMING_IDS)
@@ -113,8 +127,8 @@ def build(variant, wanted_codepoints):
     subsetter = subset.Subsetter(opts)
     subsetter.populate(unicodes=sorted(wanted_codepoints))
     subsetter.subset(font)
-    out_name, family, ps_family = OUTPUTS[variant]
-    naming = rename(font, family, ps_family)
+    out_name, family, ps_family, style = OUTPUTS[variant]
+    naming = rename(font, family, ps_family, style)
     out = FONT_DIR / out_name
     subset.save_font(font, str(out), opts)
     return out, set(font.getBestCmap()), naming
@@ -128,8 +142,8 @@ def main():
     FONT_DIR.mkdir(exist_ok=True)
     ui = codepoints(string_files()) | set(range(0x20, 0x7F))
     rows, problems = [], []
-    for variant in ("sc", "tc"):
-        required = codepoints(lyric_files(variant)) | ui
+    for variant in OUTPUTS:
+        required = codepoints(lyric_files(variant.split("-")[0])) | ui
         out, cmap, naming = build(variant, required)
         missing = sorted(required - cmap)
         if missing:

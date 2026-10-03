@@ -5,6 +5,8 @@ object ReadingPrefKeys {
     const val DISPLAY_MODE = "DisplayMode"
     const val LYRICS_FONT_SIZE = "LyricsFontSize"
     const val LYRICS_FONT = "LyricsFont"
+    /** "regular" or "bold" (heavier real weight of the font). */
+    const val LYRICS_FONT_WEIGHT = "lyrics_font_weight"
     /** Shared with sub-project B-11 (low-RAM phones will default it off). */
     const val PAGE_ANIMATION = "PageAnimation"
     const val KEEP_SCREEN_ON = "KeepScreenOn"

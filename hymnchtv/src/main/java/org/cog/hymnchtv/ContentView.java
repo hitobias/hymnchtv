@@ -71,7 +71,9 @@ import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.reading.DisplayMode;
 import org.cog.hymnchtv.reading.DisplayModePolicy;
+import org.cog.hymnchtv.reading.LyricsFaceSpec;
 import org.cog.hymnchtv.reading.LyricsFont;
+import org.cog.hymnchtv.reading.LyricsWeight;
 import org.cog.hymnchtv.reading.LyricsScale;
 import org.cog.hymnchtv.reading.LyricsTypefaces;
 import org.cog.hymnchtv.reading.ReadingPrefKeys;
@@ -586,19 +588,22 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
      */
     private void applyFont(boolean traditional) {
         ZoomTextView view = traditional ? lyricsTraditional : lyricsSimplify;
-        if (ReadingPrefs.lyricsFont(mSharedPref) != LyricsFont.KAI) {
-            view.setTypeface(Typeface.DEFAULT);
+        LyricsWeight weight = ReadingPrefs.lyricsWeight(mSharedPref);
+        LyricsFaceSpec spec = LyricsFaceSpec.choose(ReadingPrefs.lyricsFont(mSharedPref), weight, traditional);
+        if (spec instanceof LyricsFaceSpec.System) {
+            view.setTypeface(Typeface.DEFAULT, ((LyricsFaceSpec.System) spec).getStyle());
             meterKeyView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             return;
         }
-        Typeface ready = LyricsTypefaces.peek(traditional);
+        boolean bold = weight == LyricsWeight.BOLD;
+        Typeface ready = LyricsTypefaces.peek(traditional, bold);
         if (ready != null) {
             view.setTypeface(ready);
             meterKeyView.setTypeface(ready, Typeface.BOLD);
             return;
         }
         view.setTypeface(Typeface.DEFAULT);
-        LyricsTypefaces.request(mContentHandler, traditional, face -> {
+        LyricsTypefaces.request(mContentHandler, traditional, bold, face -> {
             if (isAdded()) {
                 view.setTypeface(face);
                 meterKeyView.setTypeface(face, Typeface.BOLD);
