@@ -19,6 +19,9 @@ data class TokenInput(
     }
 }
 
+/** How the player glass is drawn: blurred (API 31+), a flat translucent fallback, or opaque (high-contrast text). */
+enum class GlassMode { BLUR, FALLBACK, OPAQUE }
+
 /**
  * Surface, text and accent colours derived from one background (visual redesign spec section 4). All values are
  * 0xAARRGGBB; [surface], [surfaceTone], [disabledSurface], [onSurfaceMuted] and [outline] are translucent and must be
@@ -47,6 +50,9 @@ data class UiTokens(
         private const val PHOTO_ALPHA = 0.88f
         private const val PLAIN_ALPHA = 0.92f
         private const val ALPHA_STEP = 0.02f
+        const val GLASS_BLUR_ALPHA = 0.72f
+        const val GLASS_MAX_ALPHA = 0.94f
+        private const val BLUR_TEXT_MIX = 0.5f
         private const val MUTED_START = 0.72f
         private const val MUTED_STEP = 0.04f
         private const val OUTLINE_START = 0.24f
@@ -94,24 +100,56 @@ data class UiTokens(
         }
 
         @JvmStatic
-        fun from(input: TokenInput): UiTokens {
+        fun from(input: TokenInput): UiTokens =
+            derive(input, if (input.isPhoto) PHOTO_ALPHA else PLAIN_ALPHA, 1f)
+
+        /**
+         * `(surface & 0x00FFFFFF) | (alpha << 24)`: the player glass colour. [alpha] is the final ARGB alpha; the
+         * alpha already in [surface] is not multiplied in.
+         */
+        @JvmStatic
+        fun glassTint(surface: Int, alpha: Float): Int = withAlpha(surface and 0xFFFFFF, alpha)
+
+        /** The glass colour with the alpha forced to 1: used when the system asks for high-contrast text. */
+        @JvmStatic
+        fun opaqueGlassTint(surface: Int): Int = opaque(surface)
+
+        /**
+         * Tokens for the frosted player card and capsule (frosted-player spec sections 3 and 6): same colours as
+         * [from], but `surface` is the glass tint and every other colour is derived against what can show through it.
+         * Blurred ([GlassMode.BLUR]) the worst case behind the glass is the swatch mixed 50% with the lyrics text colour;
+         * unblurred ([GlassMode.FALLBACK]) it is the swatch or the bare text colour. The tint starts at
+         * [GLASS_BLUR_ALPHA] and rises to at most [GLASS_MAX_ALPHA] until the contrast holds.
+         */
+        @JvmStatic
+        fun glass(input: TokenInput, mode: GlassMode): UiTokens = when (mode) {
+            GlassMode.OPAQUE -> derive(input, 1f, 1f)
+            GlassMode.BLUR -> derive(input.copy(swatches = withBlurredText(input)), GLASS_BLUR_ALPHA, GLASS_MAX_ALPHA)
+            GlassMode.FALLBACK -> derive(
+                input.copy(swatches = (input.swatches + opaque(input.textColor)).distinct()), GLASS_MAX_ALPHA, GLASS_MAX_ALPHA)
+        }
+
+        private fun withBlurredText(input: TokenInput): List<Int> =
+            (input.swatches + input.swatches.map { Wcag.blend(it, opaque(input.textColor), BLUR_TEXT_MIX) }).distinct()
+
+        private fun derive(input: TokenInput, startAlpha: Float, maxAlpha: Float): UiTokens {
             val surfaceRgb = when {
                 input.isPhoto -> PHOTO_SURFACE
                 input.isDark -> Wcag.blend(input.baseColor, opaque(WHITE), DARK_WHITE_MIX)
                 else -> Wcag.blend(input.baseColor, opaque(WHITE), LIGHT_WHITE_MIX)
             }
             val toneRgb = Wcag.blend(surfaceRgb, input.textColor, if (input.isDark) DARK_TONE_MIX else LIGHT_TONE_MIX)
-            var alpha = if (input.isPhoto) PHOTO_ALPHA else PLAIN_ALPHA
+            var alpha = startAlpha
             while (true) {
                 val surface = withAlpha(surfaceRgb, alpha)
                 val tone = withAlpha(toneRgb, alpha)
                 val backdrops = input.swatches.flatMap { backdropsOver(it, surface, tone) }
                 val candidates = listOf(input.textColor, opaque(BLACK), opaque(WHITE)).map(::opaque)
                 val onSurface = candidates.maxBy { worstContrast(it, backdrops) }
-                if (worstContrast(onSurface, backdrops) >= MIN_TEXT_CONTRAST || alpha >= 1f) {
+                if (worstContrast(onSurface, backdrops) >= MIN_TEXT_CONTRAST || alpha >= maxAlpha) {
                     return finish(input, surface, tone, onSurface, backdrops)
                 }
-                alpha = (alpha + ALPHA_STEP).coerceAtMost(1f)
+                alpha = (alpha + ALPHA_STEP).coerceAtMost(maxAlpha)
             }
         }
 
