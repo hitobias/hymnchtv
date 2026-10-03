@@ -2,6 +2,11 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.1.1 (10/03/2026)" versioncode="101010">
+        <change>播放面板改為半透明毛玻璃質感（Android 12 以上即時模糊，較舊版本為磨砂色底）。</change>
+        <change>首頁詩歌本名稱字體加大，更清楚。</change>
+        <change>修正歌詞字重切換到「中粗」後無法再切換的問題。</change>
+    </release>
     <release version="1.1.0 (10/03/2026)" versioncode="101000">
         <change>首頁改版：先選詩歌本再輸入號碼，即時顯示詩名；輸入時按鍵位置固定不跳動。最近詩歌附日期，「全部記錄」依日期分組。</change>
         <change>新的搜尋頁：可搜尋詩名與歌詞，結果顯示命中的片段，也可以只搜目前的詩歌本。</change>
