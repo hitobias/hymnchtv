@@ -2,6 +2,14 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.2.0 (10/04/2026)" versioncode="102000">
+        <change>首頁改為一頁滿屏：取消底部導覽，「目錄」「設定」移到首頁頂端；連按兩次返回鍵才離開。</change>
+        <change>歌詞頁預設只顯示歌詞；頂列新增「回首頁」鈕，⋮ 選單第一項也是「回首頁」。</change>
+        <change>歌詞排版精修：頁首大號碼與詩名、節號、副歌縮排，行距更舒適。</change>
+        <change>設定與目錄頁跟隨主題配色，以分組卡片呈現，層次更分明。</change>
+        <change>全新圖示與啟動畫面；統一字體層級、圓角與圖示風格，加入轉場動畫與按鍵觸感。</change>
+        <change>沒有媒體資源時播放鍵停用並顯示說明；修正外部播放找不到應用程式時閃退。</change>
+    </release>
     <release version="1.1.1 (10/03/2026)" versioncode="101010">
         <change>播放面板改為半透明毛玻璃質感（Android 12 以上即時模糊，較舊版本為磨砂色底）。</change>
         <change>首頁詩歌本名稱字體加大，更清楚。</change>
