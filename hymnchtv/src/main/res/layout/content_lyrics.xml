@@ -70,16 +70,35 @@
             </LinearLayout>
 
             <!-- Key and time signature from the lyrics header (LyricsMeta); hidden when the file has none -->
-            <TextView
-                android:id="@+id/meter_key"
+            <LinearLayout
+                android:id="@+id/lyrics_info_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical|end"
+                android:orientation="horizontal"
                 android:paddingStart="16dp"
                 android:paddingTop="6dp"
                 android:paddingEnd="16dp"
-                android:textAppearance="@style/TextAppearance.Hymnal.Body"
-                android:textStyle="bold"
-                android:visibility="gone" />
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/meter_key"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <!-- Shown while this hymn is a favourite; the row gravity keeps it at the end when meter_key is gone -->
+                <ImageView
+                    android:id="@+id/favorite_star"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@string/fav_marked"
+                    android:src="@drawable/ic_sym_star"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <org.cog.hymnchtv.utils.ZoomTextView
                 android:id="@+id/lyrics_simplified"
