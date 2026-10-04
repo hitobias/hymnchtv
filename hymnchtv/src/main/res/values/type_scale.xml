@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Type scale and shapes of the redesign (spec 5b-1, 5b-3, 10): five text levels and three corner radii, nothing else.
+     Book, hymn and category titles are drawn in HymnalKai by code (KaiText.applyForUi) because the Traditional and Simplified
+     faces differ; the appearances here fix size, weight and spacing only. Lyrics body size is set by the user and excluded. -->
+<resources>
+    <dimen name="type_display">48sp</dimen>
+    <dimen name="type_title">22sp</dimen>
+    <dimen name="type_heading">16sp</dimen>
+    <dimen name="type_body">16sp</dimen>
+    <dimen name="type_caption">13sp</dimen>
+
+    <dimen name="shape_radius_small">12dp</dimen>
+    <dimen name="shape_radius_medium">16dp</dimen>
+    <dimen name="shape_radius_large">28dp</dimen>
+
+    <!-- Display: the home hymn number; light weight, tabular figures so digits do not shift while typing -->
+    <style name="TextAppearance.Hymnal.Display" parent="TextAppearance.Material3.DisplayLarge">
+        <item name="android:textSize">@dimen/type_display</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <!-- Title: page names and hymn titles -->
+    <style name="TextAppearance.Hymnal.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">@dimen/type_title</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <!-- Heading: category and card titles, medium weight -->
+    <style name="TextAppearance.Hymnal.Heading" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">@dimen/type_heading</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.Hymnal.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">@dimen/type_body</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.Hymnal.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">@dimen/type_caption</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <!-- 12dp: keys and chips -->
+    <style name="ShapeAppearance.Hymnal.Small" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/shape_radius_small</item>
+    </style>
+
+    <!-- 16dp: cards -->
+    <style name="ShapeAppearance.Hymnal.Medium" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/shape_radius_medium</item>
+    </style>
+
+    <!-- 28dp: panels, bottom sheets, the player card -->
+    <style name="ShapeAppearance.Hymnal.Large" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/shape_radius_large</item>
+    </style>
+</resources>

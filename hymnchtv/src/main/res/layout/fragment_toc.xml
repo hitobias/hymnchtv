@@ -1,15 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- TOC tab (sub-project C): choose a hymn book and a kind of index, then browse and open a hymn -->
+<!-- Contents page: title bar, then choose a hymn book and a kind of index, browse and open a hymn. Colours come from the
+     home background through PagePalette (TocFragment.applyPalette). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/toc_page"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <org.cog.hymnchtv.ui.page.PageTitleBar
+        android:id="@+id/toc_title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:pageTitle="@string/page_title_toc" />
+
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="8dp"
+        android:paddingHorizontal="12dp"
         android:scrollbars="none">
 
         <com.google.android.material.chip.ChipGroup
@@ -26,7 +34,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/hymn_db"
-                android:textSize="18sp" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                app:shapeAppearance="@style/ShapeAppearance.Hymnal.Small" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/toc_book_bb"
@@ -34,7 +43,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/hymn_bb"
-                android:textSize="18sp" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                app:shapeAppearance="@style/ShapeAppearance.Hymnal.Small" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/toc_book_xb"
@@ -42,7 +52,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/hymn_xb"
-                android:textSize="18sp" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                app:shapeAppearance="@style/ShapeAppearance.Hymnal.Small" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/toc_book_xg"
@@ -50,7 +61,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/hymn_xg"
-                android:textSize="18sp" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                app:shapeAppearance="@style/ShapeAppearance.Hymnal.Small" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/toc_book_yb"
@@ -58,7 +70,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/hymn_yb"
-                android:textSize="18sp" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                app:shapeAppearance="@style/ShapeAppearance.Hymnal.Small" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/toc_book_er"
@@ -66,7 +79,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/hymn_er"
-                android:textSize="18sp" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                app:shapeAppearance="@style/ShapeAppearance.Hymnal.Small" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
@@ -74,11 +88,16 @@
         android:id="@+id/toc_pages"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:tabMode="scrollable" />
+        app:tabMode="scrollable"
+        app:tabTextAppearance="@style/TextAppearance.Hymnal.Body" />
 
     <FrameLayout
+        android:id="@+id/toc_list_frame"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
         android:layout_weight="1">
 
         <ExpandableListView
@@ -97,7 +116,7 @@
             android:gravity="center"
             android:padding="24dp"
             android:text="@string/c_toc_empty"
-            android:textSize="18sp"
+            android:textAppearance="@style/TextAppearance.Hymnal.Body"
             android:visibility="gone" />
 
         <ProgressBar

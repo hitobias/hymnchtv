@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- androidx.core.splashscreen launch theme (all API levels): brand background, centred icon, no text; the exit is a fade.
+         Turned on by SplashScreen.installSplashScreen(this) before super.onCreate in MainActivity plus this theme on the
+         launcher activity in the manifest; the app theme afterwards is postSplashScreenTheme. -->
+    <style name="Theme.Hymnal.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>

@@ -7,9 +7,12 @@ import android.widget.BaseExpandableListAdapter
 import android.widget.ImageView
 import android.widget.TextView
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.ui.page.PagePalette
+import org.cog.hymnchtv.ui.picker.KaiText
+import android.content.res.ColorStateList
 
 /** Groups (categories / index headings) with their hymn items; rows are at least 48dp tall. */
-class TocAdapter(private val toc: Map<String, List<String>>) : BaseExpandableListAdapter() {
+class TocAdapter(private val toc: Map<String, List<String>>, var palette: PagePalette? = null) : BaseExpandableListAdapter() {
     private val groups: List<String> = toc.keys.toList()
 
     override fun getGroupCount() = groups.size
@@ -30,15 +33,23 @@ class TocAdapter(private val toc: Map<String, List<String>>) : BaseExpandableLis
 
     override fun getGroupView(groupPosition: Int, isExpanded: Boolean, convertView: View?, parent: ViewGroup): View {
         val row = convertView ?: LayoutInflater.from(parent.context).inflate(R.layout.toc_group_row, parent, false)
-        row.findViewById<TextView>(R.id.hymnCategory).text = getGroup(groupPosition)
-        row.findViewById<ImageView>(R.id.groupExpandState)
-            .setImageResource(if (isExpanded) R.drawable.ic_toc_expanded else R.drawable.ic_toc_collapsed)
+        val name = row.findViewById<TextView>(R.id.hymnCategory)
+        name.text = getGroup(groupPosition)
+        val arrow = row.findViewById<ImageView>(R.id.groupExpandState)
+        arrow.setImageResource(if (isExpanded) R.drawable.ic_toc_expanded else R.drawable.ic_toc_collapsed)
+        palette?.let {
+            name.setTextColor(it.category)
+            arrow.imageTintList = ColorStateList.valueOf(it.muted)
+        }
+        KaiText.applyForUi(name, name.context, bold = false)
         return row
     }
 
     override fun getChildView(groupPosition: Int, childPosition: Int, isLastChild: Boolean, convertView: View?, parent: ViewGroup): View {
         val row = (convertView as? TextView) ?: LayoutInflater.from(parent.context).inflate(R.layout.toc_item_row, parent, false) as TextView
         row.text = getChild(groupPosition, childPosition)
+        palette?.let { row.setTextColor(it.onCard) }
+        KaiText.applyForUi(row, row.context, bold = false)
         return row
     }
 }

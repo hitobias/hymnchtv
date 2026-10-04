@@ -12,5 +12,5 @@
     android:minHeight="48dp"
     android:paddingStart="48dp"
     android:paddingEnd="12dp"
-    android:textAppearance="?attr/textAppearanceBodyLarge"
+    android:textAppearance="@style/TextAppearance.Hymnal.Body"
     tools:text="0001: 祂的计划（英1）" />

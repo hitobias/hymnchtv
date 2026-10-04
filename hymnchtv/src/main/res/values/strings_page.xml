@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Full-page title bar (settings, contents, reading settings) -->
+    <string name="page_back">Back</string>
+    <string name="page_title_toc">Contents</string>
+    <string name="page_title_settings">Settings</string>
+</resources>

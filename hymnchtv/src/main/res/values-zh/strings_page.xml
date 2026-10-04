@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Full-page title bar (settings, contents, reading settings) -->
+    <string name="page_back">返回</string>
+    <string name="page_title_toc">目录</string>
+    <string name="page_title_settings">设置</string>
+</resources>

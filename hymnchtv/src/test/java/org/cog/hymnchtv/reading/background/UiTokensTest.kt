@@ -122,6 +122,24 @@ class UiTokensTest {
     }
 
     @Test
+    fun surfaceRaisedIsTheSurfaceTintedFourPercentTowardAccentWithTheSameAlpha() = forEachSwatch { name, _, t, _ ->
+        assertWithMessage(name).that(t.surfaceRaised ushr 24).isEqualTo(t.surface ushr 24)
+        val expected = Wcag.blend(t.surface or (0xFF shl 24), t.accent or (0xFF shl 24), 0.04f) and 0xFFFFFF
+        assertWithMessage(name).that(t.surfaceRaised and 0xFFFFFF).isEqualTo(expected)
+        assertWithMessage(name).that(t.surfaceRaised).isNotEqualTo(t.surface)
+    }
+
+    @Test
+    fun textMeetsAaOnTheRaisedSurface() = forEachSwatch { name, _, t, s ->
+        val raised = UiTokens.over(s, t.surfaceRaised)
+        assertWithMessage("$name: onSurface on raised ${hex(raised)}").that(Wcag.contrast(t.onSurface, raised)).isAtLeast(4.5)
+        val muted = UiTokens.over(raised, t.onSurfaceMuted)
+        assertWithMessage("$name: muted on raised ${hex(raised)}").that(Wcag.contrast(muted, raised)).isAtLeast(4.5)
+        assertWithMessage("$name: onOutlineAction on raised").that(Wcag.contrast(t.onOutlineAction, raised)).isAtLeast(4.5)
+        assertWithMessage("$name: accent on raised").that(Wcag.contrast(t.accent, raised)).isAtLeast(3.0)
+    }
+
+    @Test
     fun requiresSwatches() {
         val e = runCatching { TokenInput(0, 0, 0, false, false, emptyList()) }.exceptionOrNull()
         assertThat(e).isInstanceOf(IllegalArgumentException::class.java)

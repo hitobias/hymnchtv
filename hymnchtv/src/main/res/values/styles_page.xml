@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed preference rows (spec 5a): the layouts carry size and spacing, PagePreferenceAdapter paints the colours from the
+     home background's tokens. Selected through the app theme's preferenceTheme, so every PreferenceFragmentCompat uses them. -->
+<resources>
+    <style name="PreferenceThemeOverlay.Hymnal" parent="PreferenceThemeOverlay">
+        <item name="preferenceCategoryStyle">@style/Preference.Category.Hymnal</item>
+        <item name="preferenceStyle">@style/Preference.Hymnal</item>
+        <item name="dialogPreferenceStyle">@style/Preference.DialogPreference.Hymnal</item>
+        <item name="switchPreferenceCompatStyle">@style/Preference.SwitchPreferenceCompat.Hymnal</item>
+        <item name="seekBarPreferenceStyle">@style/Preference.SeekBarPreference.Hymnal</item>
+    </style>
+
+    <style name="Preference.Category.Hymnal" parent="Preference.Category.Material">
+        <item name="android:layout">@layout/preference_category_themed</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+        <item name="iconSpaceReserved">false</item>
+    </style>
+
+    <style name="Preference.Hymnal" parent="Preference.Material">
+        <item name="android:layout">@layout/preference_themed</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+        <item name="iconSpaceReserved">false</item>
+    </style>
+
+    <style name="Preference.DialogPreference.Hymnal" parent="Preference.DialogPreference.Material">
+        <item name="android:layout">@layout/preference_themed</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+        <item name="iconSpaceReserved">false</item>
+    </style>
+
+    <style name="Preference.SwitchPreferenceCompat.Hymnal" parent="Preference.SwitchPreferenceCompat.Material">
+        <item name="android:layout">@layout/preference_themed</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+        <item name="iconSpaceReserved">false</item>
+    </style>
+
+    <style name="Preference.SeekBarPreference.Hymnal" parent="Preference.SeekBarPreference.Material">
+        <item name="android:layout">@layout/preference_seekbar_themed</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+        <item name="iconSpaceReserved">false</item>
+    </style>
+</resources>

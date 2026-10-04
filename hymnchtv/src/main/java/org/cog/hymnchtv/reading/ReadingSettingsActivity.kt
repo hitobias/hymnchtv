@@ -7,6 +7,7 @@ import org.cog.hymnchtv.BaseActivity
 import org.cog.hymnchtv.ContentView
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.ui.theme.SystemBars
 
 /**
  * Hosts ReadingSettingsFragment (plan A2). Settings apply immediately; on finish the result carries
@@ -19,6 +20,8 @@ class ReadingSettingsActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The page draws its own title bar and pads for the bars (see PagePreferenceFragment)
+        SystemBars.enable(this)
         setContentView(R.layout.reading_settings)
         setTitle(R.string.reading_settings)
         changed = savedInstanceState?.getBoolean(STATE_CHANGED) ?: false

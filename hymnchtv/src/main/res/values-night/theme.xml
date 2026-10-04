@@ -9,6 +9,7 @@
         <item name="colorSecondary">@color/color_accent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay.Hymnal</item>
         <item name="listItemRow">@style/RowList.Dark</item>
         <item name="listItemRadio">@style/RadioListItem.Dark</item>
     </style>

@@ -11,6 +11,7 @@
         <ListPreference
             app:entries="@array/c_night_modes"
             app:entryValues="@array/c_night_mode_values"
+            app:icon="@drawable/ic_sym_palette"
             app:iconSpaceReserved="false"
             app:key="Theme"
             app:persistent="false"
@@ -20,6 +21,7 @@
         <ListPreference
             app:entries="@array/c_locales"
             app:entryValues="@array/c_locale_values"
+            app:icon="@drawable/ic_sym_language"
             app:iconSpaceReserved="false"
             app:key="Locale"
             app:persistent="false"
@@ -33,6 +35,7 @@
 
         <!-- Lyrics language, fonts, backgrounds, ...: the reading settings screen (plan A2) -->
         <Preference
+            app:icon="@drawable/ic_sym_menu_book"
             app:iconSpaceReserved="false"
             app:key="reading_settings"
             app:persistent="false"
@@ -44,6 +47,7 @@
         app:title="@string/c_cat_media">
 
         <Preference
+            app:icon="@drawable/ic_sym_play_circle"
             app:iconSpaceReserved="false"
             app:key="media_config"
             app:persistent="false"
@@ -68,24 +72,28 @@
         app:title="@string/c_cat_other">
 
         <Preference
+            app:icon="@drawable/ic_sym_update"
             app:iconSpaceReserved="false"
             app:key="check_update"
             app:persistent="false"
             app:title="@string/c_check_update" />
 
         <Preference
+            app:icon="@drawable/ic_sym_lock"
             app:iconSpaceReserved="false"
             app:key="permission_request"
             app:persistent="false"
             app:title="@string/permission_settings" />
 
         <Preference
+            app:icon="@drawable/ic_sym_help"
             app:iconSpaceReserved="false"
             app:key="online_help"
             app:persistent="false"
             app:title="@string/help_online" />
 
         <Preference
+            app:icon="@drawable/ic_sym_info"
             app:iconSpaceReserved="false"
             app:key="about"
             app:persistent="false"
