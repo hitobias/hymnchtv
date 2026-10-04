@@ -116,13 +116,19 @@ class SearchFragmentTest {
         openSearch()
         search("zzzqqq不存在的词xyz")
         FragmentHost.eventually(timeoutMs = 60_000) {
-            scenario.onActivity { a -> assertThat(status(a)).isEqualTo(a.getString(R.string.c_search_status_none)) }
+            scenario.onActivity { a ->
+                assertThat(status(a)).isEqualTo(a.getString(R.string.c_search_status_none))
+                // The empty state: icon and one sentence in place of the list
+                assertThat(a.findViewById<android.view.View>(R.id.search_empty).visibility).isEqualTo(android.view.View.VISIBLE)
+            }
         }
+        onView(withText(R.string.c_search_empty_title)).check(matches(androidx.test.espresso.matcher.ViewMatchers.isDisplayed()))
     }
 
     @Test fun emptyQueryShowsTheHint() = PickerTestSupport.launch {
         openSearch()
         onView(withId(R.id.tv_search_status)).check(matches(withText(R.string.c_search_empty_hint)))
+        onView(withId(R.id.search_empty)).check(matches(androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility(androidx.test.espresso.matcher.ViewMatchers.Visibility.GONE)))
     }
 
     @Test fun resultSurvivesRotation() = PickerTestSupport.launch { scenario ->

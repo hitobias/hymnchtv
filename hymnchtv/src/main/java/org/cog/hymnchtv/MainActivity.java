@@ -43,7 +43,6 @@ import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -67,8 +66,8 @@ import de.cketti.library.changelog.ChangeLog;
 import timber.log.Timber;
 
 /**
- * MainActivity: the hymnchtv app main user interface. It only hosts the four tabs (home, contents, my hymns, settings,
- * see {@link MainHost}); the tabs are fragments under {@code ui/}. It also keeps the static entry points other classes use
+ * MainActivity: the hymnchtv app main user interface. It only hosts the home page and the pages opened from it (contents,
+ * settings, search, history; see {@link MainHost}), which are fragments under {@code ui/}. It also keeps the static entry points other classes use
  * to open lyrics, and handles the share intents.
  *
  * @author Eng Chong Meng
@@ -121,7 +120,6 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
     private static MainActivity mInstance;
 
     private MainHost mainHost;
-    private BottomNavigationView bottomNav;
 
     /** Delayed work that captures this activity; cleared in onDestroy so a recreated activity is not kept alive. */
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -129,6 +127,7 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public void onCreate(Bundle savedInstanceState) {
         mInstance = this;
+        androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
         // DayNight is applied globally by HymnsApp (ThemePrefs.applyStored)
         super.onCreate(savedInstanceState);
         org.cog.hymnchtv.ui.theme.SystemBars.enable(this);
@@ -142,11 +141,8 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
             actionBar.setTitle(R.string.app_title_main);
         }
 
-        bottomNav = findViewById(R.id.bottom_nav);
         mainHost = new MainHost(this);
-        int savedTab = (savedInstanceState == null) ? R.id.nav_home
-                : savedInstanceState.getInt(MainHost.EXTRA_TAB, R.id.nav_home);
-        mainHost.attach(bottomNav, savedTab);
+        mainHost.attach(savedInstanceState);
         MainChrome.apply(this, getSharedPreferences(PREF_SETTINGS, 0));
 
         AppExecutors.io("yb-xref-prewarm", YbCrossRef::prewarm);
@@ -227,6 +223,13 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
     }
 
     @Override
+    public void openSettings() {
+        if (mainHost != null) {
+            mainHost.openSettings();
+        }
+    }
+
+    @Override
     public void openHistory() {
         if (mainHost != null) {
             mainHost.openHistory();
@@ -240,10 +243,11 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         }
     }
 
+    /** The top bar's back arrow (shown on every page but the home page) does what the back key does. */
     @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        mainHost.onSaveState(outState);
+    public boolean onSupportNavigateUp() {
+        getOnBackPressedDispatcher().onBackPressed();
+        return true;
     }
 
     @Override
@@ -251,13 +255,8 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         super.onResume();
         // The home background or the theme may have changed in the settings tab or a picker meanwhile
         MainChrome.apply(this, getSharedPreferences(PREF_SETTINGS, 0));
-        // An update found by the checker is flagged on the settings tab, where "check for updates" lives
-        if (mHasUpdate) {
-            bottomNav.getOrCreateBadge(R.id.nav_settings);
-        }
-        else {
-            bottomNav.removeBadge(R.id.nav_settings);
-        }
+        // An update found by the checker is flagged on the settings button, where "check for updates" lives
+        mainHost.setUpdateAvailable(mHasUpdate);
     }
 
     @Override
@@ -369,19 +368,14 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
     }
 
     /**
-     * The home tab closes its history list first, any other tab goes back to home; otherwise pop a fragment if any, else close app
+     * The top page of the back stack closes first (overlay, then a full page); on the bare home page a second press within
+     * two seconds closes the app (see {@link MainHost#onBackPressed()}).
      */
     OnBackPressedCallback backPressedCallback = new OnBackPressedCallback(true) {
         @Override
         public void handleOnBackPressed() {
-            if (mainHost.onBackPressed()) {
-                return;
-            }
-            if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
+            if (!mainHost.onBackPressed()) {
                 finish();
-            }
-            else {
-                getSupportFragmentManager().popBackStack();
             }
         }
     };

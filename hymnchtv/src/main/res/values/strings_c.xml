@@ -83,4 +83,8 @@
     <string name="c_repeat">Repeat</string>
     <string name="c_repeat_count">Repeat count</string>
     <string name="c_search_youtube">Search YouTube for this hymn</string>
+    <string name="c_recent_empty">No recent hymns yet</string>
+    <string name="c_search_empty_title">No hymns found</string>
+    <string name="c_press_back_again">Press back again to exit</string>
+    <string name="c_settings_update_desc">Settings (update available)</string>
 </resources>

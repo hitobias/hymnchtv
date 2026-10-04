@@ -51,23 +51,44 @@ class HistoryFragmentTest {
 
     private fun chipLabel(no: Int) = HymnLabels.chip(ctx, HymnRef(HymnTypes.DB, no))
 
-    @Test fun chipsShowAtMostEightNewestFirst() {
+    @Test fun recentRowsShowAtMostFiveNewestFirst() {
         PickerTestSupport.resetHistory(*records(12))
         PickerTestSupport.launch { scenario ->
             FragmentHost.eventually {
                 scenario.onActivity { a ->
                     val chips = a.findViewById<android.widget.LinearLayout>(R.id.recent_chips)
-                    assertThat(chips.childCount).isEqualTo(8)
+                    // The page lists what fits (0 to 5); in the scrolling exception (small screens) all five show
+                    val scroller = chips.rootView.findViewById<android.view.View>(R.id.home_content).parent as org.cog.hymnchtv.ui.home.HomeScrollView
+                    assertThat(chips.childCount).isAtMost(5)
+                    if (scroller.scrollingAllowed) assertThat(chips.childCount).isEqualTo(5)
+                    assertThat(chips.childCount).isGreaterThan(0)
                     assertThat(chips.getChildAt(0).findViewById<TextView>(R.id.tv_recent_label_item).text.toString()).isEqualTo(chipLabel(12))
                 }
             }
         }
     }
 
-    @Test fun emptyHistoryHidesTheRecentRow() {
+    @Test fun emptyHistoryShowsTheEmptyStateAndKeepsTheAllHistoryEntry() {
         PickerTestSupport.resetHistory()
         PickerTestSupport.launch { scenario ->
-            scenario.onActivity { a -> assertThat(a.findViewById<View>(R.id.recentArea).visibility).isEqualTo(View.GONE) }
+            FragmentHost.eventually {
+                scenario.onActivity { a ->
+                    assertThat(a.findViewById<View>(R.id.recentArea).visibility).isEqualTo(View.VISIBLE)
+                    assertThat(a.findViewById<android.widget.LinearLayout>(R.id.recent_chips).childCount).isEqualTo(0)
+                    assertThat(a.findViewById<View>(R.id.recent_empty).visibility).isEqualTo(View.VISIBLE)
+                    assertThat(a.findViewById<TextView>(R.id.recent_empty_text).text.toString()).isEqualTo(a.getString(R.string.c_recent_empty))
+                    assertThat(a.findViewById<View>(R.id.btn_recent_more).visibility).isEqualTo(View.VISIBLE)
+                }
+            }
+        }
+    }
+
+    @Test fun emptyStateGoesAwayWhenAHymnIsInTheHistory() {
+        PickerTestSupport.resetHistory(*records(1))
+        PickerTestSupport.launch { scenario ->
+            FragmentHost.eventually {
+                scenario.onActivity { a -> assertThat(a.findViewById<View>(R.id.recent_empty).visibility).isEqualTo(View.GONE) }
+            }
         }
     }
 

@@ -42,6 +42,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val status: TextView = root.findViewById(R.id.tv_search_status)
         val progress: ProgressBar = root.findViewById(R.id.search_progress)
         val results: RecyclerView = root.findViewById(R.id.search_results)
+        val empty: View = root.findViewById(R.id.search_empty)
     }
 
     private val prefs: SharedPreferences
@@ -115,6 +116,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val v = views ?: return
         val state = vm.state
         v.progress.visibility = if (state is SearchUiState.Loading) View.VISIBLE else View.GONE
+        v.empty.visibility = if (state is SearchUiState.Done && state.page.results.isEmpty() && !state.page.hasMore) View.VISIBLE else View.GONE
         when (state) {
             SearchUiState.Idle -> {
                 adapter.submitList(emptyList())

@@ -19,7 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** The home tab's contents button opens the contents tab with the chosen book (or the English index) preselected. */
+/** The home page's contents button opens the contents page with the chosen book (or the English index) preselected. */
 @RunWith(AndroidJUnit4::class)
 class TocSelectTest {
     @Before fun setUp() = PickerTestSupport.prepare()
@@ -39,7 +39,9 @@ class TocSelectTest {
         FragmentHost.eventually {
             scenario.onActivity { a ->
                 assertThat(selection(a)).isEqualTo(R.id.toc_book_bb to 0)
-                assertThat(a.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_nav).selectedItemId).isEqualTo(R.id.nav_toc)
+                // Full page on the back stack, the same path as the top bar's contents button
+                assertThat(a.supportFragmentManager.backStackEntryCount).isEqualTo(1)
+                assertThat(a.supportFragmentManager.getBackStackEntryAt(0).name).isEqualTo(org.cog.hymnchtv.ui.host.MainHost.TAG_TOC)
             }
         }
     }
@@ -52,12 +54,23 @@ class TocSelectTest {
         }
     }
 
-    @Test fun contentsTabAlreadyCreatedIsRetargeted() = PickerTestSupport.launch { scenario ->
-        onView(withId(R.id.nav_toc)).perform(click())
-        onView(withId(R.id.nav_home)).perform(click())
+    @Test fun contentsPageOpenedFromTheTopBarIsLeftAndReopenedOnTheNewBook() = PickerTestSupport.launch { scenario ->
+        onView(withId(R.id.btn_home_toc)).perform(click())
+        onView(withId(R.id.toc_books)).check(matches(isDisplayed()))
+        androidx.test.espresso.Espresso.pressBack()
         onView(withId(R.id.bs_xg)).perform(scrollTo(), click())
         onView(withId(R.id.btn_toc)).perform(scrollTo(), click())
         FragmentHost.eventually { scenario.onActivity { a -> assertThat(selection(a)).isEqualTo(R.id.toc_book_xg to 0) } }
+    }
+
+    @Test fun topBarContentsButtonAndHomeContentsButtonTakeTheSamePath() = PickerTestSupport.launch { scenario ->
+        onView(withId(R.id.btn_home_toc)).perform(click())
+        FragmentHost.eventually {
+            scenario.onActivity { a ->
+                assertThat(a.supportFragmentManager.getBackStackEntryAt(0).name).isEqualTo(org.cog.hymnchtv.ui.host.MainHost.TAG_TOC)
+                assertThat(a.supportFragmentManager.findFragmentById(R.id.fragment_container)).isInstanceOf(TocFragment::class.java)
+            }
+        }
     }
 
     @Test fun selectRejectsUnknownBooksAndPages() = PickerTestSupport.launch { scenario ->
