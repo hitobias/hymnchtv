@@ -128,6 +128,8 @@ import org.cog.hymnchtv.reading.background.TokenInput;
 import org.cog.hymnchtv.reading.background.UiTokens;
 import org.cog.hymnchtv.ui.lyrics.ReadingPanelSheet;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
+import org.cog.hymnchtv.ui.lyrics.FavoriteController;
+import org.cog.hymnchtv.notebook.Notebook;
 import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
 import org.cog.hymnchtv.ui.lyrics.LyricsWindowInsets;
 import org.cog.hymnchtv.ui.motion.Motion;
@@ -257,6 +259,47 @@ public class ContentHandler extends BaseActivity {
     }
 
     private MyPagerAdapter mPagerAdapter;
+
+    /** Favourite state of the hymn on screen; created in onCreate. */
+    private FavoriteController mFavorites;
+
+    private final FavoriteController.Listener mFavoriteListener = new FavoriteController.Listener() {
+        @Override
+        public void onState(boolean marked, boolean canToggle) {
+            refreshFavoriteViews();
+        }
+
+        @Override
+        public void onToggled(boolean marked) {
+            HymnsApp.showToastMessage(marked ? R.string.fav_added : R.string.fav_removed);
+        }
+
+        @Override
+        public void onError() {
+            HymnsApp.showToastMessage(R.string.fav_error);
+        }
+    };
+
+    /** The favourite star of every page that has a view follows the controller's state. */
+    private void refreshFavoriteViews() {
+        if (mPagerAdapter == null) {
+            return;
+        }
+        for (int i = 0; i < mPagerAdapter.mFragments.size(); i++) {
+            Fragment page = mPagerAdapter.mFragments.valueAt(i);
+            if (page instanceof ContentView) {
+                ((ContentView) page).onFavoriteStateChanged();
+            }
+        }
+    }
+
+    public boolean isFavoriteMarked(String type, int no) {
+        return mFavorites != null && mFavorites.isMarked(type, no);
+    }
+
+    public boolean canToggleFavorite() {
+        return mFavorites != null && mFavorites.canToggle();
+    }
     private ViewPager2 mPager;
 
     public PopupWindow pop;
@@ -410,6 +453,10 @@ public class ContentHandler extends BaseActivity {
             break;
         }
 
+        // Created before the pager so that pages built by the adapter can ask for the current state
+        mFavorites = new FavoriteController(Notebook.async(this), mFavoriteListener);
+        mFavorites.onHymnChanged(mHymnType, mHymnNo);
+
         // The pager adapter, which provides the pages to the view pager widget.
         mPagerAdapter = new MyPagerAdapter(this, mHymnType);
 
@@ -504,6 +551,7 @@ public class ContentHandler extends BaseActivity {
         super.onDestroy();
         mChromeHost.stop();
         mPlayerSheet.release();
+        mFavorites.destroy();
     }
 
     /** A lyrics page follows the toolbar show/hide state from now on (plan 6c). */
@@ -843,6 +891,10 @@ public class ContentHandler extends BaseActivity {
             openReadingSettings();
             return true;
         }
+        else if (itemId == R.id.favorite) {
+            mFavorites.toggle();
+            return true;
+        }
         else if (itemId == R.id.menutoggle) {
             mPlayerSheet.toggleUserHidden();
             return true;
@@ -1069,6 +1121,7 @@ public class ContentHandler extends BaseActivity {
                 if (tmp != mHymnNo) {
                     mHymnNo = tmp;
                     hymnIdx = position;
+                    mFavorites.onHymnChanged(mHymnType, mHymnNo);
                     stopPlaybackForHymnChange();
                     updateMediaPlayerInfo();
 
