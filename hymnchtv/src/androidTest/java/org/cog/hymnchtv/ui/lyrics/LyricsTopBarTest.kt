@@ -42,8 +42,8 @@ class LyricsTopBarTest {
 
     @Before
     fun setUp() {
-        // The toolbars fade 3 s after opening; on a loaded machine the test body can start later than that, so the
-        // clock is fake (never advanced): these tests are about the buttons, not the fade
+        // The toolbars are revealed by a centre tap and fade after the idle time; the clock is fake (never advanced):
+        // these tests are about the buttons, not the fade
         ContentHandler.sChromeTimerForTest = ManualChromeTimer()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             TestPermissions.grantLaunchPermission(ctx.packageName)
@@ -65,7 +65,9 @@ class LyricsTopBarTest {
         return ActivityScenario.launch<ContentHandler>(Intent(ctx, ContentHandler::class.java).putExtras(extras))
             .also {
                 it.waitForPage()
-                it.onActivity { activity -> activity.setChromeHeld(true) }
+                // Hymns open with the toolbars hidden: the centre tap brings them in, the hold keeps them
+                it.onActivity { activity -> activity.onLyricsCenterTap(); activity.setChromeHeld(true) }
+                SystemClock.sleep(400) // the fade
             }
     }
 
@@ -220,6 +222,9 @@ class LyricsTopBarTest {
     @Test
     fun autoPlayCheckBoxFollowsTheAutoStreamState() {
         launch().use { scenario ->
+            // The card starts collapsed as the capsule: expand it to reach the check box
+            scenario.onActivity { it.playerSheet.expand(true) }
+            SystemClock.sleep(600)
             onView(withId(R.id.playback_auto_stream)).check(matches(isDisplayed()))
             val box = scenario.read { it.findViewById<CheckBox>(R.id.playback_auto_stream) }
             assertThat(box.isChecked).isFalse()

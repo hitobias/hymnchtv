@@ -106,6 +106,21 @@ abstract class LyricsTestBase {
 
     fun ActivityScenario<ContentHandler>.buttonBarShown(): Boolean = read { page(it)!!.findViewById<View>(R.id.lyricsButtonBar).visibility == View.VISIBLE }
 
+    /**
+     * Hymns open with the toolbars hidden (lyrics only): reveal them with a centre tap, like a reader does, before a test uses a
+     * toolbar button. The fake chrome timer never advances on its own, so they then stay until the test moves the clock.
+     */
+    fun ActivityScenario<ContentHandler>.revealChrome() {
+        // A tap that lands while the page is still settling after the launch can be lost: try again, a shown bar is never hidden by a retry
+        repeat(3) {
+            if (topBarShown()) return
+            val c = hostPoint(0.5f, 0.5f)
+            tap(c[0], c[1])
+            SystemClock.sleep(500)
+        }
+        await("toolbars shown") { page(it)!!.findViewById<View>(R.id.lyrics_top_bar).visibility == View.VISIBLE }
+    }
+
     fun ActivityScenario<ContentHandler>.scroll(): ScrollView = read { page(it)!!.findViewById<ScrollView>(R.id.lyrics_scroll) }
 
     /** Screen position of a point in the lyrics host, as fractions of its width and height. */

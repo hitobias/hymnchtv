@@ -102,18 +102,36 @@ class CollapsiblePlayerTest : LyricsTestBase() {
         return ctl
     }
 
+    /** A cold open shows the capsule; tests that work on the card expand it explicitly first. */
+    private fun launchExpanded(): ActivityScenario<ContentHandler> = launch().also {
+        it.awaitCollapsed()
+        it.onActivity { a -> a.playerSheet.expand(true) }
+        it.awaitExpanded()
+    }
+
     @Test
-    fun startsAsTheCard() {
+    fun coldOpenStartsAsTheCapsule() {
         launch().use { s ->
-            assertThat(s.vis(R.id.playerUi)).isEqualTo(View.VISIBLE)
-            assertThat(s.vis(R.id.playerCapsule)).isEqualTo(View.GONE)
+            s.awaitCollapsed()
+            assertThat(s.vis(R.id.playerUi)).isEqualTo(View.GONE)
+            assertThat(s.vis(R.id.playerCapsule)).isEqualTo(View.VISIBLE)
+            assertThat(s.vis(R.id.capsuleNote)).isEqualTo(View.VISIBLE)
+        }
+    }
+
+    @Test
+    fun expandedCardStartsWithTheHandleAndSurvivesRecreation() {
+        launchExpanded().use { s ->
             assertThat(s.vis(R.id.sheet_handle)).isEqualTo(View.VISIBLE)
+            s.recreate()
+            s.awaitPage()
+            s.awaitExpanded()
         }
     }
 
     @Test
     fun collapseButtonShowsTheCapsuleAndNoteExpands() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
             assertThat(s.vis(R.id.capsuleNote)).isEqualTo(View.VISIBLE)
@@ -125,7 +143,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun capsuleTapOnTheNoteWithARealTouchExpands() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
             val c = centre(s, R.id.capsuleNote)
@@ -136,7 +154,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun playingCapsuleHasPlayKeyAndExpandArea() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             val ctl = playing(s)
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
@@ -162,7 +180,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun dragFromTheHandleCollapses() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             val h = centre(s, R.id.sheet_handle)
             val height = s.read { it.findViewById<View>(R.id.playerUi).height }
             drag(h[0], h[1], 0, height / 2)
@@ -172,7 +190,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun shortDragSpringsBack() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             val h = centre(s, R.id.sheet_handle)
             val height = s.read { it.findViewById<View>(R.id.playerUi).height }
             drag(h[0], h[1], 0, height / 8)
@@ -182,7 +200,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun dragFromTheProgressBarDoesNotCollapse() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             val bar = centre(s, R.id.playback_seekbar)
             val height = s.read { it.findViewById<View>(R.id.playerUi).height }
             drag(bar[0], bar[1], 0, height / 2)
@@ -193,7 +211,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun upwardDragOnTheCapsuleExpands() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
             val c = centre(s, R.id.playerCapsule)
@@ -204,7 +222,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun changingHymnKeepsTheCapsuleAndTurnsItIntoTheNote() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.onActivity { it.setChromeHeld(true) }
             val ctl = playing(s)
             s.click(R.id.btn_player_collapse)
@@ -221,7 +239,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun portraitCollapsedStaysCollapsedAfterLandscape() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
             rotate(s, landscape = true)
@@ -236,7 +254,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun portraitExpandedShowsTheCapsuleInLandscapeAndComesBack() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             rotate(s, landscape = true)
             s.awaitCollapsed()
             rotate(s, landscape = false)
@@ -246,7 +264,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun hidingThePlayerBarHidesBothAndShowingRestoresTheForm() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
             s.onActivity { it.onLyricsAction(R.id.menutoggle) }
@@ -269,7 +287,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun everyBuiltPageFollowsTheBottomPaddingFormula() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.onActivity { it.setChromeHeld(true) }
             fun expectedAndActual(): List<Pair<Int, Int>> = s.read { a ->
                 val reserve = a.playerReserve
@@ -294,7 +312,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun lyricsScrollAboveTheCapsule() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
             s.onActivity { page(it)!!.findViewById<ScrollView>(R.id.lyrics_scroll).fullScroll(View.FOCUS_DOWN) }
@@ -312,7 +330,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun buttonsCarryContentDescriptions() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             assertThat(s.id(R.id.btn_player_collapse).contentDescription.toString()).isEqualTo(ctx.getString(R.string.c_player_collapse))
             assertThat(s.id(R.id.capsuleNote).contentDescription.toString()).isEqualTo(ctx.getString(R.string.c_player_expand))
             assertThat(s.id(R.id.capsuleExpand).contentDescription.toString()).isEqualTo(ctx.getString(R.string.c_player_expand))
@@ -323,7 +341,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
 
     @Test
     fun stateSurvivesRecreation() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
             s.awaitCollapsed()
             s.recreate()

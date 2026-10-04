@@ -14,7 +14,7 @@ enum class CapsuleForm { NOTE, PLAYBACK }
  */
 data class PlayerSheetState(
     val userHidden: Boolean = false,
-    val collapsed: Boolean = false,
+    val collapsed: Boolean = true,
     val landscapeExpanded: Boolean = false,
 ) {
     /** What to show. A playing video owns the layer, so the card and the capsule give way to it. */

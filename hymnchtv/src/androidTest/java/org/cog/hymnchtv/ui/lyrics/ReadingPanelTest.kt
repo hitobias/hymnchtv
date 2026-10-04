@@ -60,6 +60,7 @@ class ReadingPanelTest : LyricsTestBase() {
     }
 
     private fun androidx.test.core.app.ActivityScenario<org.cog.hymnchtv.ContentHandler>.openPanel() {
+        revealChrome()
         onActivity { it.setChromeHeld(true); it.showReadingPanel() }
         instrumentation.waitForIdleSync()
         onView(withId(R.id.aa_size_slider)).check(matches(isDisplayed()))
@@ -83,6 +84,7 @@ class ReadingPanelTest : LyricsTestBase() {
     @Test
     fun aaButtonOpensThePanel() {
         launch().use { s ->
+            s.revealChrome()
             s.onActivity { it.setChromeHeld(true) }
             onView(withId(R.id.btn_aa)).perform(click())
             onView(withId(R.id.aa_size_slider)).check(matches(isDisplayed()))

@@ -73,6 +73,7 @@ class PlaybackStopsOnHymnChangeTest : LyricsTestBase() {
     @Test
     fun nextButtonStopsPlaybackAndResetsTheBar() {
         launch().use { s ->
+            s.revealChrome()
             s.onActivity { it.setChromeHeld(true) }
             val ctl = playing(s)
             val before = s.item()

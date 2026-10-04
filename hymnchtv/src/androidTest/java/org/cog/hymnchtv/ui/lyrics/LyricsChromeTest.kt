@@ -13,7 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Visual redesign 6c: toolbar auto-hide, centre tap, inset, page hand-over, TalkBack. Real touches, real 3 s / 4 s timers. */
+/** Visual redesign 6c: toolbar auto-hide, centre tap, inset, page hand-over, TalkBack. Real touches; the idle timer is a fake clock. Hymns open with the bars hidden. */
 @RunWith(AndroidJUnit4::class)
 class LyricsChromeTest : LyricsTestBase() {
     private val prefs get() = ctx.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
@@ -31,14 +31,12 @@ class LyricsChromeTest : LyricsTestBase() {
     private fun dp(value: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), ctx.resources.displayMetrics).toInt()
 
     @Test
-    fun startsShownThenFadesAndRecordsTheHint() {
+    fun opensWithBothBarsHiddenAndRecordsTheHint() {
         launch().use { s ->
-            assertThat(s.topBarShown()).isTrue()
-            assertThat(s.buttonBarShown()).isTrue()
-            s.advance(2_999)
-            assertThat(s.topBarShown()).isTrue()
-            s.hide()
+            assertThat(s.topBarShown()).isFalse()
             assertThat(s.buttonBarShown()).isFalse()
+            s.advance(60_000)
+            assertThat(s.topBarShown()).isFalse()
             assertThat(prefs.getBoolean(LyricsChromeHint.PREF_KEY, false)).isTrue()
         }
     }
@@ -46,16 +44,14 @@ class LyricsChromeTest : LyricsTestBase() {
     private fun topBarShownIn(a: org.cog.hymnchtv.ContentHandler) =
         page(a)!!.findViewById<View>(R.id.lyrics_top_bar).visibility == View.VISIBLE
 
-    /** The opening 3 s pass; the fade itself runs for real (150 ms). */
     private fun androidx.test.core.app.ActivityScenario<org.cog.hymnchtv.ContentHandler>.hide() {
-        advance(3_000)
+        advance(4_000)
         await("fade", 6_000) { !topBarShownIn(it) }
     }
 
     @Test
     fun centreTapShowsAndAnEdgeTapDoesNot() {
         launch().use { s ->
-            s.hide()
             val edge = s.hostPoint(0.05f, 0.5f)
             tap(edge[0], edge[1])
             assertThat(s.topBarShown()).isFalse()
@@ -77,6 +73,7 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun centreTapWhileShownHidesAtOnce() {
         launch().use { s ->
+            s.revealChrome()
             val c = s.hostPoint(0.5f, 0.5f)
             tap(c[0], c[1])
             assertThat(s.topBarShown()).isFalse()
@@ -86,7 +83,6 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun longPressDoesNotToggle() {
         launch().use { s ->
-            s.hide()
             val c = s.hostPoint(0.5f, 0.5f)
             tap(c[0], c[1], holdMs = 700)
             assertThat(s.topBarShown()).isFalse()
@@ -96,7 +92,6 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun scrollAndSwipeDoNotToggle() {
         launch().use { s ->
-            s.hide()
             val c = s.hostPoint(0.5f, 0.5f)
             drag(c[0], c[1], 0, -(s.hostPoint(0.5f, 0.5f)[1] / 2))
             assertThat(s.topBarShown()).isFalse()
@@ -112,9 +107,8 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun newPageFollowsTheCurrentState() {
         launch().use { s ->
-            s.hide()
             val c = s.hostPoint(0.5f, 0.5f)
-            tap(c[0], c[1])   // shown again
+            tap(c[0], c[1])   // shown
             val w = s.hostPoint(1f, 0.5f)[0] - s.hostPoint(0f, 0.5f)[0]
             val start = s.item()
             drag(c[0] + w * 2 / 5, c[1], -(w * 17 / 20), 0)   // long enough to pass the half-page mark even after the pager takes over late
@@ -128,14 +122,17 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun playerCardIsNotPartOfTheAutoHide() {
         launch().use { s ->
+            s.revealChrome()
             s.hide()
-            assertThat(s.read { it.findViewById<View>(R.id.playerUi).visibility }).isEqualTo(View.VISIBLE)
+            // the card (here the collapsed capsule) stays put whatever the toolbars do
+            assertThat(s.read { it.findViewById<View>(R.id.playerCapsule).visibility }).isEqualTo(View.VISIBLE)
         }
     }
 
     @Test
     fun touchExplorationKeepsEverythingShown() {
         launch().use { s ->
+            assertThat(s.topBarShown()).isFalse()
             s.onActivity { it.setChromeAlwaysVisible(true) }
             s.advance(60_000)
             assertThat(s.topBarShown()).isTrue()
@@ -149,6 +146,7 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun heldWhileTheOverflowMenuStaysOpenIsRepresentedByTheHold() {
         launch().use { s ->
+            s.revealChrome()
             s.onActivity { it.setChromeHeld(true) }
             s.advance(60_000)
             assertThat(s.topBarShown()).isTrue()
@@ -161,7 +159,12 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun lyricsPaddingFollowsTheOverlays() {
         launch().use { s ->
-            s.onActivity { it.setChromeHeld(true) }   // measure while shown, whatever the launch took
+            // hidden on open: no top padding and no button bar in the bottom padding
+            val extra0 = dp(8) + s.read { it.playerReserve + it.systemBottomInset }
+            assertThat(s.scroll().paddingTop).isEqualTo(0)
+            assertThat(s.scroll().paddingBottom).isEqualTo(extra0)
+            s.revealChrome()
+            s.onActivity { it.setChromeHeld(true) }
             // The player layer floats over the pager: its reserve and the system bottom inset are part of the padding
             val extra = dp(8) + s.read { it.playerReserve + it.systemBottomInset }
             // shown
@@ -180,6 +183,7 @@ class LyricsChromeTest : LyricsTestBase() {
     @Test
     fun topBarHasSixEqualButtonsAtAnyWidth() {
         launch().use { s ->
+            s.revealChrome()
             val bar = s.pageView(R.id.lyrics_top_bar) as android.view.ViewGroup
             assertThat(bar.childCount).isEqualTo(6)
             val widths = (0 until 6).map { bar.getChildAt(it).width }

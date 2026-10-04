@@ -1,6 +1,6 @@
 package org.cog.hymnchtv.ui.lyrics
 
-/** Delayed callbacks for [ChromeController]; a fake one makes the 3 s / 4 s rules testable without waiting. */
+/** Delayed callbacks for [ChromeController]; a fake one makes the idle-hide rule testable without waiting. */
 interface ChromeTimer {
     /** @return a token for [cancel] */
     fun postDelayed(delayMs: Long, action: Runnable): Any
@@ -12,14 +12,14 @@ interface ChromeTimer {
  * Show/hide state of the lyrics page toolbars (top bar and the three buttons under it), plan 6c.
  * One instance per lyrics activity; the pages only follow [onVisibilityChanged]. The play card never takes part.
  *
- * Rules: opening fades after [INITIAL_VISIBLE_MS]; a centre tap toggles; shown, it fades after [IDLE_HIDE_MS]
+ * Rules: opening starts with the toolbars hidden (lyrics only); a centre tap toggles; shown, it fades after [IDLE_HIDE_MS]
  * without interaction; held (Aa sheet or overflow menu open) it stays; always visible while TalkBack is on.
  */
 class ChromeController(
     private val timer: ChromeTimer,
     private val onVisibilityChanged: (visible: Boolean) -> Unit,
 ) {
-    var isVisible: Boolean = true
+    var isVisible: Boolean = false
         private set
 
     private var held = false
@@ -27,10 +27,11 @@ class ChromeController(
     private var pending: Any? = null
     private var released = false
 
-    /** The screen opens with the toolbars shown, then they fade. */
+    /** The screen opens with the toolbars hidden: nothing is shown and no timer runs (TalkBack keeps them visible). */
     fun start() {
         if (released) return
-        scheduleHide(INITIAL_VISIBLE_MS)
+        cancelPending()
+        if (alwaysVisible) show()
     }
 
     /** After recreation (rotation, theme change): keep what the reader had, without replaying the opening. */
@@ -106,7 +107,6 @@ class ChromeController(
     }
 
     companion object {
-        const val INITIAL_VISIBLE_MS = 3_000L
         const val IDLE_HIDE_MS = 4_000L
     }
 }

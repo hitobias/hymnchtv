@@ -280,7 +280,7 @@ public class ContentHandler extends BaseActivity {
     private static final String STATE_PLAYER_HIDDEN = "state_player_hidden"; // player bar hidden from the overflow menu
     private static final String STATE_PLAYER_COLLAPSED = "state_player_collapsed"; // portrait: capsule instead of the card
 
-    /** Tests install a manual timer here so the 3 s / 4 s fades do not depend on emulator speed; null in production. */
+    /** Tests install a manual timer here so the idle-hide fade does not depend on emulator speed; null in production. */
     @VisibleForTesting
     public static org.cog.hymnchtv.ui.lyrics.ChromeTimer sChromeTimerForTest = null;
 
@@ -332,10 +332,10 @@ public class ContentHandler extends BaseActivity {
         setContentView(R.layout.content_main);
         // The background runs behind the status and navigation bars; the layers keep clear of them (LyricsWindowInsets)
         SystemBars.enable(this);
-        // Cold start: the "show the player by default" setting decides; a recreation restores the saved choice
+        // Cold start: the "show the player by default" setting decides, and the card starts collapsed as the capsule; a recreation restores the saved choice
         SharedPreferences settings = getSharedPreferences(PREF_SETTINGS, 0);
         PlayerSheetState sheetState = savedInstanceState == null
-                ? new PlayerSheetState(!settings.getBoolean(PREF_MENU_SHOW, true), false, false)
+                ? new PlayerSheetState(!settings.getBoolean(PREF_MENU_SHOW, true), true, false)
                 : new PlayerSheetState(savedInstanceState.getBoolean(STATE_PLAYER_HIDDEN, false),
                         savedInstanceState.getBoolean(STATE_PLAYER_COLLAPSED, false), false);
         mPlayerSheet = new PlayerSheetController(findViewById(R.id.mediaPlayer), findViewById(R.id.playerCapsule),
