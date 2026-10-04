@@ -44,7 +44,7 @@
     <string name="c_open">Open</string>
     <string name="c_label_no">No. %1$d</string>
     <string name="c_label_fu">Appx. %1$d</string>
-    <string name="c_preview_empty">Pick a book and type a number</string>
+    <string name="c_preview_empty">Pick a book, type a number</string>
     <string name="c_preview_invalid">%1$s has no No. %2$s</string>
     <string name="c_preview_invalid_fu">%1$s has no Appx. %2$s</string>
     <string name="c_preview_also">Also found in:</string>

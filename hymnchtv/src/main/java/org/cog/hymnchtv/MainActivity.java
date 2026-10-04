@@ -19,6 +19,7 @@ package org.cog.hymnchtv;
 import static org.cog.hymnchtv.utils.HymnNoValidate.HYMN_BB_DUMMY;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -60,6 +61,7 @@ import org.cog.hymnchtv.toc.YbCrossRef;
 import org.cog.hymnchtv.ui.host.MainChrome;
 import org.cog.hymnchtv.ui.host.MainHost;
 import org.cog.hymnchtv.ui.host.MainNavigator;
+import org.cog.hymnchtv.ui.motion.Motion;
 import org.cog.hymnchtv.utils.DialogActivity;
 
 import de.cketti.library.changelog.ChangeLog;
@@ -131,6 +133,7 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         // DayNight is applied globally by HymnsApp (ThemePrefs.applyStored)
         super.onCreate(savedInstanceState);
         org.cog.hymnchtv.ui.theme.SystemBars.enable(this);
+        Motion.applyHostWindow(getWindow(), this);
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 
         setContentView(R.layout.activity_main_host);
@@ -330,6 +333,18 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
      * @param engNo optional english hymn no to show if present
      */
     public static void showContent(Context ctx, String hymnType, int hymnNo, boolean autoPlay, Integer... engNo) {
+        showContent(ctx, hymnType, hymnNo, autoPlay, engNo.length == 0 ? -1 : engNo[0], null);
+    }
+
+    /**
+     * Same as above, from an activity: the page opens with a fade, and with the hymn number flying from
+     * {@code sharedNumber} (the home preview) when it is given; see Motion.
+     */
+    public static void showContent(Activity activity, String hymnType, int hymnNo, boolean autoPlay, int engNo, View sharedNumber) {
+        showContent((Context) activity, hymnType, hymnNo, autoPlay, engNo, sharedNumber);
+    }
+
+    private static void showContent(Context ctx, String hymnType, int hymnNo, boolean autoPlay, int engNo, View sharedNumber) {
         // Save the user selection into history record; the title lookup reads assets, so both run off the main thread
         if (HYMN_BB_DUMMY != hymnNo) {
             boolean isFu = MediaRecord.isFu(hymnType, hymnNo);
@@ -343,10 +358,12 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         bundle.putString(ATTR_HYMN_TYPE, hymnType);
         bundle.putInt(ATTR_HYMN_NUMBER, hymnNo);
         bundle.putBoolean(ATTR_AUTO_PLAY, autoPlay);
-        bundle.putInt(ATTR_ENGLISH_NO, engNo.length == 0 ? -1 : engNo[0]);
+        bundle.putInt(ATTR_ENGLISH_NO, engNo);
+        bundle.putBoolean(Motion.EXTRA_SHARED_NUMBER, sharedNumber != null && Motion.enabled(ctx));
 
         intent.putExtras(bundle);
-        ctx.startActivity(intent);
+        Bundle options = ctx instanceof Activity ? Motion.contentOptions((Activity) ctx, sharedNumber) : null;
+        ctx.startActivity(intent, options);
     }
 
     public static String getHymnType(String hymnTN) {

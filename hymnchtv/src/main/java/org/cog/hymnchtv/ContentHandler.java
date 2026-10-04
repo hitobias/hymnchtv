@@ -130,6 +130,8 @@ import org.cog.hymnchtv.ui.lyrics.ReadingPanelSheet;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
 import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
 import org.cog.hymnchtv.ui.lyrics.LyricsWindowInsets;
+import org.cog.hymnchtv.ui.motion.Motion;
+import org.cog.hymnchtv.ui.motion.SharedNumberStarter;
 import org.cog.hymnchtv.ui.player.PlaybackUiListener;
 import org.cog.hymnchtv.ui.player.GlassPolicy;
 import org.cog.hymnchtv.ui.player.PlayerSheetCallbacks;
@@ -434,6 +436,44 @@ public class ContentHandler extends BaseActivity {
 
         mPager.registerOnPageChangeCallback(initOnPageChangeCallback());
         getOnBackPressedDispatcher().addCallback(backPressedCallback);
+        setupEnterMotion(savedInstanceState != null);
+    }
+
+    /**
+     * Fade in and out; when opened from the home preview, the pager page is not shown until its header number has a
+     * place to land (or 300 ms passed), so the shared element starts from the right bounds.
+     */
+    private void setupEnterMotion(boolean restored) {
+        Motion.applyContentWindow(getWindow(), this);
+        if (restored || !Motion.enabled(this) || !getIntent().getBooleanExtra(Motion.EXTRA_SHARED_NUMBER, false)) {
+            return;
+        }
+        postponeEnterTransition();
+        new SharedNumberStarter(getWindow().getDecorView(), this::placeSharedNumber, () -> {
+            startPostponedEnterTransition();
+            return kotlin.Unit.INSTANCE;
+        },
+                Motion.POSTPONE_TIMEOUT_MS);
+    }
+
+    private ContentView currentContentView() {
+        Fragment page = mPagerAdapter == null ? null : mPagerAdapter.mFragments.get(mPager.getCurrentItem());
+        return page instanceof ContentView ? (ContentView) page : null;
+    }
+
+    private boolean placeSharedNumber() {
+        ContentView page = currentContentView();
+        return page != null && page.placeNumberAnchor();
+    }
+
+    /** The shared number only flies in; going back is a plain fade, the hymn may have changed meanwhile. */
+    @Override
+    public void finishAfterTransition() {
+        ContentView page = currentContentView();
+        if (page != null) {
+            page.clearNumberAnchor();
+        }
+        super.finishAfterTransition();
     }
 
     @Override

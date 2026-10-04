@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.host
 
+import org.cog.hymnchtv.ui.motion.Motion
 import android.content.Context
 import android.os.Bundle
 import android.os.SystemClock
@@ -114,7 +115,7 @@ class MainHost(private val activity: AppCompatActivity) {
     private fun showFullPage(fragment: Fragment, tag: String) {
         // Overlays only open from home; whatever is open closes first so the page replaces the home page itself
         popAll()
-        fm.beginTransaction().setReorderingAllowed(true)
+        Motion.fadeThrough(fm.beginTransaction(), activity).setReorderingAllowed(true)
             .replace(R.id.fragment_container, fragment, tag)
             .addToBackStack(tag)
             .commit()

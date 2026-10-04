@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fade-through, second half: the new page fades in after the old one is gone (90 ms + 110 ms = 200 ms) -->
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="110"
+    android:propertyName="alpha"
+    android:startOffset="90"
+    android:valueFrom="0"
+    android:valueTo="1"
+    android:valueType="floatType" />

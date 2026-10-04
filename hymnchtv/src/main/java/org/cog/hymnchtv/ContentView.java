@@ -32,19 +32,23 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.text.Layout;
 import android.text.TextUtils;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
@@ -53,6 +57,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
 
 import java.io.BufferedReader;
@@ -93,6 +98,7 @@ import org.cog.hymnchtv.ui.lyrics.LyricsMeta;
 import org.cog.hymnchtv.ui.lyrics.LyricsStyle;
 import org.cog.hymnchtv.ui.lyrics.LyricsTypography;
 import org.cog.hymnchtv.ui.lyrics.LyricsPadding;
+import org.cog.hymnchtv.ui.motion.Motion;
 import org.cog.hymnchtv.utils.NestedScrollableHost;
 import org.cog.hymnchtv.utils.ZoomTextView;
 import org.jetbrains.annotations.NotNull;
@@ -312,8 +318,51 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     }
 
     /** The "more" button of the top bar: the entries that have no button of their own. */
+    /**
+     * Puts the transparent shared-element target over the header number (line 0 of the lyrics text) and names it for the
+     * home to lyrics transition. Returns true once the target sits where the number is drawn.
+     */
+    public boolean placeNumberAnchor() {
+        View anchor = mConvertView == null ? null : mConvertView.findViewById(R.id.lyrics_number_anchor);
+        TextView text = isShowTraditional() ? lyricsTraditional : lyricsSimplify;
+        if (anchor == null || text == null || text.getLayout() == null || text.getLayout().getLineCount() == 0
+                || text.getVisibility() != View.VISIBLE) {
+            return false;
+        }
+        Layout layout = text.getLayout();
+        Rect line = new Rect();
+        layout.getLineBounds(0, line);
+        int[] textAt = new int[2];
+        int[] frameAt = new int[2];
+        text.getLocationInWindow(textAt);
+        mConvertView.getLocationInWindow(frameAt);
+        int width = Math.max(1, (int) Math.ceil(layout.getLineWidth(0)));
+        int height = Math.max(1, line.height());
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) anchor.getLayoutParams();
+        int left = textAt[0] - frameAt[0] + text.getTotalPaddingLeft() + (int) layout.getLineLeft(0);
+        int top = textAt[1] - frameAt[1] + text.getTotalPaddingTop() + line.top;
+        boolean placed = lp.width == width && lp.height == height && lp.leftMargin == left && lp.topMargin == top;
+        if (!placed) {
+            lp.width = width;
+            lp.height = height;
+            lp.leftMargin = left;
+            lp.topMargin = top;
+            anchor.setLayoutParams(lp);
+            return false;
+        }
+        ViewCompat.setTransitionName(anchor, Motion.SHARED_NUMBER);
+        return true;
+    }
+
+    public void clearNumberAnchor() {
+        View anchor = mConvertView == null ? null : mConvertView.findViewById(R.id.lyrics_number_anchor);
+        if (anchor != null) {
+            ViewCompat.setTransitionName(anchor, null);
+        }
+    }
+
     private void showMoreMenu(View anchor) {
-        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        PopupMenu popup = new PopupMenu(new ContextThemeWrapper(requireContext(), R.style.ThemeOverlay_Hymnal_LyricsMenu), anchor);
         popup.inflate(R.menu.menu_lyrics_more);
         // Hide the English entries if there are no associated English lyrics
         popup.getMenu().findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);

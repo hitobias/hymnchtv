@@ -77,7 +77,7 @@
                 android:paddingStart="16dp"
                 android:paddingTop="6dp"
                 android:paddingEnd="16dp"
-                android:textSize="16sp"
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -114,6 +114,13 @@
         </LinearLayout>
     </ScrollView>
     </org.cog.hymnchtv.utils.NestedScrollableHost>
+
+    <!-- Transparent landing spot of the hymn number shared element (home to lyrics); ContentView.placeNumberAnchor sizes it over the header number -->
+    <View
+        android:id="@+id/lyrics_number_anchor"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:importantForAccessibility="no" />
 
     <!-- Six buttons at any width (6 x 48dp fits 320dp); A-/A+ moved into the Aa panel, tint into the overflow -->
     <LinearLayout
@@ -170,7 +177,7 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:contentDescription="@string/c_lyrics_more"
-            android:src="@drawable/ic_lyrics_more" />
+            android:src="@drawable/ic_sym_more_vert" />
     </LinearLayout>
 
     <!-- Same height and style as the top bar buttons; three equal columns, one line each, also at 320dp -->

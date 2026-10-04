@@ -10,6 +10,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import org.cog.hymnchtv.MainActivity
+import org.cog.hymnchtv.ui.motion.Motion
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.hymn.HymnSource
@@ -63,6 +64,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
         super.onViewCreated(view, savedInstanceState)
         val views = HymnPickerViews(view)
         this.views = views
+        // The preview number is the source of the shared element into the lyrics page (Motion)
+        ViewCompat.setTransitionName(views.entry, Motion.SHARED_NUMBER)
         val recent = RecentChips(views, ::openFromHistory)
         this.recent = recent
         keypadSizer = KeypadSizer(views, view.findViewById(R.id.viewMain), recent).also { it.attach() }
@@ -152,13 +155,13 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
 
     // ---- PickerHost ----
 
-    override fun onOpenRef(ref: HymnRef, englishNo: Int?) {
+    override fun onOpenRef(ref: HymnRef, englishNo: Int?) = openRef(ref, englishNo, shareNumber = true)
+
+    /** [shareNumber]: the preview shows the hymn being opened, so its number may fly into the lyrics page header. */
+    private fun openRef(ref: HymnRef, englishNo: Int?, shareNumber: Boolean) {
         MainActivity.setHymnTypeNo(ref.book, ref.storedNo)
-        if (englishNo == null) {
-            MainActivity.showContent(requireContext(), ref.book, ref.storedNo, false)
-        } else {
-            MainActivity.showContent(requireContext(), ref.book, ref.storedNo, false, englishNo)
-        }
+        val number = if (shareNumber) views?.entry else null
+        MainActivity.showContent(requireActivity(), ref.book, ref.storedNo, false, englishNo ?: -1, number)
     }
 
     override fun openSearch(book: String?) {
@@ -180,6 +183,6 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
         val ref = HistoryActions.refOf(record)
         val source = HymnSource.ofBook(ref.book) ?: return
         controller?.show(PickerState(source = source, digits = ref.displayNo.toString(), isFu = ref.isFu))
-        onOpenRef(ref, null)
+        openRef(ref, null, shareNumber = false)
     }
 }
