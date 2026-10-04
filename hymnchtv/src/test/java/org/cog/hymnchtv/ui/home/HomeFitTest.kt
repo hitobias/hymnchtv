@@ -2,6 +2,7 @@ package org.cog.hymnchtv.ui.home
 
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import org.cog.hymnchtv.ui.picker.KeypadMetrics
 import org.junit.Test
 
 /** The one-page home plan: how many recent rows and how tall the keys are for a given height. */
@@ -197,7 +198,9 @@ class HomeFitTest {
     }
 
     @Test fun theHeaderWithTheHistoryEntryIsAlwaysPartOfTheBase() {
-        val exact = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP
+        // Keys may shrink to the floor before anything scrolls; the 48dp header still counts at that point
+        val floorKeypad = HomeFit.KEYPAD_MIN_DP - KeypadMetrics.ROWS * (KeypadMetrics.MIN_KEY_DP - HomeFit.MIN_KEY_FLOOR_DP)
+        val exact = FIXED + 48f + floorKeypad + HomeFit.SAFETY_DP
         assertThat(plan(available = exact, recent = 0).scrollable).isFalse()
         assertThat(plan(available = exact - 1f, recent = 0).scrollable).isTrue()
     }
