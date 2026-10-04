@@ -58,7 +58,13 @@ class LyricsChromeHost(
     fun start(restoredVisible: Boolean?) {
         accessibility?.addTouchExplorationStateChangeListener(touchExplorationListener)
         controller.setAlwaysVisible(accessibility?.isTouchExplorationEnabled == true)
-        if (restoredVisible == null) controller.start() else controller.restore(restoredVisible)
+        if (restoredVisible == null) {
+            controller.start()
+            if (!controller.isVisible) showHintOnce() // opened with lyrics only: tell the reader once how to bring the toolbars back
+        }
+        else {
+            controller.restore(restoredVisible)
+        }
     }
 
     fun stop() {
@@ -91,7 +97,11 @@ class LyricsChromeHost(
     private fun dispatch(visible: Boolean) {
         pages.removeAll { it.get() == null }
         pages.forEach { it.get()?.setChromeVisible(visible, true) }
-        if (!visible && accessibility?.isTouchExplorationEnabled != true && LyricsChromeHint.shouldShow(prefs)) {
+        if (!visible) showHintOnce()
+    }
+
+    private fun showHintOnce() {
+        if (accessibility?.isTouchExplorationEnabled != true && LyricsChromeHint.shouldShow(prefs)) {
             LyricsChromeHint.markShown(prefs)
             Toast.makeText(context, R.string.c_chrome_hint, Toast.LENGTH_LONG).show()
         }

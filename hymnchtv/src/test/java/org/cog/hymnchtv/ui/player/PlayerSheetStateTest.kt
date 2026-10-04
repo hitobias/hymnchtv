@@ -4,10 +4,19 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 class PlayerSheetStateTest {
-    private val start = PlayerSheetState()
+    private val start = PlayerSheetState(collapsed = false)
 
     @Test
-    fun startsExpandedInPortrait() {
+    fun defaultStartsCollapsedAsTheCapsule() {
+        val fresh = PlayerSheetState()
+        assertThat(fresh.collapsed).isTrue()
+        assertThat(fresh.userHidden).isFalse()
+        assertThat(fresh.display(portrait = true)).isEqualTo(SheetDisplay.CAPSULE)
+        assertThat(fresh.expand(portrait = true).display(true)).isEqualTo(SheetDisplay.CARD)
+    }
+
+    @Test
+    fun expandedStateShowsTheCardInPortrait() {
         assertThat(start.display(portrait = true)).isEqualTo(SheetDisplay.CARD)
     }
 

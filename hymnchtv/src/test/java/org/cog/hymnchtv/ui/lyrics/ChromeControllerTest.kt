@@ -15,41 +15,45 @@ class ChromeControllerTest {
         chrome = ChromeController(timer) { changes += it }
     }
 
+    private fun showFor(chromeUnderTest: ChromeController = chrome) {
+        chromeUnderTest.start()
+        chromeUnderTest.toggle()
+    }
+
     @Test
-    fun startsVisibleAndFadesAfterThreeSeconds() {
+    fun startsHiddenWithNoTimerAndNoCallback() {
         chrome.start()
-        assertThat(chrome.isVisible).isTrue()
-        timer.advance(2_999)
-        assertThat(chrome.isVisible).isTrue()
-        timer.advance(1)
         assertThat(chrome.isVisible).isFalse()
-        assertThat(changes).containsExactly(false)
+        assertThat(timer.pendingCount).isEqualTo(0)
+        timer.advance(60_000)
+        assertThat(chrome.isVisible).isFalse()
+        assertThat(changes).isEmpty()
     }
 
     @Test
     fun centreTapShowsThenHidesAfterFourSeconds() {
         chrome.start()
-        timer.advance(3_000)
         chrome.toggle()
         assertThat(chrome.isVisible).isTrue()
         timer.advance(3_999)
         assertThat(chrome.isVisible).isTrue()
         timer.advance(1)
         assertThat(chrome.isVisible).isFalse()
+        assertThat(changes).containsExactly(true, false).inOrder()
     }
 
     @Test
     fun toggleWhileVisibleHidesAtOnceAndCancelsTheTimer() {
-        chrome.start()
+        showFor()
         chrome.toggle()
         assertThat(chrome.isVisible).isFalse()
         timer.advance(10_000)
-        assertThat(changes).containsExactly(false)
+        assertThat(changes).containsExactly(true, false).inOrder()
     }
 
     @Test
     fun interactionRestartsTheFourSecondTimer() {
-        chrome.start()
+        showFor()
         timer.advance(2_000)
         chrome.onInteraction()
         timer.advance(3_999)
@@ -61,14 +65,13 @@ class ChromeControllerTest {
     @Test
     fun interactionWhileHiddenDoesNotShow() {
         chrome.start()
-        timer.advance(3_000)
         chrome.onInteraction()
         assertThat(chrome.isVisible).isFalse()
     }
 
     @Test
     fun heldWhileASheetOrMenuIsOpenThenRestartsOnRelease() {
-        chrome.start()
+        showFor()
         chrome.setHeld(true)
         timer.advance(60_000)
         assertThat(chrome.isVisible).isTrue()
@@ -82,7 +85,6 @@ class ChromeControllerTest {
     @Test
     fun releasingTheHoldWhileHiddenStaysHidden() {
         chrome.start()
-        timer.advance(3_000)
         chrome.setHeld(true)
         chrome.setHeld(false)
         assertThat(chrome.isVisible).isFalse()
@@ -92,6 +94,7 @@ class ChromeControllerTest {
     fun touchExplorationKeepsEverythingVisible() {
         chrome.start()
         chrome.setAlwaysVisible(true)
+        assertThat(chrome.isVisible).isTrue()
         timer.advance(60_000)
         assertThat(chrome.isVisible).isTrue()
         chrome.toggle()
@@ -99,26 +102,30 @@ class ChromeControllerTest {
     }
 
     @Test
-    fun touchExplorationShowsWhatWasHiddenAndLeavingItRestartsTheTimer() {
-        chrome.start()
-        timer.advance(3_000)
+    fun touchExplorationOnBeforeStartStillOpensVisible() {
         chrome.setAlwaysVisible(true)
+        chrome.start()
+        timer.advance(60_000)
         assertThat(chrome.isVisible).isTrue()
+    }
+
+    @Test
+    fun leavingTouchExplorationRestartsTheTimer() {
+        chrome.start()
+        chrome.setAlwaysVisible(true)
         chrome.setAlwaysVisible(false)
-        timer.advance(4_000)
+        timer.advance(3_999)
+        assertThat(chrome.isVisible).isTrue()
+        timer.advance(1)
         assertThat(chrome.isVisible).isFalse()
     }
 
     @Test
-    fun startTwiceDoesNotStackTimers() {
+    fun startTwiceStaysHiddenWithoutTimers() {
         chrome.start()
-        timer.advance(1_000)
         chrome.start()
-        timer.advance(2_999)
-        assertThat(chrome.isVisible).isTrue()
-        timer.advance(1)
         assertThat(chrome.isVisible).isFalse()
-        assertThat(changes).containsExactly(false)
+        assertThat(timer.pendingCount).isEqualTo(0)
     }
 
     @Test
@@ -132,6 +139,7 @@ class ChromeControllerTest {
     @Test
     fun restoringVisibleStartsTheFourSecondTimer() {
         chrome.restore(visible = true)
+        assertThat(chrome.isVisible).isTrue()
         timer.advance(3_999)
         assertThat(chrome.isVisible).isTrue()
         timer.advance(1)
@@ -140,7 +148,7 @@ class ChromeControllerTest {
 
     @Test
     fun afterReleaseNothingIsScheduledAgain() {
-        chrome.start()
+        showFor()
         chrome.setHeld(true)
         chrome.release()
         chrome.setHeld(false) // the Aa sheet or menu is dismissed after the activity is gone

@@ -158,7 +158,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private View topBar;
     private View buttonBar;
     private ScrollView lyricsScroll;
-    private boolean mChromeVisible = true;
+    private boolean mChromeVisible = false; // lyrics only on open; the bars start hidden
     private View lyricsView;
     private View scoreContainer;
     private ZoomTextView lyricsSimplify;
