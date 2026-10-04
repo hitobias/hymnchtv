@@ -52,7 +52,7 @@ class HomeLayoutTest {
         }
     }
 
-    @Test fun everyTouchTargetIsAtLeast48dp() {
+    @Test fun everyTouchTargetIsAtLeast48dpAndKeysAtLeast40dp() {
         PickerTestSupport.resetHistory(HistoryRecord(HymnTypes.DB, 1, false, "標題", 1L))
         PickerTestSupport.launch { scenario ->
             FragmentHost.eventually {
@@ -62,14 +62,16 @@ class HomeLayoutTest {
                 val min = 48 * a.resources.displayMetrics.density - 1
                 val chips = a.findViewById<android.widget.LinearLayout>(R.id.recent_chips)
                 val views: List<View> = fixedIds.map { a.findViewById<View>(it) } + listOf(chips.getChildAt(0), a.findViewById<View>(R.id.btn_recent_more))
+                val keyMin = 40 * a.resources.displayMetrics.density - 1
+                val keyIds = setOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5, R.id.n6, R.id.n7, R.id.n8, R.id.n9, R.id.n10, R.id.n11)
                 views.forEach { v ->
-                    assertWithMessage("${v.javaClass.simpleName} ${v.id}").that(v.height.toFloat()).isAtLeast(min)
+                    assertWithMessage("${v.javaClass.simpleName} ${v.id}").that(v.height.toFloat()).isAtLeast(if (v.id in keyIds) keyMin else min)
                 }
             }
         }
     }
 
-    @Test fun bookCellsAre52dpHighAndKeysAtLeast48() {
+    @Test fun bookCellsAre52dpHighAndKeysAtLeast40() {
         PickerTestSupport.launch { scenario ->
             scenario.onActivity { a ->
                 val d = a.resources.displayMetrics.density
@@ -77,7 +79,7 @@ class HomeLayoutTest {
                 assertThat(a.findViewById<View>(R.id.btn_open).height).isEqualTo((52 * d).toInt())
                 listOf(R.id.n0, R.id.n5, R.id.n11).forEach { id ->
                     val h = a.findViewById<View>(id).height
-                    assertThat(h).isAtLeast((48 * d).toInt())
+                    assertThat(h).isAtLeast((40 * d).toInt() - 1)
                     assertThat(h).isAtMost((72 * d).toInt() + 1)
                 }
             }

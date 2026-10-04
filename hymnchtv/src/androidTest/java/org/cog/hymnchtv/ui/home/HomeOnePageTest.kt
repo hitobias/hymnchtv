@@ -79,9 +79,26 @@ class HomeOnePageTest {
                     assertWithMessage("${a.resources.getResourceEntryName(id)} fully visible (${config(a)})").that(r.height()).isEqualTo(v.height)
                 }
             } else {
-                // The exception: 48dp keys and no recent rows still do not fit
+                // The exception: 40dp keys, a compact preview and no recent rows still do not fit
                 assertWithMessage("${config(a)}: scrolling needs a reason").that(needed).isGreaterThan(s.height - (HomeFit.SAFETY_DP * d).toInt())
-                assertThat(a.findViewById<View>(R.id.key_row0).height).isEqualTo((48 * d).toInt())
+                assertThat(a.findViewById<View>(R.id.key_row0).height).isAtLeast((HomeFit.MIN_KEY_FLOOR_DP * d).toInt() - 1)
+            }
+        }
+    }
+
+    @Test fun openIsFullyOnScreenWithoutScrollingAfterTypingANumber() = PickerTestSupport.launch { scenario ->
+        waitForFit(scenario)
+        onView(withId(R.id.bs_db)).perform(scrollTo(), click())
+        PickerTestSupport.type("1")
+        FragmentHost.eventually {
+            scenario.onActivity { a ->
+                assumeTrue("portrait only", isPortrait(a))
+                val open = a.findViewById<View>(R.id.btn_open)
+                assertWithMessage("btn_open enabled (${config(a)})").that(open.isEnabled).isTrue()
+                val r = Rect()
+                assertWithMessage("btn_open visible (${config(a)})").that(open.getGlobalVisibleRect(r)).isTrue()
+                assertWithMessage("btn_open fully visible (${config(a)}): $r of ${open.height}px").that(r.height()).isEqualTo(open.height)
+                assertThat(scroller(a).scrollY).isEqualTo(0)
             }
         }
     }
@@ -107,12 +124,12 @@ class HomeOnePageTest {
         }
     }
 
-    @Test fun keysAreBetween48And72dpInEveryConfiguration() = PickerTestSupport.launch { scenario ->
+    @Test fun keysAreBetween40And72dpInEveryConfiguration() = PickerTestSupport.launch { scenario ->
         waitForFit(scenario)
         scenario.onActivity { a ->
             val d = a.resources.displayMetrics.density
             listOf(R.id.n0, R.id.n5, R.id.n11).forEach { id ->
-                assertThat(a.findViewById<View>(id).height).isAtLeast((48 * d).toInt())
+                assertThat(a.findViewById<View>(id).height).isAtLeast((HomeFit.MIN_KEY_FLOOR_DP * d).toInt() - 1)
                 assertThat(a.findViewById<View>(id).height).isAtMost((72 * d).toInt() + 1)
             }
         }
