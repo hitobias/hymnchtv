@@ -3,6 +3,7 @@ package org.cog.hymnchtv.ui.home
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -45,9 +46,6 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
     private var loadGen = 0
     private var loadCall: Cancellable? = null
     private var snackbar: Snackbar? = null
-
-    /** Favourite writes in flight; cancelled with the view. */
-    private val writes = mutableListOf<Cancellable>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -126,8 +124,6 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
         snackbar = null
         loadCall?.cancel()
         loadCall = null
-        writes.forEach { it.cancel() }
-        writes.clear()
         loadGen++
         list = null
         empty = null
@@ -166,7 +162,7 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
                 is Outcome.Ok -> buildFavoriteRows(appContext, gen, variant, outcome.value)
                 is Outcome.Err -> {
                     Timber.w(outcome.error, "Loading the favourites failed")
-                    showFavorites(emptyList())
+                    showFavoritesError()
                 }
             }
         }
@@ -181,11 +177,17 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
         }
     }
 
-    private fun showFavorites(rows: List<FavoriteRow>) {
+    private fun showFavorites(rows: List<FavoriteRow>, emptyText: Int = R.string.fav_empty) {
+        (favoritesEmpty as? TextView)?.setText(emptyText)
         shownFavorites = rows
         favoriteAdapter.submitList(rows)
         favoritesIsEmpty = FavoriteRows.isEmpty(rows)
         refreshVisibility()
+    }
+
+    /** A failed load is not "no favourites": show the error text in the empty-state view. */
+    private fun showFavoritesError() {
+        showFavorites(emptyList(), R.string.fav_error)
     }
 
     private var shownFavorites: List<FavoriteRow> = emptyList()
@@ -204,17 +206,17 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
 
     private fun setFavorite(key: HymnKey, favorite: Boolean, onOk: () -> Unit) {
         invalidateLoads()
-        val call = Notebook.async(requireContext().applicationContext).setFavorite(key, favorite) { outcome ->
+        // Not cancelled with the view: a cancelled write could be dropped; the callback ignores a destroyed view
+        Notebook.async(requireContext().applicationContext).setFavorite(key, favorite) { outcome ->
             if (list == null) return@setFavorite
             if (outcome is Outcome.Ok) {
                 onOk()
             } else {
                 Timber.w(outcome.errorOrNull(), "Setting the favourite failed")
-                snackbar = view?.let { Snackbar.make(it, R.string.error, Snackbar.LENGTH_LONG).also(Snackbar::show) }
+                snackbar = view?.let { Snackbar.make(it, R.string.fav_error, Snackbar.LENGTH_LONG).also(Snackbar::show) }
                 loadFavorites()
             }
         }
-        writes += call
     }
 
     private fun unfavorite(row: FavoriteRow) {

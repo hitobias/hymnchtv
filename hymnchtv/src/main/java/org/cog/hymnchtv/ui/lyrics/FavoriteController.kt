@@ -24,14 +24,14 @@ class FavoriteController(
     private var queryCancel: Cancellable? = null
     private var inFlightToggleKey: HymnKey? = null
     private var queryGen = 0
-    private var toggleCancels = mutableListOf<Cancellable>()
     private var destroyed = false
 
     /** True when [type]/[no] is the current hymn and it is known to be a favourite. */
     fun isMarked(type: String?, no: Int): Boolean =
         marked == true && current != null && current == HymnKey.ofOrNull(type, no)
 
-    fun canToggle(): Boolean = current != null
+    /** Only when the state is known, so the menu text always matches what the action will do. */
+    fun canToggle(): Boolean = current != null && marked != null
 
     fun onHymnChanged(type: String?, no: Int) {
         if (destroyed) return
@@ -40,10 +40,13 @@ class FavoriteController(
         current = key
         marked = null
         notifyState()
-        if (key == null) return
+        if (key != null) query(key)
+    }
+
+    private fun query(key: HymnKey) {
         val gen = queryGen
         queryCancel = async.isFavorite(key) { outcome ->
-            if (destroyed || gen != queryGen || key != current) return@isFavorite
+            if (destroyed || gen != queryGen || key != current || inFlightToggleKey == key) return@isFavorite
             queryCancel = null
             val value = (outcome as? Outcome.Ok)?.value ?: return@isFavorite
             marked = value
@@ -51,35 +54,39 @@ class FavoriteController(
         }
     }
 
+    /** Sets exactly the state the menu offers (idempotent), not "the opposite of whatever the row is now". */
     fun toggle() {
         val key = current ?: return
+        val target = marked?.not() ?: return
         if (destroyed || inFlightToggleKey == key) return
         beginNewGeneration()
         inFlightToggleKey = key
-        var cancel: Cancellable? = null
-        cancel = async.toggleFavorite(key) { outcome ->
-            cancel?.let { toggleCancels.remove(it) }
-            if (destroyed) return@toggleFavorite
+        // Writes are not cancelled (not even by destroy): a cancelled write could be dropped half-way
+        async.setFavorite(key, target) { outcome ->
+            if (destroyed) return@setFavorite
             if (inFlightToggleKey == key) inFlightToggleKey = null
-            if (key != current) return@toggleFavorite
+            if (key != current) return@setFavorite
             when (outcome) {
                 is Outcome.Ok -> {
-                    marked = outcome.value
+                    beginNewGeneration()
+                    marked = target
                     notifyState()
-                    listener.onToggled(outcome.value)
+                    listener.onToggled(target)
                 }
-                is Outcome.Err -> listener.onError()
+                is Outcome.Err -> {
+                    listener.onError()
+                    beginNewGeneration()
+                    query(key)
+                }
             }
         }
-        toggleCancels.add(cancel)
     }
 
+    /** Cancels only the query; a write already sent still completes, its callback does nothing after this. */
     fun destroy() {
         destroyed = true
         queryCancel?.cancel()
         queryCancel = null
-        toggleCancels.forEach { it.cancel() }
-        toggleCancels = mutableListOf()
     }
 
     private fun beginNewGeneration() {
@@ -88,5 +95,5 @@ class FavoriteController(
         queryCancel = null
     }
 
-    private fun notifyState() = listener.onState(marked == true, current != null)
+    private fun notifyState() = listener.onState(marked == true, canToggle())
 }

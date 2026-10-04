@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="fav_error">Could not update favourites. Please try again.</string>
+    <string name="fav_error">Couldn\'t update favourites. Please try again.</string>
 </resources>

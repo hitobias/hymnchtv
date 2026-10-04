@@ -36,6 +36,7 @@ class FavoriteLyricsTest : LyricsTestBase() {
         s.read { page(it)!!.findViewById<ImageView>(R.id.favorite_star).visibility == View.VISIBLE }
 
     private fun chooseFavoriteInMenu(s: ActivityScenario<ContentHandler>, expectedTitle: Int) {
+        s.await("favourite state known") { it.canToggleFavorite() }
         s.revealChrome()
         onView(withId(R.id.btn_more)).perform(click())
         onView(withText(expectedTitle)).inRoot(isPlatformPopup()).perform(click())
@@ -52,6 +53,7 @@ class FavoriteLyricsTest : LyricsTestBase() {
             s.await("star hidden") { page(it)!!.findViewById<View>(R.id.favorite_star).visibility == View.GONE }
             assertThat(FavoriteTestSupport.isFavorite(db5)).isFalse()
             // the menu is back to "add"
+            s.await("favourite state known") { it.canToggleFavorite() }
             s.revealChrome()
             onView(withId(R.id.btn_more)).perform(click())
             onView(withText(R.string.fav_add)).inRoot(isPlatformPopup()).perform(click())
