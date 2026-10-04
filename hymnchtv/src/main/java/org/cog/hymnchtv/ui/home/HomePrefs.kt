@@ -7,4 +7,7 @@ import org.cog.hymnchtv.MainActivity
 object HomePrefs {
     /** The hymn book selected last, so the home tab opens with it highlighted (direction C). */
     const val LAST_HYMN_TYPE = "LastHymnType"
+
+    /** The tab last chosen on the history page: 0 = Recent, 1 = Favourites. */
+    const val HISTORY_TAB = "HistoryTab"
 }
