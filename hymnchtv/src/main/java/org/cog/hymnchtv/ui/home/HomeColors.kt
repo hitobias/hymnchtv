@@ -50,20 +50,9 @@ class HomeColors(
         listOfNotNull(disabled, selected, normal).toIntArray(),
     )
 
-    private fun card(fill: Int, radiusDp: Float, stroke: Boolean = isPhoto): GradientDrawable = GradientDrawable().apply {
+    private fun card(fill: Int, radiusDp: Float): GradientDrawable = GradientDrawable().apply {
         setColor(fill)
         cornerRadius = dp(radiusDp)
-        if (stroke) setStroke(density.toInt().coerceAtLeast(1), tokens.outline)
-    }
-
-    /** What marks a disabled key without colour: a dashed outline in the key's own corner radius. */
-    private fun dashedWhenDisabled(radiusDp: Float): Drawable = StateListDrawable().apply {
-        val dashed = GradientDrawable().apply {
-            cornerRadius = dp(radiusDp)
-            setStroke(density.toInt().coerceAtLeast(1), tokens.outline, dp(DASH_DP), dp(DASH_GAP_DP))
-        }
-        addState(intArrayOf(-android.R.attr.state_enabled), dashed)
-        addState(intArrayOf(), GradientDrawable().apply { setColor(Color.TRANSPARENT) })
     }
 
     private fun ripple(): ColorStateList = ColorStateList.valueOf((tokens.onSurface and 0xFFFFFF) or (RIPPLE_ALPHA shl 24))
@@ -81,7 +70,7 @@ class HomeColors(
 
     private fun applySurfaces(views: HymnPickerViews) {
         views.previewArea.background = card(tokens.surface, CARD_RADIUS_DP)
-        views.searchField.background = card(tokens.surface, SEARCH_RADIUS_DP)
+        views.searchField.background = card(tokens.surface, CARD_RADIUS_DP)
         views.searchField.setTextColor(tokens.onSurface)
         views.searchField.setHintTextColor(tokens.onSurfaceMuted)
         TextViewCompat.setCompoundDrawableTintList(views.searchField, ColorStateList.valueOf(tokens.onSurfaceMuted))
@@ -106,22 +95,21 @@ class HomeColors(
             )
             it.rippleColor = ripple()
         }
-        views.toc.backgroundTintList = ColorStateList.valueOf(tokens.surface)
-        views.toc.strokeColor = ColorStateList.valueOf(tokens.outline)
+        // A colour block instead of an outline (spec 5b-2): the raised surface marks the contents button
+        views.toc.backgroundTintList = ColorStateList.valueOf(tokens.surfaceRaised)
         views.toc.setTextColor(tokens.onOutlineAction)
         views.toc.iconTint = ColorStateList.valueOf(tokens.onOutlineAction)
         views.toc.rippleColor = ColorStateList.valueOf((tokens.onOutlineAction and 0xFFFFFF) or (RIPPLE_ALPHA shl 24))
     }
 
     private fun applyKeys(views: HymnPickerViews) {
-        val fill = states(tokens.disabledSurface, tokens.accent, tokens.surfaceTone)
+        val fill = states(tokens.surfaceRaised, tokens.accent, tokens.surfaceTone)
         val text = states(tokens.disabledOnSurface, tokens.onAccent, tokens.onSurface)
         (views.digits + views.fu + views.delete).forEach {
             it.backgroundTintList = fill
             it.setTextColor(text)
             it.iconTint = text
             it.rippleColor = ripple()
-            it.foreground = dashedWhenDisabled(KEY_RADIUS_DP)
         }
     }
 
@@ -152,18 +140,17 @@ class HomeColors(
     }
 
     private fun applyTypography(views: HymnPickerViews) {
-        val english = !KaiText.isChineseUi(context.resources.configuration.locales[0])
         views.books.values.plus(views.toc).forEach { KaiText.applyForUi(it, context, bold = true) }
-        // Chinese labels are 20sp Kai, the English short labels 17sp; both shrink together if the system font is large
+        // Book labels are Heading size (Kai in a Chinese interface); they shrink together only if the system font is large
         views.bookFitter?.detach()
-        views.bookFitter = BookLabelFitter(views, if (english) ENGLISH_BOOK_SP else BOOK_SP).also { it.attach() }
-        views.fu.setTextSize(TypedValue.COMPLEX_UNIT_SP, FU_SP)
+        val headingSp = context.resources.getDimension(R.dimen.type_heading) / context.resources.displayMetrics.scaledDensity
+        views.bookFitter = BookLabelFitter(views, headingSp).also { it.attach() }
         KaiText.applyForUi(views.fu, context, bold = true)
     }
 
     /** One recent hymn: a surface card with the short name over the time. */
     fun styleRecent(item: View) {
-        item.background = android.graphics.drawable.RippleDrawable(ripple(), card(tokens.surface, RECENT_RADIUS_DP), null)
+        item.background = android.graphics.drawable.RippleDrawable(ripple(), card(tokens.surface, CARD_RADIUS_DP), null)
         item.findViewById<TextView>(R.id.tv_recent_label_item).setTextColor(tokens.onSurface)
         item.findViewById<TextView>(R.id.tv_recent_when).setTextColor(tokens.onSurfaceMuted)
     }
@@ -177,15 +164,7 @@ class HomeColors(
 
     private companion object {
         const val CARD_RADIUS_DP = 16f
-        const val SEARCH_RADIUS_DP = 24f
-        const val KEY_RADIUS_DP = 14f
-        const val RECENT_RADIUS_DP = 10f
         const val PLATE_PAD_DP = 8f
-        const val DASH_DP = 4f
-        const val DASH_GAP_DP = 3f
         const val RIPPLE_ALPHA = 0x1F
-        const val BOOK_SP = 20f
-        const val ENGLISH_BOOK_SP = 17f
-        const val FU_SP = 18f
     }
 }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Rounded, weight 400, 24dp; tinted in code -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path android:fillColor="#FF000000" android:pathData="M480-357q-6 0-11.5-2t-10.5-7L260-564q-11-11-11-28t11-28q11-11 28-11t28 11l164 164 164-164q11-11 28-11t28 11q11 11 11 28t-11 28L502-366q-5 5-10.5 7t-11.5 2Z" />
+    </group>
+</vector>

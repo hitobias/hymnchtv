@@ -247,7 +247,7 @@ class HymnPickerController(
     /** A message (not a hymn title): plain 16sp, so only titles carry the big Kai face. */
     private fun status(text: String) {
         views.title.text = text
-        views.title.setTextSize(TypedValue.COMPLEX_UNIT_SP, STATUS_SP)
+        views.title.setTextSize(TypedValue.COMPLEX_UNIT_PX, context.resources.getDimension(R.dimen.type_body))
         views.title.setTypeface(Typeface.DEFAULT, Typeface.NORMAL)
     }
 
@@ -259,8 +259,8 @@ class HymnPickerController(
             AppExecutors.MAIN.post {
                 if (!released && request == previewRequest && views.alsoScroll.visibility != View.VISIBLE) {
                     views.title.text = title
-                    views.title.setTextSize(TypedValue.COMPLEX_UNIT_SP, TITLE_SP)
-                    KaiText.apply(views.title, titleTraditional(), bold = true)
+                    views.title.setTextSize(TypedValue.COMPLEX_UNIT_PX, context.resources.getDimension(R.dimen.type_title))
+                    KaiText.apply(views.title, titleTraditional(), bold = false)
                 }
             }
         }
@@ -296,7 +296,5 @@ class HymnPickerController(
     internal companion object {
         const val MIN_TOUCH_DP = 48
         const val EMPTY_NUMBER = "\u2014"
-        const val TITLE_SP = 20f
-        const val STATUS_SP = 16f
     }
 }

@@ -12,17 +12,38 @@ class HomeFitTest {
         val p = plan(available = 900f)
         assertThat(p.scrollable).isFalse()
         assertThat(p.recentCount).isEqualTo(5)
-        assertThat(p.keyHeightDp).isEqualTo(72f)
+        assertThat(p.keyHeightDp).isEqualTo(64f)
     }
 
-    @Test fun keysGrowToSeventyTwoBeforeRecentRowsAreAdded() {
+    @Test fun keysNeverExceedSixtyFour() {
+        for (h in 480..1400 step 13) {
+            val p = plan(available = h.toFloat())
+            if (!p.scrollable) assertThat(p.keyHeightDp).isAtMost(HomeFit.MAX_KEY_DP)
+        }
+        assertThat(HomeFit.MAX_KEY_DP).isEqualTo(64f)
+    }
+
+    @Test fun threeRecentRowsAreFilledBeforeTheKeysGrow() {
         val min = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP
-        val mid = plan(available = min + 60f)
-        assertThat(mid.keyHeightDp).isEqualTo(48f + 15f)
-        assertThat(mid.recentCount).isEqualTo(0)
-        val full = plan(available = min + 96f + HomeFit.RECENT_ROW_DP)
-        assertThat(full.keyHeightDp).isEqualTo(72f)
-        assertThat(full.recentCount).isEqualTo(1)
+        val p = plan(available = min + HomeFit.RECENT_ROW_DP * 3 + 8f)
+        assertThat(p.recentCount).isEqualTo(3)
+        assertThat(p.keyHeightDp).isEqualTo(48f + 2f)
+    }
+
+    @Test fun keysGrowToSixtyFourBeforeTheFourthRowIsAdded() {
+        val min = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP + HomeFit.RECENT_ROW_DP * 3
+        val mid = plan(available = min + 40f)
+        assertThat(mid.recentCount).isEqualTo(3)
+        assertThat(mid.keyHeightDp).isEqualTo(48f + 10f)
+        val full = plan(available = min + 64f + HomeFit.RECENT_ROW_DP)
+        assertThat(full.keyHeightDp).isEqualTo(64f)
+        assertThat(full.recentCount).isEqualTo(4)
+    }
+
+    @Test fun fewerRowsThanTheTargetWhenTheHistoryIsShort() {
+        val p = plan(available = 900f, recent = 2)
+        assertThat(p.recentCount).isEqualTo(2)
+        assertThat(p.keyHeightDp).isEqualTo(64f)
     }
 
     @Test fun recentCountNeverExceedsWhatTheHistoryHolds() {
@@ -31,14 +52,14 @@ class HomeFitTest {
     }
 
     @Test fun smallerScreenDropsRecentRowsBeforeKeysShrinkBelow48() {
-        val p = plan(available = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP + 96f + HomeFit.RECENT_ROW_DP * 2 + 1f)
+        val p = plan(available = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP + HomeFit.RECENT_ROW_DP * 2 + 1f)
         assertThat(p.scrollable).isFalse()
         assertThat(p.recentCount).isEqualTo(2)
-        assertThat(p.keyHeightDp).isEqualTo(72f)
+        assertThat(p.keyHeightDp).isAtMost(48.5f)
     }
 
     @Test fun recentGoesToZeroButTheHeaderStaysWhenOnlyTheKeysFit() {
-        val p = plan(available = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP + 96f + 10f)
+        val p = plan(available = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP + 10f)
         assertThat(p.scrollable).isFalse()
         assertThat(p.recentCount).isEqualTo(0)
     }
@@ -56,6 +77,13 @@ class HomeFitTest {
         assertThat(p.keyHeightDp).isAtLeast(48f)
     }
 
+    @Test fun screen411x891ShowsAtLeastThreeRecentRows() {
+        // Same screen: the fixed parts of the real page measure about 354dp (search, books, preview, open and margins)
+        val p = plan(available = 779f, fixed = 354f)
+        assertThat(p.scrollable).isFalse()
+        assertThat(p.recentCount).isAtLeast(3)
+    }
+
     @Test fun screen360x640ScrollsBecauseTheControlsNeedMoreThanItHas() {
         // 640 - 24 - 48 - 48 - 24 = 496 of content, but the controls alone need 354 + 48 + 216
         assertThat(plan(available = 496f, fixed = 354f).scrollable).isTrue()
@@ -66,7 +94,7 @@ class HomeFitTest {
     }
 
     @Test fun emptyHistoryShowsTheEmptyStateOnlyWhenItFits() {
-        val tight = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP + 96f
+        val tight = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP + 64f
         assertThat(plan(available = tight, recent = 0).showEmpty).isFalse()
         val roomy = tight + HomeFit.EMPTY_BLOCK_DP
         val p = plan(available = roomy, recent = 0)
@@ -74,14 +102,15 @@ class HomeFitTest {
         assertThat(p.recentCount).isEqualTo(0)
     }
 
-    @Test fun keysGrowMonotonicallyWithHeight() {
-        var last = 0f
-        for (h in 480..900 step 10) {
+    @Test fun keysGrowMonotonicallyWhileTheRowCountStaysTheSame() {
+        var lastKey = 0f
+        var lastCount = -1
+        for (h in 480..900 step 2) {
             val p = plan(available = h.toFloat())
-            if (!p.scrollable) {
-                assertThat(p.keyHeightDp).isAtLeast(last)
-                last = p.keyHeightDp
-            }
+            if (p.scrollable) continue
+            if (p.recentCount == lastCount) assertThat(p.keyHeightDp).isAtLeast(lastKey)
+            lastKey = p.keyHeightDp
+            lastCount = p.recentCount
         }
     }
 

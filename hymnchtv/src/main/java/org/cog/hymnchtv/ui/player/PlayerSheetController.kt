@@ -378,7 +378,7 @@ class PlayerSheetController(
         expandButton.visibility = if (playing) View.VISIBLE else View.GONE
         noteButton.visibility = if (playing) View.GONE else View.VISIBLE
         playButton.progress = if (playing) playback.progress else 0f
-        playButton.setImageResource(if (playback.isPlaying) R.drawable.ic_player_pause else R.drawable.ic_player_play_arrow)
+        playButton.setImageResource(if (playback.isPlaying) R.drawable.ic_sym_pause else R.drawable.ic_sym_play_arrow)
         val verb = context.getString(if (playback.isPlaying) R.string.c_pause else R.string.c_play)
         val label = if (playback.hymnInfo.isBlank()) verb else context.getString(
             if (playback.isPlaying) R.string.c_player_pause_named else R.string.c_player_play_named, playback.hymnInfo)

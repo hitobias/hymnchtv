@@ -36,7 +36,8 @@ class HomeLayoutTest {
                 // spec 5: the open key is on the first screen when the content area (below the toolbar, above the nav bar) is 580dp
                 val scroller = generateSequence(a.findViewById<View>(R.id.tv_search).parent) { it.parent }
                     .filterIsInstance<androidx.core.widget.NestedScrollView>().first()
-                val contentDp = scroller.height / dm.density
+                // the page now reaches behind the transparent toolbar (spec 5b), so the content area starts below it
+                val contentDp = (scroller.height - a.findViewById<View>(R.id.toolbar).height) / dm.density
                 val portrait = a.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
                 val fontScale = a.resources.configuration.fontScale
                 assumeTrue("needs a 580dp tall content area in portrait at normal font size", portrait && contentDp >= 580 && fontScale <= 1.0f)

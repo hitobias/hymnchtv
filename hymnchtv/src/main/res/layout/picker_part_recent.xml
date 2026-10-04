@@ -19,8 +19,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/c_recent_label"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.Hymnal.Heading" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_recent_more"
@@ -29,7 +28,8 @@
             android:layout_height="wrap_content"
             android:minHeight="48dp"
             android:text="@string/c_recent_more"
-            app:icon="@drawable/ic_chevron_right"
+            android:textAppearance="@style/TextAppearance.Hymnal.Body"
+            app:icon="@drawable/ic_sym_chevron_right"
             app:iconGravity="textEnd"
             app:iconPadding="2dp" />
     </LinearLayout>
@@ -64,6 +64,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/c_recent_empty"
-            android:textSize="16sp" />
+            android:textAppearance="@style/TextAppearance.Hymnal.Body" />
     </LinearLayout>
 </LinearLayout>

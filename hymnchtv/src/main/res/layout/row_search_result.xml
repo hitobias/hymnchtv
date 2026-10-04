@@ -15,9 +15,8 @@
         android:id="@+id/tv_result_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="?attr/colorPrimary"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:textAppearance="@style/TextAppearance.Hymnal.Heading"
+        android:textColor="?attr/colorPrimary" />
 
     <TextView
         android:id="@+id/tv_result_title"
@@ -25,8 +24,8 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textColor="?attr/colorOnSurface"
-        android:textSize="18sp" />
+        android:textAppearance="@style/TextAppearance.Hymnal.Body"
+        android:textColor="?attr/colorOnSurface" />
 
     <TextView
         android:id="@+id/tv_result_snippet"
@@ -34,6 +33,6 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="2"
-        android:textColor="?attr/colorOnSurfaceVariant"
-        android:textSize="14sp" />
+        android:textAppearance="@style/TextAppearance.Hymnal.Caption"
+        android:textColor="?attr/colorOnSurfaceVariant" />
 </LinearLayout>

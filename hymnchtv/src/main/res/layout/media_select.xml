@@ -17,7 +17,8 @@
         android:layout_height="48dp"
         android:contentDescription="@string/c_search_youtube"
         android:scaleType="center"
-        android:src="@drawable/ic_search" />
+        android:src="@drawable/ic_sym_search"
+        app:tint="?attr/colorOnSurfaceVariant" />
 
     <RadioButton
         android:id="@+id/btn_media"

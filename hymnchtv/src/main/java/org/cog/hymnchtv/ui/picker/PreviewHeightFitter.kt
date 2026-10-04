@@ -37,14 +37,16 @@ class PreviewHeightFitter(private val views: HymnPickerViews, private val titleT
         val faces = listOf<Typeface>(Typeface.DEFAULT) + listOfNotNull(LyricsTypefaces.peek(true), LyricsTypefaces.peek(false))
         val area = views.previewArea
         val padding = area.paddingTop + area.paddingBottom
-        val note = lineHeight(views.note, NOTE_SP, Typeface.DEFAULT, false, 1)
-        val entry = lineHeight(views.entry, null, Typeface.DEFAULT_BOLD, true, 1)
+        val titlePx = context.resources.getDimension(R.dimen.type_title)
+        val bodyPx = context.resources.getDimension(R.dimen.type_body)
+        val note = lineHeight(views.note, null, Typeface.DEFAULT, false, 1)
+        val entry = lineHeight(views.entry, null, Typeface.DEFAULT, false, 1)
         val chips = chipBlock()
         val tallest = faces.maxOf { face ->
-            val left = lineHeight(views.book, BOOK_SP, face, false, 1) + entry
-            // a hymn title (20sp, two lines) with the English note below it, or a message at 16sp
-            val titleState = maxOf(left, lineHeight(views.title, TITLE_SP, face, false, 2) + note)
-            val messageState = maxOf(left, lineHeight(views.title, STATUS_SP, Typeface.DEFAULT, false, 2))
+            val left = lineHeight(views.book, null, face, false, 1) + entry
+            // a hymn title (Title size, two lines) with the English note below it, or a message at 16sp
+            val titleState = maxOf(left, lineHeight(views.title, titlePx, face, false, 2) + note)
+            val messageState = maxOf(left, lineHeight(views.title, bodyPx, Typeface.DEFAULT, false, 2))
             // the chips take the title's place under the (English) note, in the same cell
             val chipState = maxOf(left, note + chips)
             maxOf(titleState, messageState, chipState)
@@ -52,11 +54,11 @@ class PreviewHeightFitter(private val views: HymnPickerViews, private val titleT
         return tallest + padding
     }
 
-    /** [lines] lines of [like]'s style at [sp] (its own size when null) in [face]. */
-    private fun lineHeight(like: TextView, sp: Float?, face: Typeface, bold: Boolean, lines: Int): Int {
+    /** [lines] lines of [like]'s style at [sizePx] (its own size when null) in [face]. */
+    private fun lineHeight(like: TextView, sizePx: Float?, face: Typeface, bold: Boolean, lines: Int): Int {
         val scratch = TextView(context)
         scratch.includeFontPadding = like.includeFontPadding
-        if (sp != null) scratch.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp) else scratch.setTextSize(TypedValue.COMPLEX_UNIT_PX, like.textSize)
+        scratch.setTextSize(TypedValue.COMPLEX_UNIT_PX, sizePx ?: like.textSize)
         scratch.setTypeface(face, if (bold) Typeface.BOLD else Typeface.NORMAL)
         scratch.text = List(lines) { "體" }.joinToString("\n")
         scratch.maxLines = lines
@@ -69,7 +71,7 @@ class PreviewHeightFitter(private val views: HymnPickerViews, private val titleT
         val density = context.resources.displayMetrics.density
         val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         column.addView(TextView(context).apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, NOTE_SP)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, context.resources.getDimension(R.dimen.type_caption))
             maxLines = 1
             text = "體"
         })
@@ -85,10 +87,6 @@ class PreviewHeightFitter(private val views: HymnPickerViews, private val titleT
     }
 
     private companion object {
-        const val BOOK_SP = 14f
-        const val NOTE_SP = 14f
-        const val TITLE_SP = 20f
-        const val STATUS_SP = 16f
         const val WIDTH_DP = 300
     }
 }

@@ -107,7 +107,7 @@
                 android:contentDescription="@string/c_play"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_play_arrow" />
+                android:src="@drawable/ic_sym_play_arrow" />
 
             <ImageView
                 android:id="@+id/capsuleExpand"
@@ -117,7 +117,7 @@
                 android:contentDescription="@string/c_player_expand"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_expand_less" />
+                android:src="@drawable/ic_sym_expand_less" />
 
             <ImageView
                 android:id="@+id/capsuleNote"
@@ -126,7 +126,7 @@
                 android:contentDescription="@string/c_player_expand"
                 android:padding="16dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_note" />
+                android:src="@drawable/ic_sym_music_note" />
         </LinearLayout>
     </org.cog.hymnchtv.ui.player.PlayerCapsuleView>
 

@@ -49,6 +49,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     private var views: HymnPickerViews? = null
     private var controller: HymnPickerController? = null
     private var recent: RecentChips? = null
+    private var toolbarListener: View.OnLayoutChangeListener? = null
 
     private val prefs: SharedPreferences
         get() = requireContext().getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
@@ -66,6 +67,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
         this.recent = recent
         keypadSizer = KeypadSizer(views, view.findViewById(R.id.viewMain), recent).also { it.attach() }
         padForNavigationBar(view.findViewById(R.id.home_content))
+        padForToolbar(view.findViewById(R.id.home_content))
         // The background and tokens are applied in onResume (always follows), once, so a photo is decoded only once
         controller = HymnPickerController(views, this, PickerMode.HOME, vm, prefs, ::currentTitleSource, ::titleIsTraditional, haptic = { haptic(it) })
     }
@@ -94,6 +96,26 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     }
 
     /**
+     * The page reaches behind the host's transparent toolbar (and the status bar), so its content starts below the toolbar:
+     * the padding follows the toolbar's height, which grows by the status bar's size once the insets arrive.
+     */
+    private fun padForToolbar(content: View) {
+        val toolbar = activity?.findViewById<View>(R.id.toolbar) ?: return
+        val base = content.paddingTop
+        val apply = {
+            val top = base + toolbar.height
+            if (content.paddingTop != top) {
+                content.setPadding(content.paddingLeft, top, content.paddingRight, content.paddingBottom)
+                content.post { keypadSizer?.update() }
+            }
+        }
+        val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply() }
+        toolbar.addOnLayoutChangeListener(listener)
+        toolbarListener = listener
+        apply()
+    }
+
+    /**
      * Shows the MAIN slot's background and colours every home element from the UiTokens derived from it (spec 4). The
      * lyrics page builds its own tokens from the LYRICS slot; the two are never shared.
      */
@@ -109,6 +131,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     }
 
     override fun onDestroyView() {
+        toolbarListener?.let { activity?.findViewById<View>(R.id.toolbar)?.removeOnLayoutChangeListener(it) }
+        toolbarListener = null
         controller?.release()
         recent?.release()
         keypadSizer?.detach()

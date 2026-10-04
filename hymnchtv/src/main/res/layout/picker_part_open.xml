@@ -16,10 +16,8 @@
         android:layout_weight="2"
         android:enabled="false"
         android:text="@string/c_open"
-        android:textSize="17sp"
-        android:textStyle="bold"
-        app:cornerRadius="14dp"
-        app:icon="@drawable/ic_chevron_right"
+        android:textAppearance="@style/TextAppearance.Hymnal.Heading"
+        app:icon="@drawable/ic_sym_chevron_right"
         app:iconGravity="textEnd"
         app:iconPadding="4dp" />
 
@@ -32,9 +30,8 @@
         android:layout_marginStart="8dp"
         android:layout_weight="1"
         android:text="@string/c_add_playlist"
-        android:textSize="17sp"
-        android:visibility="gone"
-        app:cornerRadius="14dp" />
+        android:textAppearance="@style/TextAppearance.Hymnal.Heading"
+        android:visibility="gone" />
 
     <!-- Jump panel only (H5) -->
     <com.google.android.material.button.MaterialButton
@@ -45,7 +42,6 @@
         android:layout_marginStart="8dp"
         android:layout_weight="1"
         android:text="@string/c_set_next"
-        android:textSize="17sp"
-        android:visibility="gone"
-        app:cornerRadius="14dp" />
+        android:textAppearance="@style/TextAppearance.Hymnal.Heading"
+        android:visibility="gone" />
 </LinearLayout>

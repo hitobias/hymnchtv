@@ -5,11 +5,17 @@ import org.cog.hymnchtv.ui.picker.KeypadMetrics
 /**
  * The one-page home (spec 2): decides, for the height the screen leaves, how many recent hymns are listed and how tall
  * the keys are. Order of priority: the fixed parts (search, books, preview, open) as measured, the keypad at its 48dp
- * minimum, the recent header (the "all history" entry is always visible), then the keys grow up to 72dp, and recent rows
- * take what is left. When even the 48dp keys do not fit, [HomeFitPlan.scrollable] is true and the page scrolls.
+ * minimum, the recent header (the "all history" entry is always visible), then the first [TARGET_RECENT] recent rows (spec
+ * 5b: a phone must show at least three), then the keys grow up to [MAX_KEY_DP], and the remaining recent rows take what is left. When even the 48dp keys do not fit, [HomeFitPlan.scrollable] is true and the page scrolls.
  */
 object HomeFit {
     const val MAX_RECENT = 5
+
+    /** Recent rows that are placed before the keys grow beyond their minimum. */
+    const val TARGET_RECENT = 3
+
+    /** Tallest a key grows on the home page; more height goes to the recent list. */
+    const val MAX_KEY_DP = 64f
 
     /** One recent row: a 48dp item plus the 4dp gap under it. */
     const val RECENT_ROW_DP = 52f
@@ -40,12 +46,14 @@ object HomeFit {
         if (left < 0f) {
             return HomeFitPlan(KeypadMetrics.MIN_KEY_DP, wanted, input.recentTotal == 0, scrollable = true)
         }
-        // Keys first (up to 72dp), then recent rows from what is left (spec 9)
-        val extraPerKey = minOf(left / KeypadMetrics.ROWS, KeypadMetrics.MAX_KEY_DP - KeypadMetrics.MIN_KEY_DP)
+        val firstRows = minOf(wanted, TARGET_RECENT, (left / RECENT_ROW_DP).toInt())
+        left -= firstRows * RECENT_ROW_DP
+        val extraPerKey = minOf(left / KeypadMetrics.ROWS, MAX_KEY_DP - KeypadMetrics.MIN_KEY_DP)
         val key = KeypadMetrics.MIN_KEY_DP + extraPerKey
         left -= extraPerKey * KeypadMetrics.ROWS
-        val count = minOf(wanted, (left / RECENT_ROW_DP).toInt())
-        left -= count * RECENT_ROW_DP
+        val moreRows = minOf(wanted - firstRows, (left / RECENT_ROW_DP).toInt())
+        val count = firstRows + moreRows
+        left -= moreRows * RECENT_ROW_DP
         val showEmpty = input.recentTotal == 0 && left >= EMPTY_BLOCK_DP
         return HomeFitPlan(key, count, showEmpty, scrollable = false)
     }

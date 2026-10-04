@@ -27,18 +27,18 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
-                android:textSize="14sp" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Caption" />
 
             <TextView
                 android:id="@+id/tv_entry"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFeatureSettings="tnum"
+
                 android:includeFontPadding="false"
                 android:maxLines="1"
-                android:minWidth="64dp"
-                android:textSize="@dimen/c_number_size"
-                android:textStyle="bold" />
+                android:minWidth="96dp"
+                android:textAppearance="@style/TextAppearance.Hymnal.Display" />
         </LinearLayout>
 
         <!-- Shared cell: the hymn title, or (when the number has no hymn here) a status message and where else it exists -->
@@ -58,8 +58,7 @@
                 android:ellipsize="end"
                 android:gravity="end"
                 android:maxLines="2"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.Hymnal.Title" />
 
             <TextView
                 android:id="@+id/tv_preview_note"
@@ -68,7 +67,7 @@
                 android:ellipsize="end"
                 android:gravity="end"
                 android:maxLines="1"
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.Hymnal.Caption"
                 android:visibility="gone" />
 
             <!-- "Also found in" / "Open instead": its label over a row of chips (scrolls sideways), shown only for a number with no hymn here; it takes the title's place so the card never grows -->
@@ -86,7 +85,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textSize="14sp" />
+                    android:textAppearance="@style/TextAppearance.Hymnal.Caption" />
 
                 <HorizontalScrollView
                     android:layout_width="match_parent"

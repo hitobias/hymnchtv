@@ -61,10 +61,10 @@
             style="@style/Widget.Hymnal.BookButton"
             android:checkable="false"
             android:text="@string/c_toc_open"
-            app:icon="@drawable/ic_chevron_right"
+            app:icon="@drawable/ic_sym_chevron_right"
             app:iconGravity="textEnd"
             app:iconPadding="0dp"
             app:iconSize="16dp"
-            app:strokeWidth="1dp" />
+            app:strokeWidth="0dp" />
     </LinearLayout>
 </LinearLayout>
