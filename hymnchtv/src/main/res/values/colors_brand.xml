@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand indigo of the app icon (option B) and the launch screen -->
-    <color name="ic_launcher_background">#FF2B3A67</color>
+    <!-- Launch screen background: the navy of the app icon (drawable/hymnchtv) -->
+    <color name="splash_background">#FF17344B</color>
 </resources>

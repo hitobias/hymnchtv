@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash icon: the launcher icon (drawable/hymnchtv) inset so that the whole square fits inside the splash
+     screen's circular icon mask (2/3 of the 288dp icon view). -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/hymnchtv"
+    android:inset="27%" />
