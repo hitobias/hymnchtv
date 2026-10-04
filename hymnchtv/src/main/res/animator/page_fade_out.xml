@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fade-through, outgoing half: 100ms so the incoming page has the rest of the 200ms -->
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="100"
+    android:propertyName="alpha"
+    android:valueFrom="1"
+    android:valueTo="0" />

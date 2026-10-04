@@ -129,6 +129,7 @@ import org.cog.hymnchtv.reading.background.UiTokens;
 import org.cog.hymnchtv.ui.lyrics.ReadingPanelSheet;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
 import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
+import org.cog.hymnchtv.ui.host.HymnTransitions;
 import org.cog.hymnchtv.ui.lyrics.LyricsWindowInsets;
 import org.cog.hymnchtv.ui.player.PlaybackUiListener;
 import org.cog.hymnchtv.ui.player.GlassPolicy;
@@ -317,6 +318,39 @@ public class ContentHandler extends BaseActivity {
                         && data.getBooleanExtra(ContentView.EXTR_KEY_HAS_CHANGES, false));
             });
 
+    /**
+     * Gives the home page's shared number its landing place (see {@link HymnTransitions}): a view over the lyrics
+     * header's number, shown only while the transition runs. Without the number text (opened from elsewhere) it stays gone.
+     */
+    private void prepareNumberAnchor() {
+        String text = getIntent().getStringExtra(HymnTransitions.EXTRA_NUMBER_TEXT);
+        android.widget.TextView anchor = findViewById(R.id.lyrics_number_anchor);
+        if (anchor == null || text == null || text.isEmpty()) {
+            return;
+        }
+        anchor.setText(text);
+        anchor.setTextColor(getLyricsTokens().getAccent());
+        anchor.setAlpha(1f);
+        anchor.setVisibility(View.VISIBLE);
+        View insetTop = findViewById(R.id.insetTop);
+        if (insetTop != null) {
+            insetTop.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> anchor.setTranslationY(b - t));
+        }
+        android.transition.Transition enter = getWindow().getSharedElementEnterTransition();
+        if (enter == null) {
+            anchor.setVisibility(View.GONE);
+            return;
+        }
+        enter.addListener(new android.transition.TransitionListenerAdapter() {
+            @Override
+            public void onTransitionEnd(android.transition.Transition transition) {
+                // The lyrics header's own number takes over
+                anchor.setVisibility(View.GONE);
+                transition.removeListener(this);
+            }
+        });
+    }
+
     public void onCreate(Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             int saved = savedInstanceState.getInt(STATE_LYRICS_OVERRIDE, -1);
@@ -328,6 +362,8 @@ public class ContentHandler extends BaseActivity {
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         // getWindow().setFlags(FLAG_FULLSCREEN, FLAG_FULLSCREEN); // will hide android notification bar
         setContentView(R.layout.content_main);
+        HymnTransitions.prepareEnter(this);
+        prepareNumberAnchor();
         // The background runs behind the status and navigation bars; the layers keep clear of them (LyricsWindowInsets)
         SystemBars.enable(this);
         // Cold start: the "show the player by default" setting decides; a recreation restores the saved choice

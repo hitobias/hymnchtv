@@ -3,7 +3,10 @@ package org.cog.hymnchtv.ui.host
 import android.app.Activity
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.View
+import android.widget.TextView
+import org.cog.hymnchtv.ui.picker.KaiText
 import android.view.ViewGroup
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -51,6 +54,18 @@ object MainChrome {
         )
     }
 
+    /**
+     * The home page's top bar (spec 5b): no band of its own. On a plain background the bar is transparent and the icons and
+     * title take the background's reading colour (contrast-tested on every swatch); on a photo, whose pixels are unknown,
+     * the bar is the translucent card surface so [UiTokens.onSurface] keeps its guaranteed contrast.
+     */
+    @JvmStatic
+    fun homeColors(input: TokenInput, tokens: UiTokens): ChromeColors {
+        val solid = colors(input, tokens)
+        if (input.isPhoto) return solid.copy(bar = tokens.surface)
+        return solid.copy(bar = Color.TRANSPARENT, onBar = opaque(input.textColor), onBarMuted = opaque(input.textColor))
+    }
+
     /** The keyboard lifts the whole frame; without it the page containers pad for the gesture area. */
     @JvmStatic
     fun frameInsets(barsLeft: Int, barsTop: Int, barsRight: Int, barsBottom: Int, imeBottom: Int): FrameInsets {
@@ -69,18 +84,22 @@ object MainChrome {
     fun apply(activity: Activity, prefs: SharedPreferences) {
         val input = BackgroundPolicy.tokenInput(BackgroundPrefs.resolve(prefs, BackgroundSlot.MAIN))
         val tokens = UiTokens.from(input)
-        val c = colors(input, tokens)
+        val solid = colors(input, tokens)
+        // Over a search or history page the bar sits on the page's own surface, so it keeps its solid colour there
+        val overlayShown = activity.findViewById<View>(R.id.overlay_container)?.visibility == View.VISIBLE
+        val c = if (overlayShown) solid else homeColors(input, tokens)
         activity.findViewById<MaterialToolbar>(R.id.toolbar)?.apply {
             setBackgroundColor(c.bar)
             setTitleTextColor(c.onBar)
             navigationIcon?.setTint(c.onBar)
+            styleTitle(this)
         }
         val iconTint = ColorStateList.valueOf(c.onBar)
         for (id in intArrayOf(R.id.btn_home_toc, R.id.btn_home_settings)) {
             activity.findViewById<ImageView>(id)?.let { ImageViewCompat.setImageTintList(it, iconTint) }
         }
         activity.findViewById<View>(R.id.home_settings_badge)?.let { ViewCompat.setBackgroundTintList(it, ColorStateList.valueOf(c.accent)) }
-        SystemBars.styleIcons(activity, c.isDark, SystemBars.legacyNavColor(c.isDark, c.bar, c.onBar))
+        SystemBars.styleIcons(activity, c.isDark, SystemBars.legacyNavColor(c.isDark, solid.bar, solid.onBar))
     }
 
     /**
@@ -130,6 +149,13 @@ object MainChrome {
             }
         }
         root.findViewById<View>(R.id.overlay_container)?.let { it.setPadding(it.paddingLeft, it.paddingTop, it.paddingRight, insets.navPadding) }
+    }
+
+    /** The app name is a Title in HymnalKai (Kai in a Chinese interface only), like every other page name. */
+    private fun styleTitle(toolbar: MaterialToolbar) {
+        for (i in 0 until toolbar.childCount) {
+            (toolbar.getChildAt(i) as? TextView)?.let { KaiText.applyForUi(it, toolbar.context, bold = false) }
+        }
     }
 
     private fun opaque(rgb: Int): Int = (0xFF shl 24) or (rgb and 0xFFFFFF)

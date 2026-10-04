@@ -91,7 +91,7 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/n10"
             style="@style/Widget.Hymnal.KeyButton"
-            android:textSize="18sp"
+            android:textAppearance="@style/TextAppearance.Hymnal.Body"
             android:text="@string/nn10" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/n0"
@@ -101,7 +101,7 @@
             android:id="@+id/n11"
             style="@style/Widget.Hymnal.KeyButton"
             android:contentDescription="@string/c_key_delete_desc"
-            app:icon="@drawable/ic_backspace"
+            app:icon="@drawable/ic_sym_backspace"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
             app:iconSize="24dp" />

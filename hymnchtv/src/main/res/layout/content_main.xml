@@ -54,6 +54,22 @@
         </RelativeLayout>
     </eightbitlab.com.blurview.BlurTarget>
 
+    <!-- Target of the home page's shared number (HymnTransitions): drawn only while the transition runs, then the lyrics
+         header's own number shows. Its place follows the first line of the lyrics (ContentHandler sets the top). -->
+    <TextView
+        android:id="@+id/lyrics_number_anchor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="21dp"
+        android:layout_marginTop="61dp"
+        android:alpha="0"
+        android:fontFeatureSettings="tnum"
+        android:importantForAccessibility="no"
+        android:includeFontPadding="false"
+        android:textAppearance="@style/TextAppearance.Hymnal.Display"
+        android:transitionName="hymn_number"
+        android:visibility="gone" />
+
     <!-- Empty slot for the notebook bar (sub-project D-1 fills it and makes it visible); C only reserves it (C-5) -->
     <FrameLayout
         android:id="@+id/notebookBar"
@@ -107,7 +123,7 @@
                 android:contentDescription="@string/c_play"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_play_arrow" />
+                android:src="@drawable/ic_sym_play_arrow" />
 
             <ImageView
                 android:id="@+id/capsuleExpand"
@@ -117,7 +133,7 @@
                 android:contentDescription="@string/c_player_expand"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_expand_less" />
+                android:src="@drawable/ic_sym_expand_less" />
 
             <ImageView
                 android:id="@+id/capsuleNote"
@@ -126,7 +142,7 @@
                 android:contentDescription="@string/c_player_expand"
                 android:padding="16dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_note" />
+                android:src="@drawable/ic_sym_music_note" />
         </LinearLayout>
     </org.cog.hymnchtv.ui.player.PlayerCapsuleView>
 

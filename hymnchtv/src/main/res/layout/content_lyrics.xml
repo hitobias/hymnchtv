@@ -77,8 +77,7 @@
                 android:paddingStart="16dp"
                 android:paddingTop="6dp"
                 android:paddingEnd="16dp"
-                android:textSize="16sp"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.Hymnal.Heading"
                 android:visibility="gone" />
 
             <org.cog.hymnchtv.utils.ZoomTextView
@@ -170,7 +169,7 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:contentDescription="@string/c_lyrics_more"
-            android:src="@drawable/ic_lyrics_more" />
+            android:src="@drawable/ic_sym_more_vert" />
     </LinearLayout>
 
     <!-- Same height and style as the top bar buttons; three equal columns, one line each, also at 320dp -->

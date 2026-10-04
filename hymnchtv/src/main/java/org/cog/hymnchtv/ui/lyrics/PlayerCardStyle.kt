@@ -25,7 +25,7 @@ import org.cog.hymnchtv.ui.player.GlassFrameLayout
  * `onSurfaceMuted` track at alpha 0.3.
  */
 object PlayerCardStyle {
-    private const val CARD_RADIUS_DP = 16f
+    private const val CARD_RADIUS_DP = 28f
     private const val CHIP_RADIUS_DP = 12f
     private const val TRACK_ALPHA = 0x4D // 0.3
     private const val DISABLED_PLAY_ALPHA = 0.38f

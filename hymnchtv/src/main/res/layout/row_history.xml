@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One history row (home tab): tap opens, the trailing button deletes (visible alternative to swipe / long press) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
@@ -19,8 +20,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:textColor="?attr/colorOnSurfaceVariant"
-        android:textSize="14sp" />
+        android:textAppearance="@style/TextAppearance.Hymnal.Caption"
+        android:textColor="?attr/colorOnSurfaceVariant" />
 
     <ImageButton
         android:id="@+id/b_delete_in_list"
@@ -28,5 +29,6 @@
         android:layout_height="48dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/c_history_delete"
-        android:src="@drawable/ic_delete_red" />
+        android:src="@drawable/ic_sym_delete"
+        app:tint="?attr/colorOnSurfaceVariant" />
 </LinearLayout>

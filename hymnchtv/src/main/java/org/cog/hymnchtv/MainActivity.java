@@ -57,6 +57,7 @@ import org.cog.hymnchtv.reading.ReadingPrefKeys;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.persistance.PermissionUtils;
 import org.cog.hymnchtv.toc.YbCrossRef;
+import org.cog.hymnchtv.ui.host.HymnTransitions;
 import org.cog.hymnchtv.ui.host.MainChrome;
 import org.cog.hymnchtv.ui.host.MainHost;
 import org.cog.hymnchtv.ui.host.MainNavigator;
@@ -131,6 +132,7 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         // DayNight is applied globally by HymnsApp (ThemePrefs.applyStored)
         super.onCreate(savedInstanceState);
         org.cog.hymnchtv.ui.theme.SystemBars.enable(this);
+        HymnTransitions.prepareExit(this);
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 
         setContentView(R.layout.activity_main_host);
@@ -338,15 +340,37 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
                     .storeHymnHistory(new HistoryRecord(hymnType, hymnNo, isFu)));
         }
 
+        ctx.startActivity(contentIntent(ctx, hymnType, hymnNo, autoPlay, engNo.length == 0 ? null : engNo[0]));
+    }
+
+    /**
+     * Opens the lyrics from the home page: the typed number [shared] moves to the lyrics header (spec 5b-4) unless the
+     * system's animations are off. History is stored like {@link #showContent}.
+     */
+    public static void showContentFromHome(android.app.Activity activity, View shared, String hymnType, int hymnNo, Integer engNo) {
+        if (HYMN_BB_DUMMY != hymnNo) {
+            boolean isFu = MediaRecord.isFu(hymnType, hymnNo);
+            Context appContext = activity.getApplicationContext();
+            AppExecutors.io("store-history", () -> DatabaseBackend.getInstance(appContext)
+                    .storeHymnHistory(new HistoryRecord(hymnType, hymnNo, isFu)));
+        }
+        Intent intent = contentIntent(activity, hymnType, hymnNo, false, engNo);
+        Bundle options = HymnTransitions.openOptions(activity, shared, HymnTransitions.durationScale(activity));
+        if (options != null && shared instanceof android.widget.TextView) {
+            intent.putExtra(HymnTransitions.EXTRA_NUMBER_TEXT, ((android.widget.TextView) shared).getText().toString());
+        }
+        activity.startActivity(intent, options);
+    }
+
+    private static Intent contentIntent(Context ctx, String hymnType, int hymnNo, boolean autoPlay, Integer engNo) {
         Intent intent = new Intent(ctx, ContentHandler.class);
         Bundle bundle = new Bundle();
         bundle.putString(ATTR_HYMN_TYPE, hymnType);
         bundle.putInt(ATTR_HYMN_NUMBER, hymnNo);
         bundle.putBoolean(ATTR_AUTO_PLAY, autoPlay);
-        bundle.putInt(ATTR_ENGLISH_NO, engNo.length == 0 ? -1 : engNo[0]);
-
+        bundle.putInt(ATTR_ENGLISH_NO, engNo == null ? -1 : engNo);
         intent.putExtras(bundle);
-        ctx.startActivity(intent);
+        return intent;
     }
 
     public static String getHymnType(String hymnTN) {

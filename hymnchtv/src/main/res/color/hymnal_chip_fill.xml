@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Filter chip fill without an outline (spec 5b-2): a colour block, tinted when checked -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/colorSecondaryContainer" android:state_checked="true" />
+    <item android:color="?attr/colorSurfaceContainerHigh" />
+</selector>
