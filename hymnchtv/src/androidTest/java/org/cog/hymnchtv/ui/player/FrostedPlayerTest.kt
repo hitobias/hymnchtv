@@ -57,7 +57,7 @@ class FrostedPlayerTest : LyricsTestBase() {
 
     @Test
     fun cardIsGlassOnApi31AndAFlatFallbackBelow() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             s.read { a ->
                 val card = a.card()
                 val glass = card.glass!!
@@ -111,7 +111,7 @@ class FrostedPlayerTest : LyricsTestBase() {
 
     @Test
     fun blurFollowsCollapseExpandHideAndTheTransition() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             assertThat(s.read { it.playerSheet.cardBlurActive() }).isEqualTo(blurs)
             // Mid-transition both layers are on screen: both blur (the first frame of the container transform)
             s.onActivity { it.playerSheet.collapse(animate = true) }
@@ -140,7 +140,7 @@ class FrostedPlayerTest : LyricsTestBase() {
 
     @Test
     fun highContrastTextTurnsTheGlassOpaqueAndBack() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             shell("settings put secure ${GlassPolicy.HIGH_TEXT_CONTRAST_KEY} 1")
             s.await("opaque glass") { it.glassMode == GlassMode.OPAQUE }
             s.read { a ->
@@ -199,7 +199,7 @@ class FrostedPlayerTest : LyricsTestBase() {
 
     @Test
     fun landscapeKeepsTheInsetsAndTheBlurFillsTheCard() {
-        launch().use { s ->
+        launchExpanded().use { s ->
             assertInsetsUntouched(s)
             s.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
             s.await("landscape", 15_000) { !HymnsApp.isPortrait && it.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
@@ -216,7 +216,7 @@ class FrostedPlayerTest : LyricsTestBase() {
     @Test
     fun keyboardKeepsTheInsetsAndTheBlurFillsTheCard() {
         shell("settings put secure show_ime_with_hard_keyboard 1")
-        launch().use { s ->
+        launchExpanded().use { s ->
             val before = s.read { it.playerSheet.systemBottom }
             s.onActivity {
                 val field = it.card().findViewById<View>(R.id.repeatCount)

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home picker, recent hymns: title row ("Recent" and "All history") over a short list of the newest hymns -->
+<!-- Home picker, recent hymns: title row ("Recent" and "History &amp; favourites") over a short list of the newest hymns -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/recentArea"
@@ -18,6 +18,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:text="@string/c_recent_label"
             android:textAppearance="@style/TextAppearance.Hymnal.Heading" />
 
@@ -26,6 +28,8 @@
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
             android:minHeight="48dp"
             android:text="@string/c_recent_more"
             android:textAppearance="@style/TextAppearance.Hymnal.Body"

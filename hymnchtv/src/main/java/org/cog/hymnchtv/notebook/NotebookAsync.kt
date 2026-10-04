@@ -65,6 +65,10 @@ class NotebookAsync(
     fun toggleFavorite(key: HymnKey, callback: NotebookCallback<Boolean>): Cancellable =
         call(callback) { favorites.toggle(key) }
 
+    /** Idempotent: sets the state instead of flipping it. Delivers the stored row, or null when un-favouriting a never-favourited hymn. */
+    fun setFavorite(key: HymnKey, favorite: Boolean, callback: NotebookCallback<FavoriteEntity?>): Cancellable =
+        call(callback) { favorites.setFavorite(key, favorite) }
+
     fun favorites(callback: NotebookCallback<List<FavoriteEntity>>): Cancellable =
         call(callback) { favorites.findAll() }
 

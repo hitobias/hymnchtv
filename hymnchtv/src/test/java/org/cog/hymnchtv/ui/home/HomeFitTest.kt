@@ -126,4 +126,20 @@ class HomeFitTest {
     private companion object {
         const val FIXED = 240f
     }
+
+    @Test fun theHeaderWithTheHistoryEntryIsAlwaysPartOfTheBase() {
+        val exact = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP
+        assertThat(plan(available = exact, recent = 0).scrollable).isFalse()
+        assertThat(plan(available = exact - 1f, recent = 0).scrollable).isTrue()
+    }
+
+    @Test fun whenNoRowFitsTheHeaderStillStaysAndNothingIsDropped() {
+        val exact = FIXED + 48f + HomeFit.KEYPAD_MIN_DP + HomeFit.SAFETY_DP
+        val p = plan(available = exact, recent = 12)
+        assertThat(p.scrollable).isFalse()
+        assertThat(p.recentCount).isEqualTo(0)
+        val tiny = plan(available = 100f, recent = 12)
+        assertThat(tiny.scrollable).isTrue()
+        assertThat(tiny.recentCount).isEqualTo(HomeFit.MAX_RECENT)
+    }
 }

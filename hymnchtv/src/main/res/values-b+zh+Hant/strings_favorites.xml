@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fav_add">收藏</string>
+    <string name="fav_remove">取消收藏</string>
+    <string name="fav_added">已加入收藏</string>
+    <string name="fav_removed">已取消收藏</string>
+    <string name="fav_undo">復原</string>
+    <string name="fav_tab_recent">最近</string>
+    <string name="fav_tab_favorites">收藏</string>
+    <string name="fav_empty">還沒有收藏的詩歌。在歌詞頁右上角「更多」選單選「收藏」即可加入。</string>
+    <string name="fav_marked">已收藏</string>
+</resources>

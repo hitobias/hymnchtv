@@ -16,6 +16,7 @@ import org.cog.hymnchtv.notebook.backup.BackupIo
 import org.cog.hymnchtv.notebook.backup.ExportResult
 import org.cog.hymnchtv.notebook.backup.ImportResult
 import org.cog.hymnchtv.notebook.data.SingStats
+import org.cog.hymnchtv.notebook.data.entity.FavoriteEntity
 import org.cog.hymnchtv.notebook.data.entity.SingLogEntity
 import org.cog.hymnchtv.notebook.fakes.FakeNotebookPrefs
 import org.cog.hymnchtv.notebook.fakes.InMemoryFavoriteRepository
@@ -65,6 +66,41 @@ class NotebookAsyncTest {
         h.async.isFavorite(key) { outcomes += it }
         runCurrent()
         assertThat(outcomes).containsExactly(Outcome.Ok(true), Outcome.Ok(false), Outcome.Ok(false)).inOrder()
+    }
+
+    @Test
+    fun setFavoriteIsIdempotentAndDeliversTheStoredRow() = runTest {
+        val h = Harness(this)
+        val out = mutableListOf<Outcome<FavoriteEntity?>>()
+        h.async.setFavorite(key, true) { out += it }
+        h.async.setFavorite(key, true) { out += it } // already favourite: row unchanged
+        h.async.setFavorite(key, false) { out += it }
+        h.async.setFavorite(key, false) { out += it } // already removed: still not an error
+        runCurrent()
+        assertThat(out.map { (it as Outcome.Ok).value?.deletedAt != null })
+            .containsExactly(false, false, true, true).inOrder()
+        assertThat(out[0].getOrNull()).isEqualTo(out[1].getOrNull())
+    }
+
+    @Test
+    fun setFavoriteOfANeverFavouritedHymnToFalseDeliversNull() = runTest {
+        val h = Harness(this)
+        var result: Outcome<FavoriteEntity?>? = null
+        h.async.setFavorite(key, false) { result = it }
+        runCurrent()
+        assertThat(result).isEqualTo(Outcome.Ok(null))
+    }
+
+    @Test
+    fun setFavoriteCallbackIsNotCalledAfterCancel() = runTest {
+        val h = Harness(this)
+        val gate = CompletableDeferred<Unit>().also { h.favorites.gate = it }
+        val outcomes = mutableListOf<Outcome<FavoriteEntity?>>()
+        val call = h.async.setFavorite(key, true) { outcomes += it }
+        call.cancel()
+        gate.complete(Unit)
+        runCurrent()
+        assertThat(outcomes).isEmpty()
     }
 
     @Test

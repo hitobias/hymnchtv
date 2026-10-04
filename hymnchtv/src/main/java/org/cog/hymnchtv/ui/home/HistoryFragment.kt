@@ -1,22 +1,51 @@
 package org.cog.hymnchtv.ui.home
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.tabs.TabLayout
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.concurrent.AppExecutors
 import org.cog.hymnchtv.hymnhistory.HistoryRecord
+import org.cog.hymnchtv.lyrics.LyricsScript
+import org.cog.hymnchtv.notebook.Cancellable
+import org.cog.hymnchtv.notebook.Notebook
+import org.cog.hymnchtv.notebook.Outcome
+import org.cog.hymnchtv.notebook.data.entity.FavoriteEntity
+import org.cog.hymnchtv.notebook.model.HymnKey
+import org.cog.hymnchtv.ui.titles.AssetHymnTitles
+import timber.log.Timber
 
-/** Full-screen list of the recently opened hymns (over the tabs): tap opens, the trailing button or a swipe deletes, a long press asks first. */
+/**
+ * Full-screen "History & favourites" page (over the tabs). The Recent tab lists the recently opened hymns: tap opens, the
+ * trailing button or a swipe deletes, a long press asks first. The Favourites tab lists the favourites: tap opens, the
+ * trailing star removes (with undo).
+ */
 class HistoryFragment : Fragment(R.layout.fragment_history) {
     private var list: RecyclerView? = null
     private var empty: View? = null
+    private var favoritesList: RecyclerView? = null
+    private var favoritesEmpty: View? = null
+    private var tabs: TabLayout? = null
     private lateinit var adapter: HistoryAdapter
+    private lateinit var favoriteAdapter: FavoriteAdapter
+    private var currentTab = HistoryTab.RECENT
+    private var recentIsEmpty = false
+    private var favoritesIsEmpty = false
+
+    /** Bumped whenever the favourites change or a newer load starts, so an older snapshot arriving late is dropped. */
+    private var loadGen = 0
+    private var loadCall: Cancellable? = null
+    private var snackbar: Snackbar? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,6 +72,45 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
                 if (holder is HistoryAdapter.RowHolder) super.getSwipeDirs(rv, holder) else 0
         }
         ItemTouchHelper(swipe).attachToRecyclerView(recycler)
+        setUpFavorites(view)
+    }
+
+    private fun setUpFavorites(view: View) {
+        val recycler = view.findViewById<RecyclerView>(R.id.favorites_list)
+        favoritesList = recycler
+        favoritesEmpty = view.findViewById(R.id.tv_favorites_empty)
+        favoriteAdapter = FavoriteAdapter(onOpen = { openFavorite(it) }, onUnfavorite = { unfavorite(it) })
+        recycler.layoutManager = LinearLayoutManager(requireContext())
+        recycler.adapter = favoriteAdapter
+
+        val tabBar = view.findViewById<TabLayout>(R.id.history_tabs)
+        tabs = tabBar
+        val saved = HistoryTab.fromPref(prefs().getInt(HomePrefs.HISTORY_TAB, HistoryTab.RECENT.pref))
+        tabBar.addTab(tabBar.newTab().setText(R.string.fav_tab_recent).setTag(HistoryTab.RECENT), saved == HistoryTab.RECENT)
+        tabBar.addTab(tabBar.newTab().setText(R.string.fav_tab_favorites).setTag(HistoryTab.FAVORITES), saved == HistoryTab.FAVORITES)
+        currentTab = saved
+        refreshVisibility()
+        tabBar.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                currentTab = tab.tag as? HistoryTab ?: HistoryTab.RECENT
+                prefs().edit().putInt(HomePrefs.HISTORY_TAB, currentTab.pref).apply()
+                refreshVisibility()
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+
+            override fun onTabReselected(tab: TabLayout.Tab) = Unit
+        })
+    }
+
+    private fun prefs() = requireContext().getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
+
+    private fun refreshVisibility() {
+        val recent = currentTab == HistoryTab.RECENT
+        list?.visibility = if (recent) View.VISIBLE else View.GONE
+        empty?.visibility = if (recent && recentIsEmpty) View.VISIBLE else View.GONE
+        favoritesList?.visibility = if (recent) View.GONE else View.VISIBLE
+        favoritesEmpty?.visibility = if (!recent && favoritesIsEmpty) View.VISIBLE else View.GONE
     }
 
     override fun onStart() {
@@ -52,13 +120,22 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
     }
 
     override fun onDestroyView() {
+        snackbar?.dismiss()
+        snackbar = null
+        loadCall?.cancel()
+        loadCall = null
+        loadGen++
         list = null
         empty = null
+        favoritesList = null
+        favoritesEmpty = null
+        tabs = null
         super.onDestroyView()
     }
 
     private fun reload() {
         HistoryActions.load(requireContext()) { records -> if (list != null) show(records) }
+        loadFavorites()
     }
 
     /** The records on screen (without day headings), newest first. */
@@ -67,7 +144,91 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
     private fun show(records: List<HistoryRecord>) {
         shown = records
         adapter.submitList(HistoryAdapter.group(requireContext(), records, System.currentTimeMillis()))
-        empty?.visibility = if (records.isEmpty()) View.VISIBLE else View.GONE
+        recentIsEmpty = records.isEmpty()
+        refreshVisibility()
+    }
+
+    // ---- favourites ----
+
+    private fun loadFavorites() {
+        val gen = ++loadGen
+        loadCall?.cancel()
+        val appContext = requireContext().applicationContext
+        // The script is read now, so a later change of the lyrics language is picked up by the next load
+        val variant = LyricsScript.hantVariant(appContext)
+        loadCall = Notebook.async(appContext).favorites { outcome ->
+            if (list == null || gen != loadGen) return@favorites
+            when (outcome) {
+                is Outcome.Ok -> buildFavoriteRows(appContext, gen, variant, outcome.value)
+                is Outcome.Err -> {
+                    Timber.w(outcome.error, "Loading the favourites failed")
+                    showFavoritesError()
+                }
+            }
+        }
+    }
+
+    /** Title lookup reads assets, so it runs off the main thread. */
+    private fun buildFavoriteRows(appContext: Context, gen: Int, variant: org.cog.hymnchtv.lyrics.HantVariant?, entities: List<FavoriteEntity>) {
+        AppExecutors.io("favorites-titles") {
+            val titles = AssetHymnTitles.from(appContext, variant)
+            val rows = FavoriteRows.build(entities) { ref -> titles.lookup(ref.book, ref.storedNo) }
+            AppExecutors.MAIN.post { if (list != null && gen == loadGen) showFavorites(rows) }
+        }
+    }
+
+    private fun showFavorites(rows: List<FavoriteRow>, emptyText: Int = R.string.fav_empty) {
+        (favoritesEmpty as? TextView)?.setText(emptyText)
+        shownFavorites = rows
+        favoriteAdapter.submitList(rows)
+        favoritesIsEmpty = FavoriteRows.isEmpty(rows)
+        refreshVisibility()
+    }
+
+    /** A failed load is not "no favourites": show the error text in the empty-state view. */
+    private fun showFavoritesError() {
+        showFavorites(emptyList(), R.string.fav_error)
+    }
+
+    private var shownFavorites: List<FavoriteRow> = emptyList()
+
+    private fun openFavorite(row: FavoriteRow) {
+        MainActivity.setHymnTypeNo(row.ref.book, row.ref.storedNo)
+        MainActivity.showContent(requireContext(), row.ref.book, row.ref.storedNo, false)
+    }
+
+    /** Drops any load still in flight: its snapshot would show the old state, the write's own reload shows the new one. */
+    private fun invalidateLoads() {
+        loadGen++
+        loadCall?.cancel()
+        loadCall = null
+    }
+
+    private fun setFavorite(key: HymnKey, favorite: Boolean, onOk: () -> Unit) {
+        invalidateLoads()
+        // Not cancelled with the view: a cancelled write could be dropped; the callback ignores a destroyed view
+        Notebook.async(requireContext().applicationContext).setFavorite(key, favorite) { outcome ->
+            if (list == null) return@setFavorite
+            if (outcome is Outcome.Ok) {
+                onOk()
+            } else {
+                Timber.w(outcome.errorOrNull(), "Setting the favourite failed")
+                snackbar = view?.let { Snackbar.make(it, R.string.fav_error, Snackbar.LENGTH_LONG).also(Snackbar::show) }
+                loadFavorites()
+            }
+        }
+    }
+
+    private fun unfavorite(row: FavoriteRow) {
+        setFavorite(row.key, false) {
+            showFavorites(shownFavorites.filterNot { it.key == row.key })
+            snackbar = view?.let { root ->
+                Snackbar.make(root, R.string.fav_removed, Snackbar.LENGTH_LONG)
+                    .setAction(R.string.fav_undo) { setFavorite(row.key, true) { loadFavorites() } }
+                    .also(Snackbar::show)
+            }
+            loadFavorites()
+        }
     }
 
     private fun open(record: HistoryRecord) {

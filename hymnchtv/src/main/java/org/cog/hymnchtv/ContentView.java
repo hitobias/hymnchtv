@@ -27,6 +27,7 @@ import static org.cog.hymnchtv.utils.ZoomTextView.STEP_SCALE_FACTOR;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -43,6 +44,7 @@ import android.text.Layout;
 import android.text.TextUtils;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
@@ -58,6 +60,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
+import androidx.core.widget.ImageViewCompat;
 import androidx.fragment.app.Fragment;
 
 import java.io.BufferedReader;
@@ -164,6 +167,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private ZoomTextView lyricsSimplify;
     private ZoomTextView lyricsTraditional;
     private TextView meterKeyView;
+    private View infoRowView;
+    private ImageView favoriteStarView;
     /** Bumped by every applyFont: a background face load only applies if no newer choice was made meanwhile. */
     private int mFontRequest;
     private WebView lyricsEnglish;
@@ -198,6 +203,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private ReadingPalette mPalette;
     private String mResPrefix;
     private int[] mHymnScoreInfo;
+    /** The hymn this page shows; the favourite star follows the key of this page, not of the current one. */
+    private String mPageHymnType;
+    private int mPageHymnNo;
 
     private SharedPreferences mSharedPref;
     private SharedPreferences.Editor mEditor;
@@ -261,6 +269,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsTraditional.registerZoomTextListener(this);
 
         meterKeyView = mConvertView.findViewById(R.id.meter_key);
+        infoRowView = mConvertView.findViewById(R.id.lyrics_info_row);
+        favoriteStarView = mConvertView.findViewById(R.id.favorite_star);
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
 
         mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
@@ -367,6 +377,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         // Hide the English entries if there are no associated English lyrics
         popup.getMenu().findItem(R.id.lyrcsEnglish).setVisible(mHymnNoEng != null);
         popup.getMenu().findItem(R.id.lyrcsEnglishDelete).setVisible(mHymnNoEng != null && hasEnglishLyrics);
+        MenuItem favorite = popup.getMenu().findItem(R.id.favorite);
+        favorite.setTitle(isFavoriteMarked() ? R.string.fav_remove : R.string.fav_add);
+        favorite.setEnabled(mContentHandler.canToggleFavorite());
         popup.setOnMenuItemClickListener(item -> mContentHandler.onLyricsAction(item.getItemId()));
         // The toolbars must not fade away under an open menu
         mContentHandler.setChromeHeld(true);
@@ -432,6 +445,8 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
 
         // Chinese lyrics#
         int lyricsNo = mHymnScoreInfo[0];
+        mPageHymnType = hymnType;
+        mPageHymnNo = lyricsNo;
         isErGe = HYMN_ER.equals(hymnType);
 
         switch (hymnType) {
@@ -700,6 +715,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         int accent = mPalette.getAccentColor();
         view.setTextColor(mPalette.getTextColor());
         meterKeyView.setTextColor(accent);
+        ImageViewCompat.setImageTintList(favoriteStarView, ColorStateList.valueOf(accent));
         view.setLinkTextColor(accent);
         view.setHighlightColor((accent & 0x00FFFFFF) | 0x40000000);
         // null for drawn backgrounds; an 85 % panel for photos
@@ -893,6 +909,26 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private void showMeterKey(@Nullable String meterKey) {
         meterKeyView.setText(meterKey);
         meterKeyView.setVisibility(TextUtils.isEmpty(meterKey) ? View.GONE : View.VISIBLE);
+        updateInfoRow();
+    }
+
+    private boolean isFavoriteMarked() {
+        return mContentHandler.isFavoriteMarked(mPageHymnType, mPageHymnNo);
+    }
+
+    /** The row shows the key and time signature and/or the favourite star; it is hidden when it has neither. */
+    private void updateInfoRow() {
+        boolean marked = isFavoriteMarked();
+        favoriteStarView.setVisibility(marked ? View.VISIBLE : View.GONE);
+        boolean hasKey = meterKeyView.getVisibility() == View.VISIBLE;
+        infoRowView.setVisibility(hasKey || marked ? View.VISIBLE : View.GONE);
+    }
+
+    /** Called by ContentHandler when the favourite state of the hymn on screen changed. */
+    public void onFavoriteStateChanged() {
+        if (infoRowView != null) {
+            updateInfoRow();
+        }
     }
 
     private boolean isShowTraditional() {

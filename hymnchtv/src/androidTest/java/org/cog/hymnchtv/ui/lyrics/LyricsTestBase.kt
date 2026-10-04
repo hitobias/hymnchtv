@@ -48,6 +48,8 @@ abstract class LyricsTestBase {
     @Before
     fun setUpBase() {
         chromeTimer = ManualChromeTimer()
+        // The one-time "tap the middle" hint Toast would take the injected touches: mark it as already shown
+        ctx.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE).edit().putBoolean(LyricsChromeHint.PREF_KEY, true).commit()
         ContentHandler.sChromeTimerForTest = chromeTimer
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             TestPermissions.grantLaunchPermission(ctx.packageName)
@@ -68,6 +70,16 @@ abstract class LyricsTestBase {
             putInt(MainActivity.ATTR_HYMN_NUMBER, number)
         }
         return ActivityScenario.launch<ContentHandler>(Intent(ctx, ContentHandler::class.java).putExtras(extras)).also { it.awaitPage() }
+    }
+
+    /** A cold open starts with the player as the capsule: tests that work on the card expand it explicitly. */
+    fun launchExpanded(type: String = MainActivity.HYMN_DB, number: Int = 5): ActivityScenario<ContentHandler> = launch(type, number).also {
+        it.await("the capsule") { a -> a.findViewById<View>(R.id.playerCapsule).visibility == View.VISIBLE && a.findViewById<View>(R.id.playerUi).visibility == View.GONE }
+        it.onActivity { a -> a.playerSheet.expand(true) }
+        it.await("the card") { a ->
+            val card = a.findViewById<View>(R.id.playerUi)
+            a.findViewById<View>(R.id.playerCapsule).visibility == View.GONE && card.visibility == View.VISIBLE && card.alpha == 1f && card.scaleX == 1f
+        }
     }
 
     fun <T> ActivityScenario<ContentHandler>.read(block: (ContentHandler) -> T): T {

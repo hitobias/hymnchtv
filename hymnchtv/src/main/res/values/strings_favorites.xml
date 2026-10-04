@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fav_add">Add to favourites</string>
+    <string name="fav_remove">Remove from favourites</string>
+    <string name="fav_added">Added to favourites</string>
+    <string name="fav_removed">Removed from favourites</string>
+    <string name="fav_undo">Undo</string>
+    <string name="fav_tab_recent">Recent</string>
+    <string name="fav_tab_favorites">Favourites</string>
+    <string name="fav_empty">No favourites yet. On a lyrics page, open the More menu and choose Add to favourites.</string>
+    <string name="fav_marked">Favourite</string>
+</resources>

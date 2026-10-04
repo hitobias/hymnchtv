@@ -2,6 +2,7 @@ package org.cog.hymnchtv.ui
 
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
@@ -39,8 +40,24 @@ class SmokeFlowTest {
             onView(withId(R.id.viewPager)).check(matches(isDisplayed()))
             onView(withId(R.id.viewPager)).perform(swipeLeft())
             onView(withId(R.id.viewPager)).check(matches(isDisplayed()))
-            onView(withId(R.id.playback_play)).perform(click())
+            // A hymn opens with the player collapsed to the capsule: show the card before pressing play
+            onView(withId(R.id.capsuleNote)).perform(click())
+            clickWhenShown(R.id.playback_play)
             scenario.onActivity { a -> assertFalse(a.isFinishing) }
+        }
+    }
+
+    /** The card expands with an animation: retry the click until it is on screen. */
+    private fun clickWhenShown(id: Int) {
+        val end = SystemClock.uptimeMillis() + 10_000
+        while (true) {
+            try {
+                onView(withId(id)).perform(click())
+                return
+            } catch (e: RuntimeException) {
+                if (SystemClock.uptimeMillis() > end) throw e
+                SystemClock.sleep(200)
+            }
         }
     }
 
