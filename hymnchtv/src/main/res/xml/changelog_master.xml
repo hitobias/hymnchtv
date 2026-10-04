@@ -2,6 +2,12 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.3.0 (10/04/2026)" versioncode="103000">
+        <change>新增收藏：歌詞頁右上角「更多」選單可收藏／取消收藏，已收藏的詩在詩題下顯示 ★。</change>
+        <change>首頁「全部記錄」改為「記錄與收藏」，新增「收藏」分頁；可在列尾 ★ 取消收藏並復原。</change>
+        <change>打開詩歌時只顯示歌詞：上下工具列先隱藏，點畫面中央即可叫出；播放卡預設收合在右下角。</change>
+        <change>App 圖示換回原本的「詩歌・書拉密女」圖示。</change>
+    </release>
     <release version="1.2.0 (10/04/2026)" versioncode="102000">
         <change>首頁改為一頁滿屏：取消底部導覽，「目錄」「設定」移到首頁頂端；連按兩次返回鍵才離開。</change>
         <change>歌詞頁預設只顯示歌詞；頂列新增「回首頁」鈕，⋮ 選單第一項也是「回首頁」。</change>
