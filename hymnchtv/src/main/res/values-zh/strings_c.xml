@@ -56,8 +56,8 @@
     <string name="c_key_fu_desc">附录诗歌</string>
     <string name="c_key_delete_desc">删除一位</string>
     <string name="c_recent_label">最近</string>
-    <string name="c_recent_more">全部记录</string>
-    <string name="c_history_title">最近打开过</string>
+    <string name="c_recent_more">记录与收藏</string>
+    <string name="c_history_title">记录与收藏</string>
     <string name="c_history_empty">还没有打开过诗歌</string>
     <string name="c_chip_desc">%1$s，%2$s，%3$s</string>
     <string name="c_chip_remove_action">从最近移除</string>

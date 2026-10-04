@@ -56,8 +56,8 @@
     <string name="c_key_fu_desc">Appendix hymns</string>
     <string name="c_key_delete_desc">Delete last digit</string>
     <string name="c_recent_label">Recent</string>
-    <string name="c_recent_more">All history</string>
-    <string name="c_history_title">Recently opened</string>
+    <string name="c_recent_more">History &amp; favourites</string>
+    <string name="c_history_title">History &amp; favourites</string>
     <string name="c_history_empty">Nothing opened yet</string>
     <string name="c_chip_desc">%1$s, %2$s, %3$s</string>
     <string name="c_chip_remove_action">Remove from recent</string>
