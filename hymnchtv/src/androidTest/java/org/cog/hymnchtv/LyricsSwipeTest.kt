@@ -17,6 +17,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.reading.DisplayMode
 import org.cog.hymnchtv.reading.ReadingPrefKeys
+import org.cog.hymnchtv.ui.lyrics.LyricsChromeHint
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -44,6 +45,7 @@ class LyricsSwipeTest {
         prefs.edit()
             .putString(ReadingPrefKeys.DISPLAY_MODE, DisplayMode.SCORE_AND_LYRICS.name)
             .putBoolean(ReadingPrefKeys.MENU_SHOW, false)
+            .putBoolean(LyricsChromeHint.PREF_KEY, true) // no hint Toast over the injected gestures
             .commit()
     }
 
@@ -51,7 +53,7 @@ class LyricsSwipeTest {
     fun tearDown() {
         mainScenario?.close()
         mainScenario = null
-        prefs.edit().remove(ReadingPrefKeys.DISPLAY_MODE).remove(ReadingPrefKeys.MENU_SHOW).commit()
+        prefs.edit().remove(ReadingPrefKeys.DISPLAY_MODE).remove(ReadingPrefKeys.MENU_SHOW).remove(LyricsChromeHint.PREF_KEY).commit()
     }
 
     private fun launch(): ActivityScenario<ContentHandler> {
