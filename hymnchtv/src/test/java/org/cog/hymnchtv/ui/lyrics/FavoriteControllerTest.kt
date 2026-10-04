@@ -34,7 +34,7 @@ class FavoriteControllerTest {
         override suspend fun importFrom(uri: Uri): ImportResult = throw UnsupportedOperationException()
     }
 
-    /** isFavorite / toggle of a key suspend on that key's own gate (when one is installed). */
+    /** isFavorite / setFavorite of a key suspend on that key's own gate (when one is installed). */
     private class GatedRepo(private val d: InMemoryFavoriteRepository) : FavoriteRepository by d {
         val queryGates = mutableMapOf<HymnKey, CompletableDeferred<Unit>>()
         val toggleGates = mutableMapOf<HymnKey, CompletableDeferred<Unit>>()
@@ -45,10 +45,10 @@ class FavoriteControllerTest {
             return d.isFavorite(key)
         }
 
-        override suspend fun toggle(key: HymnKey): Boolean {
+        override suspend fun setFavorite(key: HymnKey, favorite: Boolean): FavoriteEntity? {
             toggleCalls++
             toggleGates[key]?.await()
-            return d.toggle(key)
+            return d.setFavorite(key, favorite)
         }
     }
 
@@ -121,6 +121,7 @@ class FavoriteControllerTest {
         val h = Harness(this)
         val gate = CompletableDeferred<Unit>().also { h.repo.toggleGates[k1] = it }
         h.controller.onHymnChanged(HymnTypes.DB, 1)
+        runCurrent()
         h.controller.toggle()
         h.controller.toggle()
         runCurrent()
@@ -135,6 +136,7 @@ class FavoriteControllerTest {
         val h = Harness(this)
         val gate = CompletableDeferred<Unit>().also { h.repo.toggleGates[k1] = it }
         h.controller.onHymnChanged(HymnTypes.DB, 1)
+        runCurrent()
         h.controller.toggle()
         h.controller.onHymnChanged(HymnTypes.DB, 2)
         runCurrent()
@@ -167,6 +169,7 @@ class FavoriteControllerTest {
         val q = CompletableDeferred<Unit>().also { h.repo.queryGates[k1] = it }
         val t = CompletableDeferred<Unit>().also { h.repo.toggleGates[k2] = it }
         h.controller.onHymnChanged(HymnTypes.DB, 2)
+        runCurrent()
         h.controller.toggle()
         h.controller.onHymnChanged(HymnTypes.DB, 1)
         val before = h.listener.states.size
@@ -177,6 +180,8 @@ class FavoriteControllerTest {
         assertThat(h.listener.states.size).isEqualTo(before)
         assertThat(h.listener.toggled).isEmpty()
         assertThat(h.listener.errors).isEqualTo(0)
+        // the write itself is not cancelled by destroy
+        assertThat(h.mem.isFavorite(k2)).isTrue()
     }
 
     @Test
@@ -189,10 +194,63 @@ class FavoriteControllerTest {
         runCurrent()
         assertThat(h.listener.errors).isEqualTo(1)
         assertThat(h.listener.toggled).isEmpty()
+        // the state is re-queried after the failure, so the menu stays truthful
+        assertThat(h.controller.canToggle()).isTrue()
         assertThat(h.controller.isMarked(HymnTypes.DB, 1)).isFalse()
         // marker cleared: retry works
         h.controller.toggle()
         runCurrent()
+        assertThat(h.listener.toggled).containsExactly(true)
+    }
+
+    @Test
+    fun toggleDisabledUntilStateKnown() = runTest {
+        val h = Harness(this)
+        val g = CompletableDeferred<Unit>().also { h.repo.queryGates[k1] = it }
+        h.controller.onHymnChanged(HymnTypes.DB, 1)
+        runCurrent()
+        assertThat(h.controller.canToggle()).isFalse()
+        assertThat(h.listener.states.last()).isEqualTo(false to false)
+        h.controller.toggle()
+        runCurrent()
+        assertThat(h.repo.toggleCalls).isEqualTo(0)
+        g.complete(Unit)
+        runCurrent()
+        assertThat(h.controller.canToggle()).isTrue()
+        assertThat(h.listener.states.last()).isEqualTo(false to true)
+    }
+
+    @Test
+    fun toggleSetsExactlyWhatTheMenuSays() = runTest {
+        val h = Harness(this)
+        h.mem.setFavorite(k1, true)
+        h.controller.onHymnChanged(HymnTypes.DB, 1)
+        runCurrent()
+        // the menu says "remove": the write removes, even if the row was meanwhile re-added elsewhere
+        h.controller.toggle()
+        runCurrent()
+        assertThat(h.mem.isFavorite(k1)).isFalse()
+        assertThat(h.listener.toggled).containsExactly(false)
+        assertThat(h.controller.isMarked(HymnTypes.DB, 1)).isFalse()
+    }
+
+    @Test
+    fun queryStartedDuringToggleDoesNotOverrideResult() = runTest {
+        val h = Harness(this)
+        h.controller.onHymnChanged(HymnTypes.DB, 1)
+        runCurrent()
+        val toggleGate = CompletableDeferred<Unit>().also { h.repo.toggleGates[k1] = it }
+        val queryGate = CompletableDeferred<Unit>().also { h.repo.queryGates[k1] = it }
+        h.controller.toggle()
+        h.controller.onHymnChanged(HymnTypes.DB, 2)
+        h.controller.onHymnChanged(HymnTypes.DB, 1)
+        runCurrent()
+        toggleGate.complete(Unit)
+        runCurrent()
+        assertThat(h.controller.isMarked(HymnTypes.DB, 1)).isTrue()
+        queryGate.complete(Unit)
+        runCurrent()
+        assertThat(h.controller.isMarked(HymnTypes.DB, 1)).isTrue()
         assertThat(h.listener.toggled).containsExactly(true)
     }
 }
