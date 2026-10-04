@@ -55,6 +55,7 @@ class InMemoryFavoriteRepository(private val clock: Clock, private val device: S
     }
 
     override suspend fun setFavorite(key: HymnKey, favorite: Boolean): FavoriteEntity? {
+        enter()
         val id = FavoriteIds.forKey(key)
         val existing = rows[id]
         val now = clock.nowMillis()
