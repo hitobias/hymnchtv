@@ -17,7 +17,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Secondary screens show their title in the window ActionBar; MainActivity (own Toolbar) and ContentHandler have none. */
+/**
+ * Secondary screens show their title in the window ActionBar; MainActivity (own Toolbar) and ContentHandler have none.
+ * Reading settings themes its page with an in-page [org.cog.hymnchtv.ui.page.PageTitleBar] (1.2.0) instead.
+ */
 @RunWith(AndroidJUnit4::class)
 class ActionBarThemeTest {
     @Before
@@ -44,7 +47,17 @@ class ActionBarThemeTest {
 
     @Test fun licensesHasActionBar() = assertHasVisibleActionBar(LicensesActivity::class.java)
 
-    @Test fun readingSettingsHasActionBar() = assertHasVisibleActionBar(ReadingSettingsActivity::class.java)
+    @Test
+    fun readingSettingsHasAVisiblePageTitleBarWithBack() {
+        launch(ReadingSettingsActivity::class.java) { a ->
+            val back = a.findViewById<android.view.View>(R.id.page_back)
+            val title = a.findViewById<android.widget.TextView>(R.id.page_title)
+            assertThat(back).isNotNull()
+            assertThat(back.isShown).isTrue()
+            assertThat(title.isShown).isTrue()
+            assertThat(title.text.toString()).isNotEmpty()
+        }
+    }
 
     @Test fun backgroundPickerHasActionBar() = assertHasVisibleActionBar(BackgroundPickerActivity::class.java)
 

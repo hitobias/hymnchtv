@@ -15,10 +15,11 @@
         <item name="shapeAppearance">@style/ShapeAppearance.Hymnal.Small</item>
     </style>
 
-    <!-- Hymn book cell: 52dp, 12dp corners, Heading text (shrinks to fit rather than cutting a name off) -->
+    <!-- Hymn book cell: 52dp, 12dp corners, bold Title text (kept large on purpose, 1.1.1; shrinks to fit rather than cutting a name off) -->
     <style name="Widget.Hymnal.BookButton" parent="Widget.Hymnal.HomeButton">
         <item name="shapeAppearance">@style/ShapeAppearance.Hymnal.Small</item>
-        <item name="android:textAppearance">@style/TextAppearance.Hymnal.Heading</item>
+        <item name="android:textAppearance">@style/TextAppearance.Hymnal.Title</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">52dp</item>
         <item name="android:layout_weight">1</item>
