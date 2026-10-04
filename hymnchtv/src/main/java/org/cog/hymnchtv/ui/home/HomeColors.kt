@@ -141,10 +141,11 @@ class HomeColors(
 
     private fun applyTypography(views: HymnPickerViews) {
         views.books.values.plus(views.toc).forEach { KaiText.applyForUi(it, context, bold = true) }
-        // Book labels are Heading size (Kai in a Chinese interface); they shrink together only if the system font is large
+        // Book labels are Title size (kept large on purpose since 1.1.1; Kai in a Chinese interface); they shrink together
+        // only when a label would not fit, e.g. a large system font on a narrow screen
         views.bookFitter?.detach()
-        val headingSp = context.resources.getDimension(R.dimen.type_heading) / context.resources.displayMetrics.scaledDensity
-        views.bookFitter = BookLabelFitter(views, headingSp).also { it.attach() }
+        val titleSp = context.resources.getDimension(R.dimen.type_title) / context.resources.displayMetrics.scaledDensity
+        views.bookFitter = BookLabelFitter(views, titleSp).also { it.attach() }
         KaiText.applyForUi(views.fu, context, bold = true)
     }
 

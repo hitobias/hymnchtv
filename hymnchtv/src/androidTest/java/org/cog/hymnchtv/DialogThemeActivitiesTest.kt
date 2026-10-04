@@ -43,9 +43,16 @@ class DialogThemeActivitiesTest {
             val cls = Class.forName(a.name)
             androidx.appcompat.app.AppCompatActivity::class.java.isAssignableFrom(cls) &&
                 a.theme != 0 &&
-                !isAppCompat(a.theme)
+                !isAppCompat(launchTheme(a.theme))
         }.map { it.name }
         assertThat(bad).isEmpty()
+    }
+
+    /** A core-splashscreen launch theme hands over to its postSplashScreenTheme in installSplashScreen(), so check that. */
+    private fun launchTheme(themeRes: Int): Int {
+        val ctx = android.view.ContextThemeWrapper(getInstrumentation().targetContext, themeRes)
+        val a = ctx.obtainStyledAttributes(intArrayOf(androidx.core.splashscreen.R.attr.postSplashScreenTheme))
+        return try { a.getResourceId(0, themeRes) } finally { a.recycle() }
     }
 
     private fun isAppCompat(themeRes: Int): Boolean {
