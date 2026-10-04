@@ -1154,6 +1154,9 @@ public class ContentHandler extends BaseActivity {
 
     // Media file playback ended or file download error
     public void onEndOrError(String statusText) {
+        // Download callbacks outlive this page (the download handler is app-wide); ignore them once it is going away
+        if (isFinishing() || isDestroyed())
+            return;
         Timber.w("AutoStream: %s; %s", mAutoStream, statusText);
         if (mAutoStream && advanceByAutoStream()) {
             if (isMediaPlayerUi) {
@@ -1453,6 +1456,8 @@ public class ContentHandler extends BaseActivity {
      * Show BibleTool linked page if download failed.
      */
     public void showBibleToolHymnal() {
+        if (isFinishing() || isDestroyed())
+            return;
         String url = getHymnUri();
         initWebView(ContentHandler.UrlType.hymnBibleTool, url);
     }
