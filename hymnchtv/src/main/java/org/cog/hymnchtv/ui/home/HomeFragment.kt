@@ -154,7 +154,11 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
 
     override fun onOpenRef(ref: HymnRef, englishNo: Int?) {
         MainActivity.setHymnTypeNo(ref.book, ref.storedNo)
-        MainActivity.showContentFromHome(requireActivity(), views?.entry, ref.book, ref.storedNo, englishNo)
+        if (englishNo == null) {
+            MainActivity.showContent(requireContext(), ref.book, ref.storedNo, false)
+        } else {
+            MainActivity.showContent(requireContext(), ref.book, ref.storedNo, false, englishNo)
+        }
     }
 
     override fun openSearch(book: String?) {

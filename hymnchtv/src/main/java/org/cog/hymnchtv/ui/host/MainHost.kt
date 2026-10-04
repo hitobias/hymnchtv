@@ -115,7 +115,6 @@ class MainHost(private val activity: AppCompatActivity) {
         // Overlays only open from home; whatever is open closes first so the page replaces the home page itself
         popAll()
         fm.beginTransaction().setReorderingAllowed(true)
-            .setCustomAnimations(R.animator.page_fade_in, R.animator.page_fade_out, R.animator.page_fade_in, R.animator.page_fade_out)
             .replace(R.id.fragment_container, fragment, tag)
             .addToBackStack(tag)
             .commit()

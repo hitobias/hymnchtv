@@ -35,4 +35,21 @@ class MainChromeTest {
         assertThat(MainChrome.frameInsets(0, 80, 0, 48, 600)).isEqualTo(FrameInsets(0, 80, 0, 600, 0))
         assertThat(MainChrome.frameInsets(-1, -1, -1, -1, 0)).isEqualTo(FrameInsets(0, 0, 0, 0, 0))
     }
+
+    @Test
+    fun homeBarIconsAndTitleAreReadableOnTheBackgroundTheyAreDrawnOn() {
+        for ((name, choice) in choices) {
+            val input = BackgroundPolicy.tokenInput(choice)
+            val tokens = UiTokens.from(input)
+            val c = MainChrome.homeColors(input, tokens)
+            for (swatch in input.swatches) {
+                val seen = UiTokens.over(opaqueOf(swatch), c.bar)
+                assertThat(Wcag.contrast(c.onBar, seen)).isAtLeast(UiTokens.MIN_TEXT_CONTRAST)
+            }
+            if (!input.isPhoto) assertThat(c.bar ushr 24).isEqualTo(0)
+            println("home bar ok: $name")
+        }
+    }
+
+    private fun opaqueOf(rgb: Int) = (0xFF shl 24) or (rgb and 0xFFFFFF)
 }

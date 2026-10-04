@@ -54,22 +54,6 @@
         </RelativeLayout>
     </eightbitlab.com.blurview.BlurTarget>
 
-    <!-- Target of the home page's shared number (HymnTransitions): drawn only while the transition runs, then the lyrics
-         header's own number shows. Its place follows the first line of the lyrics (ContentHandler sets the top). -->
-    <TextView
-        android:id="@+id/lyrics_number_anchor"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="21dp"
-        android:layout_marginTop="61dp"
-        android:alpha="0"
-        android:fontFeatureSettings="tnum"
-        android:importantForAccessibility="no"
-        android:includeFontPadding="false"
-        android:textAppearance="@style/TextAppearance.Hymnal.Display"
-        android:transitionName="hymn_number"
-        android:visibility="gone" />
-
     <!-- Empty slot for the notebook bar (sub-project D-1 fills it and makes it visible); C only reserves it (C-5) -->
     <FrameLayout
         android:id="@+id/notebookBar"

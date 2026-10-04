@@ -35,7 +35,7 @@
     </style>
 
     <style name="LyricsChromeButton" parent="Widget.AppCompat.Button.Borderless">
-        <item name="android:textAppearance">@style/TextAppearance.Hymnal.Caption</item>
+        <item name="android:textSize">14sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:maxLines">1</item>
