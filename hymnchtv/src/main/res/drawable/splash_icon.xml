@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash icon: the launcher icon (drawable/hymnchtv) inset so that the whole square fits inside the splash
-     screen's circular icon mask (2/3 of the 288dp icon view). -->
+<!-- Splash icon: the launcher icon (drawable/hymnchtv, 512px at xxhdpi = 171dp) inset so that the whole square fits
+     inside the splash screen's circular icon mask (2/3 of the 288dp icon view). The inset is in dp, not a fraction:
+     fractional insets need API 28 and crash InsetDrawable on older versions. -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/hymnchtv"
-    android:inset="27%" />
+    android:inset="96dp" />
