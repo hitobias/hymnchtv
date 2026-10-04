@@ -28,6 +28,7 @@ object PlayerCardStyle {
     private const val CARD_RADIUS_DP = 16f
     private const val CHIP_RADIUS_DP = 12f
     private const val TRACK_ALPHA = 0x4D // 0.3
+    private const val DISABLED_PLAY_ALPHA = 0.38f
 
     private val SOURCE_IDS = intArrayOf(R.id.btn_media, R.id.btn_jiaochang, R.id.btn_changshi, R.id.btn_banzhou)
 
@@ -63,6 +64,7 @@ object PlayerCardStyle {
     @JvmStatic
     fun styleSources(card: View, tokens: UiTokens, available: BooleanArray) {
         val density = card.resources.displayMetrics.density
+        styleMediaEmpty(card, tokens, available)
         card.findViewById<ImageButton>(R.id.btn_hymnSearch).apply {
             background = shape(tokens.surfaceTone, density)
             imageTintList = ColorStateList.valueOf(tokens.onSurface)
@@ -83,6 +85,20 @@ object PlayerCardStyle {
                     ),
                 )
             }
+        }
+    }
+
+    /** No media at all: the play button is disabled (dimmed disc) and the explanation line shows, in `onSurfaceMuted`. */
+    private fun styleMediaEmpty(card: View, tokens: UiTokens, available: BooleanArray) {
+        val hasMedia = MediaAvailability.hasAny(available)
+        card.findViewById<ImageView>(R.id.playback_play).apply {
+            isEnabled = hasMedia
+            alpha = if (hasMedia) 1f else DISABLED_PLAY_ALPHA
+        }
+        card.findViewById<TextView>(R.id.media_empty).apply {
+            visibility = if (hasMedia) View.GONE else View.VISIBLE
+            setTextColor(tokens.onSurfaceMuted)
+            compoundDrawableTintList = ColorStateList.valueOf(tokens.onSurfaceMuted)
         }
     }
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lyrics page type sizes (1.2.0); the global type scale unifies these later -->
+    <dimen name="media_empty_text">13sp</dimen>
+    <dimen name="lyrics_header_number">48sp</dimen>
+    <dimen name="lyrics_header_book">13sp</dimen>
+    <dimen name="lyrics_header_title">22sp</dimen>
+    <dimen name="lyrics_header_gap">24dp</dimen>
+    <dimen name="lyrics_chorus_bar">2dp</dimen>
+</resources>

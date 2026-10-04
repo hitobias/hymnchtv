@@ -9,9 +9,9 @@ enum class DisplayMode(val showScore: Boolean, val showLyrics: Boolean) {
     fun next(): DisplayMode = entries[(ordinal + 1) % entries.size]
 
     companion object {
-        /** Never throws; unknown values mean SCORE_AND_LYRICS (the behaviour before A2). */
+        /** Never throws; unset or unknown values mean LYRICS_ONLY (the default since 1.2.0; stored choices are kept). */
         @JvmStatic
-        fun fromPref(value: String?): DisplayMode = entries.firstOrNull { it.name == value } ?: SCORE_AND_LYRICS
+        fun fromPref(value: String?): DisplayMode = entries.firstOrNull { it.name == value } ?: LYRICS_ONLY
     }
 }
 
@@ -26,10 +26,10 @@ object DisplayModePolicy {
     @JvmStatic
     fun resolve(sessionOverride: DisplayMode?, stored: DisplayMode): DisplayMode = sessionOverride ?: stored
 
-    /** "Lyrics only" on a hymn without lyrics text would leave an empty page, so both are shown instead. */
+    /** "Lyrics only" on a hymn without lyrics text would leave an empty page, so the score alone is shown. */
     @JvmStatic
     fun effective(mode: DisplayMode, hasLyricsText: Boolean): DisplayMode =
-        if (mode == DisplayMode.LYRICS_ONLY && !hasLyricsText) DisplayMode.SCORE_AND_LYRICS else mode
+        if (mode == DisplayMode.LYRICS_ONLY && !hasLyricsText) DisplayMode.SCORE_ONLY else mode
 
     /** A theme change regenerates the English HTML only when the English page is on screen, never in "score only". */
     @JvmStatic

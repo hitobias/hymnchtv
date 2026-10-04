@@ -90,6 +90,8 @@ import org.cog.hymnchtv.utils.HymnIdx2NoConvert;
 import org.cog.hymnchtv.ui.lyrics.ChromePage;
 import org.cog.hymnchtv.ui.lyrics.LyricsInsets;
 import org.cog.hymnchtv.ui.lyrics.LyricsMeta;
+import org.cog.hymnchtv.ui.lyrics.LyricsStyle;
+import org.cog.hymnchtv.ui.lyrics.LyricsTypography;
 import org.cog.hymnchtv.ui.lyrics.LyricsPadding;
 import org.cog.hymnchtv.utils.NestedScrollableHost;
 import org.cog.hymnchtv.utils.ZoomTextView;
@@ -174,7 +176,10 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private boolean mHasLyricsText = false;
 
     /** Stored default display mode, read once per onCreateView/onResume. */
-    private DisplayMode mStoredDisplayMode = DisplayMode.SCORE_AND_LYRICS;
+    /** Line spacing multiplier of the lyrics text views (also in content_lyrics.xml). */
+    private static final float LYRICS_LINE_SPACING = 1.7f;
+
+    private DisplayMode mStoredDisplayMode = DisplayMode.LYRICS_ONLY;
 
     /** Score colour level from the context menu; 0 = automatic (follows the background, see ScoreTintPolicy). */
     private static int mScoreColor = 0;
@@ -218,7 +223,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         btn_english = mConvertView.findViewById(R.id.button_english);
         btn_english.setOnClickListener(this);
 
-        for (int id : new int[]{R.id.btn_share, R.id.btn_lyrics_media, R.id.btn_aa, R.id.btn_next, R.id.btn_more}) {
+        for (int id : new int[]{R.id.btn_home, R.id.btn_share, R.id.btn_lyrics_media, R.id.btn_aa, R.id.btn_next, R.id.btn_more}) {
             mConvertView.findViewById(id).setOnClickListener(this);
         }
 
@@ -326,6 +331,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         mContentHandler.onChromeInteraction();
         if (id == R.id.btn_aa) {
             mContentHandler.showReadingPanel();
+        }
+        else if (id == R.id.btn_home) {
+            mContentHandler.onLyricsAction(R.id.home);
         }
         else if (id == R.id.btn_share) {
             mContentHandler.onLyricsAction(R.id.lyrcsShare);
@@ -505,8 +513,17 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         }
         int verseColor = mPalette.isDark() ? mPalette.getAccentColor()
                 : ContextCompat.getColor(mContentHandler, R.color.c_verse_red);
-        lyricsSimplify.setText(LyricsMeta.applyVerseSpans(mLyricsSimplifiedPlain, verseColor));
-        lyricsTraditional.setText(LyricsMeta.applyVerseSpans(mLyricsTraditionalPlain, verseColor));
+        String book = mContentHandler.hymnType2Text(mContentHandler);
+        lyricsSimplify.setText(LyricsTypography.apply(mLyricsSimplifiedPlain, book, lyricsStyle(lyricsSimplify, verseColor)));
+        lyricsTraditional.setText(LyricsTypography.apply(mLyricsTraditionalPlain, book, lyricsStyle(lyricsTraditional, verseColor)));
+    }
+
+    private LyricsStyle lyricsStyle(ZoomTextView view, int verseColor) {
+        android.content.res.Resources res = getResources();
+        return new LyricsStyle(mPalette.getAccentColor(), verseColor, mContentHandler.getLyricsTokens().getOnSurfaceMuted(),
+                res.getDimensionPixelSize(R.dimen.lyrics_header_number), res.getDimensionPixelSize(R.dimen.lyrics_header_title),
+                res.getDimensionPixelSize(R.dimen.lyrics_header_book), res.getDimensionPixelSize(R.dimen.lyrics_header_gap),
+                res.getDimensionPixelSize(R.dimen.lyrics_chorus_bar), LYRICS_LINE_SPACING, view);
     }
 
     /**

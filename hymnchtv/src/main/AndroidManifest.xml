@@ -39,6 +39,15 @@
 
     <queries>
         <package android:name="android.content.pm" />
+        <!-- External media players (API 30+ package visibility): playVideoUrlExt resolves VIEW audio/video first -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="audio/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="video/*" />
+        </intent>
     </queries>
 
     <application
