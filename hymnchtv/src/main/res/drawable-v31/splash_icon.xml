@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ system splash: the icon is drawn into fixed bounds (the 288dp icon view, masked to a 192dp circle), so the inset must be a
+     fraction of those bounds, not dp (96dp per side would leave nothing). 27% per side keeps the square's corners
+     inside the circle. Older versions use drawable/splash_icon.xml (dp inset, scaled by an ImageView). -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/hymnchtv"
+    android:inset="27%" />
