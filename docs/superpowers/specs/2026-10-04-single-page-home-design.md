@@ -1,6 +1,6 @@
 # 單頁首頁、預設純歌詞、回首頁入口、主題化設定頁與高級感（1.2.0）
 
-> 狀態：rev 2（2026-10-04）。Codex r1：P1×6、P2×1 已修正（見 §9）。使用者要求：
+> 狀態：**rev 3 定案**（2026-10-04）。Codex r1：P1×6、P2×1 已修正（§9）。r2 的 P1 均為「程式尚未依規格修改」（實作項，非規格缺陷），已逐條對應 §9／§5a；P2×2 併入 §10。使用者要求：
 > 1. 取消首頁底部導覽列，首頁（點數字選詩歌）為一頁滿屏、不可捲動；
 > 2. 預設只顯示歌詞，不顯示詞譜；
 > 3. 播放／歌詞頁的選單加「回首頁」按鈕或選項；
@@ -73,7 +73,7 @@
    - 副歌（重句）：左縮排 1.5em，字色 `onSurface` 不變，前方細直線 2dp `accent @ 40%`。
    - 行距 1.7、節間距 1.2 行；中英對照時英文用 Caption 級、`onSurfaceMuted`。
    - 若歌詞資料無法辨識副歌（無標記），不縮排（不得誤判）。實作前先盤點歌詞資料格式的副歌標記；無可靠標記則此子項只做節號與頁首。
-6. **App 圖示與啟動畫面**：重新設計 adaptive icon（前景：簡化的「詩」字或琴譜意象，單色向量；背景：品牌 accent 純色；附 monochrome layer 供 Android 13 主題圖示）；啟動畫面用 `androidx.core:core-splashscreen`，背景為品牌色、中央圖示，無文字，結束時淡出。圖示設計先產 3 個候選（SVG）給使用者選，選定後才實作。
+6. **App 圖示與啟動畫面**：重新設計 adaptive icon（前景：簡化的「詩」字或琴譜意象，單色向量；背景：品牌 accent 純色；附 monochrome layer 供 Android 13 主題圖示）；啟動畫面用 `androidx.core:core-splashscreen`，背景為品牌色、中央圖示，無文字，結束時淡出。**使用者選定 B（書頁＋八分音符，品牌色靛藍 #2B3A67）**；前景／monochrome SVG 在 scratchpad/icons/B-*.svg，轉成 vector drawable。
 7. **空狀態**：最近詩歌為空、搜尋無結果、詩歌沒有媒體資源時，顯示 Material Symbols 圖示（48dp、`onSurfaceMuted`）＋一句說明（Body、`onSurfaceMuted`），例如「還沒有最近的詩歌」「找不到相關詩歌」「這首詩歌沒有可播放的媒體」；無媒體時播放鍵停用並顯示此說明（同時根治 1.1.1 遺留閃退的使用者面向）。
 
 ## 6. 不做
@@ -107,3 +107,8 @@
 - **顯示模式回退（P1）**：`DisplayMode.kt:29-32` 無歌詞文字時回退值改為 `SCORE_ONLY`（原為 `SCORE_AND_LYRICS`）。
 - **外部播放閃退（P1）**：`MediaExoPlayerFragment.java:243-253` 目前先移除 fragment 再無條件 `startActivity`；改為先 `intent.resolveActivity(pm)`（API 30+ 需在 Manifest `<queries>` 宣告 VIEW audio/video intent），無 handler 時 Toast 並 return，**不**移除 fragment；有 handler 時才移除並啟動，`startActivity` 仍包 `try/catch ActivityNotFoundException` 作為最後防線。
 - **雙按退出（P2）**：在 `MainActivity.java:371-386` 的 `OnBackPressedCallback` 中，只有 back stack 為空（無 overlay、無全頁）時才啟用雙按邏輯；pop 進行中（`isStateSaved` 或 pending transaction）不計入第一次按壓。
+
+## 10. rev 3 補充（Codex r2）
+
+- **TypeScale 遷移**：`styles.xml:3-187`、`styles_home.xml:17-40` 散落 12–35sp 與 12/14dp 圓角。先定義 5 個 `TextAppearance.Hymnal.*` 與 3 個 `ShapeAppearance.Hymnal.*`，再逐項遷移本版觸及的畫面（首頁、歌詞頁 chrome、設定、目錄、播放卡、搜尋、全部記錄）；歌詞本文的使用者字級排除。未觸及的舊畫面（說明頁、WebView 等）不強制遷移，掃描測試以白名單排除並列出。
+- **副歌**：`LyricsMeta.kt:41-75` 只辨識獨立的「副」標記，素材中另有「接副歌」等註記。只對獨立成行的「副」或「副歌」標記行之後、到下一節號或空行為止的段落加副歌 span；「接副歌」等行內註記不觸發縮排。單元測試以真實歌詞樣本（至少 5 首含副歌、3 首含「接副歌」註記）驗證不誤判。
