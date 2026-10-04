@@ -2,6 +2,9 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.3.1 (10/04/2026)" versioncode="103010">
+        <change>修正小螢幕或大字體時，首頁輸入號碼後「開啟」按鈕被擠出畫面；數字鍵與間距會自動縮小以完整顯示。</change>
+    </release>
     <release version="1.3.0 (10/04/2026)" versioncode="103000">
         <change>新增收藏：歌詞頁右上角「更多」選單可收藏／取消收藏，已收藏的詩在詩題下顯示星號。</change>
         <change>首頁「全部記錄」改為「記錄與收藏」，新增「收藏」分頁；可在列尾星號取消收藏並復原。</change>
