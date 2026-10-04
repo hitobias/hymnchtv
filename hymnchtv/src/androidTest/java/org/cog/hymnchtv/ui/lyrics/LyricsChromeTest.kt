@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.lyrics
 
+import org.cog.hymnchtv.QuickTest
 import android.content.Context
 import android.util.TypedValue
 import android.view.View
@@ -31,6 +32,7 @@ class LyricsChromeTest : LyricsTestBase() {
     private fun dp(value: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), ctx.resources.displayMetrics).toInt()
 
     @Test
+    @QuickTest
     fun opensWithBothBarsHiddenAndRecordsTheHint() {
         launch().use { s ->
             assertThat(s.topBarShown()).isFalse()
@@ -50,6 +52,7 @@ class LyricsChromeTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun centreTapShowsAndAnEdgeTapDoesNot() {
         launch().use { s ->
             val edge = s.hostPoint(0.05f, 0.5f)
@@ -71,6 +74,7 @@ class LyricsChromeTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun centreTapWhileShownHidesAtOnce() {
         launch().use { s ->
             s.revealChrome()
@@ -90,6 +94,7 @@ class LyricsChromeTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun scrollAndSwipeDoNotToggle() {
         launch().use { s ->
             val c = s.hostPoint(0.5f, 0.5f)

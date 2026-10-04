@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui
 
+import org.cog.hymnchtv.QuickTest
 import android.content.Context
 import android.view.View
 import androidx.test.core.app.ActivityScenario
@@ -48,6 +49,7 @@ class MainHostTest {
     private fun openSettings() = onView(withId(R.id.btn_home_settings)).perform(click())
 
     @Test
+    @QuickTest
     fun startsOnTheHomePageWithTheTopBarEntries() = launch { scenario ->
         onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
         onView(withId(R.id.btn_home_toc)).check(matches(isDisplayed()))
@@ -65,6 +67,7 @@ class MainHostTest {
     }
 
     @Test
+    @QuickTest
     fun contentsAndSettingsOpenFullPageAndBackReturnsHome() = launch { scenario ->
         openToc()
         onView(withId(R.id.toc_books)).check(matches(isDisplayed()))
@@ -129,6 +132,7 @@ class MainHostTest {
     }
 
     @Test
+    @QuickTest
     fun theOpenPageSurvivesRecreation() = launch { scenario ->
         openToc()
         scenario.recreate()
@@ -147,6 +151,7 @@ class MainHostTest {
     }
 
     @Test
+    @QuickTest
     fun backFromAFullPageGoesHomeThenNeedsASecondPressToFinish() = launch { scenario ->
         openSettings()
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
@@ -169,6 +174,7 @@ class MainHostTest {
     }
 
     @Test
+    @QuickTest
     fun backClosesTheHistoryPageBeforeFinishing() {
         // the recent row is read when the home tab resumes, so the record must exist before the launch
         val db = DatabaseBackend.getInstance(ctx)
@@ -186,6 +192,7 @@ class MainHostTest {
     }
 
     @Test
+    @QuickTest
     fun openButtonIsShownOnHomeAndStartsDisabled() = launch {
         onView(withId(R.id.btn_open)).perform(scrollTo()).check(matches(isDisplayed())).check(matches(not(isEnabled())))
     }

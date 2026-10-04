@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui
 
+import org.cog.hymnchtv.QuickTest
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -25,6 +26,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SmokeFlowTest {
     @Test
+    @QuickTest
     fun inputOpensLyricsFlipPageThenPlay() {
         // MainActivity asks for a runtime permission at launch; the dialog would take focus from the activity
         val pkg = ApplicationProvider.getApplicationContext<android.content.Context>().packageName

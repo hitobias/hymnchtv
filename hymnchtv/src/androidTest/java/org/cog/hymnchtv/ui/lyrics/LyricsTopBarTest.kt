@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.lyrics
 
+import org.cog.hymnchtv.QuickTest
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -90,6 +91,7 @@ class LyricsTopBarTest {
     }
 
     @Test
+    @QuickTest
     fun topBarButtonsAreShown() {
         launch().use {
             // Six buttons at any width: home, share, media, Aa, next, more
@@ -100,6 +102,7 @@ class LyricsTopBarTest {
     }
 
     @Test
+    @QuickTest
     fun homeButtonLeavesTheLyricsPage() {
         launch().use { scenario ->
             onView(withId(R.id.btn_home)).perform(click())
@@ -128,6 +131,7 @@ class LyricsTopBarTest {
     }
 
     @Test
+    @QuickTest
     fun overflowListsTheEntriesWithoutAButton() {
         launch().use {
             onView(withId(R.id.btn_more)).perform(click())
@@ -138,6 +142,7 @@ class LyricsTopBarTest {
     }
 
     @Test
+    @QuickTest
     fun nextButtonTurnsToTheNextHymn() {
         launch().use { scenario ->
             fun current() = scenario.read { it.findViewById<ViewPager2>(R.id.viewPager).currentItem }
@@ -153,6 +158,7 @@ class LyricsTopBarTest {
     }
 
     @Test
+    @QuickTest
     fun scoreColorIsChangedFromTheOverflowMenu() {
         launch().use {
             val prefs = ctx.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)

@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.host
 
+import org.cog.hymnchtv.QuickTest
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
@@ -37,7 +38,7 @@ class OverlayNavigationTest {
         onView(withId(R.id.history_list)).check(matches(isDisplayed()))
     }
 
-    @Test fun backClosesTheOverlayAndReturnsToHome() = PickerTestSupport.launch { scenario ->
+    @Test @QuickTest fun backClosesTheOverlayAndReturnsToHome() = PickerTestSupport.launch { scenario ->
         openHistory()
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         onView(withId(R.id.history_list)).check(doesNotExist())
@@ -67,7 +68,7 @@ class OverlayNavigationTest {
         onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
     }
 
-    @Test fun overlayIsStillThereAfterRotation() = PickerTestSupport.launch { scenario ->
+    @Test @QuickTest fun overlayIsStillThereAfterRotation() = PickerTestSupport.launch { scenario ->
         openHistory()
         scenario.recreate()
         onView(withId(R.id.history_list)).check(matches(isDisplayed()))

@@ -145,6 +145,7 @@ class LyricsSwipeTest {
     }
 
     @Test
+    @QuickTest
     fun slightlyDiagonalUpwardDragOnlyScrolls() = diagonalScrollDoesNotTurnPage(0.3, true)
 
     @Test
@@ -192,6 +193,7 @@ class LyricsSwipeTest {
      * delivers too slowly to count.
      */
     @Test
+    @QuickTest
     fun clearHorizontalSwipeTurnsToNextAndPreviousPage() {
         launch().use { s ->
             s.awaitPage()
