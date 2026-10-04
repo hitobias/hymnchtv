@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.home
 
+import org.cog.hymnchtv.QuickTest
 import android.content.Context
 import android.os.SystemClock
 import androidx.recyclerview.widget.RecyclerView
@@ -106,7 +107,7 @@ class FavoritesTabTest {
 
     private fun headline(book: String, stored: Int) = HymnLabels.headline(ctx, HymnRef(book, stored))
 
-    @Test fun favouritesTabListsFavouritesNewestFirstAndTapOpensIt() {
+    @Test @QuickTest fun favouritesTabListsFavouritesNewestFirstAndTapOpensIt() {
         FavoriteTestSupport.add(HymnKey.of(HymnTypes.DB, 5))
         SystemClock.sleep(30)
         FavoriteTestSupport.add(HymnKey.of(HymnTypes.DB, 6))
@@ -133,7 +134,7 @@ class FavoritesTabTest {
     private fun starOf(book: String, stored: Int) =
         allOf(withId(R.id.b_unfavorite), hasSibling(hasDescendant(withText(headline(book, stored)))))
 
-    @Test fun unfavouriteRemovesRowAndUndoBringsItBack() {
+    @Test @QuickTest fun unfavouriteRemovesRowAndUndoBringsItBack() {
         FavoriteTestSupport.add(HymnKey.of(HymnTypes.DB, 5))
         SystemClock.sleep(30)
         FavoriteTestSupport.add(HymnKey.of(HymnTypes.DB, 6))
@@ -151,7 +152,7 @@ class FavoritesTabTest {
         }
     }
 
-    @Test fun emptyStateShowsFavEmptyText() {
+    @Test @QuickTest fun emptyStateShowsFavEmptyText() {
         PickerTestSupport.launch {
             openFavouritesTab()
             FragmentHost.eventually {
@@ -193,7 +194,7 @@ class FavoritesTabTest {
         }
     }
 
-    @Test fun tabChoiceIsRemembered() {
+    @Test @QuickTest fun tabChoiceIsRemembered() {
         PickerTestSupport.launch {
             openHistoryPage()
             onView(withId(R.id.history_list)).check(matches(isDisplayed()))

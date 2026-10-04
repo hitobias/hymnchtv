@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.home
 
+import org.cog.hymnchtv.QuickTest
 import android.content.pm.ActivityInfo
 import android.os.ParcelFileDescriptor
 import android.view.View
@@ -76,7 +77,7 @@ class FavoritesEntryTest {
         }
     }
 
-    @Test fun entryOpensHistoryWithFavouritesTabReachable() {
+    @Test @QuickTest fun entryOpensHistoryWithFavouritesTabReachable() {
         PickerTestSupport.resetHistory()
         FavoriteTestSupport.add(HymnKey.of(HymnTypes.DB, 7))
         PickerTestSupport.launch { scenario ->

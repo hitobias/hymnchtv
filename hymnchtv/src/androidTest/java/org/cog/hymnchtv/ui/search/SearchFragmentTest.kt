@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.search
 
+import org.cog.hymnchtv.QuickTest
 import android.view.View
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -58,7 +59,7 @@ class SearchFragmentTest {
 
     private fun status(a: MainActivity) = a.findViewById<TextView>(R.id.tv_search_status).text.toString()
 
-    @Test fun traditionalQueryFindsTheMainBookHymnFirstAndCountsResults() = PickerTestSupport.launch { scenario ->
+    @Test @QuickTest fun traditionalQueryFindsTheMainBookHymnFirstAndCountsResults() = PickerTestSupport.launch { scenario ->
         openSearch()
         search("祂的計劃")
         val list = waitForResults(scenario)
@@ -68,7 +69,7 @@ class SearchFragmentTest {
         }
     }
 
-    @Test fun tappingAYouthAppendixResultOpensItsLyrics() = PickerTestSupport.launch { scenario ->
+    @Test @QuickTest fun tappingAYouthAppendixResultOpensItsLyrics() = PickerTestSupport.launch { scenario ->
         PickerTestSupport.resetHistory()
         onView(withId(R.id.bs_yb)).perform(scrollTo(), click())
         openSearch()
@@ -112,7 +113,7 @@ class SearchFragmentTest {
         FragmentHost.eventually { scenario.onActivity { a -> assertThat(status(a)).isEqualTo(a.getString(R.string.c_search_status_more)) } }
     }
 
-    @Test fun noMatchSaysSo() = PickerTestSupport.launch { scenario ->
+    @Test @QuickTest fun noMatchSaysSo() = PickerTestSupport.launch { scenario ->
         openSearch()
         search("zzzqqq不存在的词xyz")
         FragmentHost.eventually(timeoutMs = 60_000) {
@@ -125,7 +126,7 @@ class SearchFragmentTest {
         onView(withText(R.string.c_search_empty_title)).check(matches(androidx.test.espresso.matcher.ViewMatchers.isDisplayed()))
     }
 
-    @Test fun emptyQueryShowsTheHint() = PickerTestSupport.launch {
+    @Test @QuickTest fun emptyQueryShowsTheHint() = PickerTestSupport.launch {
         openSearch()
         onView(withId(R.id.tv_search_status)).check(matches(withText(R.string.c_search_empty_hint)))
         onView(withId(R.id.search_empty)).check(matches(androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility(androidx.test.espresso.matcher.ViewMatchers.Visibility.GONE)))
@@ -140,7 +141,7 @@ class SearchFragmentTest {
         assertThat(list.first().ref).isEqualTo(HymnRef(HymnTypes.DB, 1))
     }
 
-    @Test fun backClosesTheSearchPageAndShowsTheTitleOfThePage() = PickerTestSupport.launch { scenario ->
+    @Test @QuickTest fun backClosesTheSearchPageAndShowsTheTitleOfThePage() = PickerTestSupport.launch { scenario ->
         openSearch()
         scenario.onActivity { a -> assertThat(a.supportActionBar?.title?.toString()).isEqualTo(a.getString(R.string.c_search_title)) }
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }

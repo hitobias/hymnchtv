@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.player
 
+import org.cog.hymnchtv.QuickTest
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.view.View
@@ -110,6 +111,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun coldOpenStartsAsTheCapsule() {
         launch().use { s ->
             s.awaitCollapsed()
@@ -120,6 +122,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun expandedCardStartsWithTheHandleAndSurvivesRecreation() {
         launchExpanded().use { s ->
             assertThat(s.vis(R.id.sheet_handle)).isEqualTo(View.VISIBLE)
@@ -130,6 +133,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun collapseButtonShowsTheCapsuleAndNoteExpands() {
         launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)
@@ -153,6 +157,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun playingCapsuleHasPlayKeyAndExpandArea() {
         launchExpanded().use { s ->
             val ctl = playing(s)
@@ -340,6 +345,7 @@ class CollapsiblePlayerTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun stateSurvivesRecreation() {
         launchExpanded().use { s ->
             s.click(R.id.btn_player_collapse)

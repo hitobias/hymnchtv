@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.settings
 
+import org.cog.hymnchtv.QuickTest
 import android.content.Context
 import androidx.preference.ListPreference
 import androidx.preference.Preference
@@ -63,6 +64,7 @@ class SettingsFragmentTest {
     }
 
     @Test
+    @QuickTest
     fun showsEffectiveValuesWithoutWritingThem() = withSettings { fragment, scenario ->
         assertThat(scenario.pref<ListPreference>(fragment, "Theme").value).isEqualTo(NightMode.DEFAULT.name)
         // Opening the screen froze nothing
@@ -70,6 +72,7 @@ class SettingsFragmentTest {
     }
 
     @Test
+    @QuickTest
     fun choosingDarkInTheDialogStoresIt() = withSettings { _, _ ->
         onView(withText(R.string.theme_menu)).perform(click())
         onView(withText(R.string.theme_dark)).inRoot(isDialog()).perform(click())
@@ -94,6 +97,7 @@ class SettingsFragmentTest {
     }
 
     @Test
+    @QuickTest
     fun readingSettingsEntryOpensTheReadingSettings() = withSettings { _, _ ->
         onView(withText(R.string.reading_settings)).perform(click())
         FragmentHost.eventually {

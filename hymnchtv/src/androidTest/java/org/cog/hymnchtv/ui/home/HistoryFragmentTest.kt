@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.home
 
+import org.cog.hymnchtv.QuickTest
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
@@ -51,7 +52,7 @@ class HistoryFragmentTest {
 
     private fun chipLabel(no: Int) = HymnLabels.chip(ctx, HymnRef(HymnTypes.DB, no))
 
-    @Test fun recentRowsShowAtMostFiveNewestFirst() {
+    @Test @QuickTest fun recentRowsShowAtMostFiveNewestFirst() {
         PickerTestSupport.resetHistory(*records(12))
         PickerTestSupport.launch { scenario ->
             FragmentHost.eventually {
@@ -68,7 +69,7 @@ class HistoryFragmentTest {
         }
     }
 
-    @Test fun emptyHistoryShowsTheEmptyStateAndKeepsTheAllHistoryEntry() {
+    @Test @QuickTest fun emptyHistoryShowsTheEmptyStateAndKeepsTheAllHistoryEntry() {
         PickerTestSupport.resetHistory()
         PickerTestSupport.launch { scenario ->
             FragmentHost.eventually {
@@ -92,7 +93,7 @@ class HistoryFragmentTest {
         }
     }
 
-    @Test fun historyPageListsRecordsAndTheTrailingButtonDeletes() {
+    @Test @QuickTest fun historyPageListsRecordsAndTheTrailingButtonDeletes() {
         PickerTestSupport.resetHistory(*records(2))
         PickerTestSupport.launch { scenario ->
             openHistoryPage()
@@ -104,7 +105,7 @@ class HistoryFragmentTest {
         }
     }
 
-    @Test fun swipingARowDeletesIt() {
+    @Test @QuickTest fun swipingARowDeletesIt() {
         PickerTestSupport.resetHistory(*records(2))
         PickerTestSupport.launch {
             openHistoryPage()

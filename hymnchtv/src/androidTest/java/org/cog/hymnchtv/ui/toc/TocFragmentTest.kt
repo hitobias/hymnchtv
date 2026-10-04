@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.toc
 
+import org.cog.hymnchtv.QuickTest
 import android.content.Context
 import android.widget.ExpandableListView
 import androidx.test.core.app.ActivityScenario
@@ -59,6 +60,7 @@ class TocFragmentTest {
     }
 
     @Test
+    @QuickTest
     fun opensOnTheDaBenCategoriesAndSwitchesBook() = withToc { scenario ->
         FragmentHost.eventually { assertThat(groups(scenario).firstOrNull()).isEqualTo("颂三一神") }
         assertThat(groups(scenario)).hasSize(30)
@@ -69,6 +71,7 @@ class TocFragmentTest {
     }
 
     @Test
+    @QuickTest
     fun opensOnTheBookLastUsedOnHome() {
         prefs.edit().putString(HomePrefs.LAST_HYMN_TYPE, MainActivity.HYMN_ER).commit()
         withToc { scenario ->
@@ -77,6 +80,7 @@ class TocFragmentTest {
     }
 
     @Test
+    @QuickTest
     fun strokeTabListsStrokeGroupsWithOpenableItems() = withToc { scenario ->
         onView(allOf(withText(R.string.hymn_stroke), isDescendantOfA(withId(R.id.toc_pages)))).perform(click())
         FragmentHost.eventually { assertThat(groups(scenario).firstOrNull()).startsWith("一画") }

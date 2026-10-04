@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.picker
 
+import org.cog.hymnchtv.QuickTest
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.ViewCompat
@@ -95,7 +96,7 @@ class HymnPickerTest {
         onView(withId(R.id.n7)).check(matches(isEnabled()))
     }
 
-    @Test fun anInvalidNumberOffersTheOtherBooksWhereItExists() = launch { scenario ->
+    @Test @QuickTest fun anInvalidNumberOffersTheOtherBooksWhereItExists() = launch { scenario ->
         pick(R.id.bs_bb)
         type("40")
         // the number stays big on the card, the message goes to its right side
@@ -142,7 +143,7 @@ class HymnPickerTest {
         onView(withId(R.id.btn_open)).check(matches(not(isEnabled())))
     }
 
-    @Test fun openingWritesHistoryAndShowsLyrics() = launch {
+    @Test @QuickTest fun openingWritesHistoryAndShowsLyrics() = launch {
         PickerTestSupport.resetHistory()
         pick(R.id.bs_bb)
         type("37")
@@ -177,7 +178,7 @@ class HymnPickerTest {
         onView(withId(R.id.btn_set_next)).check(matches(withEffectiveVisibility(Visibility.GONE)))
     }
 
-    @Test fun enteredNumberAndSourceSurviveRotation() = launch { scenario ->
+    @Test @QuickTest fun enteredNumberAndSourceSurviveRotation() = launch { scenario ->
         pick(R.id.bs_bb)
         type("37")
         scenario.recreate()
@@ -211,7 +212,7 @@ class HymnPickerTest {
         return found
     }
 
-    @Test fun deleteKeyRemovesOneDigitAtATime() = launch {
+    @Test @QuickTest fun deleteKeyRemovesOneDigitAtATime() = launch {
         pick(R.id.bs_db)
         type("12")
         pick(R.id.n11)

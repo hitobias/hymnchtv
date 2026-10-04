@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.lyrics
 
+import org.cog.hymnchtv.QuickTest
 import android.view.View
 import android.widget.ImageView
 import androidx.test.core.app.ActivityScenario
@@ -43,6 +44,7 @@ class FavoriteLyricsTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun favouriteStarAppearsAndMenuTextFlips() {
         launch(MainActivity.HYMN_DB, 5).use { s ->
             assertThat(starVisible(s)).isFalse()
@@ -62,6 +64,7 @@ class FavoriteLyricsTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun pagingToAnotherHymnHidesTheStarAndBackShowsIt() {
         FavoriteTestSupport.add(db5)
         launch(MainActivity.HYMN_DB, 5).use { s ->
@@ -91,6 +94,7 @@ class FavoriteLyricsTest : LyricsTestBase() {
     }
 
     @Test
+    @QuickTest
     fun twoCompleteTogglesEachTakeEffect() {
         launch(MainActivity.HYMN_DB, 5).use { s ->
             chooseFavoriteInMenu(s, R.string.fav_add)
