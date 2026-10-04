@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.ui.home
 
+import android.content.Context
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.scrollTo
@@ -11,7 +12,9 @@ import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
+import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.notebook.FavoriteTestSupport
@@ -22,20 +25,24 @@ import org.cog.hymnchtv.ui.picker.HymnLabels
 import org.cog.hymnchtv.ui.picker.PickerTestSupport
 import org.cog.hymnchtv.ui.picker.PickerTestSupport.ctx
 import org.hamcrest.CoreMatchers.allOf
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
  * Favourites survive an app restart. Run as two separate instrumentation calls with a force-stop in between:
  * `-e class ...FavoritesPersistenceTest#seed`, `adb shell am force-stop <pkg>`, `-e class ...FavoritesPersistenceTest#verify`.
- * (A plain full-suite run executes seed then verify in one process, which still checks the stored rows.)
+ * Both only run with `-e persistence 1`, so a full-suite run skips them (their order is not guaranteed).
  */
 @RunWith(AndroidJUnit4::class)
 class FavoritesPersistenceTest {
     private val db5 = HymnKey.of(HymnTypes.DB, 5)
     private val yb276 = HymnKey.of(HymnTypes.YB, 276)
 
+    private fun requested() = assumeTrue("run with -e persistence 1", InstrumentationRegistry.getArguments().getString("persistence") == "1")
+
     @Test fun seed() {
+        requested()
         // No reset(): the rows must be left behind for verify
         FavoriteTestSupport.reset()
         FavoriteTestSupport.add(db5, yb276)
@@ -43,6 +50,7 @@ class FavoritesPersistenceTest {
     }
 
     @Test fun verify() {
+        requested()
         try {
             assertThat(FavoriteTestSupport.active().map { it.hymn }).containsAtLeast(db5, yb276)
             PickerTestSupport.prepare()
@@ -57,6 +65,8 @@ class FavoritesPersistenceTest {
             }
         } finally {
             FavoriteTestSupport.reset()
+            // The tab choice is remembered: do not leave "Favourites" selected for the tests that follow
+            ctx.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE).edit().remove(HomePrefs.HISTORY_TAB).commit()
             PickerTestSupport.cleanUp()
         }
     }
