@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seek bar preference on a card; same frame as preference_themed. Colours are applied by PagePreferenceAdapter. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:gravity="center_vertical"
+        android:minHeight="56dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <LinearLayout
+            android:id="@+id/icon_frame"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="start|center_vertical"
+            android:paddingEnd="16dp">
+
+            <ImageView
+                android:id="@android:id/icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@android:id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:labelFor="@id/seekbar"
+                android:singleLine="true"
+                android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+
+            <TextView
+                android:id="@android:id/summary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="4"
+                android:textAlignment="viewStart"
+                android:textAppearance="@style/TextAppearance.Hymnal.Caption" />
+
+            <androidx.preference.UnPressableLinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:gravity="center_vertical"
+                android:paddingEnd="0dp"
+                android:paddingStart="0dp">
+
+                <SeekBar
+                    android:id="@+id/seekbar"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:paddingStart="@dimen/preference_seekbar_padding_horizontal"
+                    android:paddingTop="@dimen/preference_seekbar_padding_vertical"
+                    android:paddingEnd="@dimen/preference_seekbar_padding_horizontal"
+                    android:paddingBottom="@dimen/preference_seekbar_padding_vertical" />
+
+                <TextView
+                    android:id="@+id/seekbar_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="marquee"
+                    android:fadingEdge="horizontal"
+                    android:gravity="end"
+                    android:minWidth="@dimen/preference_seekbar_value_minWidth"
+                    android:paddingStart="8dp"
+                    android:scrollbars="none"
+                    android:singleLine="true"
+                    android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+            </androidx.preference.UnPressableLinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:id="@+id/hymnal_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="16dp"
+        android:importantForAccessibility="no" />
+</LinearLayout>

@@ -6,7 +6,6 @@ import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.preference.ListPreference
 import androidx.preference.Preference
-import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SeekBarPreference
 import androidx.preference.SwitchPreferenceCompat
 import org.cog.hymnchtv.ContentView
@@ -18,10 +17,13 @@ import org.cog.hymnchtv.reading.background.BackgroundDrawables
 import org.cog.hymnchtv.reading.background.BackgroundPrefs
 import org.cog.hymnchtv.reading.background.BackgroundSlot
 import org.cog.hymnchtv.reading.background.PhotoBackground
+import org.cog.hymnchtv.ui.page.PagePreferenceFragment
 import java.util.Locale
 
 /** The reading settings (plan A2); sub-project C can host this fragment in its settings page unchanged. */
-class ReadingSettingsFragment : PreferenceFragmentCompat() {
+class ReadingSettingsFragment : PagePreferenceFragment() {
+    override val pageTitleRes get() = R.string.reading_settings
+
     private val pickBackground = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         refreshBackgroundSummaries()
     }

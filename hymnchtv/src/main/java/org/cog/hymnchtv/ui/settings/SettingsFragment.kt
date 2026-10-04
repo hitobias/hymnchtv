@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.preference.ListPreference
 import androidx.preference.Preference
-import androidx.preference.PreferenceFragmentCompat
 import org.cog.hymnchtv.About
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
@@ -18,15 +17,18 @@ import org.cog.hymnchtv.locale.LocaleStore
 import org.cog.hymnchtv.mediaconfig.MediaConfig
 import org.cog.hymnchtv.reading.ReadingSettingsActivity
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl
+import org.cog.hymnchtv.ui.page.PagePreferenceFragment
 import org.cog.hymnchtv.ui.theme.NightMode
 import org.cog.hymnchtv.ui.theme.ThemePrefs
 import kotlin.concurrent.thread
 
 /**
- * Settings tab: everything the old main menu held. Every preference is non-persistent (see c_preferences.xml): the screen
+ * Settings page: everything the old main menu held. Every preference is non-persistent (see c_preferences.xml): the screen
  * shows the effective value and a change listener applies it, so opening the screen never writes a default.
  */
-class SettingsFragment : PreferenceFragmentCompat() {
+class SettingsFragment : PagePreferenceFragment() {
+    override val pageTitleRes get() = R.string.page_title_settings
+
     private val prefs get() = requireContext().getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {

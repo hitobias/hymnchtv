@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Merged into PageTitleBar (vertical): back arrow + page name row, then a 1dp divider shown once the page scrolls -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/page_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/actionBarItemBackground"
+            android:contentDescription="@string/page_back"
+            android:scaleType="center"
+            android:src="@drawable/ic_sym_arrow_back" />
+
+        <TextView
+            android:id="@+id/page_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="16dp"
+            android:layout_weight="1"
+            android:accessibilityHeading="true"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.Hymnal.Title" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/page_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:importantForAccessibility="no"
+        android:visibility="invisible" />
+</merge>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Open hymnal with an eighth note (icon option B); drawn inside the 66dp adaptive-icon safe zone -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M52 56 C46 51 38 50 30 53 V75 C38 72 46 73 52 78 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M56 56 C62 51 70 50 78 53 V75 C70 72 62 73 56 78 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M42.0,44.0 a5.0,5.0 0 1,0 10.0,0 a5.0,5.0 0 1,0 -10.0,0Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M50.5,26.0h3.0v18.0h-3.0Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M53.5 26 C61 28 64 34 60 40 C61 34 58 32 53.5 32 Z" />
+</vector>

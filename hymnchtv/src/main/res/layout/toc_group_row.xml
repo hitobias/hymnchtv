@@ -27,7 +27,6 @@
         android:layout_weight="1"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:textStyle="bold"
+        android:textAppearance="@style/TextAppearance.Hymnal.Heading"
         tools:text="得救证实" />
 </LinearLayout>

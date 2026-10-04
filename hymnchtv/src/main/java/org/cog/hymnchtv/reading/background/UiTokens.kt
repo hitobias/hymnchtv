@@ -25,7 +25,7 @@ enum class GlassMode { BLUR, FALLBACK, OPAQUE }
 /**
  * Surface, text and accent colours derived from one background (visual redesign spec section 4). All values are
  * 0xAARRGGBB; [surface], [surfaceTone], [disabledSurface], [onSurfaceMuted] and [outline] are translucent and must be
- * drawn over the background (use [over]), the others are opaque.
+ * drawn over the background (use [over]), the others are opaque. [surfaceRaised] is translucent too.
  */
 data class UiTokens(
     val surface: Int,
@@ -38,6 +38,8 @@ data class UiTokens(
     val disabledSurface: Int,
     val disabledOnSurface: Int,
     val outline: Int,
+    /** [surface] tinted 4% toward [accent] (alpha kept): selected and pressed states on a card. Draw it over the background like [surface]. */
+    val surfaceRaised: Int = surface,
 ) {
     companion object {
         const val MIN_TEXT_CONTRAST = 4.5
@@ -189,8 +191,15 @@ data class UiTokens(
                 disabledSurface = surface,
                 disabledOnSurface = disabled,
                 outline = withAlpha(onSurface, outlineAlpha),
+                surfaceRaised = raised(surface, accent),
             )
         }
+
+        private const val RAISED_ACCENT_MIX = 0.04f
+
+        /** [accent] at 4% painted over the translucent [surface]: the colour moves, the alpha stays. */
+        private fun raised(surface: Int, accent: Int): Int =
+            (surface and (0xFF shl 24)) or (Wcag.blend(opaque(surface), opaque(accent), RAISED_ACCENT_MIX) and 0xFFFFFF)
 
         private fun disabledText(onSurface: Int, surface: Int, mix: Float): Int =
             Wcag.blend(onSurface, opaque(surface), mix)

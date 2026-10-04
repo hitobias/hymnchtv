@@ -2,7 +2,11 @@ package org.cog.hymnchtv.ui.toc
 
 import android.content.Context
 import android.os.Bundle
+import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
 import android.view.View
+import android.content.SharedPreferences
+import com.google.android.material.chip.Chip
 import android.widget.ExpandableListView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -15,9 +19,14 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.concurrent.AppExecutors
 import org.cog.hymnchtv.lyrics.HantVariant
 import org.cog.hymnchtv.lyrics.LyricsScript
+import org.cog.hymnchtv.reading.background.BackgroundSlot
 import org.cog.hymnchtv.ui.home.HomePrefs
+import org.cog.hymnchtv.ui.page.PageInsets
+import org.cog.hymnchtv.ui.page.PagePalette
+import org.cog.hymnchtv.ui.page.PageTitleBar
+import org.cog.hymnchtv.ui.theme.SystemBars
 
-/** TOC tab: pick a hymn book and a kind of index, browse the tree, tap a hymn to open its lyrics. */
+/** Contents page (follows the home background, see [PagePalette]): pick a hymn book and a kind of index, browse the tree, tap a hymn to open its lyrics. */
 class TocFragment : Fragment(R.layout.fragment_toc) {
     private var hymnType: String = MainActivity.HYMN_DB
     private var tocPage: String = TocConstants.TOC_CATEGORY
@@ -31,7 +40,21 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
     /** Finished tables by (book, index kind); a table never changes while the app runs. */
     private val cache = HashMap<Triple<String, String, HantVariant?>, Map<String, List<String>>>()
 
+    /** The colours on screen; rebuilt in onResume and when the MAIN background changes. Null before the view exists. */
+    var palette: PagePalette? = null
+        private set
+
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == BackgroundSlot.MAIN.prefKey) views?.page?.post { applyPalette() }
+    }
+
+    private fun settings(): SharedPreferences =
+        requireContext().getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
+
     private class Views(root: View) {
+        val page: View = root.findViewById(R.id.toc_page)
+        val titleBar: PageTitleBar = root.findViewById(R.id.toc_title_bar)
+        val listFrame: View = root.findViewById(R.id.toc_list_frame)
         val books: ChipGroup = root.findViewById(R.id.toc_books)
         val pages: TabLayout = root.findViewById(R.id.toc_pages)
         val list: ExpandableListView = root.findViewById(R.id.hymnToc)
@@ -95,6 +118,10 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
             override fun onTabReselected(tab: TabLayout.Tab) = Unit
         })
 
+        PageInsets.install(v.page)
+        v.listFrame.clipToOutline = true
+        applyPalette()
+
         v.list.setOnChildClickListener { parent, _, group, child, _ ->
             val adapter = parent.expandableListAdapter as? TocAdapter ?: return@setOnChildClickListener true
             val hymnNo = TocBuilder.hymnNoOf(adapter.getChild(group, child))
@@ -106,7 +133,60 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
 
     override fun onStart() {
         super.onStart()
+        settings().registerOnSharedPreferenceChangeListener(prefsListener)
         if (views != null && LyricsScript.hantVariant(requireContext()) != requestedVariant) load()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyPalette()
+    }
+
+    override fun onStop() {
+        settings().unregisterOnSharedPreferenceChangeListener(prefsListener)
+        super.onStop()
+    }
+
+    /** Re-reads the home background and repaints the page, title bar, chips, tabs and rows. */
+    fun applyPalette() {
+        val v = views ?: return
+        val pal = PagePalette.fromPrefs(settings())
+        if (pal == palette) return
+        palette = pal
+        v.page.setBackgroundColor(pal.page)
+        v.titleBar.apply(pal)
+        paintChips(v, pal)
+        v.pages.setBackgroundColor(pal.page)
+        v.pages.setTabTextColors(pal.muted, pal.onCard)
+        v.pages.setSelectedTabIndicatorColor(pal.accent)
+        v.pages.tabRippleColor = ColorStateList.valueOf((pal.onCard and 0xFFFFFF) or RIPPLE_ALPHA)
+        v.listFrame.background = GradientDrawable().apply {
+            setColor(pal.card)
+            cornerRadius = resources.getDimension(R.dimen.shape_radius_medium)
+        }
+        v.empty.setTextColor(pal.muted)
+        v.progress.indeterminateTintList = ColorStateList.valueOf(pal.accent)
+        (v.list.expandableListAdapter as? TocAdapter)?.let {
+            it.palette = pal
+            it.notifyDataSetChanged()
+        }
+        activity?.let { SystemBars.styleIcons(it, pal.isDark, SystemBars.legacyNavColor(pal.isDark, pal.page, pal.onCard)) }
+    }
+
+    private fun paintChips(v: Views, pal: PagePalette) {
+        val checked = intArrayOf(android.R.attr.state_checked)
+        val fill = ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(pal.accent, pal.card))
+        val text = ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(pal.onAccent, pal.onCard))
+        for (i in 0 until v.books.childCount) {
+            (v.books.getChildAt(i) as? Chip)?.apply {
+                chipBackgroundColor = fill
+                setTextColor(text)
+                chipStrokeColor = ColorStateList.valueOf(pal.divider)
+                chipStrokeWidth = resources.displayMetrics.density
+                checkedIconTint = ColorStateList.valueOf(pal.onAccent)
+                rippleColor = ColorStateList.valueOf((pal.onCard and 0xFFFFFF) or RIPPLE_ALPHA)
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -154,7 +234,7 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
 
     private fun show(v: Views, toc: Map<String, List<String>>, emptyMessage: Int) {
         v.progress.visibility = View.GONE
-        v.list.setAdapter(TocAdapter(toc))
+        v.list.setAdapter(TocAdapter(toc, palette))
         val isEmpty = toc.isEmpty()
         v.empty.setText(emptyMessage)
         v.empty.visibility = if (isEmpty) View.VISIBLE else View.GONE
@@ -162,6 +242,7 @@ class TocFragment : Fragment(R.layout.fragment_toc) {
     }
 
     companion object {
+        private const val RIPPLE_ALPHA = 0x1F shl 24
         private const val STATE_BOOK = "toc_book"
         private const val STATE_PAGE = "toc_page"
 
