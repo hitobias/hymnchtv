@@ -18,7 +18,6 @@ class TypeScaleScanTest {
         "layout/media_config.xml", "layout-land/media_config.xml", "layout/rich_text_editor.xml",
         "layout/custom_dialog_wv.xml", "layout/file_xfer_ui.xml", "layout/media_record_delete.xml",
         "layout/action_bar.xml", "layout/http_login_dialog.xml",
-        "layout/content_lyrics.xml", // lyrics page: migrated by the lyrics sweep
     )
 
     /** Ids whose size the reader sets (lyrics body) */

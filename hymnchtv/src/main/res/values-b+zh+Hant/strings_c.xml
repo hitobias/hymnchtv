@@ -44,7 +44,7 @@
     <string name="c_open">開啟</string>
     <string name="c_label_no">第 %1$d 首</string>
     <string name="c_label_fu">附 %1$d</string>
-    <string name="c_preview_empty">選擇詩歌本並輸入詩號</string>
+    <string name="c_preview_empty">選詩歌本，輸入號碼</string>
     <string name="c_preview_invalid">%1$s無第 %2$s 首</string>
     <string name="c_preview_invalid_fu">%1$s無附 %2$s</string>
     <string name="c_preview_also">此號也在：</string>
