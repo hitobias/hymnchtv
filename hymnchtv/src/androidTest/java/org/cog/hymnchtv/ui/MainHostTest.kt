@@ -80,17 +80,17 @@ class MainHostTest {
     }
 
     @Test
-    fun fullPagesShowABackArrowAndThePageName() = launch { scenario ->
+    fun fullPagesHideTheTopBarAndBringTheirOwnTitleBar() = launch { scenario ->
         openSettings()
+        onView(withId(R.id.page_back)).check(matches(isDisplayed()))
         scenario.onActivity { a ->
-            assertThat(a.supportActionBar?.title?.toString()).isEqualTo(a.getString(R.string.c_nav_settings))
-            assertThat(a.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar).navigationIcon).isNotNull()
-            assertThat(a.findViewById<View>(R.id.home_top_buttons).visibility).isEqualTo(View.GONE)
+            assertThat(a.findViewById<View>(R.id.toolbar).visibility).isEqualTo(View.GONE)
         }
-        // The arrow does what the back key does
-        scenario.onActivity { it.onSupportNavigateUp() }
+        // The page's arrow does what the back key does
+        onView(withId(R.id.page_back)).perform(click())
         onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
         scenario.onActivity { a ->
+            assertThat(a.findViewById<View>(R.id.toolbar).visibility).isEqualTo(View.VISIBLE)
             assertThat(a.supportActionBar?.title?.toString()).isEqualTo(a.getString(R.string.app_title_main))
             assertThat(a.findViewById<View>(R.id.home_top_buttons).visibility).isEqualTo(View.VISIBLE)
         }
@@ -136,7 +136,6 @@ class MainHostTest {
         onView(withId(R.id.tv_entry)).check(doesNotExist())
         scenario.onActivity { a ->
             assertThat(a.supportFragmentManager.backStackEntryCount).isEqualTo(1)
-            assertThat(a.supportActionBar?.title?.toString()).isEqualTo(a.getString(R.string.c_nav_toc))
             // Home waits on the back stack under the page; recreation does not add a second one
             assertThat(a.supportFragmentManager.fragments.count { it is org.cog.hymnchtv.ui.home.HomeFragment }).isAtMost(1)
         }
@@ -219,12 +218,19 @@ class MainHostTest {
     }
 
     @Test
-    fun aFullPageIsPaddedForTheNavigationBarByTheHost() = launch { scenario ->
+    fun aFullPageTakesTheSystemBarInsetsItself() = launch { scenario ->
         openSettings()
-        scenario.onActivity { a ->
-            val insets = androidx.core.view.ViewCompat.getRootWindowInsets(a.window.decorView)!!
-                .getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            assertThat(a.findViewById<View>(R.id.fragment_container).paddingBottom).isAtLeast(insets.bottom)
+        FragmentHost.eventually {
+            scenario.onActivity { a ->
+                val insets = androidx.core.view.ViewCompat.getRootWindowInsets(a.window.decorView)!!
+                    .getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                val page = a.supportFragmentManager.findFragmentById(R.id.fragment_container)!!.requireView()
+                assertThat(page.paddingBottom).isAtLeast(insets.bottom)
+                assertThat(a.findViewById<View>(R.id.viewMain).paddingBottom).isEqualTo(0)
+                val loc = IntArray(2)
+                page.getLocationOnScreen(loc)
+                assertThat(loc[1]).isAtMost(0)
+            }
         }
     }
 

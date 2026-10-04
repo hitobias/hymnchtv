@@ -23,8 +23,8 @@ import org.cog.hymnchtv.ui.toc.TocFragment
  * Back order: overlay, full page, home. All screens come back from the FragmentManager after rotation or process death,
  * so nothing here is saved by the host itself.
  *
- * The top bar is the activity's toolbar: on the home page it holds the app name and the contents and settings buttons; on
- * any other page a back arrow and the page name (a plain host-level placeholder; the pages may restyle it).
+ * The top bar is the activity's toolbar: on the home page it holds the app name and the contents and settings buttons. Full
+ * pages bring their own title bar and system-bar padding, so the toolbar is hidden while one is shown.
  */
 class MainHost(private val activity: AppCompatActivity) {
     private val fm = activity.supportFragmentManager
@@ -127,13 +127,10 @@ class MainHost(private val activity: AppCompatActivity) {
     private fun updateChrome() {
         val name = topName()
         val open = fm.backStackEntryCount > 0
-        val bar = activity.supportActionBar
-        bar?.setDisplayHomeAsUpEnabled(open)
-        when {
-            name == TAG_TOC -> bar?.setTitle(R.string.c_nav_toc)
-            name == TAG_SETTINGS -> bar?.setTitle(R.string.c_nav_settings)
-            !open -> bar?.setTitle(R.string.app_title_main)
-        }
+        val fullPage = isFullPage(name)
+        // A full page has its own title bar (PageTitleBar) and takes the whole screen; the toolbar is the home page's top bar
+        activity.findViewById<View>(R.id.toolbar)?.visibility = if (fullPage) View.GONE else View.VISIBLE
+        if (!open) activity.supportActionBar?.setTitle(R.string.app_title_main)
         activity.findViewById<View>(R.id.overlay_container)?.visibility = if (isOverlay(name)) View.VISIBLE else View.GONE
         // What is behind an overlay must not be reachable by TalkBack or the keyboard
         activity.findViewById<ViewGroup>(R.id.fragment_container)?.let { group ->
@@ -141,10 +138,9 @@ class MainHost(private val activity: AppCompatActivity) {
             group.importantForAccessibility =
                 if (hidden) View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
             group.descendantFocusability = if (hidden) ViewGroup.FOCUS_BLOCK_DESCENDANTS else ViewGroup.FOCUS_AFTER_DESCENDANTS
-            MainChrome.setHomeOnTop(group, !open)
         }
+        activity.findViewById<View>(R.id.viewMain)?.let { MainChrome.setFullPageShown(it, fullPage) }
         updateButtons()
-        // The arrow and the buttons are new views for the toolbar; paint them with the frame colours again
         MainChrome.apply(activity, activity.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE))
     }
 

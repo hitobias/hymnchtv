@@ -84,17 +84,23 @@ object MainChrome {
     }
 
     /**
-     * The toolbar reaches behind the status bar and pads by its size; the page containers pad for the navigation bar
-     * (the home page paints its own background behind it instead, see [setHomeOnTop]). Installs once per activity.
+     * The toolbar reaches behind the status bar and pads by its size; the overlay container pads for the navigation bar
+     * (the home page pads its own bottom, so its background reaches the screen edge). A full page brings its own title bar and
+     * pads itself ([org.cog.hymnchtv.ui.page.PageInsets]), so while one is shown the window insets pass through untouched
+     * (see [setFullPageShown]). Installs once per activity.
      */
     @JvmStatic
     fun installInsets(root: View) {
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, windowInsets ->
+            if (isFullPageShown(root)) {
+                root.setPadding(0, 0, 0, 0)
+                return@setOnApplyWindowInsetsListener windowInsets
+            }
             val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
             val insets = frameInsets(bars.left, bars.top, bars.right, bars.bottom, ime.bottom)
             applyInsets(root, insets)
-            // The pages inside may pad for the navigation bar themselves (the home page does); the rest is used up here
+            // The home page pads for the navigation bar itself; the rest is used up here
             WindowInsetsCompat.Builder(windowInsets)
                 .setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(0, 0, 0, insets.navPadding))
                 .build()
@@ -102,22 +108,17 @@ object MainChrome {
         ViewCompat.requestApplyInsets(root)
     }
 
-    /**
-     * Tells the page container whether the home page is the page shown. The home page pads for the navigation bar inside
-     * itself (so its background reaches the screen edge); any other page gets the padding from the container.
-     */
+    /** Tells the frame whether a full page (contents, settings) is shown, which then takes the insets itself. */
     @JvmStatic
-    fun setHomeOnTop(container: View, homeOnTop: Boolean) {
-        container.setTag(R.id.chrome_home_on_top, homeOnTop)
-        refreshContainerPadding(container)
+    fun setFullPageShown(root: View, shown: Boolean) {
+        val container = root.findViewById<View>(R.id.fragment_container) ?: return
+        if (isFullPageShown(root) == shown) return
+        container.setTag(R.id.chrome_full_page, shown)
+        ViewCompat.requestApplyInsets(root)
     }
 
-    private fun refreshContainerPadding(container: View) {
-        val nav = container.getTag(R.id.chrome_nav_padding) as? Int ?: 0
-        val homeOnTop = container.getTag(R.id.chrome_home_on_top) as? Boolean ?: true
-        val bottom = if (homeOnTop) 0 else nav
-        if (container.paddingBottom != bottom) container.setPadding(container.paddingLeft, container.paddingTop, container.paddingRight, bottom)
-    }
+    private fun isFullPageShown(root: View): Boolean =
+        root.findViewById<View>(R.id.fragment_container)?.getTag(R.id.chrome_full_page) as? Boolean ?: false
 
     private fun applyInsets(root: View, insets: FrameInsets) {
         root.setPadding(insets.left, 0, insets.right, insets.bottomPadding)
@@ -127,10 +128,6 @@ object MainChrome {
             if (toolbar.layoutParams.height != height) {
                 toolbar.layoutParams = (toolbar.layoutParams as ViewGroup.LayoutParams).apply { this.height = height }
             }
-        }
-        root.findViewById<View>(R.id.fragment_container)?.let {
-            it.setTag(R.id.chrome_nav_padding, insets.navPadding)
-            refreshContainerPadding(it)
         }
         root.findViewById<View>(R.id.overlay_container)?.let { it.setPadding(it.paddingLeft, it.paddingTop, it.paddingRight, insets.navPadding) }
     }

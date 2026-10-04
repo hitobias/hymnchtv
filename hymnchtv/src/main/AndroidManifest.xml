@@ -58,7 +58,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/AppTheme.NoActionBar"
+            android:theme="@style/Theme.Hymnal.Splash"
             android:launchMode="singleTask">
 
             <intent-filter>

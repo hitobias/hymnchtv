@@ -127,6 +127,7 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public void onCreate(Bundle savedInstanceState) {
         mInstance = this;
+        androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
         // DayNight is applied globally by HymnsApp (ThemePrefs.applyStored)
         super.onCreate(savedInstanceState);
         org.cog.hymnchtv.ui.theme.SystemBars.enable(this);
