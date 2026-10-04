@@ -521,6 +521,9 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
 
     /** Play arrow when a tap starts or resumes playback, pause bars while playing. */
     public void showPlayIcon(boolean playArrow) {
+        // A late callback (e.g. a media download failing after the lyrics page closed) may reach a detached card
+        if (!isAdded() || playbackPlay == null)
+            return;
         playbackPlay.setImageResource(playArrow ? R.drawable.ic_sym_play_arrow : R.drawable.ic_sym_pause);
         playbackPlay.setContentDescription(getString(playArrow ? R.string.c_play : R.string.c_pause));
         publishPlaybackUi();
