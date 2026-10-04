@@ -4,4 +4,6 @@
     <dimen name="c_key_height">48dp</dimen>
     <!-- Big hymn number on the home preview card: 34sp below 360dp wide, values-w360dp has 40sp -->
     <dimen name="c_number_size">34sp</dimen>
+    <!-- Top bar of the home page and of the full pages (spec 1) -->
+    <dimen name="home_top_bar_height">48dp</dimen>
 </resources>

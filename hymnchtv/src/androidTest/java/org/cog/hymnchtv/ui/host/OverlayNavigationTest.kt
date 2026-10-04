@@ -7,6 +7,7 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.MainActivity
@@ -20,7 +21,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Pages shown over the tabs (recent history): the back key and the bottom navigation close them. */
+/** Pages shown over the home page (recent history): the back key and opening a full page close them. */
 @RunWith(AndroidJUnit4::class)
 class OverlayNavigationTest {
     @Before fun setUp() {
@@ -43,11 +44,27 @@ class OverlayNavigationTest {
         onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
     }
 
-    @Test fun choosingATabClosesTheOverlayFirst() = PickerTestSupport.launch {
+    @Test fun openingAFullPageClosesTheOverlayFirst() = PickerTestSupport.launch { scenario ->
         openHistory()
-        onView(withId(R.id.nav_settings)).perform(click())
+        onView(withId(R.id.btn_home_settings)).perform(click())
         onView(withId(R.id.history_list)).check(doesNotExist())
-        onView(withId(R.id.nav_settings)).check(matches(isDisplayed()))
+        onView(withText(R.string.c_cat_appearance)).check(matches(isDisplayed()))
+        // One back press leaves the page and lands on the bare home page, not on the closed overlay
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
+        scenario.onActivity { a -> assertThat(a.supportFragmentManager.backStackEntryCount).isEqualTo(0) }
+    }
+
+    @Test fun backOrderIsOverlayThenFullPageThenHome() = PickerTestSupport.launch { scenario ->
+        onView(withId(R.id.btn_home_toc)).perform(click())
+        onView(withId(R.id.toc_books)).check(matches(isDisplayed()))
+        scenario.onActivity { a -> assertThat(a.supportFragmentManager.backStackEntryCount).isEqualTo(1) }
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
+        openHistory()
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        onView(withId(R.id.history_list)).check(doesNotExist())
+        onView(withId(R.id.tv_entry)).check(matches(isDisplayed()))
     }
 
     @Test fun overlayIsStillThereAfterRotation() = PickerTestSupport.launch { scenario ->
@@ -70,7 +87,7 @@ class OverlayNavigationTest {
 
     @Test fun contentBehindTheOverlayIsHiddenFromAccessibilityAndFocus() = PickerTestSupport.launch { scenario ->
         fun check(open: Boolean) = scenario.onActivity { a ->
-            for (id in intArrayOf(R.id.fragment_container, R.id.bottom_nav)) {
+            for (id in intArrayOf(R.id.fragment_container)) {
                 val group = a.findViewById<android.view.ViewGroup>(id)
                 assertThat(group.importantForAccessibility == android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS).isEqualTo(open)
                 assertThat(group.descendantFocusability == android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS).isEqualTo(open)

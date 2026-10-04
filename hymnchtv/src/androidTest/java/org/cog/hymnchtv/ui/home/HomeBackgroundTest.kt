@@ -47,9 +47,9 @@ class HomeBackgroundTest {
     @Test fun backgroundChosenWhileAwayShowsWhenTheHomeTabComesBack() = PickerTestSupport.launch { scenario ->
         var before: Int? = null
         scenario.onActivity { before = topColor(it) }
-        onView(withId(R.id.nav_settings)).perform(click())
+        onView(withId(R.id.btn_home_settings)).perform(click())
         prefs.edit().putString(BackgroundSlot.MAIN.prefKey, BackgroundPreset.INK.id).commit()
-        onView(withId(R.id.nav_home)).perform(click())
+        androidx.test.espresso.Espresso.pressBack()
         FragmentHost.eventually {
             scenario.onActivity { a ->
                 assertThat(topColor(a)).isNotNull()

@@ -44,6 +44,8 @@ class HymnPickerController(
     /** Whether titles are shown in Traditional (picks the TC Kai face), see LyricsScript. */
     private val titleTraditional: () -> Boolean = { false },
     private val xref: () -> EnglishXRef = EnglishXRefStore::current,
+    /** Key-tap feedback; replaceable for tests. The system's haptic setting decides whether it is felt. */
+    private val haptic: (View) -> Unit = { KeyHaptics.keyTap(it) },
 ) {
     private val context: Context = views.root.context
     private val chrome = PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)
@@ -89,15 +91,18 @@ class HymnPickerController(
     private fun bindKeys() {
         views.digits.forEachIndexed { digit, button ->
             button.setOnClickListener {
+                haptic(button)
                 vm.pressDigit(digit, xref())
                 render()
             }
         }
         views.fu.setOnClickListener {
+            haptic(views.fu)
             vm.pressFu()
             render()
         }
         views.delete.setOnClickListener {
+            haptic(views.delete)
             vm.backspace()
             render()
         }
@@ -112,6 +117,7 @@ class HymnPickerController(
         // Exactly one source stays chosen: a tap on the chosen one changes nothing (render() restores the check)
         views.books.forEach { (source, button) ->
             button.setOnClickListener {
+                haptic(button)
                 vm.selectSource(source)
                 persistSource(source)
                 render()

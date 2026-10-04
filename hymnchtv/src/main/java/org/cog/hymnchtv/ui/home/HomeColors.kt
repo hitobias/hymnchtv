@@ -142,6 +142,8 @@ class HomeColors(
     private fun applyRecent(views: HymnPickerViews) {
         views.recentLabel.setTextColor(onBackground)
         views.recentMore.setTextColor(onBackground)
+        views.recentEmptyText.setTextColor(onBackground)
+        androidx.core.widget.ImageViewCompat.setImageTintList(views.recentEmptyIcon, ColorStateList.valueOf(onBackground))
         views.recentMore.iconTint = ColorStateList.valueOf(onBackground)
         views.recentMore.rippleColor = ColorStateList.valueOf((onBackground and 0xFFFFFF) or (RIPPLE_ALPHA shl 24))
         val pad = if (isPhoto) dp(PLATE_PAD_DP).toInt() else 0

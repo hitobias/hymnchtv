@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
 import androidx.annotation.VisibleForTesting
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import org.cog.hymnchtv.MainActivity
@@ -18,6 +20,7 @@ import org.cog.hymnchtv.ui.host.MainNavigator
 import org.cog.hymnchtv.ui.picker.HymnPickerController
 import org.cog.hymnchtv.ui.picker.HymnPickerViewModel
 import org.cog.hymnchtv.ui.picker.HymnPickerViews
+import org.cog.hymnchtv.ui.picker.KeyHaptics
 import org.cog.hymnchtv.ui.picker.PickerHost
 import org.cog.hymnchtv.ui.picker.PickerMode
 import org.cog.hymnchtv.ui.picker.PickerState
@@ -26,9 +29,9 @@ import org.cog.hymnchtv.ui.titles.AssetHymnTitles
 import org.cog.hymnchtv.ui.titles.HymnTitleSource
 
 /**
- * Home tab: pick a hymn book, type the number, see the hymn's title at once, open it. The keys and preview are the shared
- * [HymnPickerController]; this fragment adds the user's appearance, the recent-hymns chips and the navigation to the
- * contents tab, the history page and the search page. It opens lyrics through the static [MainActivity.showContent].
+ * Home page: pick a hymn book, type the number, see the hymn's title at once, open it. The keys and preview are the shared
+ * [HymnPickerController]; this fragment adds the user's appearance, the recent-hymns list and the navigation to the
+ * contents page, the history page and the search page. It fits one screen (see [KeypadSizer]). It opens lyrics through the static [MainActivity.showContent].
  */
 class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     private val vm: HymnPickerViewModel by viewModels()
@@ -36,6 +39,10 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
     /** Replaceable for tests; defaults to the bundled lyrics assets. */
     @VisibleForTesting
     var titleSource: HymnTitleSource? = null
+
+    /** Key-tap feedback of the keys and book buttons; replaceable for tests. */
+    @VisibleForTesting
+    var haptic: (View) -> Unit = { KeyHaptics.keyTap(it) }
 
     private var homeColors: HomeColors? = null
     private var keypadSizer: KeypadSizer? = null
@@ -55,10 +62,12 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
         super.onViewCreated(view, savedInstanceState)
         val views = HymnPickerViews(view)
         this.views = views
-        keypadSizer = KeypadSizer(views, view.findViewById(R.id.viewMain)).also { it.attach() }
-        recent = RecentChips(views, ::openFromHistory)
+        val recent = RecentChips(views, ::openFromHistory)
+        this.recent = recent
+        keypadSizer = KeypadSizer(views, view.findViewById(R.id.viewMain), recent).also { it.attach() }
+        padForNavigationBar(view.findViewById(R.id.home_content))
         // The background and tokens are applied in onResume (always follows), once, so a photo is decoded only once
-        controller = HymnPickerController(views, this, PickerMode.HOME, vm, prefs, ::currentTitleSource, ::titleIsTraditional)
+        controller = HymnPickerController(views, this, PickerMode.HOME, vm, prefs, ::currentTitleSource, ::titleIsTraditional, haptic = { haptic(it) })
     }
 
     override fun onResume() {
@@ -69,13 +78,19 @@ class HomeFragment : Fragment(R.layout.fragment_home), PickerHost {
         recent?.reload()
     }
 
-    /** The host hides this tab instead of pausing it; settings changed meanwhile must show when it comes back. */
-    override fun onHiddenChanged(hidden: Boolean) {
-        super.onHiddenChanged(hidden)
-        if (!hidden) {
-            applyHomeTheme()
-            recent?.reload()
+    /** The home page pads for the gesture or navigation bar itself, so its background reaches the screen edge. */
+    private fun padForNavigationBar(content: View) {
+        val base = content.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(content) { v, insets ->
+            val bottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            if (v.paddingBottom != base + bottom) {
+                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, base + bottom)
+                // The viewport itself does not change, so the fit has to be asked for again
+                v.post { keypadSizer?.update() }
+            }
+            insets
         }
+        ViewCompat.requestApplyInsets(content)
     }
 
     /**

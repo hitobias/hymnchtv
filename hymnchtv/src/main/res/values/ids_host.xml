@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- View tags the host's insets code keeps on the page container -->
+    <item name="chrome_nav_padding" type="id" />
+    <item name="chrome_home_on_top" type="id" />
+</resources>

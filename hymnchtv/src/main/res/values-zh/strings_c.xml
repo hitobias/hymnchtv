@@ -83,4 +83,8 @@
     <string name="c_repeat">重播</string>
     <string name="c_repeat_count">重播次数</string>
     <string name="c_search_youtube">在 YouTube 搜索这首诗歌</string>
+    <string name="c_recent_empty">还没有最近的诗歌</string>
+    <string name="c_search_empty_title">找不到相关诗歌</string>
+    <string name="c_press_back_again">再按一次返回键退出</string>
+    <string name="c_settings_update_desc">设置（有可用更新）</string>
 </resources>

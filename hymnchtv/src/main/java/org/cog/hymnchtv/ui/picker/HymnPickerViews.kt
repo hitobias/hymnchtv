@@ -42,6 +42,9 @@ class HymnPickerViews(val root: View) {
     val recentArea: View = root.findViewById(R.id.recentArea)
     val recentLabel: TextView = root.findViewById(R.id.tv_recent_label)
     val recentChips: android.widget.LinearLayout = root.findViewById(R.id.recent_chips)
+    val recentEmpty: View = root.findViewById(R.id.recent_empty)
+    val recentEmptyIcon: ImageView = root.findViewById(R.id.recent_empty_icon)
+    val recentEmptyText: TextView = root.findViewById(R.id.recent_empty_text)
     val recentMore: MaterialButton = root.findViewById(R.id.btn_recent_more)
 
     /** The source buttons by source (the first four on the first row, the rest on the second). */

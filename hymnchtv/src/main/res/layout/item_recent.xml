@@ -1,33 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One recent hymn: its short name over the time it was opened -->
+<!-- One recent hymn: a full-width row, its short name on the left and the time it was opened on the right -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="8dp"
-        android:clickable="true"
+    android:layout_marginBottom="4dp"
+    android:clickable="true"
     android:focusable="true"
-    android:gravity="center"
-    android:minHeight="52dp"
-    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:minHeight="48dp"
+    android:orientation="horizontal"
     android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp">
+    android:paddingEnd="12dp">
 
     <TextView
         android:id="@+id/tv_recent_label_item"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
         android:maxLines="1"
         android:textColor="?attr/colorOnSurface"
-        android:textSize="14sp"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/tv_recent_when"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
         android:maxLines="1"
         android:textColor="?attr/colorOnSurfaceVariant"
-        android:textSize="11sp" />
+        android:textSize="13sp" />
 </LinearLayout>
