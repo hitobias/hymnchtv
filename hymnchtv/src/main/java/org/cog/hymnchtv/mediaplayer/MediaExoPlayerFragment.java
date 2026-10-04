@@ -22,6 +22,7 @@ import static org.cog.hymnchtv.mediaplayer.YoutubePlayerFragment.rateMax;
 import static org.cog.hymnchtv.mediaplayer.YoutubePlayerFragment.rateMin;
 
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -33,6 +34,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.media3.common.MediaItem;
@@ -49,6 +51,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.http.util.TextUtils;
+import timber.log.Timber;
+
 import org.cog.hymnchtv.BaseFragment;
 import org.cog.hymnchtv.ContentHandler;
 import org.cog.hymnchtv.HymnsApp;
@@ -237,12 +241,16 @@ public class MediaExoPlayerFragment extends BaseFragment {
     /**
      * Play the specified videoUrl using android Intent.ACTION_VIEW
      * Use setDataAndType(uri, mimeType) to ensure android has default defined.
+     * <p>
+     * When no installed app can handle the media the fragment stays and a toast explains why; the final
+     * try/catch covers an app that disappears between the check and the start.
      *
      * @param videoUrl videoUrl not playable by ExoPlayer
+     *
+     * @return true if an external app was started
      */
-    private void playVideoUrlExt(String videoUrl) {
-        // remove the exoPlayer fragment
-        mFragmentActivity.getSupportFragmentManager().beginTransaction().remove(this).commit();
+    @VisibleForTesting
+    public boolean playVideoUrlExt(String videoUrl) {
         Uri uri = Uri.parse(videoUrl);
         String mimeType = FileBackend.getMimeType(mContext, uri);
 
@@ -250,7 +258,23 @@ public class MediaExoPlayerFragment extends BaseFragment {
         intent.setDataAndType(uri, mimeType);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        startActivity(intent);
+
+        if (intent.resolveActivity(mContext.getPackageManager()) == null) {
+            HymnsApp.showToastMessage(R.string.error_no_external_player);
+            return false;
+        }
+
+        // remove the exoPlayer fragment
+        mFragmentActivity.getSupportFragmentManager().beginTransaction().remove(this).commit();
+        try {
+            startActivity(intent);
+            return true;
+        }
+        catch (ActivityNotFoundException | SecurityException e) {
+            Timber.w(e, "External player failed for %s", videoUrl);
+            HymnsApp.showToastMessage(R.string.error_no_external_player);
+            return false;
+        }
     }
 
     /**

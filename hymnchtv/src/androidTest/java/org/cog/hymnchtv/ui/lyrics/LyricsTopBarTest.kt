@@ -90,9 +90,37 @@ class LyricsTopBarTest {
     @Test
     fun topBarButtonsAreShown() {
         launch().use {
-            // Five buttons at any width (visual redesign 6): share, media, Aa, next, more
-            listOf(R.id.btn_share, R.id.btn_lyrics_media, R.id.btn_aa, R.id.btn_next, R.id.btn_more).forEach { id ->
+            // Six buttons at any width: home, share, media, Aa, next, more
+            listOf(R.id.btn_home, R.id.btn_share, R.id.btn_lyrics_media, R.id.btn_aa, R.id.btn_next, R.id.btn_more).forEach { id ->
                 onView(withId(id)).check(matches(isDisplayed()))
+            }
+        }
+    }
+
+    @Test
+    fun homeButtonLeavesTheLyricsPage() {
+        launch().use { scenario ->
+            onView(withId(R.id.btn_home)).perform(click())
+            val end = SystemClock.uptimeMillis() + 5_000
+            while (scenario.state != androidx.lifecycle.Lifecycle.State.DESTROYED) {
+                check(SystemClock.uptimeMillis() < end) { "lyrics page did not finish" }
+                SystemClock.sleep(50)
+            }
+        }
+    }
+
+    @Test
+    fun homeIsTheFirstOverflowEntryAndLeavesTheLyricsPage() {
+        launch().use { scenario ->
+            onView(withId(R.id.btn_more)).perform(click())
+            val menu = android.widget.PopupMenu(ctx, android.view.View(ctx)).apply { inflate(R.menu.menu_lyrics_more) }.menu
+            assertThat(menu.getItem(0).itemId).isEqualTo(R.id.home)
+            assertThat(ctx.getString(R.string.home)).isNotEmpty()
+            onView(withText(R.string.home)).inRoot(isPlatformPopup()).perform(click())
+            val end = SystemClock.uptimeMillis() + 5_000
+            while (scenario.state != androidx.lifecycle.Lifecycle.State.DESTROYED) {
+                check(SystemClock.uptimeMillis() < end) { "lyrics page did not finish" }
+                SystemClock.sleep(50)
             }
         }
     }
@@ -178,9 +206,10 @@ class LyricsTopBarTest {
         launch(MainActivity.HYMN_XB, 1).use { scenario ->
             val text = scenario.read { page(it)!!.findViewById<TextView>(R.id.lyrics_simplified).text }
             assertThat(text).isInstanceOf(Spanned::class.java)
-            val spans = (text as Spanned).getSpans(0, text.length, ForegroundColorSpan::class.java)
-            assertThat(spans).isNotEmpty()
             val ranges = LyricsMeta.verseMarkerRanges(text.toString())
+            // The header (number, book) has its own colours since 1.2.0; the verse markers are everything after it
+            val spans = (text as Spanned).getSpans(ranges.first().first, text.length, ForegroundColorSpan::class.java)
+            assertThat(spans).isNotEmpty()
             assertThat(spans.size).isEqualTo(ranges.size)
             ranges.forEach { r ->
                 assertThat(text.getSpans(r.first, r.last + 1, ForegroundColorSpan::class.java)).hasLength(1)

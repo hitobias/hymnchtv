@@ -178,13 +178,13 @@ class LyricsChromeTest : LyricsTestBase() {
     }
 
     @Test
-    fun topBarHasFiveEqualButtonsAtAnyWidth() {
+    fun topBarHasSixEqualButtonsAtAnyWidth() {
         launch().use { s ->
             val bar = s.pageView(R.id.lyrics_top_bar) as android.view.ViewGroup
-            assertThat(bar.childCount).isEqualTo(5)
-            val widths = (0 until 5).map { bar.getChildAt(it).width }
+            assertThat(bar.childCount).isEqualTo(6)
+            val widths = (0 until 6).map { bar.getChildAt(it).width }
             assertThat(widths.max() - widths.min()).isAtMost(1)   // equal weights, at most a pixel of rounding
-            (0 until 5).forEach { assertThat(bar.getChildAt(it).height).isAtLeast(dp(48)) }
+            (0 until 6).forEach { assertThat(bar.getChildAt(it).height).isAtLeast(dp(48)) }
         }
     }
 }

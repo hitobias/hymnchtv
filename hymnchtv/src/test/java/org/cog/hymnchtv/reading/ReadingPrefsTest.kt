@@ -7,7 +7,7 @@ class ReadingPrefsTest {
     @Test
     fun emptyPrefsGiveTheDefaults() {
         val sp = FakeSharedPreferences()
-        assertThat(ReadingPrefs.displayMode(sp)).isEqualTo(DisplayMode.SCORE_AND_LYRICS)
+        assertThat(ReadingPrefs.displayMode(sp)).isEqualTo(DisplayMode.LYRICS_ONLY)
         assertThat(ReadingPrefs.fontSize(sp)).isEqualTo(LyricsFontSize.MEDIUM)
         assertThat(ReadingPrefs.lyricsFont(sp)).isEqualTo(LyricsFont.KAI)
         assertThat(ReadingPrefs.pageAnimation(sp)).isTrue()
@@ -45,7 +45,7 @@ class ReadingPrefsTest {
                 ReadingPrefKeys.LYRICS_SCALE_P to "big",
             )
         )
-        assertThat(ReadingPrefs.displayMode(sp)).isEqualTo(DisplayMode.SCORE_AND_LYRICS)
+        assertThat(ReadingPrefs.displayMode(sp)).isEqualTo(DisplayMode.LYRICS_ONLY)
         assertThat(ReadingPrefs.pageAnimation(sp)).isTrue()
         assertThat(ReadingPrefs.lyricsScale(sp, true)).isEqualTo(LyricsFontSize.MEDIUM.scale)
     }

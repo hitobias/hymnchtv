@@ -224,7 +224,7 @@
     <string name="help">幫助</string>
     <string name="stop">停止</string>
     <string name="play">播放</string>
-    <string name="home">首頁</string>
+    <string name="home">回首頁</string>
 
     <string name="small">小</string>
     <string name="lager">大</string>
@@ -289,4 +289,6 @@
     <string name="media_type_name_jiaochang">教唱</string>
     <string name="media_type_name_changshi">唱詩</string>
     <string name="media_type_name_banzou">伴奏</string>
+    <string name="error_no_external_player">沒有可播放此媒體的應用程式</string>
+    <string name="media_none_available">這首詩歌沒有可播放的媒體</string>
 </resources>

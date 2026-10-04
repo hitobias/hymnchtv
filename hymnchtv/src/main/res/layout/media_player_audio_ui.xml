@@ -193,6 +193,20 @@
                         android:padding="0dp" />
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Shown instead of a working play button when the hymn has no media at all -->
+            <TextView
+                android:id="@+id/media_empty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="4dp"
+                android:drawablePadding="8dp"
+                android:drawableStart="@drawable/ic_sym_music_off"
+                android:gravity="center_vertical"
+                android:text="@string/media_none_available"
+                android:textSize="@dimen/media_empty_text"
+                android:visibility="gone" />
         </LinearLayout>
 
         <include

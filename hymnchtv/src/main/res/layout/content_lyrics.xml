@@ -85,7 +85,7 @@
                 android:id="@+id/lyrics_simplified"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:lineSpacingMultiplier="1.2"
+                android:lineSpacingMultiplier="1.7"
                 android:paddingStart="16dp"
                 android:paddingTop="8dp"
                 android:paddingEnd="16dp"
@@ -97,7 +97,7 @@
                 android:id="@+id/lyrics_traditional"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:lineSpacingMultiplier="1.2"
+                android:lineSpacingMultiplier="1.7"
                 android:paddingStart="16dp"
                 android:paddingTop="8dp"
                 android:paddingEnd="16dp"
@@ -115,7 +115,7 @@
     </ScrollView>
     </org.cog.hymnchtv.utils.NestedScrollableHost>
 
-    <!-- Five buttons at any width (5 x 48dp fits 320dp); A-/A+ moved into the Aa panel, tint into the overflow -->
+    <!-- Six buttons at any width (6 x 48dp fits 320dp); A-/A+ moved into the Aa panel, tint into the overflow -->
     <LinearLayout
         android:id="@+id/lyrics_top_bar"
         android:accessibilityTraversalBefore="@id/lyrics_scroll"
@@ -126,6 +126,14 @@
         android:paddingStart="4dp"
         android:paddingEnd="4dp">
 
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/btn_home"
+            style="@style/LyricsChromeButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/home"
+            android:src="@drawable/ic_sym_home" />
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_share"
             style="@style/LyricsChromeButton"

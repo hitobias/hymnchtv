@@ -13,9 +13,9 @@ class DisplayModeTest {
     }
 
     @Test
-    fun invalidOrMissingFallsBackToScoreAndLyrics() {
+    fun invalidOrMissingFallsBackToLyricsOnly() {
         listOf(null, "", "score_only", "BOTH").forEach {
-            assertThat(DisplayMode.fromPref(it)).isEqualTo(SCORE_AND_LYRICS)
+            assertThat(DisplayMode.fromPref(it)).isEqualTo(LYRICS_ONLY)
         }
     }
 
@@ -40,8 +40,8 @@ class DisplayModeTest {
     }
 
     @Test
-    fun lyricsOnlyWithoutTextShowsBoth() {
-        assertThat(DisplayModePolicy.effective(LYRICS_ONLY, false)).isEqualTo(SCORE_AND_LYRICS)
+    fun lyricsOnlyWithoutTextShowsScoreOnly() {
+        assertThat(DisplayModePolicy.effective(LYRICS_ONLY, false)).isEqualTo(SCORE_ONLY)
         assertThat(DisplayModePolicy.effective(LYRICS_ONLY, true)).isEqualTo(LYRICS_ONLY)
         assertThat(DisplayModePolicy.effective(SCORE_ONLY, false)).isEqualTo(SCORE_ONLY)
         assertThat(DisplayModePolicy.effective(SCORE_AND_LYRICS, false)).isEqualTo(SCORE_AND_LYRICS)
