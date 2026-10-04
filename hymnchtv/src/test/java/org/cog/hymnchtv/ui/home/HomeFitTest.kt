@@ -1,12 +1,13 @@
 package org.cog.hymnchtv.ui.home
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
 
 /** The one-page home plan: how many recent rows and how tall the keys are for a given height. */
 class HomeFitTest {
-    private fun plan(available: Float, fixed: Float = FIXED, recent: Int = 5, header: Float = 48f) =
-        HomeFit.plan(HomeFit.Input(availableDp = available, fixedDp = fixed, recentHeaderDp = header, recentTotal = recent))
+    private fun plan(available: Float, fixed: Float = FIXED, recent: Int = 5, header: Float = 48f, saving: Float = 0f) =
+        HomeFit.plan(HomeFit.Input(availableDp = available, fixedDp = fixed, recentHeaderDp = header, recentTotal = recent, compactSavingDp = saving))
 
     @Test fun tallScreenShowsFiveRecentAndTallestKeys() {
         val p = plan(available = 900f)
@@ -64,10 +65,71 @@ class HomeFitTest {
         assertThat(p.recentCount).isEqualTo(0)
     }
 
-    @Test fun whenTheKeysAt48DoNotFitThePageScrolls() {
-        val p = plan(available = FIXED + 48f + HomeFit.KEYPAD_MIN_DP - 1f)
+    @Test fun keysShrinkBelow48DownToTheFloorBeforeAnythingScrolls() {
+        val p = plan(available = FIXED + 48f + HomeFit.KEYPAD_MIN_DP - 1f + HomeFit.SAFETY_DP)
+        assertThat(p.scrollable).isFalse()
+        assertThat(p.compact).isFalse()
+        assertThat(p.keyHeightDp).isLessThan(48f)
+        assertThat(p.keyHeightDp).isAtLeast(HomeFit.MIN_KEY_FLOOR_DP)
+        assertThat(p.recentCount).isEqualTo(0)
+    }
+
+    @Test fun keysNeverShrinkBelowTheFloor() {
+        for (h in 200..700 step 3) {
+            val p = plan(available = h.toFloat())
+            assertThat(p.keyHeightDp).isAtLeast(HomeFit.MIN_KEY_FLOOR_DP)
+        }
+        assertThat(HomeFit.MIN_KEY_FLOOR_DP).isEqualTo(40f)
+    }
+
+    @Test fun thePreviewCompactsBeforeTheRecentHeaderGoesBelowTheFold() {
+        val need = FIXED + 48f + HomeFit.keypadDp(40f) + HomeFit.SAFETY_DP
+        val p = plan(available = need - 10f, saving = 32f)
+        assertThat(p.compact).isTrue()
+        assertThat(p.scrollable).isFalse()
+        assertThat(p.pinAction).isFalse()
+    }
+
+    @Test fun theRecentHeaderMovesBelowTheFoldWhileOpenStaysVisible() {
+        val need = FIXED + HomeFit.keypadDp(40f) + HomeFit.SAFETY_DP
+        val p = plan(available = need + 1f, saving = 32f)
+        assertThat(p.scrollable).isTrue()
+        assertThat(p.compact).isTrue()
+        assertThat(p.pinAction).isFalse()
+        assertThat(p.keyHeightDp).isAtLeast(40f)
+    }
+
+    @Test fun whenNothingFitsOpenIsPinned() {
+        val p = plan(available = 200f, saving = 32f)
+        assertThat(p.scrollable).isTrue()
+        assertThat(p.pinAction).isTrue()
+        assertThat(p.keyHeightDp).isEqualTo(40f)
+    }
+
+    @Test fun landscapeKeepsTheOldFallbackWithoutShrinkingOrPinning() {
+        val p = HomeFit.plan(HomeFit.Input(availableDp = 100f, fixedDp = FIXED, recentHeaderDp = 48f, recentTotal = 5, portrait = false))
         assertThat(p.scrollable).isTrue()
         assertThat(p.keyHeightDp).isEqualTo(48f)
+        assertThat(p.pinAction).isFalse()
+        assertThat(p.compact).isFalse()
+    }
+
+    @Test fun openAndKeypadAreNeverCutOffOnTheTargetScreens() {
+        for ((name, available, fixed) in TARGET_SCREENS) {
+            val p = plan(available = available, fixed = fixed, saving = HomeFit.COMPACT_SAVING_DP)
+            val keypad = HomeFit.keypadDp(p.keyHeightDp)
+            val saved = if (p.compact) HomeFit.COMPACT_SAVING_DP else 0f
+            val upToOpen = fixed - saved + keypad
+            val visible = p.pinAction || upToOpen <= available
+            assertWithMessage(name).that(visible).isTrue()
+            assertWithMessage(name).that(p.keyHeightDp).isAtLeast(40f)
+        }
+    }
+
+    @Test fun screen320x640NoLongerScrollsOrPinsWhenKeysAndCompactPreviewFit() {
+        val p = plan(available = 520f, fixed = 340f, saving = HomeFit.COMPACT_SAVING_DP)
+        assertThat(p.pinAction).isFalse()
+        assertThat(p.compact).isTrue()
     }
 
     @Test fun screen411x891FitsWithoutScrolling() {
@@ -90,7 +152,7 @@ class HomeFitTest {
     }
 
     @Test fun largeFontGrowsTheFixedPartAndForcesScrolling() {
-        assertThat(plan(available = 779f, fixed = 520f).scrollable).isTrue()
+        assertThat(plan(available = 779f, fixed = 600f).scrollable).isTrue()
     }
 
     @Test fun emptyHistoryShowsTheEmptyStateOnlyWhenItFits() {
@@ -125,5 +187,12 @@ class HomeFitTest {
 
     private companion object {
         const val FIXED = 240f
+
+        /** Name, content height (screen minus toolbar, status bar, nav inset, padding) and fixed part: 372 at font 1.0, 410 at 1.3. */
+        val TARGET_SCREENS = listOf(
+            Triple("320x640 @1.0", 520f, 372f),
+            Triple("360x640 @1.3", 520f, 410f),
+            Triple("360x640 @1.0 3-button nav", 496f, 372f),
+        )
     }
 }
