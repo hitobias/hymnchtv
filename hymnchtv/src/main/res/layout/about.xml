@@ -1,105 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- About page (sub-project Z): native views, no WebView, no links, no personal data. -->
+<!-- About (sub-project Z, restyled in spec rev 3 section 5): native views, no WebView, no links, no personal data.
+     Icon, name and version on top; the four secondary pages as chips; Check for updates (tonal) above OK (primary). -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="10dp">
+        android:padding="20dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:padding="10dp">
-
-            <ImageView
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:contentDescription="@string/app_name"
-                android:src="@drawable/hymnchtv" />
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingStart="20dp"
-                tools:ignore="RtlSymmetry">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/app_name"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/about_appVersion"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="Version 1.0.0" />
-            </LinearLayout>
-        </LinearLayout>
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_horizontal"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/hymnchtv" />
 
         <TextView
+            android:id="@+id/about_title"
+            style="@style/Hymnal.Dialog.Title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="10dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/app_name" />
+
+        <TextView
+            android:id="@+id/about_appVersion"
+            style="@style/Hymnal.Dialog.Muted"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            tools:text="Version 1.4.0" />
+
+        <TextView
+            style="@style/Hymnal.Dialog.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:text="@string/about_description" />
 
-        <LinearLayout
-            style="?android:attr/buttonBarStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <Button
-                android:id="@+id/about_licenses"
-                style="@style/Button"
-                android:text="@string/about_licenses_title" />
-
-            <Button
-                android:id="@+id/about_help"
-                style="@style/Button"
-                android:layout_marginStart="1dp"
-                android:text="@string/help" />
-        </LinearLayout>
-
-        <LinearLayout
-            style="?android:attr/buttonBarStyle"
+        <com.google.android.material.chip.ChipGroup
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="10dp"
-            android:paddingBottom="5dp">
+            android:layout_marginTop="16dp"
+            app:chipSpacingHorizontal="8dp"
+            app:chipSpacingVertical="4dp">
 
-            <Button
+            <com.google.android.material.chip.Chip
+                android:id="@+id/about_help"
+                style="@style/Hymnal.Dialog.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/help" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/about_licenses"
+                style="@style/Hymnal.Dialog.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/about_licenses_title" />
+            <com.google.android.material.chip.Chip
                 android:id="@+id/history_log"
-                style="@style/Button"
+                style="@style/Hymnal.Dialog.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="@string/show_history_log" />
-
-            <Button
+            <com.google.android.material.chip.Chip
                 android:id="@+id/submit_logs"
-                style="@style/Button"
-                android:layout_marginStart="1dp"
+                style="@style/Hymnal.Dialog.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="@string/send_logs" />
+        </com.google.android.material.chip.ChipGroup>
 
-            <Button
-                android:id="@+id/check_new_version"
-                style="@style/Button"
-                android:layout_marginStart="1dp"
-                android:layout_weight="0.7"
-                android:text="@string/app_update_check" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/check_new_version"
+            style="@style/Hymnal.Dialog.Button.Tonal"
+            android:layout_marginTop="20dp"
+            android:text="@string/app_update_check" />
 
-            <Button
-                android:id="@+id/ok_button"
-                style="@style/Button"
-                android:layout_marginStart="1dp"
-                android:layout_weight="0.7"
-                android:text="@string/ok" />
-        </LinearLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/ok_button"
+            style="@style/Hymnal.Dialog.Button.Primary"
+            android:layout_marginTop="8dp"
+            android:text="@string/ok" />
     </LinearLayout>
 </ScrollView>

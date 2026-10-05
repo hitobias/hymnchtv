@@ -22,7 +22,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
+import android.view.ViewGroup;
 import android.widget.TextView;
 
 import org.cog.hymnchtv.about.HelpActivity;
@@ -63,19 +63,24 @@ public class About extends BaseActivity implements View.OnClickListener {
         findViewById(R.id.about_licenses).setOnClickListener(this);
         findViewById(R.id.about_help).setOnClickListener(this);
 
-        Button btn_HistoryLog = findViewById(R.id.history_log);
+        View btn_HistoryLog = findViewById(R.id.history_log);
         btn_HistoryLog.setOnClickListener(this);
 
         findViewById(R.id.submit_logs).setOnClickListener(this);
         findViewById(R.id.ok_button).setOnClickListener(this);
 
-        Button btn_chkNewVersion = findViewById(R.id.check_new_version);
+        View btn_chkNewVersion = findViewById(R.id.check_new_version);
         if (HymnsApp.updateServiceAllowed || BuildConfig.DEBUG) {
             btn_chkNewVersion.setVisibility(View.VISIBLE);
             btn_chkNewVersion.setOnClickListener(this);
         }
         else {
             btn_chkNewVersion.setVisibility(View.GONE);
+            // Without the update button, OK keeps the same gap above it as the button pair
+            View okButton = findViewById(R.id.ok_button);
+            ViewGroup.MarginLayoutParams okParams = (ViewGroup.MarginLayoutParams) okButton.getLayoutParams();
+            okParams.topMargin = getResources().getDimensionPixelSize(R.dimen.dialog_button_gap_first);
+            okButton.setLayoutParams(okParams);
         }
 
         TextView version = findViewById(R.id.about_appVersion);
