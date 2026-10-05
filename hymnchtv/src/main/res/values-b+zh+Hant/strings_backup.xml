@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sing_log_auto">自動記錄唱過的詩歌</string>
+    <string name="sing_log_auto_summary">歌詞頁開著 120 秒或播放完畢時記下一筆，只存在這支手機。</string>
+    <string name="backup_export">匯出筆記本</string>
+    <string name="backup_export_summary">把收藏、筆記、歌單與唱詩記錄存成一個檔案</string>
+    <string name="backup_import">匯入筆記本</string>
+    <string name="backup_import_summary">與手機上現有的內容合併，現有內容不會被刪除</string>
+    <string name="backup_running">處理中…</string>
+    <string name="backup_title">筆記本備份</string>
+    <string name="backup_export_done">已匯出 %1$d 項。</string>
+    <string name="backup_import_done">已匯入：新增 %1$d 項、更新 %2$d 項。</string>
+    <string name="backup_import_skipped">略過 %1$d 項無效的內容。</string>
+    <string name="backup_error_format">這不是詩歌筆記本的備份檔。</string>
+    <string name="backup_error_version">這個備份檔的版本比 App 新，請先更新 App。</string>
+    <string name="backup_error_too_large">檔案太大，無法匯入。</string>
+    <string name="backup_error_io">無法存取檔案。</string>
+    <string name="backup_error_storage">無法儲存，請再試一次。</string>
+</resources>

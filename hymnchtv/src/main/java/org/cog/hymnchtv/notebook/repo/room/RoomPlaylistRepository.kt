@@ -76,6 +76,13 @@ class RoomPlaylistRepository(
         row
     }
 
+    /** Composes the existing writes inside one Room transaction (nested withTransaction joins it); no new DAO query. */
+    override suspend fun createPlaylistWithItem(name: String, key: HymnKey): Pair<PlaylistEntity, PlaylistItemEntity> =
+        db.withTransaction {
+            val playlist = createPlaylist(name)
+            playlist to checkNotNull(addItem(playlist.id, key)) { "The new playlist vanished inside its own transaction" }
+        }
+
     override suspend fun removeItem(itemId: String): Boolean = db.withTransaction {
         val existing = itemDao.findById(itemId)?.takeIf { it.isActive } ?: return@withTransaction false
         val now = clock.nowMillis()

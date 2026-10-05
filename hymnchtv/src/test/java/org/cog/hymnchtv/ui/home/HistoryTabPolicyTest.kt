@@ -7,6 +7,7 @@ class HistoryTabPolicyTest {
     @Test fun knownValuesMapToTheirTab() {
         assertThat(HistoryTab.fromPref(0)).isEqualTo(HistoryTab.RECENT)
         assertThat(HistoryTab.fromPref(1)).isEqualTo(HistoryTab.FAVORITES)
+        assertThat(HistoryTab.fromPref(2)).isEqualTo(HistoryTab.PLAYLISTS)
     }
 
     @Test fun unknownOrMissingFallsBackToRecent() {

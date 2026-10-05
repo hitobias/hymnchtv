@@ -115,9 +115,8 @@ class MainHostTest {
     }
 
     @Test
-    fun myHymnsIsNotOfferedWhileTheNotebookUiIsOff() = launch { scenario ->
+    fun theHomeTopBarHoldsOnlyContentsAndSettings() = launch { scenario ->
         scenario.onActivity { a ->
-            assertThat(a.supportFragmentManager.fragments.none { it is org.cog.hymnchtv.ui.myhymns.MyHymnsFragment }).isTrue()
             assertThat(a.findViewById<View>(R.id.home_top_buttons).let { (it as android.view.ViewGroup).childCount }).isEqualTo(2)
         }
     }

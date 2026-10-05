@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notes_menu">筆記</string>
+    <string name="notes_menu_count">筆記（%1$d）</string>
+    <string name="notes_title">筆記</string>
+    <string name="notes_add">新增筆記</string>
+    <string name="notes_edit">編輯筆記</string>
+    <string name="notes_empty">還沒有筆記。點「新增筆記」開始。</string>
+    <string name="notes_hint">輸入筆記內容</string>
+    <string name="notes_save">儲存</string>
+    <string name="notes_delete">刪除筆記</string>
+    <string name="notes_delete_confirm">刪除此筆記？刪除後無法還原。</string>
+    <string name="notes_unsaved">修改還沒有儲存。</string>
+    <string name="notes_dont_save">不儲存</string>
+    <string name="notes_save_error">無法儲存筆記，請再試一次。</string>
+    <string name="notes_delete_error">無法刪除筆記，請再試一次。</string>
+    <string name="notes_load_error">無法讀取筆記。</string>
+    <string name="notes_edited">修改於 %1$s</string>
+    <string name="notes_sung">唱過 %1$d 次，最近 %2$s</string>
+    <string name="notes_marked">有筆記</string>
+    <string name="notes_too_long">筆記最多 %1$d 個字。</string>
+</resources>

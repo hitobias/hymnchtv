@@ -152,8 +152,14 @@ fi
 
 TMO=$(command -v timeout || command -v gtimeout || true)
 instrument() {   # $1 = extra "-e key value" args
+  # adb shell reads stdin: without </dev/null it swallows the rest of the batch loop's here-string.
+  # am instrument exits 0 even when tests fail, so success is decided from its output.
+  local out
   # shellcheck disable=SC2086
-  ${TMO:+$TMO 1800} adb -s "$RUN" shell am instrument -w $1 "$PKG.test/androidx.test.runner.AndroidJUnitRunner"
+  out=$(${TMO:+$TMO 1800} adb -s "$RUN" shell am instrument -w $1 "$PKG.test/androidx.test.runner.AndroidJUnitRunner" < /dev/null)
+  local rc=$?
+  printf '%s\n' "$out"
+  [ $rc -eq 0 ] && printf '%s' "$out" | grep -q '^OK (' && ! printf '%s' "$out" | grep -q 'FAILURES!!!\|INSTRUMENTATION_FAILED\|Process crashed'
 }
 run_quick() { echo ">> quick suite ($QUICK_ANN)" >&2; instrument "-e annotation $QUICK_ANN"; }
 

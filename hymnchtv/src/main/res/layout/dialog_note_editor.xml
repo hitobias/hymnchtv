@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The note editor. saveEnabled=false: the draft lives in HymnNotesViewModel and, across process death, in its private draft file (never in a Bundle) -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp">
+
+    <EditText
+        android:id="@+id/note_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="top|start"
+        android:hint="@string/notes_hint"
+        android:importantForAutofill="no"
+        android:inputType="textMultiLine|textCapSentences"
+        android:maxLines="12"
+        android:minLines="4"
+        android:saveEnabled="false"
+        android:scrollbars="vertical"
+        android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+</FrameLayout>

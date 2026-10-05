@@ -34,18 +34,18 @@ class SharedPrefsNotebookPrefsTest {
     @Test
     fun defaults() {
         val prefs = SharedPrefsNotebookPrefs(context)
-        assertThat(prefs.autoRecordEnabled).isTrue()
+        assertThat(prefs.autoRecordEnabled).isFalse()
         assertThat(prefs.lastChosenOccasion).isNull()
     }
 
     @Test
     fun persistsAcrossInstances() {
         SharedPrefsNotebookPrefs(context).apply {
-            setAutoRecordEnabled(false)
+            setAutoRecordEnabled(true)
             setLastChosenOccasion(Occasion.SMALL_GROUP)
         }
         val again = SharedPrefsNotebookPrefs(context)
-        assertThat(again.autoRecordEnabled).isFalse()
+        assertThat(again.autoRecordEnabled).isTrue()
         assertThat(again.lastChosenOccasion).isEqualTo(Occasion.SMALL_GROUP)
     }
 

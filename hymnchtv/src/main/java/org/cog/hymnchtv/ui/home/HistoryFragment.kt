@@ -22,13 +22,14 @@ import org.cog.hymnchtv.notebook.Notebook
 import org.cog.hymnchtv.notebook.Outcome
 import org.cog.hymnchtv.notebook.data.entity.FavoriteEntity
 import org.cog.hymnchtv.notebook.model.HymnKey
+import org.cog.hymnchtv.ui.playlist.PlaylistsTabController
 import org.cog.hymnchtv.ui.titles.AssetHymnTitles
 import timber.log.Timber
 
 /**
  * Full-screen "History & favourites" page (over the tabs). The Recent tab lists the recently opened hymns: tap opens, the
  * trailing button or a swipe deletes, a long press asks first. The Favourites tab lists the favourites: tap opens, the
- * trailing star removes (with undo).
+ * trailing star removes (with undo). The Playlists tab (D-1 F2) is run by [PlaylistsTabController].
  */
 class HistoryFragment : Fragment(R.layout.fragment_history) {
     private var list: RecyclerView? = null
@@ -36,6 +37,7 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
     private var favoritesList: RecyclerView? = null
     private var favoritesEmpty: View? = null
     private var tabs: TabLayout? = null
+    private var playlistsTab: PlaylistsTabController? = null
     private lateinit var adapter: HistoryAdapter
     private lateinit var favoriteAdapter: FavoriteAdapter
     private var currentTab = HistoryTab.RECENT
@@ -72,6 +74,7 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
                 if (holder is HistoryAdapter.RowHolder) super.getSwipeDirs(rv, holder) else 0
         }
         ItemTouchHelper(swipe).attachToRecyclerView(recycler)
+        playlistsTab = PlaylistsTabController(this, view.findViewById(R.id.playlists_tab))
         setUpFavorites(view)
     }
 
@@ -88,6 +91,7 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
         val saved = HistoryTab.fromPref(prefs().getInt(HomePrefs.HISTORY_TAB, HistoryTab.RECENT.pref))
         tabBar.addTab(tabBar.newTab().setText(R.string.fav_tab_recent).setTag(HistoryTab.RECENT), saved == HistoryTab.RECENT)
         tabBar.addTab(tabBar.newTab().setText(R.string.fav_tab_favorites).setTag(HistoryTab.FAVORITES), saved == HistoryTab.FAVORITES)
+        tabBar.addTab(tabBar.newTab().setText(R.string.playlist_tab).setTag(HistoryTab.PLAYLISTS), saved == HistoryTab.PLAYLISTS)
         currentTab = saved
         refreshVisibility()
         tabBar.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -106,12 +110,15 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
     private fun prefs() = requireContext().getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
 
     private fun refreshVisibility() {
-        val recent = currentTab == HistoryTab.RECENT
-        list?.visibility = if (recent) View.VISIBLE else View.GONE
-        empty?.visibility = if (recent && recentIsEmpty) View.VISIBLE else View.GONE
-        favoritesList?.visibility = if (recent) View.GONE else View.VISIBLE
-        favoritesEmpty?.visibility = if (!recent && favoritesIsEmpty) View.VISIBLE else View.GONE
+        val tab = currentTab
+        list?.visibility = visibleIf(tab == HistoryTab.RECENT)
+        empty?.visibility = visibleIf(tab == HistoryTab.RECENT && recentIsEmpty)
+        favoritesList?.visibility = visibleIf(tab == HistoryTab.FAVORITES)
+        favoritesEmpty?.visibility = visibleIf(tab == HistoryTab.FAVORITES && favoritesIsEmpty)
+        playlistsTab?.setVisible(tab == HistoryTab.PLAYLISTS)
     }
+
+    private fun visibleIf(shown: Boolean) = if (shown) View.VISIBLE else View.GONE
 
     override fun onStart() {
         super.onStart()
@@ -130,12 +137,15 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
         favoritesList = null
         favoritesEmpty = null
         tabs = null
+        playlistsTab?.release()
+        playlistsTab = null
         super.onDestroyView()
     }
 
     private fun reload() {
         HistoryActions.load(requireContext()) { records -> if (list != null) show(records) }
         loadFavorites()
+        playlistsTab?.reload()
     }
 
     /** The records on screen (without day headings), newest first. */

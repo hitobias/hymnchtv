@@ -54,18 +54,43 @@
             app:title="@string/media_config" />
     </PreferenceCategory>
 
-    <!-- C-9: empty slots that sub-project D-1 fills (it makes them visible and adds its preferences) -->
+    <!-- D-1 F4: automatic singing log, off until switched on (written to NotebookPrefs through NotebookAsync) -->
     <PreferenceCategory
         app:iconSpaceReserved="false"
-        app:isPreferenceVisible="false"
         app:key="c_cat_sing_log"
-        app:title="@string/c_cat_sing_log" />
+        app:title="@string/c_cat_sing_log">
 
+        <SwitchPreferenceCompat
+            app:icon="@drawable/ic_sym_history"
+            app:iconSpaceReserved="false"
+            app:key="auto_record"
+            app:persistent="false"
+            app:summary="@string/sing_log_auto_summary"
+            app:title="@string/sing_log_auto" />
+    </PreferenceCategory>
+
+    <!-- D-1 F3: manual notebook backup through the Storage Access Framework (no storage permission) -->
     <PreferenceCategory
         app:iconSpaceReserved="false"
-        app:isPreferenceVisible="false"
         app:key="c_cat_backup"
-        app:title="@string/c_cat_backup" />
+        app:title="@string/c_cat_backup">
+
+        <Preference
+            app:icon="@drawable/ic_sym_article"
+            app:iconSpaceReserved="false"
+            app:key="backup_export"
+            app:persistent="false"
+            app:summary="@string/backup_export_summary"
+            app:title="@string/backup_export" />
+
+        <Preference
+            app:icon="@drawable/ic_sym_list"
+            app:iconSpaceReserved="false"
+            app:key="backup_import"
+            app:persistent="false"
+            app:summary="@string/backup_import_summary"
+            app:title="@string/backup_import" />
+    </PreferenceCategory>
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
