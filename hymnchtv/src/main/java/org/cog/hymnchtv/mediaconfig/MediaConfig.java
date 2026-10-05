@@ -52,6 +52,7 @@ import android.content.res.AssetManager;
 import android.database.SQLException;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Environment;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.text.Editable;
@@ -85,12 +86,14 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -110,6 +113,7 @@ import org.cog.hymnchtv.RichTextEditor;
 import org.cog.hymnchtv.mediaplayer.MediaExoPlayerFragment;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.share.MediaShareFiles;
 import org.cog.hymnchtv.persistance.PathTrust;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.utils.DialogActivity;
@@ -981,33 +985,64 @@ public class MediaConfig extends BaseActivity
     }
 
     /**
-     * check for any unsaved changes and alert user before the exit.
+     * Shares the import file, or the media record with its media file (see shareFiles).
      */
     private void shareMediaRecord() {
-        ArrayList<Uri> imageUris = new ArrayList<>();
         String importFile = ViewUtil.toString(tvImportFile);
-
         if (importFile != null) {
-            imageUris.add(FileBackend.getUriForFile(this, new File(importFile)));
-            ShareWith.share(this, null, imageUris);
+            shareFiles(null, Collections.singletonList(new File(importFile)));
             return;
         }
 
         final MediaRecord mRecord = createMediaRecord();
         if (mRecord != null) {
+            List<File> files = new ArrayList<>();
             String mediaFile = mRecord.getMediaFilePath();
             if (!TextUtils.isEmpty(mediaFile)) {
                 File mFile = new File(mediaFile);
                 if (mFile.exists()) {
-                    imageUris.add(FileBackend.getUriForFile(this, new File(mediaFile)));
+                    files.add(mFile);
                 }
                 else {
-                    HymnsApp.showToastMessage(R.string.share_file_missing,
-                            mediaFile.substring(mediaFile.indexOf("Download")));
+                    HymnsApp.showToastMessage(R.string.share_file_missing, mFile.getName());
                 }
             }
-            ShareWith.share(this, mRecord.toExportString(), imageUris);
+            shareFiles(mRecord.toExportString(), files);
         }
+    }
+
+    /**
+     * Shares [text] and [files]; files outside Download/hymnal/ are copied to cacheDir/share/ first (MediaShareFiles, the
+     * FileProvider has no other external root since 1.6.0), on AppExecutors.io.
+     */
+    private void shareFiles(String text, List<File> files) {
+        if (files.isEmpty()) {
+            ShareWith.share(this, text, new ArrayList<>());
+            return;
+        }
+        final Context appContext = getApplicationContext();
+        AppExecutors.ioThenMain("media-share", this, () -> {
+            try {
+                return MediaShareFiles.prepare(appContext.getCacheDir(), Environment.getExternalStorageDirectory(), files,
+                        System.currentTimeMillis());
+            }
+            catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, ready -> {
+            ArrayList<Uri> uris = new ArrayList<>();
+            try {
+                for (File file : ready) {
+                    uris.add(FileBackend.getUriForFile(this, file));
+                }
+            }
+            catch (SecurityException e) {
+                Timber.e(e, "No FileProvider uri for a media config share");
+                HymnsApp.showToastMessage(R.string.share_failed);
+                return;
+            }
+            ShareWith.share(this, text, uris);
+        }, () -> HymnsApp.showToastMessage(R.string.share_failed));
     }
 
     /**

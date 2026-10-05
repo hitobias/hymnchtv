@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?><!-- the <files-path> tag shares directories within the files/ directory of your app's internal storage -->
 <paths>
-    <!-- external-path "/" and root-path "/storage/" stay: MediaConfig shares user-chosen import and media files from
-         anywhere on external storage or an SD card, and LogUploadServiceImpl shares Download/hymnal/logs. -->
+    <!-- 1.6.0: the only external root is the app's own Download/hymnal/ (media config exports and imports, downloaded media,
+         LogUploadServiceImpl's logs). MediaConfig copies any other file it shares into cacheDir/share/ (MediaShareFiles). -->
     <external-path
-        name="external"
-        path="/" />
-    <root-path
-        name="storage"
-        path="/storage/" />
+        name="hymnal"
+        path="Download/hymnal/" />
     <files-path
         name="pictures"
         path="Images/" />
