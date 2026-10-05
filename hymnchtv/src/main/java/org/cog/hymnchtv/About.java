@@ -60,6 +60,14 @@ public class About extends BaseActivity implements View.OnClickListener {
         setContentView(R.layout.about);
         setTitle(getString(R.string.about));
 
+        // getString drops the <u>/<b> styling some shared strings carry; the chips and buttons are plain text here
+        setPlainText(R.id.about_help, R.string.help);
+        setPlainText(R.id.about_licenses, R.string.about_licenses_title);
+        setPlainText(R.id.history_log, R.string.show_history_log);
+        setPlainText(R.id.submit_logs, R.string.send_logs);
+        setPlainText(R.id.check_new_version, R.string.app_update_check);
+        setPlainText(R.id.ok_button, R.string.ok);
+
         findViewById(R.id.about_licenses).setOnClickListener(this);
         findViewById(R.id.about_help).setOnClickListener(this);
 
@@ -85,6 +93,10 @@ public class About extends BaseActivity implements View.OnClickListener {
 
         TextView version = findViewById(R.id.about_appVersion);
         version.setText(getString(R.string.about_version, BuildConfig.VERSION_NAME));
+    }
+
+    private void setPlainText(int viewId, int stringId) {
+        ((TextView) findViewById(viewId)).setText(getString(stringId));
     }
 
     @Override

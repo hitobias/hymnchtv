@@ -23,7 +23,7 @@
         android:layout_marginTop="12dp"
         android:accessibilityHeading="true" />
 
-    <!-- Short content keeps its own height; DialogActivity caps this at 55% of the screen so long text or a custom
+    <!-- Short content keeps its own height; DialogActivity caps this at 45% of the screen so long text or a custom
          fragment scrolls while the buttons below stay on screen -->
     <org.cog.hymnchtv.utils.BoundedScrollView
         android:id="@+id/alertScroll"

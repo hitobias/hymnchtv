@@ -22,7 +22,8 @@
         <item name="listItemRadio">@style/RadioListItem.Dark</item>
         <item name="android:windowBackground">@drawable/dialog_card_bg</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="android:windowMinWidthMinor">100%</item>
+        <item name="android:windowMinWidthMajor">100%</item>
         <item name="android:backgroundDimAmount">0.38</item>
     </style>
 </resources>

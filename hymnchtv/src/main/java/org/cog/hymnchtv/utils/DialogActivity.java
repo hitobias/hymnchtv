@@ -44,7 +44,7 @@ import java.util.Map;
  */
 public class DialogActivity extends BaseActivity {
     /** Long content scrolls inside the card above this share of the screen height, so the buttons stay visible. */
-    private static final float MAX_CONTENT_FRACTION = 0.55f;
+    private static final float MAX_CONTENT_FRACTION = 0.45f;
 
     /**
      * Dialog title extra.

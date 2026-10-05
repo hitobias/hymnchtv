@@ -52,6 +52,10 @@ class DialogCardTest {
             s.onActivity { a ->
                 val card = Rect().also { a.window.decorView.findViewById<View>(android.R.id.content).getGlobalVisibleRect(it) }
                 val ok = rect(a.findViewById(R.id.okButton))
+                val edge = (16 * a.resources.displayMetrics.density + 0.5f).toInt()
+                val screenW = a.resources.displayMetrics.widthPixels
+                assertThat(card.left).isIn(com.google.common.collect.Range.closed(edge - 1, edge + 1))
+                assertThat(screenW - card.right).isIn(com.google.common.collect.Range.closed(edge - 1, edge + 1))
                 val inset = (20 * a.resources.displayMetrics.density + 0.5f).toInt()
                 assertThat(ok.left - card.left).isIn(com.google.common.collect.Range.closed(inset - 1, inset + 1))
                 assertThat(card.right - ok.right).isIn(com.google.common.collect.Range.closed(inset - 1, inset + 1))
@@ -90,10 +94,12 @@ class DialogCardTest {
         ActivityScenario.launch<DialogActivity>(intent).use { s ->
             s.onActivity { a ->
                 val screen = Rect(0, 0, a.resources.displayMetrics.widthPixels, a.resources.displayMetrics.heightPixels)
-                assertThat(screen.contains(rect(a.findViewById(R.id.okButton)))).isTrue()
-                assertThat(screen.contains(rect(a.findViewById(R.id.cancelButton)))).isTrue()
+                // Real layout bounds: getGlobalVisibleRect is clipped to the window and would hide an overflowing button
+                fun bounds(v: View) = IntArray(2).also { v.getLocationOnScreen(it) }.let { Rect(it[0], it[1], it[0] + v.width, it[1] + v.height) }
+                assertThat(screen.contains(bounds(a.findViewById(R.id.okButton)))).isTrue()
+                assertThat(screen.contains(bounds(a.findViewById(R.id.cancelButton)))).isTrue()
                 val scroll = a.findViewById<View>(R.id.alertScroll)
-                assertThat(scroll.height).isAtMost((a.resources.displayMetrics.heightPixels * 0.55f).toInt() + 1)
+                assertThat(scroll.height).isAtMost((a.resources.displayMetrics.heightPixels * 0.45f).toInt() + 1)
                 assertThat(scroll.canScrollVertically(1)).isTrue()
             }
         }
