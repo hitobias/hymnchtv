@@ -21,7 +21,7 @@
     <string name="c_lyrics_font_dec">A-</string>
     <string name="c_lyrics_font_inc">A+</string>
     <string name="c_lyrics_share">Share</string>
-    <string name="c_lyrics_media">Media</string>
+    <string name="c_lyrics_media">Media settings</string>
     <string name="c_lyrics_more">More</string>
     <string name="c_auto_stream">Auto-next</string>
     <string name="c_search_hint">Search titles or lyrics</string>
