@@ -78,8 +78,12 @@ class DialogCardTest {
         }
         ActivityScenario.launch(About::class.java).use { s ->
             s.onActivity { it.findViewById<View>(R.id.ok_button).performClick() }
-            instrumentation.waitForIdleSync()
-            assertThat(s.state).isEqualTo(androidx.lifecycle.Lifecycle.State.DESTROYED)
+            // finish() is asynchronous, so poll for the destroyed state
+            val end = android.os.SystemClock.uptimeMillis() + 5_000
+            while (s.state != androidx.lifecycle.Lifecycle.State.DESTROYED) {
+                check(android.os.SystemClock.uptimeMillis() < end) { "About did not finish" }
+                android.os.SystemClock.sleep(50)
+            }
         }
     }
 
