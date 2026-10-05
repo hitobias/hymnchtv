@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- H5 lyrics jump: overflow entry, jump panel, next slot (plan 2026-10-05-h5-jump) -->
+<resources>
+    <string name="jump_menu">Jump to…</string>
+    <string name="jump_title">Jump</string>
+    <string name="jump_close">Close</string>
+    <string name="jump_recent_label">Recent jumps</string>
+    <string name="jump_recent_empty">No jumps yet</string>
+    <string name="jump_next_slot">Next: %1$s</string>
+    <string name="jump_slot_none">No next hymn set</string>
+    <string name="jump_slot_clear">Clear</string>
+    <string name="jump_back_to">Back to %1$s</string>
+</resources>

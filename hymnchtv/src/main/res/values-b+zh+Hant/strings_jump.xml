@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="jump_menu">跳轉…</string>
+    <string name="jump_title">跳轉</string>
+    <string name="jump_close">關閉</string>
+    <string name="jump_recent_label">最近跳轉</string>
+    <string name="jump_recent_empty">還沒有跳轉記錄</string>
+    <string name="jump_next_slot">下一首：%1$s</string>
+    <string name="jump_slot_none">未設下一首</string>
+    <string name="jump_slot_clear">清除</string>
+    <string name="jump_back_to">返回 %1$s</string>
+</resources>
