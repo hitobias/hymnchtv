@@ -13,8 +13,23 @@ import java.security.MessageDigest
 object EditorStore {
     private const val DRAFT_PREFIX = "editor_draft_"
 
-    /** The text for the editor; [fromDraft] if it is an unsaved draft, [draftMissing] if a draft was wanted but is gone. */
-    data class Loaded(val text: String, val fromDraft: Boolean, val draftMissing: Boolean = false)
+    /**
+     * Largest file the editor opens. Android 7 has a 32 MB heap: a 2 MB export in the EditText (UTF-16 text, its
+     * layout, and with an accessibility service on, a full text copy per change in each accessibility event) ran out
+     * of memory. 256 KiB is a few thousand media links; a larger export is refused with a message instead.
+     */
+    const val MAX_EDIT_BYTES: Long = 256L * 1024
+
+    /**
+     * The text for the editor; [fromDraft] if it is an unsaved draft, [draftMissing] if a draft was wanted but is gone,
+     * [tooLarge] (and no text) if the file exceeds [MAX_EDIT_BYTES].
+     */
+    data class Loaded(
+        val text: String,
+        val fromDraft: Boolean,
+        val draftMissing: Boolean = false,
+        val tooLarge: Boolean = false,
+    )
 
     @JvmStatic
     @Throws(IOException::class)
@@ -58,12 +73,13 @@ object EditorStore {
         draftFile(cacheDir, fileUri).delete()
     }
 
-    /** The draft of [fileUri] when [preferDraft] and one exists, else the text of [source]. */
+    /** The draft of [fileUri] when [preferDraft] and one exists, else the text of [source] if it is not too large. */
     @JvmStatic
     @Throws(IOException::class)
     fun load(source: File, cacheDir: File, fileUri: String, preferDraft: Boolean): Loaded {
         val draft = draftFile(cacheDir, fileUri)
         if (preferDraft && draft.isFile) return Loaded(read(draft), true)
+        if (source.length() > MAX_EDIT_BYTES) return Loaded("", fromDraft = false, draftMissing = false, tooLarge = true)
         return Loaded(read(source), false, preferDraft)
     }
 }

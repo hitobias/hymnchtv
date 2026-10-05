@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -12,6 +13,10 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class MediaDownloadedFileTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+
+    /** The copy goes to shared storage (Download/hymnal/tmp), which needs the storage permission below API 29. */
+    @Before
+    fun setUp() = TestPermissions.grantLaunchPermission(ctx.packageName)
 
     @Test
     fun aNullUriGivesNoFile() {

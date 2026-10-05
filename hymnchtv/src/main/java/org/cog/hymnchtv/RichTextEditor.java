@@ -126,6 +126,11 @@ public class RichTextEditor extends BaseActivity
                 throw new UncheckedIOException(e);
             }
         }, content -> {
+            if (content.getTooLarge()) {
+                HymnsApp.showToastMessage(R.string.editor_file_too_large, EditorStore.MAX_EDIT_BYTES / 1024);
+                finish();
+                return;
+            }
             mEditor.setText(content.getText());
             loaded = true;
             draftPending = false;
