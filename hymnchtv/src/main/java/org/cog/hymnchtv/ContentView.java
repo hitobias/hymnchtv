@@ -101,6 +101,15 @@ import org.cog.hymnchtv.ui.lyrics.LyricsMeta;
 import org.cog.hymnchtv.ui.lyrics.LyricsStyle;
 import org.cog.hymnchtv.ui.lyrics.LyricsTypography;
 import org.cog.hymnchtv.ui.lyrics.LyricsPadding;
+import org.cog.hymnchtv.ui.lyrics.ChromeCapsuleColors;
+import org.cog.hymnchtv.ui.lyrics.ChromePillLayout;
+import org.cog.hymnchtv.ui.lyrics.LyricsPillBinder;
+import org.cog.hymnchtv.ui.lyrics.PillAnchor;
+import org.cog.hymnchtv.ui.lyrics.PillModel;
+import org.cog.hymnchtv.ui.lyrics.PillPlacement;
+import org.cog.hymnchtv.ui.lyrics.PillState;
+import org.cog.hymnchtv.ui.player.CapsuleForm;
+import org.cog.hymnchtv.ui.player.SheetDisplay;
 import org.cog.hymnchtv.ui.motion.Motion;
 import org.cog.hymnchtv.utils.NestedScrollableHost;
 import org.cog.hymnchtv.utils.ZoomTextView;
@@ -157,6 +166,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private Button btn_ts;
     private Button btn_english;
     private Button btn_mode;
+    private LyricsPillBinder pillBinder;
+    /** Last placement of the bottom capsule; decides whether the mode item keeps its text. */
+    private PillPlacement mPillPlacement;
     private View mConvertView;
     private View topBar;
     private View buttonBar;
@@ -246,7 +258,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         lyricsScroll = mConvertView.findViewById(R.id.lyrics_scroll);
         // Toolbar heights change with font scale and orientation: keep the lyrics padding in step
         View.OnLayoutChangeListener insetsFollowBars = (v, l, t, r, b, ol, ot, or, ob) -> {
-            if (b - t != ob - ot) {
+            if (b != ob || t != ot) {
                 applyLyricsInsets();
             }
         };
@@ -254,12 +266,13 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         buttonBar.addOnLayoutChangeListener(insetsFollowBars);
         ((NestedScrollableHost) mConvertView.findViewById(R.id.lyrics_scroll_host))
                 .setOnCenterTapListener(mContentHandler::onLyricsCenterTap);
-        ChromeButtonStyle.styleBar((ViewGroup) topBar, mContentHandler.getLyricsTokens());
-        ChromeButtonStyle.styleBar((ViewGroup) buttonBar, mContentHandler.getLyricsTokens());
+        ChromeButtonStyle.styleTopBar((ViewGroup) topBar, mContentHandler.getLyricsTokens());
+        ChromeButtonStyle.styleBottomBar((ViewGroup) buttonBar, mContentHandler.getLyricsTokens());
         mContentHandler.registerChromePage(this);
 
         btn_mode = mConvertView.findViewById(R.id.button_mode);
         btn_mode.setOnClickListener(this);
+        pillBinder = new LyricsPillBinder(btn_ts, btn_english, btn_mode);
 
         lyricsView = mConvertView.findViewById(R.id.lyricsView);
         lyricsSimplify = mConvertView.findViewById(R.id.lyrics_simplified);
@@ -420,6 +433,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             toggleLyricsView();
         }
         else if (id == R.id.button_english) {
+            if (mHymnNoEng == null) {
+                return;
+            }
             hasEnglishLyrics = !hasEnglishLyrics;
             toggleLyricsView();
         }
@@ -602,8 +618,9 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         applyPaletteAndFont();
         applyVerseColors();
         applyScoreFilter();
-        ChromeButtonStyle.styleBar((ViewGroup) topBar, tokens);
-        ChromeButtonStyle.styleBar((ViewGroup) buttonBar, tokens);
+        ChromeButtonStyle.styleTopBar((ViewGroup) topBar, tokens);
+        ChromeButtonStyle.styleBottomBar((ViewGroup) buttonBar, tokens);
+        refreshPill();
         if (DisplayModePolicy.refreshEnglishOnTheme(hasEnglishLyrics, currentDisplayMode(), mHasLyricsText)) {
             toggleLyricsView(); // the English HTML is generated for the background brightness
         }
@@ -815,8 +832,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private void applyDisplayMode(boolean refreshLyrics) {
         DisplayMode chosen = currentDisplayMode();
         DisplayMode shown = DisplayModePolicy.effective(chosen, mHasLyricsText);
-        btn_mode.setText(displayModeShortLabel(chosen));
-        btn_mode.setContentDescription(getString(R.string.c_cd_mode, getString(displayModeLabel(chosen))));
 
         if (shown.getShowScore() && !mScoreLoaded && mResPrefix != null) {
             showLyricsScore(mResPrefix, mHymnScoreInfo);
@@ -826,9 +841,6 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         }
         scoreContainer.setVisibility(shown.getShowScore() ? View.VISIBLE : View.GONE);
 
-        // Score only: script and language buttons keep their place (three equal columns) but are disabled
-        setScriptButtonsEnabled(shown.getShowLyrics());
-        btn_english.setVisibility(mHymnNoEng != null ? View.VISIBLE : View.GONE);
         if (!shown.getShowLyrics()) {
             lyricsSimplify.setVisibility(View.GONE);
             lyricsTraditional.setVisibility(View.GONE);
@@ -838,6 +850,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             // Also when every lyrics view was hidden by an earlier mode (e.g. English page -> score only -> back)
             toggleLyricsView();
         }
+        refreshPill();
     }
 
     private boolean noLyricsViewShown() {
@@ -854,11 +867,19 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         mScoreLoaded = false;
     }
 
-    private void setScriptButtonsEnabled(boolean enabled) {
-        btn_ts.setEnabled(enabled);
-        btn_english.setEnabled(enabled);
-        btn_ts.setContentDescription(getString(enabled ? R.string.c_cd_script : R.string.c_cd_score_only_na));
-        btn_english.setContentDescription(getString(enabled ? R.string.c_cd_cn_en : R.string.c_cd_score_only_na));
+    /** Re-draws the bottom capsule from the page state (script, language, mode) and the last placement. */
+    private void refreshPill() {
+        if (pillBinder == null) {
+            return;
+        }
+        DisplayMode chosen = currentDisplayMode();
+        boolean showLyrics = DisplayModePolicy.effective(chosen, mHasLyricsText).getShowLyrics();
+        boolean hasEnglish = mHymnNoEng != null;
+        boolean showModeText = mPillPlacement == null || mPillPlacement.getShowModeText();
+        PillModel model = PillModel.from(new PillState(isShowTraditional(), hasEnglishLyrics && hasEnglish, hasEnglish,
+                chosen, showLyrics, showModeText));
+        pillBinder.render(model, ChromeCapsuleColors.from(mContentHandler.getLyricsTokens()),
+                displayModeShortLabel(chosen), getString(displayModeLabel(chosen)));
     }
 
     private static int displayModeShortLabel(DisplayMode mode) {
@@ -901,9 +922,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             applyFont(traditional);
             (traditional ? lyricsTraditional : lyricsSimplify).setVisibility(View.VISIBLE);
             showMeterKey(traditional ? mMeterKeyTraditional : mMeterKeySimplified);
+            refreshPill();
             return;
         }
         showMeterKey(null);
+        refreshPill();
     }
 
     private void showMeterKey(@Nullable String meterKey) {
@@ -992,24 +1015,37 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     }
 
     /**
-     * Lyrics padding = the overlays shown right now (top bar; three buttons + player layer + system bottom inset + 8dp).
-     * The pager fills the screen and the player layer floats over it, so the player's reserve and the system bottom
-     * inset are counted here once; the three buttons sit above both.
+     * Places the bottom capsule (ChromePillLayout) and pads the lyrics (LyricsInsets): top = the top capsule's bottom edge
+     * while shown; bottom = the higher of the player layer and the bottom capsule while shown, plus 8dp.
      */
     private void applyLyricsInsets() {
         if (lyricsScroll == null) {
             return;
         }
-        int extra = (int) (LYRICS_BOTTOM_EXTRA_DP * getResources().getDisplayMetrics().density + 0.5f);
+        float density = getResources().getDisplayMetrics().density;
+        int extra = (int) (LYRICS_BOTTOM_EXTRA_DP * density + 0.5f);
         int reserve = mContentHandler == null ? 0 : mContentHandler.getPlayerReserve();
         int systemBottom = mContentHandler == null ? 0 : mContentHandler.getSystemBottomInset();
+        PillAnchor anchor = mContentHandler == null
+                ? new PillAnchor(SheetDisplay.HIDDEN, 0, CapsuleForm.NOTE) : mContentHandler.getPillAnchor();
+        PillPlacement placement = ChromePillLayout.place(anchor, reserve, systemBottom, density);
+        boolean textChanged = mPillPlacement == null || mPillPlacement.getShowModeText() != placement.getShowModeText();
+        mPillPlacement = placement;
         ViewGroup.MarginLayoutParams barParams = (ViewGroup.MarginLayoutParams) buttonBar.getLayoutParams();
-        if (barParams.bottomMargin != reserve + systemBottom) {
-            barParams.bottomMargin = reserve + systemBottom;
+        if (barParams.bottomMargin != placement.getBottomMargin() || barParams.getMarginEnd() != placement.getEndMargin()
+                || barParams.getMarginStart() != placement.getStartMargin()) {
+            barParams.bottomMargin = placement.getBottomMargin();
+            barParams.setMarginStart(placement.getStartMargin());
+            barParams.setMarginEnd(placement.getEndMargin());
             buttonBar.setLayoutParams(barParams);
         }
-        LyricsPadding padding = LyricsInsets.padding(topBar.getHeight(), mChromeVisible,
-                buttonBar.getHeight(), mChromeVisible, reserve, systemBottom, extra);
+        if (textChanged) {
+            refreshPill();
+        }
+        int pillHeight = buttonBar.getHeight() > 0 ? buttonBar.getHeight()
+                : (int) (ChromePillLayout.PILL_HEIGHT_DP * density + 0.5f);
+        LyricsPadding padding = LyricsInsets.padding(topBar.getBottom(), mChromeVisible,
+                placement.getBottomMargin() + pillHeight, mChromeVisible, reserve, systemBottom, extra);
         int oldTop = lyricsScroll.getPaddingTop();
         if (oldTop == padding.getTop() && lyricsScroll.getPaddingBottom() == padding.getBottom()) {
             return;

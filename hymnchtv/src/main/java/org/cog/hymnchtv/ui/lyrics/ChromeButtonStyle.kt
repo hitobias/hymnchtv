@@ -28,12 +28,6 @@ object ChromeButtonStyle {
     @JvmStatic
     fun styleBottomBar(bar: ViewGroup, tokens: UiTokens) = style(bar, ChromeCapsuleColors.from(tokens), PILL_RADIUS_DP)
 
-    /** Temporary bridge so every commit builds; Task 10 switches ContentView to the two calls above and deletes this. */
-    @Deprecated("Use styleTopBar / styleBottomBar")
-    @JvmStatic
-    fun styleBar(bar: ViewGroup, tokens: UiTokens) =
-        if (bar.id == org.cog.hymnchtv.R.id.lyricsButtonBar) styleBottomBar(bar, tokens) else styleTopBar(bar, tokens)
-
     private fun style(bar: ViewGroup, colors: CapsuleColors, radiusDp: Float) {
         val density = bar.resources.displayMetrics.density
         bar.background = GradientDrawable().apply {
