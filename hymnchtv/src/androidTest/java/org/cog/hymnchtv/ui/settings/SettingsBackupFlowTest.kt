@@ -72,27 +72,28 @@ class SettingsBackupFlowTest {
         return state
     }
 
-    /** The shown dialog's text and the runner's pending message, read in one main-thread pass. */
-    private fun dialogAndMessage(s: ActivityScenario<MainActivity>): Pair<String?, Any?> {
-        var pair: Pair<String?, Any?> = null to null
+    /** The shown dialog's text, the runner's pending message and whether a job runs, read in one main-thread pass. */
+    private fun dialogAndMessage(s: ActivityScenario<MainActivity>): Triple<String?, Any?, Boolean> {
+        var snapshot: Triple<String?, Any?, Boolean> = Triple(null, null, false)
         s.onActivity {
             val f = fragment(s)
             val text = f?.childFragmentManager?.findFragmentByTag(BackupResultDialog.TAG)?.arguments?.getString(BackupResultDialog.ARG_TEXT)
-            pair = text to (f?.let { ViewModelProvider(it)[BackupViewModel::class.java].runner.state.value.message })
+            val state = f?.let { ViewModelProvider(it)[BackupViewModel::class.java].runner.state.value }
+            snapshot = Triple(text, state?.message, state?.running ?: false)
         }
-        return pair
+        return snapshot
     }
 
-    /** The message is never cleared before its dialog is there: either still pending, or shown and cleared. */
+    /** The message is never cleared before its dialog is there: either still pending (or the job still runs), or shown and cleared. */
     private fun assertShownBeforeCleared(s: ActivityScenario<MainActivity>, expected: String) {
         var clearedWithoutDialog = false
         FragmentHost.eventually(10_000) {
-            val (text, message) = dialogAndMessage(s)
-            if (message == null && text != expected) clearedWithoutDialog = true
+            val (text, message, running) = dialogAndMessage(s)
+            if (!running && message == null && text != expected) clearedWithoutDialog = true
             assertThat(text).isEqualTo(expected)
         }
         assertThat(clearedWithoutDialog).isFalse()
-        assertThat(dialogAndMessage(s)).isEqualTo(expected to null)
+        assertThat(dialogAndMessage(s)).isEqualTo(Triple(expected, null, false))
     }
 
     private fun shownResult(s: ActivityScenario<MainActivity>): String? {
@@ -172,7 +173,7 @@ class SettingsBackupFlowTest {
             ),
             // another device put db6 at the same slot as the local db5, but earlier: db5 keeps the slot, db6 moves after it
             playlistItems = listOf(
-                localItem.copy(id = "00000000-0000-0000-0000-00000000d106", hymn = db6, updatedAt = localItem.updatedAt - later, createdAt = localItem.createdAt - later),
+                localItem.copy(id = java.util.UUID.randomUUID().toString(), hymn = db6, updatedAt = localItem.updatedAt - later, createdAt = localItem.createdAt - later),
             ),
         )
         val file = File(dir, "merge.json").apply {
