@@ -43,6 +43,20 @@ class BackupDocumentsTest {
     }
 
     @Test
+    fun anExportOverTheSizeCapDeletesTheDocumentAndSaysTooLarge() = runTest {
+        val discards = Discards()
+        val tiny = BackupService(
+            InMemoryBackupStore(SampleTables.full()), Clock { 1_790_733_600_000L }, "2.9.2",
+            UnconfinedTestDispatcher(testScheduler), maxBytes = 100,
+        )
+        val out = ByteArrayOutputStream()
+        val result = BackupDocuments.exportVia({ out }, discards.action, tiny)
+        assertThat((result as ExportResult.Failure).error).isEqualTo(BackupError.TOO_LARGE)
+        assertThat(out.size()).isEqualTo(0)
+        assertThat(discards.count).isEqualTo(1)
+    }
+
+    @Test
     fun documentThatCannotBeOpenedIsDeleted() = runTest {
         val discards = Discards()
         val result = BackupDocuments.exportVia({ null }, discards.action, service())
