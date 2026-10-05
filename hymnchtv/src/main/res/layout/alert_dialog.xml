@@ -1,15 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-
+<!-- Shared dialog (spec rev 3 section 5): centred card with the app icon and title, content, then full-width buttons stacked
+     with the primary action at the bottom, nearest the thumb. The card itself is the window background (AppTheme.Dialog). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="10dp"
-    android:orientation="vertical">
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
 
-    <ScrollView
-        android:layout_width="fill_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+    <ImageView
+        android:id="@+id/alertIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center_horizontal"
+        android:importantForAccessibility="no"
+        android:src="@drawable/hymnchtv" />
+
+    <TextView
+        android:id="@+id/alertTitle"
+        style="@style/Hymnal.Dialog.Title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:accessibilityHeading="true" />
+
+    <!-- Short content keeps its own height; DialogActivity caps this at 55% of the screen so long text or a custom
+         fragment scrolls while the buttons below stay on screen -->
+    <org.cog.hymnchtv.utils.BoundedScrollView
+        android:id="@+id/alertScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:fillViewport="false">
 
         <LinearLayout
             android:id="@+id/alertContent"
@@ -19,30 +40,21 @@
 
             <TextView
                 android:id="@+id/alertText"
-                style="@style/MediumFont"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="{Alert dialog text}" />
+                style="@style/Hymnal.Dialog.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
         </LinearLayout>
-    </ScrollView>
+    </org.cog.hymnchtv.utils.BoundedScrollView>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:paddingTop="20dp"
-        android:orientation="horizontal">
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/cancelButton"
+        style="@style/Hymnal.Dialog.Button.Tonal"
+        android:layout_marginTop="20dp"
+        android:text="@string/cancel" />
 
-        <Button
-            android:id="@+id/cancelButton"
-            style="@style/ButtonTop"
-            android:textSize="22sp"
-            android:text="@string/cancel" />
-
-        <Button
-            android:id="@+id/okButton"
-            style="@style/ButtonTop"
-            android:textSize="22sp"
-            android:layout_marginStart="4dp"
-            android:text="@string/ok" />
-    </LinearLayout>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/okButton"
+        style="@style/Hymnal.Dialog.Button.Primary"
+        android:layout_marginTop="8dp"
+        android:text="@string/ok" />
 </LinearLayout>
