@@ -141,17 +141,20 @@
         android:layout_height="1dp"
         android:importantForAccessibility="no" />
 
-    <!-- Six buttons at any width (6 x 48dp fits 320dp); A-/A+ moved into the Aa panel, tint into the overflow -->
+    <!-- Floating top capsule (spec rev 3 section 2): six icon buttons, 48dp touch areas (6 x 48dp fits 320dp); names come from
+         contentDescription only. Margins are page coordinates: the page is already 5dp inside the screen. -->
     <LinearLayout
         android:id="@+id/lyrics_top_bar"
         android:visibility="gone"
         android:accessibilityTraversalBefore="@id/lyrics_scroll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:layout_gravity="top"
-        android:orientation="horizontal"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp">
+        android:layout_marginStart="3dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="3dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/btn_home"
@@ -161,35 +164,40 @@
             android:layout_weight="1"
             android:contentDescription="@string/home"
             android:src="@drawable/ic_sym_home" />
-        <androidx.appcompat.widget.AppCompatButton
+        <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/btn_share"
             style="@style/LyricsChromeButton"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:text="@string/c_lyrics_share" />
-        <androidx.appcompat.widget.AppCompatButton
+            android:contentDescription="@string/c_lyrics_share"
+            android:src="@drawable/ic_sym_share" />
+        <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/btn_lyrics_media"
             style="@style/LyricsChromeButton"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:text="@string/c_lyrics_media" />
+            android:contentDescription="@string/c_lyrics_media"
+            android:src="@drawable/ic_sym_add_link" />
+        <!-- "Aa" stays a word (it is the icon); TalkBack reads the panel name -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_aa"
             style="@style/LyricsChromeButton"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:text="@string/c_lyrics_aa" />
-        <androidx.appcompat.widget.AppCompatButton
+            android:contentDescription="@string/c_aa_title"
+            android:text="@string/c_lyrics_aa"
+            android:textAppearance="@style/TextAppearance.Hymnal.Heading" />
+        <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/btn_next"
             style="@style/LyricsChromeButton"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:text="@string/c_next_hymn" />
-
+            android:contentDescription="@string/c_next_hymn"
+            android:src="@drawable/ic_sym_arrow_forward" />
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/btn_more"
             style="@style/LyricsChromeButton"
@@ -200,40 +208,33 @@
             android:src="@drawable/ic_sym_more_vert" />
     </LinearLayout>
 
-    <!-- Same height and style as the top bar buttons; three equal columns, one line each, also at 320dp -->
+    <!-- Bottom capsule (spec rev 3 section 3): beside the player capsule, above the card, or full width when the player is
+         hidden. ContentView sets the margins from ChromePillLayout; the labels come from LyricsPillBinder. -->
     <LinearLayout
         android:id="@+id/lyricsButtonBar"
         android:visibility="gone"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="44dp"
         android:layout_gravity="bottom"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="4dp"
         android:paddingEnd="4dp">
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button_ts"
-            style="@style/LyricsChromeButton"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:contentDescription="@string/c_cd_script"
-            android:text="@string/c_btn_script" />
+            style="@style/LyricsPillItem"
+            android:contentDescription="@string/c_cd_script" />
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button_english"
-            style="@style/LyricsChromeButton"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:contentDescription="@string/c_cd_cn_en"
-            android:text="@string/c_btn_cn_en" />
+            style="@style/LyricsPillItem"
+            android:contentDescription="@string/c_cd_cn_en" />
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button_mode"
-            style="@style/LyricsChromeButton"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
+            style="@style/LyricsPillItem"
             android:contentDescription="@string/c_cd_mode"
-            android:text="@string/c_btn_mode_both" />
+            android:drawablePadding="4dp" />
     </LinearLayout>
 </FrameLayout>

@@ -2,8 +2,6 @@
 <resources>
     <!-- Lyrics page chrome (visual redesign B): top bar, short button labels, Aa panel, toolbar hint -->
     <string name="c_lyrics_aa">Aa</string>
-    <string name="c_btn_script">Simp-Trad</string>
-    <string name="c_btn_cn_en">CN/EN</string>
     <string name="c_btn_mode_both">Both</string>
     <string name="c_btn_mode_lyrics">Text</string>
     <string name="c_btn_mode_score">Score</string>

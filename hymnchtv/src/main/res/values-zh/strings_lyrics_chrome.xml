@@ -2,8 +2,6 @@
 <resources>
     <!-- Lyrics page chrome (visual redesign B): top bar, short button labels, Aa panel, toolbar hint -->
     <string name="c_lyrics_aa">Aa</string>
-    <string name="c_btn_script">简-繁</string>
-    <string name="c_btn_cn_en">中英</string>
     <string name="c_btn_mode_both">词＋谱</string>
     <string name="c_btn_mode_lyrics">歌词</string>
     <string name="c_btn_mode_score">诗谱</string>
