@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Name of a new or renamed playlist -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp">
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/playlist_name_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/playlist_name_hint">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/playlist_name_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionDone"
+            android:importantForAutofill="no"
+            android:inputType="text|textCapSentences"
+            android:singleLine="true"
+            android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+    </com.google.android.material.textfield.TextInputLayout>
+</FrameLayout>

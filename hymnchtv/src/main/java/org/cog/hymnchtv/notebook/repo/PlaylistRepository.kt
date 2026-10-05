@@ -16,6 +16,9 @@ interface PlaylistRepository : Repository<PlaylistEntity> {
     /** Appends after the highest slot ever used (in one transaction); null when the playlist is missing or deleted. */
     suspend fun addItem(playlistId: String, key: HymnKey): PlaylistItemEntity?
 
+    /** Creates a playlist and appends [key] in one transaction: if any part fails, nothing is stored (no empty playlist). */
+    suspend fun createPlaylistWithItem(name: String, key: HymnKey): Pair<PlaylistEntity, PlaylistItemEntity>
+
     suspend fun removeItem(itemId: String): Boolean
 
     /** orderedItemIds must be a permutation of the active item ids; returns items in the new order. */
