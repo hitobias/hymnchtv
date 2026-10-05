@@ -7,7 +7,8 @@ import java.io.InputStream
 
 /**
  * Copies a file another app shared with us (ACTION_SEND, or the file picker) into our tmp directory, safely: the
- * sender's display name is reduced to a plain file name (no directories, no ".."), the bytes go to a temporary file in
+ * sender's display name is reduced to a plain file name (no directories, no "..", no control characters, at most
+ * [MAX_NAME_BYTES] UTF-8 bytes with its extension kept, 1.6.0), the bytes go to a temporary file in
  * the same directory first, and only a complete copy replaces an older file of that name. Re-sharing a newer export
  * therefore never imports the old content, and a failed copy never destroys it.
  */
@@ -20,16 +21,51 @@ object SharedImport {
 
     private const val MAX_ALTERNATES = 20
 
-    /** The last path segment of [raw]; null if it is blank, "." or "..", or if [raw] has a ".." segment anywhere. */
+    /** Longest file name kept, in UTF-8 bytes (file systems allow 255; room is left for freeName's "-20"). */
+    const val MAX_NAME_BYTES = 200
+
+    /** A longer "extension" is just part of the name. */
+    private const val MAX_EXTENSION_BYTES = 16
+
+    /**
+     * The last path segment of [raw] without control characters, at most [MAX_NAME_BYTES] UTF-8 bytes; null if it is blank,
+     * "." or "..", or if [raw] has a ".." segment anywhere.
+     */
     @JvmStatic
     fun safeName(raw: String?): String? {
         if (raw == null) return null
         val segments = raw.split('/', '\\')
         if (segments.any { it.trim() == ".." }) return null
-        val name = segments.last().trim()
-        if (name.isEmpty() || name == "." || name.contains('\u0000')) return null
-        return name
+        val name = stripControls(segments.last()).trim()
+        if (name.isEmpty() || name == "." || name == "..") return null
+        return capUtf8(name, MAX_NAME_BYTES)
     }
+
+    /** C0 and C1 control characters and DEL (U+0000 included) removed. */
+    internal fun stripControls(text: String): String = text.filterNot { it.code < 0x20 || it.code in 0x7F..0x9F }
+
+    /** [name] cut to [maxBytes] UTF-8 bytes at a code point boundary; the extension (last ".xxx", <= 16 bytes) is kept. */
+    internal fun capUtf8(name: String, maxBytes: Int): String {
+        if (utf8Size(name) <= maxBytes) return name
+        val dot = name.lastIndexOf('.')
+        val extension = if (dot > 0 && utf8Size(name.substring(dot)) <= MAX_EXTENSION_BYTES) name.substring(dot) else ""
+        val base = if (extension.isEmpty()) name else name.substring(0, dot)
+        val budget = maxBytes - utf8Size(extension)
+        val cut = StringBuilder()
+        var used = 0
+        var i = 0
+        while (i < base.length) {
+            val codePoint = base.codePointAt(i)
+            val bytes = utf8Size(String(Character.toChars(codePoint)))
+            if (used + bytes > budget) break
+            cut.appendCodePoint(codePoint)
+            used += bytes
+            i += Character.charCount(codePoint)
+        }
+        return cut.toString().trimEnd() + extension
+    }
+
+    private fun utf8Size(text: String): Int = text.toByteArray(Charsets.UTF_8).size
 
     /**
      * Copies [source] to [dir]/safeName([rawName]), replacing an older file only after the copy is complete.

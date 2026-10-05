@@ -91,6 +91,42 @@ class SharedImportTest {
         File(dir, "export.csv").writeText("left by an earlier install, which this one may not replace (API 30+)")
         assertThat(SharedImport.freeName(dir, "export.csv")).isEqualTo(File(dir, "export-2.csv"))
     }
+
+    @Test
+    fun controlCharactersAreRemoved() {
+        assertThat(SharedImport.safeName("hymn\u0000_\u001F link\u007F\u0085.csv")).isEqualTo("hymn_ link.csv")
+        assertThat(SharedImport.safeName("\u0001\u0002")).isNull()
+    }
+
+    @Test
+    fun aLongNameIsCutTo200Utf8BytesAndKeepsItsExtension() {
+        val long = "詩".repeat(100) + ".csv"                       // 300 + 4 bytes
+        val name = SharedImport.safeName(long)!!
+        assertThat(name.toByteArray(Charsets.UTF_8).size).isAtMost(SharedImport.MAX_NAME_BYTES)
+        assertThat(name).endsWith(".csv")
+        assertThat(name.removeSuffix(".csv")).isEqualTo("詩".repeat(65))  // 195 bytes: a 3-byte character never splits
+    }
+
+    @Test
+    fun anOverlongExtensionIsNotKept() {
+        val name = SharedImport.safeName("a".repeat(150) + "." + "b".repeat(100))!!
+        assertThat(name.toByteArray(Charsets.UTF_8).size).isEqualTo(SharedImport.MAX_NAME_BYTES)
+        assertThat(name).startsWith("a".repeat(150) + ".")
+    }
+
+    @Test
+    fun aShortNameIsUntouched() {
+        assertThat(SharedImport.safeName("詩歌-匯出.csv")).isEqualTo("詩歌-匯出.csv")
+    }
+
+    @Test
+    fun aLongNameStillImports() {
+        val dir = tmp.newFolder("long")
+        val file = SharedImport.copyInto(dir, "x".repeat(300) + ".csv", source("hymn_db,1"))
+        assertThat(file).isNotNull()
+        assertThat(file!!.name.length).isAtMost(SharedImport.MAX_NAME_BYTES)
+        assertThat(file.readText()).isEqualTo("hymn_db,1")
+    }
 }
 
 class SharedImportRuntimeFailureTest {
