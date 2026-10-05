@@ -73,10 +73,21 @@ wait_screen 'alertTitle|select_dialog_listview' || fail "theme dialog"
 adb exec-out screencap -p > "$OUT/dialog.png"
 adb shell input keyevent KEYCODE_BACK
 
+step "a DB hymn without a MIDI (getFileResId probes a raw resource that does not exist; R8 once made it crash)"
+# hymn 28 has no bm28.mid in res/raw (keep this number in sync if one is ever added)
+[[ ! -f "$(dirname "$0")/../../hymnchtv/src/main/res/raw/bm28.mid" ]] || fail "bm28.mid exists now: pick another hymn number for this step"
+adb shell am start -W -n "$PKG/org.cog.hymnchtv.ContentHandler" --es hymn_type hymn_db --ei hymn_number 28 >/dev/null
+wait_screen "$(rid viewPager)" 30 || fail "lyrics page of hymn 28"
+sleep 3
+adb exec-out screencap -p > "$OUT/no-midi.png"
+screen_has "$(rid viewPager)" || fail "hymn 28 closed (crash?)"
+
 step "crashes and removed classes (the launch update check runs 30 s after start)"
 sleep 35
 if adb logcat -d -b crash | grep -q "$PKG"; then adb logcat -d -b crash | tail -40; fail "crash"; fi
-if adb logcat -d | grep -E "ClassNotFoundException|NoSuchMethodException|NoSuchMethodError|NoSuchFieldError|Could not instantiate|Could not create Worker"; then
+APP_PID=$(adb shell pidof "$PKG" | tr -d '\r' | awk '{print $1}')
+[[ -n "$APP_PID" ]] || fail "the app is not running any more (crash?)"
+if adb logcat -d --pid="$APP_PID" | grep -E "ClassNotFoundException|NoSuchMethodException|NoSuchMethodError|NoSuchFieldError|Could not instantiate|Could not create Worker"; then
   fail "R8 removed something that is still needed"
 fi
 echo "SMOKE OK ($OUT)"
