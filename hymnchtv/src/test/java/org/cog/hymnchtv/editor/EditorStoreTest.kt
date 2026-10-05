@@ -106,4 +106,21 @@ class EditorStoreTest {
     fun aMissingFileThrows() {
         EditorStore.read(File(tmp.root, "none.csv"))
     }
+
+    @Test
+    fun aFileAtTheEditLimitIsLoaded() {
+        val cache = tmp.newFolder("cache")
+        val source = tmp.newFile("source.csv").apply { writeBytes(ByteArray(EditorStore.MAX_EDIT_BYTES.toInt()) { 'a'.code.toByte() }) }
+        val loaded = EditorStore.load(source, cache, source.absolutePath, false)
+        assertThat(loaded.tooLarge).isFalse()
+        assertThat(loaded.text.length.toLong()).isEqualTo(EditorStore.MAX_EDIT_BYTES)
+    }
+
+    /** API 24 has a 32 MB heap: a larger file in an EditText ran out of memory, so it is refused unread. */
+    @Test
+    fun aFileOverTheEditLimitIsRefusedWithoutReadingIt() {
+        val cache = tmp.newFolder("cache")
+        val source = tmp.newFile("source.csv").apply { writeBytes(ByteArray(EditorStore.MAX_EDIT_BYTES.toInt() + 1)) }
+        assertThat(EditorStore.load(source, cache, source.absolutePath, false)).isEqualTo(EditorStore.Loaded("", false, false, true))
+    }
 }
