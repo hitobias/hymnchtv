@@ -230,4 +230,50 @@ class JumpPanelTest : JumpTestBase() {
     private companion object {
         val BOOK_IDS = listOf(R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english)
     }
+
+    @Test
+    fun theKeypadAndOpenAreOnScreenWithoutScrollingAt320x640() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            openPanel()
+            // the fitter settles after the first layouts
+            awaitTop("the panel fitted") { panelOf(it)?.view?.findViewById<View>(R.id.btn_open)?.height?.let { h -> h > 0 } == true }
+            instrumentation.waitForIdleSync()
+            android.os.SystemClock.sleep(500)
+            inPanel { v ->
+                val viewport = v.findViewById<View>(R.id.viewMain)
+                val vp = android.graphics.Rect().also { r -> viewport.getGlobalVisibleRect(r) }
+                assertThat(viewport.scrollY).isEqualTo(0)
+                for ((what, id) in listOf("keypad" to R.id.keypadArea, "Open" to R.id.btn_open)) {
+                    val view = v.findViewById<View>(id)
+                    val loc = IntArray(2).also { l -> view.getLocationOnScreen(l) }
+                    val vploc = IntArray(2).also { l -> viewport.getLocationOnScreen(l) }
+                    assertWithMessage("$what top").that(loc[1]).isAtLeast(vploc[1])
+                    assertWithMessage("$what bottom (viewport ${vploc[1]}..${vploc[1] + viewport.height})")
+                        .that(loc[1] + view.height).isAtMost(vploc[1] + viewport.height)
+                    assertWithMessage("$what fully visible").that(view.getGlobalVisibleRect(android.graphics.Rect())).isTrue()
+                }
+                assertWithMessage("Open does not cover the keypad").that(
+                    IntArray(2).also { l -> v.findViewById<View>(R.id.btn_open).getLocationOnScreen(l) }[1],
+                ).isAtLeast(IntArray(2).also { l -> v.findViewById<View>(R.id.keypadArea).getLocationOnScreen(l) }[1] + v.findViewById<View>(R.id.keypadArea).height)
+                assertThat(vp.height()).isGreaterThan(0)
+            }
+        }
+    }
+
+    @Test
+    fun theBookLabelsAreNotEllipsizedInThePanel() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            openPanel()
+            android.os.SystemClock.sleep(500)
+            inPanel { v ->
+                for (id in listOf(R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english)) {
+                    val b = v.findViewById<TextView>(id)
+                    val layout = b.layout
+                    assertWithMessage("layout of ${b.text}").that(layout).isNotNull()
+                    assertWithMessage("'${b.text}' lines").that(layout.lineCount).isEqualTo(1)
+                    assertWithMessage("'${b.text}' is cut off").that(layout.getEllipsisCount(0)).isEqualTo(0)
+                }
+            }
+        }
+    }
 }
