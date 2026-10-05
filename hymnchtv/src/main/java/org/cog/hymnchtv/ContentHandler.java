@@ -246,8 +246,13 @@ public class ContentHandler extends BaseActivity implements JumpHost {
 
     /** H5: return stack and next slot of this lyrics session (plan 2026-10-05-h5-jump); cleared when the page closes. */
     private JumpState mJumpState = JumpState.EMPTY;
-    /** The reading position a return asked for; taken once by the page it lands on (see takePendingPosition). */
+    /**
+     * The reading position a return asked for. The page it lands on takes it once (takePendingPosition) but it stays here,
+     * and in the saved state, until that page has finished restoring (onRestoreFinished): a recreation in between
+     * (the page may resume inside the return itself) must still restore it on the new page.
+     */
     private ReadingPosition mPendingPosition = null;
+    private boolean mPendingTaken = false;
     /** True while a cross-book jump swaps the pager adapter: onPageSelected must not treat it as a page turn. */
     private boolean mSwappingBook = false;
 
@@ -888,7 +893,8 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     }
 
     /**
-     * Hde the HistoryList View and return to main, or pop fragment if any; else close app
+     * Back: web layer, then the video player, then the previous hymn of the jump stack (H5), then stop the audio, then
+     * leave. The jump panel handles its own back first (it is a dialog). onUserLeaveHint() runs this too: Home never pops.
      */
     OnBackPressedCallback backPressedCallback = new OnBackPressedCallback(true) {
         @Override
@@ -911,6 +917,10 @@ public class ContentHandler extends BaseActivity implements JumpHost {
                 else {
                     mMediaContentHandler.setPlayerVisible(true);
                 }
+            }
+            // H5: back to the hymn before the last jump (a hymn change, so playback stops); never for the Home key
+            else if (!onUserLeaveHint && mJumpState.canReturn()) {
+                onReturnTo(0);
             }
             // For audio player
             else if (mMediaGuiController.isPlaying()) {
@@ -2084,6 +2094,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
             return;
         }
         mPendingPosition = position;
+        mPendingTaken = false;
         if (target.getBook().equals(mPagerAdapter.getHymnType())) {
             mPager.setCurrentItem(idx, false); // onPageSelected does the hymn-change work
         }
@@ -2117,6 +2128,45 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         final int no = ref.getStoredNo();
         AppExecutors.io("store-history", () -> DatabaseBackend.getInstance(appContext)
                 .storeHymnHistory(new HistoryRecord(type, no, MediaRecord.isFu(type, no))));
+    }
+
+    @Override
+    public void onReturnTo(int recentIndex) {
+        JumpState.Popped popped = mJumpState.popRecent(recentIndex);
+        if (popped == null) {
+            return;
+        }
+        mJumpState = popped.getState();
+        navigateTo(popped.getEntry().getRef(), popped.getEntry().getPosition());
+        mPager.post(this::deliverPendingPosition);
+    }
+
+    /** When the target page was already resumed (it never gets another onResume), hand it the position directly. */
+    private void deliverPendingPosition() {
+        ContentView page = currentContentView();
+        if (page != null && page.isResumed()) {
+            ReadingPosition position = takePendingPosition(page);
+            if (position != null) {
+                page.restoreReadingPosition(position);
+            }
+        }
+    }
+
+    /** Asked by a page when it resumes: the position a return wants restored on it, once; null for any other page. */
+    @Nullable
+    public ReadingPosition takePendingPosition(@NonNull ContentView page) {
+        if (mPendingPosition == null || mPendingTaken || page != currentContentView()) {
+            return null;
+        }
+        mPendingTaken = true;
+        return mPendingPosition;
+    }
+
+    /** The page finished restoring (time is up, or the reader took over): nothing is pending any more. */
+    public void onRestoreFinished(@NonNull ContentView page) {
+        if (page == currentContentView()) {
+            mPendingPosition = null;
+        }
     }
 
     /**

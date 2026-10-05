@@ -257,6 +257,14 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         topBar = mConvertView.findViewById(R.id.lyrics_top_bar);
         buttonBar = mConvertView.findViewById(R.id.lyricsButtonBar);
         lyricsScroll = mConvertView.findViewById(R.id.lyrics_scroll);
+        // H5: the reader's own touch or scroll ends a position restore (our own restore scroll is ignored)
+        lyricsScroll.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                onReaderScroll();
+            }
+            return false;
+        });
+        lyricsScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> onReaderScroll());
         // Toolbar heights change with font scale and orientation: keep the lyrics padding in step
         View.OnLayoutChangeListener insetsFollowBars = (v, l, t, r, b, ol, ot, or, ob) -> {
             if (b != ob || t != ot) {
@@ -324,8 +332,71 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         return ReadingPosition.of(lyricsScroll.getScrollY(), lyricsView.getHeight());
     }
 
+    /** Score images and lyrics may still be loading: the position is re-applied on every layout for this long. */
+    private static final long RESTORE_WINDOW_MS = 2000;
+    private ReadingPosition mRestorePosition;
+    private int mRestoreY;
+    /** True while this class itself scrolls for a restore; any other scroll is the reader's and ends the restore. */
+    private boolean mApplyingRestore = false;
+    private final View.OnLayoutChangeListener mRestoreOnLayout = (v, l, t, r, b, ol, ot, or, ob) -> applyRestorePosition();
+    private final Runnable mEndRestore = this::finishRestore;
+    private final Runnable mApplyScroll = () -> {
+        mApplyingRestore = true;
+        lyricsScroll.scrollTo(0, mRestoreY);
+        mApplyingRestore = false;
+    };
+
+    /** Scrolls back to [position] (H5 return), scaled when the page now measures a different height. */
+    public void restoreReadingPosition(@NonNull ReadingPosition position) {
+        if (lyricsView == null || lyricsScroll == null) {
+            return;
+        }
+        mRestorePosition = position;
+        lyricsView.removeOnLayoutChangeListener(mRestoreOnLayout);
+        lyricsView.addOnLayoutChangeListener(mRestoreOnLayout);
+        lyricsView.removeCallbacks(mEndRestore);
+        lyricsView.postDelayed(mEndRestore, RESTORE_WINDOW_MS);
+        applyRestorePosition();
+    }
+
+    private void applyRestorePosition() {
+        ReadingPosition position = mRestorePosition;
+        if (position == null || lyricsView.getHeight() == 0) {
+            return;
+        }
+        mRestoreY = position.restoredY(lyricsView.getHeight());
+        lyricsScroll.removeCallbacks(mApplyScroll);
+        lyricsScroll.post(mApplyScroll);
+    }
+
+    /** The reader touched or scrolled the page: stop following the restore. */
+    private void onReaderScroll() {
+        if (mRestorePosition != null && !mApplyingRestore) {
+            finishRestore();
+        }
+    }
+
+    /** The restore is over for good (not a mere view teardown): the handler may forget the position. */
+    private void finishRestore() {
+        endRestore();
+        mContentHandler.onRestoreFinished(this);
+    }
+
+    /** Ends a restore: no more layout re-applies, and no scroll or timeout still queued. */
+    private void endRestore() {
+        mRestorePosition = null;
+        if (lyricsView != null) {
+            lyricsView.removeOnLayoutChangeListener(mRestoreOnLayout);
+            lyricsView.removeCallbacks(mEndRestore);
+        }
+        if (lyricsScroll != null) {
+            lyricsScroll.removeCallbacks(mApplyScroll);
+        }
+    }
+
     @Override
     public void onDestroyView() {
+        endRestore();
         mContentHandler.unregisterChromePage(this);
         super.onDestroyView();
     }
@@ -347,6 +418,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         // ViewPager2 only resumes the visible page: re-apply toggles (script, display mode) made on another page.
         // Do not reload English lyrics that are already showing.
         applyDisplayMode(autoEnglish || !hasEnglishLyrics);
+        // H5: a return to this hymn scrolls back to where the reader left it
+        ReadingPosition restore = mContentHandler.takePendingPosition(this);
+        if (restore != null) {
+            restoreReadingPosition(restore);
+        }
     }
 
     /** The "more" button of the top bar: the entries that have no button of their own. */

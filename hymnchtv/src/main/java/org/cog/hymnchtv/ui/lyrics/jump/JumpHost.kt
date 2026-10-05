@@ -13,4 +13,7 @@ interface JumpHost {
 
     /** Opens [target] and pushes the hymn on screen (with its reading position) onto the return stack. */
     fun onJump(target: HymnRef)
+
+    /** Returns to the [recentIndex]-th newest stack entry (0 = what the back key does), restoring its reading position. */
+    fun onReturnTo(recentIndex: Int)
 }
