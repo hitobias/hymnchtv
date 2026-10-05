@@ -1011,6 +1011,27 @@ public class MediaConfig extends BaseActivity
         }
     }
 
+    /** The app's own directories: a media record's file path (imported from anywhere) must never share these. */
+    private static List<File> privateDirs(Context context) {
+        List<File> dirs = new ArrayList<>();
+        dirs.add(context.getDataDir());
+        dirs.add(context.getFilesDir());
+        dirs.add(context.getCacheDir());
+        dirs.add(context.getNoBackupFilesDir());
+        dirs.add(context.getCodeCacheDir());
+        for (File dir : context.getExternalFilesDirs(null)) {
+            if (dir != null) {
+                dirs.add(dir.getParentFile());
+            }
+        }
+        for (File dir : context.getExternalCacheDirs()) {
+            if (dir != null) {
+                dirs.add(dir.getParentFile());
+            }
+        }
+        return dirs;
+    }
+
     /**
      * Shares [text] and [files]; files outside Download/hymnal/ are copied to cacheDir/share/ first (MediaShareFiles, the
      * FileProvider has no other external root since 1.6.0), on AppExecutors.io.
@@ -1023,8 +1044,8 @@ public class MediaConfig extends BaseActivity
         final Context appContext = getApplicationContext();
         AppExecutors.ioThenMain("media-share", this, () -> {
             try {
-                return MediaShareFiles.prepare(appContext.getCacheDir(), Environment.getExternalStorageDirectory(), files,
-                        System.currentTimeMillis());
+                return MediaShareFiles.prepare(appContext.getCacheDir(), Environment.getExternalStorageDirectory(),
+                        privateDirs(appContext), files, System.currentTimeMillis());
             }
             catch (IOException e) {
                 throw new UncheckedIOException(e);
