@@ -333,7 +333,7 @@ public class MediaExoPlayerFragment extends BaseFragment {
 
                 case ExoPlayer.STATE_ENDED:
                     if (mContentHandler != null)
-                        mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                        mContentHandler.onPlaybackCompleted();
                     break;
 
                 case ExoPlayer.STATE_READY:

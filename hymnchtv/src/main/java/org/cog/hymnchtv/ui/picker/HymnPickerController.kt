@@ -15,7 +15,6 @@ import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.hymn.HymnSource
 import org.cog.hymnchtv.notebook.model.HymnTypes
 import org.cog.hymnchtv.ui.home.HomePrefs
-import org.cog.hymnchtv.ui.host.UiFlags
 import org.cog.hymnchtv.ui.titles.HymnTitleSource
 
 /** What the screen around a picker does with the user's choices. Only [onOpenRef] and [openSearch] must be implemented. */
@@ -29,8 +28,6 @@ interface PickerHost {
     fun openToc(book: String, page: String) {}
 
     fun openHistory() {}
-
-    fun onAddToPlaylist(ref: HymnRef?) {}
 }
 
 /** Binds [HymnPickerViews] to a [HymnPickerViewModel]: keys, source buttons, live preview and the open button. */
@@ -48,7 +45,7 @@ class HymnPickerController(
     private val haptic: (View) -> Unit = { KeyHaptics.keyTap(it) },
 ) {
     private val context: Context = views.root.context
-    private val chrome = PickerChrome.of(mode, UiFlags.NOTEBOOK_UI_ENABLED)
+    private val chrome = PickerChrome.of(mode)
 
     private var suppress = false
     private var previewRequest = 0
@@ -62,7 +59,6 @@ class HymnPickerController(
         bindActions()
         views.toc.visibility = visible(chrome.showToc)
         views.recentMore.visibility = visible(chrome.showMoreHistory)
-        views.addPlaylist.visibility = visible(chrome.showAddPlaylist)
         views.setNext.visibility = visible(chrome.showSetNext)
         EnglishXRefStore.ensure(context) { if (!released) render() }
         render()
@@ -132,7 +128,6 @@ class HymnPickerController(
             val source = vm.state.source
             host.openToc(source.book ?: HymnTypes.DB, if (source == HymnSource.ENGLISH) TocConstants.TOC_ENGLISH else TocConstants.TOC_CATEGORY)
         }
-        views.addPlaylist.setOnClickListener { host.onAddToPlaylist(target()) }
         views.setNext.setOnClickListener { target()?.let(host::onSetNext) }
         views.recentMore.setOnClickListener { host.openHistory() }
     }

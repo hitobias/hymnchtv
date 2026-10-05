@@ -120,7 +120,7 @@ class HomeColors(
         views.open.setTextColor(text)
         views.open.iconTint = text
         views.open.rippleColor = ColorStateList.valueOf((tokens.onAccent and 0xFFFFFF) or (RIPPLE_ALPHA shl 24))
-        listOf(views.addPlaylist, views.setNext).forEach {
+        listOf(views.setNext).forEach {
             it.backgroundTintList = ColorStateList.valueOf(tokens.surfaceTone)
             it.setTextColor(tokens.onSurface)
             it.rippleColor = ripple()

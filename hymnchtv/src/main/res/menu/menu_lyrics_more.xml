@@ -16,6 +16,14 @@
         android:title="@string/fav_add" />
 
     <item
+        android:id="@+id/notes"
+        android:title="@string/notes_menu" />
+
+    <item
+        android:id="@+id/addToPlaylist"
+        android:title="@string/playlist_menu_add" />
+
+    <item
         android:id="@+id/scoreColorChange"
         android:title="@string/c_lyrics_score_color" />
 

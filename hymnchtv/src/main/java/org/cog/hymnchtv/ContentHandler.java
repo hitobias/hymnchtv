@@ -106,6 +106,11 @@ import org.cog.hymnchtv.ui.lyrics.jump.JumpHost;
 import org.cog.hymnchtv.ui.lyrics.jump.JumpPanelFragment;
 import org.cog.hymnchtv.ui.picker.HymnLabels;
 import org.cog.hymnchtv.nav.ViewingCause;
+import org.cog.hymnchtv.notebook.model.HymnKey;
+import org.cog.hymnchtv.ui.lyrics.NoteCountController;
+import org.cog.hymnchtv.ui.lyrics.ReadingPolicy;
+import org.cog.hymnchtv.ui.notebook.NotebookPages;
+import org.cog.hymnchtv.ui.playlist.AddToPlaylistDialog;
 import org.cog.hymnchtv.nav.ViewingObserver;
 import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
@@ -288,6 +293,9 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     /** Favourite state of the hymn on screen; created in onCreate. */
     private FavoriteController mFavorites;
 
+    /** Note count of the hymn on screen (D-1 F1); created in onCreate. A change repaints the title rows like a favourite change. */
+    private NoteCountController mNoteCount;
+
     private final FavoriteController.Listener mFavoriteListener = new FavoriteController.Listener() {
         @Override
         public void onState(boolean marked, boolean canToggle) {
@@ -324,6 +332,16 @@ public class ContentHandler extends BaseActivity implements JumpHost {
 
     public boolean canToggleFavorite() {
         return mFavorites != null && mFavorites.canToggle();
+    }
+
+    /** Notes of type/no when it is the hymn on screen and the count is known; -1 otherwise. */
+    public int noteCountFor(String type, int no) {
+        return mNoteCount == null ? -1 : mNoteCount.countFor(type, no);
+    }
+
+    /** True when the hymn on screen can have notes and be put in a playlist (not a placeholder number). */
+    public boolean hasNotebookHymn() {
+        return mNoteCount != null && mNoteCount.currentKey() != null;
     }
     private ViewPager2 mPager;
 
@@ -504,6 +522,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
 
         // Created before the pager so that pages built by the adapter can ask for the current state (set in onViewingHymn)
         mFavorites = new FavoriteController(Notebook.async(this), mFavoriteListener);
+        mNoteCount = new NoteCountController(Notebook.async(this), count -> refreshFavoriteViews());
 
         // The pager adapter, which provides the pages to the view pager widget.
         mPagerAdapter = new MyPagerAdapter(this, mHymnType);
@@ -596,10 +615,13 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
+        // Back from the notes page: the count may have changed. (No new sing-log reading here: only onViewingHymn starts one.)
+        mNoteCount.refresh();
     }
 
     @Override
     protected void onPause() {
+        Notebook.async(this).onHymnHidden(mHymnType, mHymnNo);
         getContentResolver().unregisterContentObserver(mHighContrastObserver);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         super.onPause();
@@ -611,6 +633,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         mChromeHost.stop();
         mPlayerSheet.release();
         mFavorites.destroy();
+        mNoteCount.destroy();
     }
 
     /** A lyrics page follows the toolbar show/hide state from now on (plan 6c). */
@@ -985,6 +1008,20 @@ public class ContentHandler extends BaseActivity implements JumpHost {
             mFavorites.toggle();
             return true;
         }
+        else if (itemId == R.id.notes) {
+            HymnKey key = mNoteCount.currentKey();
+            if (key != null) {
+                startActivity(NotebookPages.notes(this, key));
+            }
+            return true;
+        }
+        else if (itemId == R.id.addToPlaylist) {
+            HymnKey key = mNoteCount.currentKey();
+            if (key != null) {
+                AddToPlaylistDialog.Companion.show(getSupportFragmentManager(), key);
+            }
+            return true;
+        }
         else if (itemId == R.id.menutoggle) {
             mPlayerSheet.toggleUserHidden();
             return true;
@@ -1259,6 +1296,18 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         finally {
             mAutoAdvancing = false;
         }
+    }
+
+    /**
+     * Media of the hymn on screen played to its end (audio, ExoPlayer or YouTube). Playback stops on a hymn change, so it is
+     * this hymn: it may be logged (D-1 F4, only while the switch is on), then the usual end handling runs.
+     */
+    public void onPlaybackCompleted() {
+        if (isFinishing() || isDestroyed())
+            return;
+        HymnRef ref = currentRef(); // H5: the pager decides which hymn is on screen
+        Notebook.async(this).onMediaCompleted(ref.getBook(), ref.getStoredNo());
+        onEndOrError(getString(R.string.playback_completed));
     }
 
     // Media file playback ended or file download error
@@ -2082,6 +2131,11 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         mHymnNo = ref.getStoredNo();
         hymnIdx = mPager.getCurrentItem();
         mFavorites.onHymnChanged(mHymnType, mHymnNo);
+        mNoteCount.onHymnChanged(mHymnType, mHymnNo);
+        if (ReadingPolicy.startsReading(cause)) {
+            // D-1 F4: a new reading starts the 2-minute timer (no-op while the switch is off); RESTORED is the same reading
+            Notebook.async(this).onHymnVisible(mHymnType, mHymnNo);
+        }
         // H5: a position waits for its own hymn only; a queued next the reader has reached is used up; going back to
         // the hymn already on screen would do nothing, so that entry goes
         if (mPendingRef != null && !mPendingRef.equals(ref)) {

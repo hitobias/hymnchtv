@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home picker, open button (plus the jump panel's and the notebook's buttons, hidden on the home tab) -->
+<!-- Home picker, open button (plus the jump panel's button, hidden on the home tab) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/actionArea"
@@ -20,18 +20,6 @@
         app:icon="@drawable/ic_sym_chevron_right"
         app:iconGravity="textEnd"
         app:iconPadding="4dp" />
-
-    <!-- C-7: id only; sub-project D-1 wires it to its add-to-playlist dialog -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_add_playlist"
-        style="@style/Widget.Hymnal.HomeButton"
-        android:layout_width="0dp"
-        android:layout_height="52dp"
-        android:layout_marginStart="8dp"
-        android:layout_weight="1"
-        android:text="@string/c_add_playlist"
-        android:textAppearance="@style/TextAppearance.Hymnal.Heading"
-        android:visibility="gone" />
 
     <!-- Jump panel only (H5) -->
     <com.google.android.material.button.MaterialButton

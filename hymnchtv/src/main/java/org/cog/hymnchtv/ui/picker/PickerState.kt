@@ -32,11 +32,11 @@ sealed interface Preview {
 enum class PickerMode { HOME, JUMP }
 
 /** Which buttons the picker shows in which mode. */
-data class PickerChrome(val showToc: Boolean, val showMoreHistory: Boolean, val showAddPlaylist: Boolean, val showSetNext: Boolean) {
+data class PickerChrome(val showToc: Boolean, val showMoreHistory: Boolean, val showSetNext: Boolean) {
     companion object {
-        fun of(mode: PickerMode, notebookEnabled: Boolean): PickerChrome = when (mode) {
-            PickerMode.HOME -> PickerChrome(showToc = true, showMoreHistory = true, showAddPlaylist = notebookEnabled, showSetNext = false)
-            PickerMode.JUMP -> PickerChrome(showToc = false, showMoreHistory = false, showAddPlaylist = false, showSetNext = true)
+        fun of(mode: PickerMode): PickerChrome = when (mode) {
+            PickerMode.HOME -> PickerChrome(showToc = true, showMoreHistory = true, showSetNext = false)
+            PickerMode.JUMP -> PickerChrome(showToc = false, showMoreHistory = false, showSetNext = true)
         }
     }
 }
