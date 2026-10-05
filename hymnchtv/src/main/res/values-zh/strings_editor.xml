@@ -2,5 +2,5 @@
 <resources>
     <string name="editor_save_failed">无法保存文件</string>
     <string name="editor_draft_lost">未保存的修改无法找回</string>
-    <string name="editor_file_too_large">文件太大，无法在此编辑（超过 %1$d KB），请改用电脑编辑。</string>
+    <string name="editor_file_too_large">文件太大，无法在此编辑（超过 %1$d KB），请改用其他装置编辑。</string>
 </resources>
