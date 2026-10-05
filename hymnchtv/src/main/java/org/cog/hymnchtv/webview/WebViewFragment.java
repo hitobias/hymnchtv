@@ -140,7 +140,9 @@ public class WebViewFragment extends BaseFragment implements OnKeyListener {
      */
     public void initWebView(String url) {
         try {
-            if (!URLDecoder.decode(webView.getUrl(), "UTF-8").equals(url)) {
+            // getUrl() is null until the first page started loading
+            String current = webView.getUrl();
+            if (current == null || !URLDecoder.decode(current, "UTF-8").equals(url)) {
                 webUrl = url;
                 webView.loadUrl("about:blank");
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
