@@ -43,11 +43,14 @@ class ContentHandlerMainThreadDbTest {
 
     private fun media(type: MediaType) = MediaRecord(MainActivity.HYMN_DB, 1, false, type)
 
-    /** The share copies db1.* into the tmp store; on API 34 a second copy over an existing file fails (EEXIST). */
+    /** The share copies db1.* into cacheDir/share/<one dir per share>/. */
     private fun clearSharedTmpFiles() {
-        val tmp = org.cog.hymnchtv.persistance.FileBackend.getHymnchtvStore(org.cog.hymnchtv.persistance.FileBackend.TMP, true)
-        listOf("db1.png", "db1.txt", "db2.png", "db2.txt").forEach { java.io.File(tmp, it).delete() }
+        org.cog.hymnchtv.share.ShareFiles.dir(ctx.cacheDir).deleteRecursively()
     }
+
+    /** Names of every file shared so far (all share directories). */
+    private fun sharedNames(): Set<String> =
+        org.cog.hymnchtv.share.ShareFiles.dir(ctx.cacheDir).walk().filter { it.isFile }.map { it.name }.toSet()
 
     @Before
     fun setUp() {
@@ -276,10 +279,7 @@ class ContentHandlerMainThreadDbTest {
 
     @Test
     fun aShareStartedOnOneHymnStaysOnThatHymnWhenTheUserSwipesBeforeTheReadFinishes() {
-        val tmp = org.cog.hymnchtv.persistance.FileBackend.getHymnchtvStore(org.cog.hymnchtv.persistance.FileBackend.TMP, true)!!
-        val first = listOf(java.io.File(tmp, "db1.png"), java.io.File(tmp, "db1.txt"))
-        val second = listOf(java.io.File(tmp, "db2.png"), java.io.File(tmp, "db2.txt"))
-        (first + second).forEach { it.delete() }
+        clearSharedTmpFiles()
         launch().use { scenario ->
             val monitor = instrumentation.addMonitor(
                 IntentFilter(Intent.ACTION_CHOOSER), Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true)
@@ -293,11 +293,11 @@ class ContentHandlerMainThreadDbTest {
                     gate.release()
                 }
                 assertThat(awaitUntil { monitor.hits > 0 }).isTrue()
-                assertThat(first.all { it.exists() }).isTrue()
-                assertThat(second.any { it.exists() }).isFalse()
+                assertThat(sharedNames()).containsAtLeast("db1.png", "db1.txt")
+                assertThat(sharedNames().none { it.startsWith("db2.") }).isTrue()
             } finally {
                 instrumentation.removeMonitor(monitor)
-                (first + second).forEach { it.delete() }
+                clearSharedTmpFiles()
             }
         }
     }

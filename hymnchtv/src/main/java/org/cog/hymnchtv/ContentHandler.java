@@ -22,11 +22,6 @@ import static org.cog.hymnchtv.ContentView.LYRICS_ER_DIR;
 import static org.cog.hymnchtv.ContentView.LYRICS_XB_DIR;
 import static org.cog.hymnchtv.ContentView.LYRICS_XG_DIR;
 import static org.cog.hymnchtv.ContentView.LYRICS_YB_DIR;
-import static org.cog.hymnchtv.ContentView.SCORE_BB_DIR;
-import static org.cog.hymnchtv.ContentView.SCORE_DB_DIR;
-import static org.cog.hymnchtv.ContentView.SCORE_ER_DIR;
-import static org.cog.hymnchtv.ContentView.SCORE_XB_DIR;
-import static org.cog.hymnchtv.ContentView.SCORE_XG_DIR;
 import static org.cog.hymnchtv.ui.toc.TocConstants.category_bb;
 import static org.cog.hymnchtv.ui.toc.TocConstants.category_db;
 import static org.cog.hymnchtv.ui.toc.TocConstants.category_er;
@@ -84,8 +79,8 @@ import androidx.viewpager2.widget.ViewPager2;
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -112,6 +107,8 @@ import org.cog.hymnchtv.mediaconfig.QQRecord;
 import org.cog.hymnchtv.mediaconfig.ShareWith;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.share.LyricsShareFiles;
+import org.cog.hymnchtv.share.SharePayload;
 import org.cog.hymnchtv.reading.DisplayMode;
 import org.cog.hymnchtv.reading.LyricsFont;
 import org.cog.hymnchtv.reading.LyricsTypefaces;
@@ -1009,7 +1006,8 @@ public class ContentHandler extends BaseActivity {
     }
 
     /**
-     * Sharing of both the score png and lyrics text files via e.g. whatsapp
+     * Share the current hymn's score page (if it has one) and lyrics, plus its media link if any, via e.g. whatsapp.
+     * The files are copied to cacheDir/share/ on AppExecutors.io; a failure is told to the user.
      */
     private void lyricsShare() {
         if (mSharePending) {
@@ -1018,80 +1016,38 @@ public class ContentHandler extends BaseActivity {
         mSharePending = true;
         final String hymnType = mHymnType;
         final int hymnNo = mHymnNo;
-        AppExecutors.ioThenMain("lyrics-share-url", this, () -> getMediaUrl(hymnType, hymnNo), mediaUrl -> {
+        final Context appContext = getApplicationContext();
+        AppExecutors.ioThenMain("lyrics-share", this, () -> {
+            String mediaUrl = getMediaUrl(hymnType, hymnNo);
+            try {
+                return new SharePayload(mediaUrl, LyricsShareFiles.prepare(appContext, hymnType, hymnNo));
+            }
+            catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, payload -> {
             mSharePending = false;
-            lyricsShare(hymnType, hymnNo, mediaUrl);
-        }, () -> mSharePending = false);
+            shareFiles(payload);
+        }, () -> {
+            mSharePending = false;
+            HymnsApp.showToastMessage(R.string.share_failed);
+        });
     }
 
-    /**
-     * @param hymnType the hymn type the share was requested for (the user may have moved on meanwhile)
-     * @param hymnNo the hymn number the share was requested for
-     * @param mediaUrl that hymn's media link read from the DB, or null
-     */
-    private void lyricsShare(String hymnType, int hymnNo, String mediaUrl) {
-        String resPrefix = "";
-        String resFName = "";
-
-        switch (hymnType) {
-        case HYMN_ER:
-            resPrefix = SCORE_ER_DIR + hymnNo;
-            resFName = LYRICS_ER_DIR + "er" + hymnNo;
-            break;
-
-        case HYMN_XB:
-            resPrefix = SCORE_XB_DIR + "xb" + hymnNo;
-            resFName = LYRICS_XB_DIR + "xb" + hymnNo;
-            break;
-
-        case HYMN_XG:
-            resPrefix = SCORE_XG_DIR + "xg" + hymnNo;
-            resFName = LYRICS_XG_DIR + "xg" + hymnNo;
-            break;
-
-        case HYMN_YB:
-            resPrefix = SCORE_XB_DIR + "yb" + hymnNo;
-            resFName = LYRICS_XB_DIR + "yb" + hymnNo;
-            break;
-
-        case HYMN_BB:
-            resPrefix = SCORE_BB_DIR + "bb" + hymnNo;
-            resFName = LYRICS_BB_DIR + "bb" + hymnNo;
-            break;
-
-        case HYMN_DB:
-            resPrefix = SCORE_DB_DIR + "db" + hymnNo;
-            resFName = LYRICS_DB_DIR + "db" + hymnNo;
-            break;
-        }
-
-        String fnScore = resPrefix + ".png";
-        File fileScore = new File(FileBackend.getHymnchtvStore(FileBackend.TMP, true), fnScore.split("/")[1]);
-
-        String fnLyrics = resFName + ".txt";
-        File fileLyrics = new File(FileBackend.getHymnchtvStore(FileBackend.TMP, true), fnLyrics.split("/")[1]);
-
+    /** Hands the prepared files to the chooser through this app's FileProvider (cache-path "share"). */
+    private void shareFiles(SharePayload payload) {
+        ArrayList<Uri> uris = new ArrayList<>();
         try {
-            InputStream inputStream = getResources().getAssets().open(fnScore);
-            FileOutputStream outputStream = new FileOutputStream(fileScore);
-            FileBackend.copy(inputStream, outputStream);
-            inputStream.close();
-            outputStream.close();
-
-            inputStream = getResources().getAssets().open(fnLyrics);
-            outputStream = new FileOutputStream(fileLyrics);
-            FileBackend.copy(inputStream, outputStream);
-            inputStream.close();
-            outputStream.close();
-
-            ArrayList<Uri> imageUris = new ArrayList<>();
-            imageUris.add(FileBackend.getUriForFile(this, fileScore));
-            imageUris.add(FileBackend.getUriForFile(this, fileLyrics));
-            ShareWith.share(this, mediaUrl, imageUris);
+            for (File file : payload.getFiles()) {
+                uris.add(FileBackend.getUriForFile(this, file));
+            }
         }
-        catch (IOException e) {
-            Timber.e("lyrics shared: %s", e.getMessage());
+        catch (SecurityException e) {
+            Timber.e(e, "No FileProvider uri for the shared lyrics");
+            HymnsApp.showToastMessage(R.string.share_failed);
+            return;
         }
+        ShareWith.share(this, payload.getMediaUrl(), uris);
     }
 
     /**

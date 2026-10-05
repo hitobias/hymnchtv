@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?><!-- the <files-path> tag shares directories within the files/ directory of your app's internal storage -->
 <paths>
+    <!-- external-path "/" and root-path "/storage/" stay: MediaConfig shares user-chosen import and media files from
+         anywhere on external storage or an SD card, and LogUploadServiceImpl shares Download/hymnal/logs. -->
     <external-path
         name="external"
         path="/" />
@@ -21,6 +23,10 @@
     <cache-path
         name="camera"
         path="Camera/" />
+    <!-- Lyrics share (ShareFiles): score and lyrics in cacheDir/share/<one dir per share>/, removed after 24 h. -->
+    <cache-path
+        name="share"
+        path="share/" />
     <!-- Verified update apks (sub-project Z): the only root used to hand an apk to the installer. -->
     <files-path
         name="updates"
