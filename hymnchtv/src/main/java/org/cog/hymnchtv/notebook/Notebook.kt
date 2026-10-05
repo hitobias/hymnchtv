@@ -71,8 +71,10 @@ object Notebook {
         val singLogs = RoomSingLogRepository(db, clock, ids, prefs)
         val tracker = SingTracker(singLogs, prefs, clock, appScope)
         val backup = BackupService(RoomBackupStore(db), clock, BuildConfig.VERSION_NAME)
+        val notes = RoomNoteRepository(db, clock, ids, prefs)
         val async = NotebookAsync(
             favorites, singLogs, prefs, tracker, UriBackupIo(app.contentResolver, backup),
+            noteCounter = { key -> notes.findByHymn(key).size },
             callbackDispatcher = Dispatchers.Main.immediate,
             workDispatcher = Dispatchers.IO,
         )
@@ -81,7 +83,7 @@ object Notebook {
             appScope = appScope,
             favorites = favorites,
             singLogs = singLogs,
-            notes = RoomNoteRepository(db, clock, ids, prefs),
+            notes = notes,
             playlists = RoomPlaylistRepository(db, clock, ids, prefs),
             prefs = prefs,
             tracker = tracker,

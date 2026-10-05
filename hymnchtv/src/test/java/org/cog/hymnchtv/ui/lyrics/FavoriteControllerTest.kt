@@ -70,6 +70,7 @@ class FavoriteControllerTest {
         private val tracker = SingTracker(singLogs, prefs, clock, scope.backgroundScope, zone = { TimeZone.getTimeZone("UTC") })
         val async = NotebookAsync(
             repo, singLogs, prefs, tracker, UnusedBackupIo,
+            noteCounter = { 0 },
             callbackDispatcher = UnconfinedTestDispatcher(scope.testScheduler),
             workDispatcher = UnconfinedTestDispatcher(scope.testScheduler),
         )

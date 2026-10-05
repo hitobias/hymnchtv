@@ -50,8 +50,11 @@ class NotebookAsyncTest {
         val singLogs = InMemorySingLogRepository(clock)
         val prefs = FakeNotebookPrefs()
         val tracker = SingTracker(singLogs, prefs, clock, scope.backgroundScope, zone = { TimeZone.getTimeZone("UTC") })
+        @Volatile var noteCounts: Map<HymnKey, Int> = emptyMap()
+        @Volatile var failNoteCount = false
         val async = NotebookAsync(
             favorites, singLogs, prefs, tracker, UnusedBackupIo,
+            noteCounter = { key -> if (failNoteCount) throw IllegalStateException("simulated") else noteCounts[key] ?: 0 },
             callbackDispatcher = UnconfinedTestDispatcher(scope.testScheduler),
             workDispatcher = UnconfinedTestDispatcher(scope.testScheduler),
         )
@@ -209,10 +212,32 @@ class NotebookAsyncTest {
     }
 
     @Test
+    fun noteCountDeliversTheCountOfThatHymn() = runTest {
+        val h = Harness(this)
+        h.noteCounts = mapOf(key to 3)
+        val out = mutableListOf<Outcome<Int>>()
+        h.async.noteCount(key) { out += it }
+        h.async.noteCount(HymnKey.of(HymnTypes.DB, 2)) { out += it }
+        runCurrent()
+        assertThat(out).containsExactly(Outcome.Ok(3), Outcome.Ok(0)).inOrder()
+    }
+
+    @Test
+    fun aFailingNoteCountIsAnErr() = runTest {
+        val h = Harness(this)
+        h.failNoteCount = true
+        var outcome: Outcome<Int>? = null
+        h.async.noteCount(key) { outcome = it }
+        runCurrent()
+        assertThat(outcome?.errorOrNull()).isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
     fun outOfMemoryBecomesErrInsteadOfCrashing() = runTest {
         val h = Harness(this)
         val async = NotebookAsync(
             HookedFavorites(h.favorites) { throw OutOfMemoryError("simulated") }, h.singLogs, h.prefs, h.tracker, UnusedBackupIo,
+            noteCounter = { 0 },
             callbackDispatcher = UnconfinedTestDispatcher(testScheduler),
             workDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
@@ -235,6 +260,7 @@ class NotebookAsyncTest {
             val favorites = HookedFavorites(InMemoryFavoriteRepository(clock)) { workName.set(Thread.currentThread().name) }
             val async = NotebookAsync(
                 favorites, singLogs, prefs, SingTracker(singLogs, prefs, clock, scope), UnusedBackupIo,
+                noteCounter = { 0 },
                 callbackDispatcher = callbackThread.asCoroutineDispatcher(),
                 workDispatcher = workThread.asCoroutineDispatcher(),
             )
