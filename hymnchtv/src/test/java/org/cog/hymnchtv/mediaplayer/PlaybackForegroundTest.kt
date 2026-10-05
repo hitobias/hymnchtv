@@ -20,4 +20,12 @@ class PlaybackForegroundTest {
     fun stoppedOrOnlyInspectedLeavesTheForeground() {
         assertThat(PlaybackForeground.of(playing = 0, pausedMidway = 0)).isEqualTo(PlaybackForeground.NONE)
     }
+
+    @Test
+    fun theForegroundLingersOnlyWhenTheLastPlayerCompleted() {
+        assertThat(PlaybackForeground.lingersAfterCompletion(playersLeft = 0, recording = false)).isTrue()
+        assertThat(PlaybackForeground.lingersAfterCompletion(playersLeft = 1, recording = false)).isFalse()
+        assertThat(PlaybackForeground.lingersAfterCompletion(playersLeft = 0, recording = true)).isFalse()
+        assertThat(PlaybackForeground.LINGER_MS).isEqualTo(5_000L)
+    }
 }

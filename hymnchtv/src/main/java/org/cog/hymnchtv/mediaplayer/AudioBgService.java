@@ -107,6 +107,10 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
     /** What the service shows now; changed only by updateForeground(). */
     private PlaybackForeground mForeground = PlaybackForeground.NONE;
 
+    /** Delays the stop after the last player completed; cancelled by the next command (see lingerOrStop). */
+    private final Handler mHandlerLinger = new Handler(Looper.getMainLooper());
+    private boolean mLingering = false;
+
     /** startId of the latest command, for stopSelf(int) after a completion. */
     private int mLastStartId = 0;
 
@@ -155,6 +159,7 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         mLastStartId = startId;
+        String action = Objects.requireNonNull(intent.getAction());
         switch (Objects.requireNonNull(intent.getAction())) {
         case ACTION_PLAYER_INIT:
             fileUri = intent.getData();
@@ -244,8 +249,15 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
             stopSelf();
             break;
         }
-        updateForeground();
-        stopIfIdle(startId);
+        if (mLingering && uriPlayers.isEmpty() && mRecorder == null && !isStopCommand(action)) {
+            // a command (speed, loop) of the next hymn arrives while the foreground lingers: keep waiting for its start
+            startLinger();
+        }
+        else {
+            cancelLinger();
+            updateForeground();
+            stopIfIdle(startId);
+        }
         return START_NOT_STICKY;
     }
 
@@ -515,9 +527,36 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
         else {
             checkLoopSyncAction(mp);
         }
+        if (PlaybackForeground.lingersAfterCompletion(uriPlayers.size(), mRecorder != null)) {
+            startLinger();
+        }
+        else {
+            updateForeground();
+            stopIfIdle(mLastStartId);
+        }
+    }
+
+    private static boolean isStopCommand(String action) {
+        return ACTION_PLAYER_STOP.equals(action) || ACTION_NOTIFY_STOP.equals(action) || ACTION_CANCEL.equals(action);
+    }
+
+    /** Keeps the foreground for PlaybackForeground.LINGER_MS; a new command cancels or renews it. */
+    private void startLinger() {
+        mLingering = true;
+        mHandlerLinger.removeCallbacks(lingerEnd);
+        mHandlerLinger.postDelayed(lingerEnd, PlaybackForeground.LINGER_MS);
+    }
+
+    private void cancelLinger() {
+        mLingering = false;
+        mHandlerLinger.removeCallbacks(lingerEnd);
+    }
+
+    private final Runnable lingerEnd = () -> {
+        mLingering = false;
         updateForeground();
         stopIfIdle(mLastStartId);
-    }
+    };
 
     /**
      * Routine to check loop action, and ensure multiple uri playback are synchronized (within for loop delay < 10ms)

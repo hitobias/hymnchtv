@@ -20,5 +20,15 @@ enum class PlaybackForeground {
             pausedMidway > 0 -> PAUSED
             else -> NONE
         }
+
+        /** How long the service stays in the foreground after the last player completed (AutoStream starts the next hymn). */
+        const val LINGER_MS = 5_000L
+
+        /**
+         * After a player completes on its own, the foreground is kept for [LINGER_MS] when nothing else is left: the next
+         * hymn then starts while still in the foreground (API 31+ refuses a foreground start from the background).
+         */
+        @JvmStatic
+        fun lingersAfterCompletion(playersLeft: Int, recording: Boolean): Boolean = playersLeft == 0 && !recording
     }
 }
