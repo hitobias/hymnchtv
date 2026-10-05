@@ -23,6 +23,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
@@ -32,6 +33,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import timber.log.Timber;
 
@@ -60,9 +63,28 @@ public class FilePathHelper {
         } catch (Exception e) {
             Timber.d("FilePath Catch: %s", uri.toString());
         }
+        // The path came from the sending app (or a provider): never use one that leads into our private data or off
+        // external storage; copy the content instead
+        if (!TextUtils.isEmpty(filePath) && !isPathAcceptable(ctx, filePath)) {
+            Timber.w("Rejected path of %s", uri);
+            filePath = null;
+        }
         if (TextUtils.isEmpty(filePath))
             filePath = getFilePathWithCreate(ctx, uri);
         return filePath;
+    }
+
+    private static boolean isPathAcceptable(Context ctx, String path) {
+        List<File> forbidden = new ArrayList<>();
+        forbidden.add(ctx.getDataDir());
+        File filesParent = ctx.getFilesDir().getParentFile();
+        if (filesParent != null) {
+            forbidden.add(filesParent);
+        }
+        List<File> allowed = new ArrayList<>();
+        allowed.add(Environment.getExternalStorageDirectory());
+        allowed.add(new File("/storage"));
+        return PathTrust.isAcceptable(path, forbidden, allowed);
     }
 
     /**
@@ -147,7 +169,11 @@ public class FilePathHelper {
             String uriAuthority = uri.getAuthority();
 
             if (isContentUri(uri)) {
-                if (isGooglePhotoDoc(uriAuthority)) {
+                if (!PathTrust.isTrustedAuthority(uriAuthority)) {
+                    // a foreign provider's _data column is not to be believed: the caller copies the content
+                    filePath = "";
+                }
+                else if (isGooglePhotoDoc(uriAuthority)) {
                     filePath = uri.getLastPathSegment();
                 }
                 else {
@@ -155,7 +181,8 @@ public class FilePathHelper {
                 }
             }
             else if (isFileUri(uri)) {
-                filePath = uri.getPath();
+                // file:// from ACTION_SEND names any path the sender likes: copy the content instead
+                filePath = "";
             }
             else if (isDocumentUri(ctx, uri)) {
                 // Get uri related document id.

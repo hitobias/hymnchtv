@@ -110,6 +110,7 @@ import org.cog.hymnchtv.RichTextEditor;
 import org.cog.hymnchtv.mediaplayer.MediaExoPlayerFragment;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.persistance.PathTrust;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.utils.DialogActivity;
 import org.cog.hymnchtv.utils.HymnNoValidate;
@@ -596,7 +597,7 @@ public class MediaConfig extends BaseActivity
      * @return original uri path or newly copied uri path
      */
     private String copyToLocalFile(String uriPath) {
-        if (uriPath.contains(FileBackend.TMP)) {
+        if (PathTrust.isUnder(uriPath, FileBackend.getHymnchtvStore(FileBackend.TMP, false))) {
             File inFile = new File(uriPath);
 
             File outFile;
@@ -856,7 +857,7 @@ public class MediaConfig extends BaseActivity
         boolean isSuccess = true;
 
         if (filePath != null) {
-            if (filePath.contains(FileBackend.TMP)) {
+            if (PathTrust.isUnder(filePath, FileBackend.getHymnchtvStore(FileBackend.TMP, false))) {
                 File inFile = new File(filePath);
 
                 File subDir = FileBackend.getHymnchtvStore(hymnType + mediaDir.get(mediaType), true);

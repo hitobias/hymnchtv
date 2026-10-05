@@ -92,3 +92,38 @@ class SharedImportTest {
         assertThat(SharedImport.freeName(dir, "export.csv")).isEqualTo(File(dir, "export-2.csv"))
     }
 }
+
+class SharedImportRuntimeFailureTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    @Test
+    fun aProviderThrowingRuntimeExceptionLeavesNoPartAndKeepsTheOldFile() {
+        val dir = tmp.newFolder("tmp")
+        File(dir, "export.csv").writeText("old")
+        val bad = SharedImport.StreamSource { throw IllegalStateException("provider died") }
+        assertThat(SharedImport.copyInto(dir, "export.csv", bad)).isNull()
+        val midway = SharedImport.StreamSource {
+            object : InputStream() {
+                override fun read(): Int = throw IllegalStateException("died mid-copy")
+            }
+        }
+        assertThat(SharedImport.copyInto(dir, "export.csv", midway)).isNull()
+        assertThat(dir.list()!!.toList()).containsExactly("export.csv")
+        assertThat(File(dir, "export.csv").readText()).isEqualTo("old")
+    }
+
+    @Test
+    fun cleanStalePartsRemovesOnlyOldImportParts() {
+        val dir = tmp.newFolder("tmp")
+        val now = 1_800_000_000_000L
+        val old = File(dir, ".import-1.part").apply { writeText("x"); setLastModified(now - 2 * 3600_000L) }
+        val fresh = File(dir, ".import-2.part").apply { writeText("x"); setLastModified(now - 60_000L) }
+        val other = File(dir, "export.csv").apply { writeText("x"); setLastModified(now - 9 * 3600_000L) }
+        assertThat(SharedImport.cleanStaleParts(dir, now, SharedImport.PART_MAX_AGE_MS)).isEqualTo(1)
+        assertThat(old.exists()).isFalse()
+        assertThat(fresh.exists()).isTrue()
+        assertThat(other.exists()).isTrue()
+        assertThat(SharedImport.cleanStaleParts(File(dir, "missing"), now, SharedImport.PART_MAX_AGE_MS)).isEqualTo(0)
+    }
+}

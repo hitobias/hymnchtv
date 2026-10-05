@@ -24,13 +24,18 @@ class MediaDownloadedFileTest {
         assertThat(MediaDownloadHandler.downloadedFile(ctx, Uri.fromFile(missing))).isNull()
     }
 
+    /** A file:// uri is never used in place (the path is the sender's word): the result is a copy in Download/hymnal/tmp. */
     @Test
-    fun anExistingFileIsReturned() {
+    fun anExistingFileIsReturnedAsACopy() {
         val file = File(ctx.cacheDir, "downloaded-test.mp3").apply { writeText("x") }
+        var copy: File? = null
         try {
-            assertThat(MediaDownloadHandler.downloadedFile(ctx, Uri.fromFile(file))).isEqualTo(file)
+            copy = MediaDownloadHandler.downloadedFile(ctx, Uri.fromFile(file))
+            assertThat(copy).isNotNull()
+            assertThat(copy!!.readText()).isEqualTo("x")
         } finally {
             file.delete()
+            copy?.delete()
         }
     }
 }

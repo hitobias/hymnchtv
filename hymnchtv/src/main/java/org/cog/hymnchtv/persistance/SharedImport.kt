@@ -43,26 +43,42 @@ object SharedImport {
         } catch (e: IOException) {
             return null
         }
-        val copied = try {
-            source.open()?.use { input -> FileOutputStream(temp).use { out -> input.copyTo(out) } } != null
-        } catch (e: IOException) {
-            false
-        } catch (e: SecurityException) {
-            false
-        }
-        if (!copied) {
-            temp.delete()
+        var moved = false
+        try {
+            val copied = try {
+                source.open()?.use { input -> FileOutputStream(temp).use { out -> input.copyTo(out) } } != null
+            } catch (e: IOException) {
+                false
+            } catch (e: RuntimeException) { // SecurityException, IllegalStateException... from a foreign provider
+                false
+            }
+            if (!copied) return null
+            // rename replaces an older file we own in one step; on API 30+ a file left by an earlier install of the
+            // app may refuse that, then the copy keeps a free alternate name instead
+            val target = File(dir, name)
+            if (temp.renameTo(target)) {
+                moved = true
+                return target
+            }
+            val alternate = freeName(dir, name)
+            if (alternate != null && temp.renameTo(alternate)) {
+                moved = true
+                return alternate
+            }
             return null
+        } finally {
+            if (!moved) temp.delete()
         }
-        // rename replaces an older file we own in one step; on API 30+ a file left by an earlier install of the app
-        // may refuse that, then the copy keeps a free alternate name instead
-        val target = File(dir, name)
-        if (temp.renameTo(target)) return target
-        val alternate = freeName(dir, name)
-        if (alternate != null && temp.renameTo(alternate)) return alternate
-        temp.delete()
-        return null
     }
+
+    const val PART_MAX_AGE_MS = 60 * 60 * 1000L
+
+    /** Deletes ".import-*.part" files in [dir] older than [maxAgeMs] (left by a process killed mid-copy). */
+    @JvmStatic
+    fun cleanStaleParts(dir: File, nowMillis: Long, maxAgeMs: Long): Int =
+        dir.listFiles().orEmpty().count {
+            it.name.startsWith(".import-") && it.name.endsWith(".part") && it.lastModified() < nowMillis - maxAgeMs && it.delete()
+        }
 
     /** The first of [dir]/[name], "base-2.ext", "base-3.ext"... that does not exist; null if none is free. */
     internal fun freeName(dir: File, name: String): File? {
