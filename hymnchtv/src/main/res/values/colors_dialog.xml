@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dialog card colours (spec rev 3 section 5), light app theme. Contrast checked by DialogColorsTest. -->
+<resources>
+    <color name="dialog_surface">#FFFAF4</color>
+    <color name="dialog_on_surface">#2E241E</color>
+    <color name="dialog_on_surface_muted">#5A4B40</color>
+    <color name="dialog_primary">#9B3B22</color>
+    <color name="dialog_on_primary">#FFFFFF</color>
+    <color name="dialog_tonal">#EFE2D6</color>
+    <color name="dialog_on_tonal">#5A2A18</color>
+    <color name="dialog_scrim">#61000000</color>
+</resources>
