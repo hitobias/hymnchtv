@@ -56,7 +56,8 @@ import org.cog.hymnchtv.persistance.FileBackend;
 import org.cog.hymnchtv.persistance.SharedImport;
 import org.cog.hymnchtv.persistance.LegacyDatabaseCleanup;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
-import org.cog.hymnchtv.service.androidupdate.OnlineUpdateService;
+import org.cog.hymnchtv.service.androidupdate.UpdateScheduler;
+import org.cog.hymnchtv.update.MediaLinksUpdater;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
 import org.cog.hymnchtv.locale.LocaleStore;
 
@@ -270,7 +271,7 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     }
 
     /**
-     * Start online service only when app is in the foreground, before going back to background upon detect
+     * Schedules the update checks (UpdateScheduler) only when app is in the foreground, before going back to background upon detect
      * the device screen is locked. Deferred until the main thread is idle (after the first frame); the
      * foreground check uses ProcessLifecycleOwner on the main thread right before startService (B-7).
      */
@@ -296,15 +297,11 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
             // Went to the background before the main thread became idle; the next ON_START retries.
             return;
         }
-        Intent dailyCheckupIntent = new Intent(mInstance, OnlineUpdateService.class);
-        dailyCheckupIntent.setAction(OnlineUpdateService.ACTION_AUTO_UPDATE_START);
-        try {
-            mInstance.startService(dailyCheckupIntent);
-            isUpdateServerStarted = true;
-            Timber.d("### Online hymnchtv app update service started!");
-        } catch (IllegalStateException e) {
-            Timber.w("Update service not started: %s", e.getMessage());
-        }
+        // First run, or an upgrade with a newer bundled list: import the media links off the main thread
+        AppExecutors.io("media-links-import", () -> MediaLinksUpdater.importBundledIfNeeded(mInstance));
+        // Daily and on-launch update checks with WorkManager (1.6.0; the alarm + IntentService never ran in the background on API 26+)
+        UpdateScheduler.schedule(mInstance);
+        isUpdateServerStarted = true;
     }
 
     /**

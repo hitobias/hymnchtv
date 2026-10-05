@@ -29,6 +29,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
@@ -153,6 +154,30 @@ public class UpdateServiceImpl {
      */
     public boolean isLatestVersion() {
         return !(fetchLatest() instanceof UpdateCheckResult.Available);
+    }
+
+    /**
+     * Background check (UpdateCheckWorker, 1.6.0): exactly one fetchLatest(). Call off the main thread.
+     *
+     * @return the notification text when a newer, checksum-published release is available, else null; the release stays in
+     * latestOffer for {@link #offerLatest()}
+     */
+    public String checkInBackground() {
+        UpdateCheckResult result = fetchLatest();
+        Offer offer = latestOffer;
+        if (!(result instanceof UpdateCheckResult.Available) || offer == null || offer.sha256 == null) {
+            return null;
+        }
+        return getLatestVersion();
+    }
+
+    /** Opens the update dialog for the release the last check found, without another network request (1.6.0). */
+    @MainThread
+    public void offerLatest() {
+        Offer offer = latestOffer;
+        if (offer != null && offer.sha256 != null) {
+            offerUpdate(offer);
+        }
     }
 
     /**

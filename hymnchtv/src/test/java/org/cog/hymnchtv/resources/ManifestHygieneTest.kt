@@ -45,4 +45,10 @@ class ManifestHygieneTest {
         assertThat(service).doesNotContain("BIND_JOB_SERVICE")
         assertThat(manifest).contains("android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK\"")
     }
+
+    @Test
+    fun theAlarmUpdateServiceIsGone() {
+        assertThat(File(main, "AndroidManifest.xml").readText()).doesNotContain("OnlineUpdateService")
+        assertThat(File(main, "java/org/cog/hymnchtv/service/androidupdate/OnlineUpdateService.java").exists()).isFalse()
+    }
 }

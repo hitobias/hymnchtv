@@ -170,10 +170,6 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
-        <service
-            android:name=".service.androidupdate.OnlineUpdateService"
-            android:enabled="true" />
-
 
         <receiver
             android:name=".mediaconfig.ShareWith$ShareBroadcastReceiver"

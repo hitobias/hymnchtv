@@ -182,12 +182,16 @@ dependencies {
 
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
 
+    // Daily update check (1.6.0): the alarm + IntentService of 1.0-1.5 never ran in the background on API 26+
+    implementation 'androidx.work:work-runtime:2.12.0'
+
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'com.google.truth:truth:1.4.5'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
     // Real org.json for JVM unit tests (android.jar only ships stubs); the app uses the platform copy.
     testImplementation 'org.json:json:20250517'
 
+    androidTestImplementation 'androidx.work:work-testing:2.12.0'
     androidTestImplementation 'androidx.test:runner:1.7.0'
     androidTestImplementation 'androidx.test:core:1.7.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
