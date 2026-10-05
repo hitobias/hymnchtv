@@ -93,6 +93,38 @@ class LyricsPillTest : LyricsTestBase() {
     }
 
     @Test
+    fun aaButtonKeepsBothLetters() {
+        launch().use { s ->
+            s.revealChrome()
+            s.onActivity { it.setChromeHeld(true) }
+            s.onActivity { a ->
+                val t = page(a)!!.findViewById<TextView>(R.id.btn_aa)
+                assertThat(t.layout.lineCount).isAtMost(1)
+                val needed = t.paint.measureText("Aa") + t.compoundPaddingLeft + t.compoundPaddingRight
+                assertThat(t.width.toFloat()).isAtLeast(needed - 1f)
+            }
+        }
+    }
+
+    @Test
+    fun activeSideIsAnnouncedToTalkBack() {
+        launch().use { s ->
+            s.onActivity { a ->
+                val ts = page(a)!!.findViewById<TextView>(R.id.button_ts)
+                val trad = a.getString(R.string.c_pill_trad)
+                val simp = a.getString(R.string.c_pill_simp)
+                assertThat(androidx.core.view.ViewCompat.getStateDescription(ts)?.toString()).isAnyOf(trad, simp)
+                // 5 of the 大本 shows Simplified lyrics here, so the label must match what the text highlights
+                val spans = (ts.text as android.text.Spanned).getSpans(0, ts.text.length, android.text.style.ForegroundColorSpan::class.java)
+                assertThat(spans).hasLength(1)
+                val start = (ts.text as android.text.Spanned).getSpanStart(spans[0])
+                val label = if (start == 0) trad else simp
+                assertThat(androidx.core.view.ViewCompat.getStateDescription(ts)?.toString()).isEqualTo(label)
+            }
+        }
+    }
+
+    @Test
     fun languageItemIsEnabledWithEnglish() {
         launch().use { s ->
             s.onActivity { a ->

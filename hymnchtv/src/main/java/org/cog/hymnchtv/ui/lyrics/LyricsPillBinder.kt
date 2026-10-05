@@ -8,6 +8,7 @@ import android.text.style.StyleSpan
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.core.view.ViewCompat
 import org.cog.hymnchtv.R
 
 /** Draws a [PillModel] on the bottom capsule's three items; text colours and tint come from ChromeButtonStyle. */
@@ -43,8 +44,11 @@ class LyricsPillBinder(
         val text = "$first$SEPARATOR$second"
         if (!item.enabled || item.active < 0) {
             view.text = text
+            ViewCompat.setStateDescription(view, null)
             return
         }
+        // TalkBack: the side in use is only shown by colour, so say it
+        ViewCompat.setStateDescription(view, if (item.active == 0) first else second)
         val start = if (item.active == 0) 0 else first.length + SEPARATOR.length
         val end = if (item.active == 0) first.length else text.length
         view.text = SpannableString(text).apply {

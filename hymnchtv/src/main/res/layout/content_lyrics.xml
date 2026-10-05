@@ -188,6 +188,8 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:contentDescription="@string/c_aa_title"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
             android:text="@string/c_lyrics_aa"
             android:textAppearance="@style/TextAppearance.Hymnal.Heading" />
         <androidx.appcompat.widget.AppCompatImageButton
