@@ -8,6 +8,8 @@
     <!-- Required to check whether Wi-Fi is enabled -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- API 34: the type permission of AudioBgService's foreground playback (1.6.0) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Required to download files from Google Play etc -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -161,10 +163,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Lyrics audio (MIDI and media files). In the foreground while a hymn plays or is paused midway, so the system
+             does not stop it when the screen goes off (1.6.0). Not exported: only this app starts it. -->
         <service
             android:name=".mediaplayer.AudioBgService"
             android:exported="false"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+            android:foregroundServiceType="mediaPlayback" />
 
         <service
             android:name=".service.androidupdate.OnlineUpdateService"

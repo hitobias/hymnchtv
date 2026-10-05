@@ -18,6 +18,7 @@ package org.cog.hymnchtv.mediaplayer;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -31,10 +32,14 @@ import android.os.SystemClock;
 import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -53,6 +58,11 @@ import timber.log.Timber;
  * <p>
  * Note: extends JobIntentService always call onDestroy for every new action
  * Must use static variables if need to keep values (not verified for recording)
+ * <p>
+ * 1.6.0: while a hymn plays, or is paused midway, the service runs in the foreground (type mediaPlayback) with
+ * {@link PlaybackNotification}; otherwise API 26+ stops it about a minute after the app leaves the screen and the process
+ * may be frozen or killed. Home still stops playback on purpose (ContentHandler.onUserLeaveHint), so this matters when
+ * the screen goes off or the system covers the lyrics page.
  *
  * @author Eng Chong Meng
  */
@@ -93,6 +103,12 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
 
     private static float playbackSpeed = 1.0f;
     private static int mLoopCount = 1;
+
+    /** What the service shows now; changed only by updateForeground(). */
+    private PlaybackForeground mForeground = PlaybackForeground.NONE;
+
+    /** startId of the latest command, for stopSelf(int) after a completion. */
+    private int mLastStartId = 0;
 
     public enum PlaybackState {
         init,
@@ -138,6 +154,7 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
+        mLastStartId = startId;
         switch (Objects.requireNonNull(intent.getAction())) {
         case ACTION_PLAYER_INIT:
             fileUri = intent.getData();
@@ -203,6 +220,19 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
             }
             break;
 
+        case ACTION_NOTIFY_TOGGLE:
+            if (anyPlaying()) {
+                pauseAll();
+            }
+            else {
+                resumeAll();
+            }
+            break;
+
+        case ACTION_NOTIFY_STOP:
+            releaseAll();
+            break;
+
         case ACTION_CANCEL:
             stopTimer();
             stopRecording();
@@ -214,6 +244,8 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
             stopSelf();
             break;
         }
+        updateForeground();
+        stopIfIdle(startId);
         return START_NOT_STICKY;
     }
 
@@ -483,6 +515,8 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
         else {
             checkLoopSyncAction(mp);
         }
+        updateForeground();
+        stopIfIdle(mLastStartId);
     }
 
     /**
@@ -615,6 +649,128 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
             uriPlayers.remove(uri);
         }
         mHandlerPlayback = null;
+    }
+
+    /* =============================================================
+     * Foreground playback (1.6.0)
+     * ============================================================= */
+
+    private static boolean anyPlaying() {
+        for (MediaPlayer player : uriPlayers.values()) {
+            if (player != null && player.isPlaying()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** For tests: true while any player of this service is playing. */
+    @VisibleForTesting
+    public static boolean anyPlayingForTest() {
+        return anyPlaying();
+    }
+
+    /** The notification's pause key: every playing player pauses (melody and accompaniment stay in step). */
+    private void pauseAll() {
+        for (Map.Entry<Uri, MediaPlayer> entry : uriPlayers.entrySet()) {
+            MediaPlayer player = entry.getValue();
+            if (player != null && player.isPlaying()) {
+                player.pause();
+                playbackState(PlaybackState.pause, entry.getKey());
+            }
+        }
+    }
+
+    /** The notification's play key: every paused player starts again and the position broadcast resumes. */
+    private void resumeAll() {
+        boolean started = false;
+        for (Map.Entry<Uri, MediaPlayer> entry : uriPlayers.entrySet()) {
+            MediaPlayer player = entry.getValue();
+            if (player != null && !player.isPlaying()) {
+                try {
+                    player.start();
+                    playbackState(PlaybackState.play, entry.getKey());
+                    started = true;
+                }
+                catch (IllegalStateException e) {
+                    Timber.w("Resume from the notification failed: %s", e.getMessage());
+                }
+            }
+        }
+        if (started) {
+            if (mHandlerPlayback == null) {
+                mHandlerPlayback = new Handler(Looper.getMainLooper());
+            }
+            mHandlerPlayback.removeCallbacks(playbackStatus);
+            mHandlerPlayback.postDelayed(playbackStatus, 500);
+        }
+    }
+
+    /** The notification's stop key: every player is released (each broadcasts its stop state to the player card). */
+    private void releaseAll() {
+        for (Uri uri : new ArrayList<>(uriPlayers.keySet())) {
+            fileUri = uri;
+            playerRelease(uri);
+        }
+    }
+
+    /**
+     * No player left and no recording: leave the foreground and end the service. With startId, a command queued
+     * after this one keeps the service alive (Service.stopSelf(int)).
+     */
+    private void stopIfIdle(int startId) {
+        if (!uriPlayers.isEmpty() || mRecorder != null) {
+            return;
+        }
+        if (mForeground != PlaybackForeground.NONE) {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
+            mForeground = PlaybackForeground.NONE;
+        }
+        stopSelf(startId);
+    }
+
+    /** Enters, updates or leaves the foreground after every command and every completion; see PlaybackForeground. */
+    private void updateForeground() {
+        int playing = 0;
+        int paused = 0;
+        for (MediaPlayer player : uriPlayers.values()) {
+            if (player == null) {
+                continue;
+            }
+            try {
+                if (player.isPlaying()) {
+                    playing++;
+                }
+                else if (player.getCurrentPosition() > 0) {
+                    paused++;
+                }
+            }
+            catch (IllegalStateException e) {
+                // released or not prepared: counts as stopped
+            }
+        }
+        PlaybackForeground next = PlaybackForeground.of(playing, paused);
+        if (next == mForeground) {
+            return;
+        }
+        if (next == PlaybackForeground.NONE) {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
+            mForeground = next;
+            return;
+        }
+        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            Timber.i("Playback notification hidden: notifications are not permitted");
+        }
+        try {
+            ServiceCompat.startForeground(this, PlaybackNotification.ID,
+                    PlaybackNotification.build(this, next == PlaybackForeground.PLAYING),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            mForeground = next;
+        }
+        catch (RuntimeException e) {
+            // ForegroundServiceStartNotAllowedException (API 31+) if the app was already in the background: play on as before
+            Timber.w(e, "Playback cannot run in the foreground");
+        }
     }
 
     /* =============================================================

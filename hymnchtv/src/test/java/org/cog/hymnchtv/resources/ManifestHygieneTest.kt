@@ -35,4 +35,14 @@ class ManifestHygieneTest {
         assertThat(src).contains("MIXED_CONTENT_NEVER_ALLOW")
         assertThat(src).doesNotContain("setAllowUniversalAccessFromFileURLs")
     }
+
+    @Test
+    fun audioServiceIsAMediaPlaybackForegroundService() {
+        val manifest = File(main, "AndroidManifest.xml").readText()
+        val service = Regex("""<service[^>]*AudioBgService[^>]*/>""").find(manifest)!!.value
+        assertThat(service).contains("android:foregroundServiceType=\"mediaPlayback\"")
+        assertThat(service).contains("android:exported=\"false\"")
+        assertThat(service).doesNotContain("BIND_JOB_SERVICE")
+        assertThat(manifest).contains("android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK\"")
+    }
 }
