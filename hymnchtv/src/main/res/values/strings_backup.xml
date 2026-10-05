@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- D-1 F3 (manual backup) and F4 (automatic singing log switch) in Settings -->
+<resources>
+    <string name="sing_log_auto">Record the hymns I sing</string>
+    <string name="sing_log_auto_summary">Adds an entry when a lyrics page stays open for 120 seconds or its recording plays to the end. Kept only on this phone.</string>
+    <string name="backup_export">Export notebook</string>
+    <string name="backup_export_summary">Save favourites, notes, playlists and singing log to one file</string>
+    <string name="backup_import">Import notebook</string>
+    <string name="backup_import_summary">Merged with what is on this phone; nothing here is deleted</string>
+    <string name="backup_running">Working…</string>
+    <string name="backup_title">Notebook backup</string>
+    <string name="backup_export_done">Exported %1$d items.</string>
+    <string name="backup_import_done">Imported: %1$d new, %2$d updated.</string>
+    <string name="backup_import_skipped">%1$d invalid items were skipped.</string>
+    <string name="backup_error_format">This is not a Hymnal notebook backup.</string>
+    <string name="backup_error_version">This backup is from a newer version of the app. Please update the app first.</string>
+    <string name="backup_error_too_large">The file is too large to import.</string>
+    <string name="backup_error_io">Couldn\'t read or write the file.</string>
+    <string name="backup_error_storage">Couldn\'t save. Please try again.</string>
+</resources>

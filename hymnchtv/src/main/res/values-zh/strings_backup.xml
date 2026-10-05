@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sing_log_auto">自动记录唱过的诗歌</string>
+    <string name="sing_log_auto_summary">歌词页开着 120 秒或播放完毕时记下一笔，只存在这支手机。</string>
+    <string name="backup_export">导出笔记本</string>
+    <string name="backup_export_summary">把收藏、笔记、歌单与唱诗记录存成一个文件</string>
+    <string name="backup_import">导入笔记本</string>
+    <string name="backup_import_summary">与手机上现有的内容合并，现有内容不会被删除</string>
+    <string name="backup_running">处理中…</string>
+    <string name="backup_title">笔记本备份</string>
+    <string name="backup_export_done">已导出 %1$d 项。</string>
+    <string name="backup_import_done">已导入：新增 %1$d 项、更新 %2$d 项。</string>
+    <string name="backup_import_skipped">略过 %1$d 项无效的内容。</string>
+    <string name="backup_error_format">这不是诗歌笔记本的备份文件。</string>
+    <string name="backup_error_version">这个备份文件的版本比 App 新，请先更新 App。</string>
+    <string name="backup_error_too_large">文件太大，无法导入。</string>
+    <string name="backup_error_io">无法存取文件。</string>
+    <string name="backup_error_storage">无法保存，请再试一次。</string>
+</resources>
