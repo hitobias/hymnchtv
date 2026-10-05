@@ -53,6 +53,7 @@ public class NestedScrollableHost extends FrameLayout {
     private final SingleTapDetector tapDetector;
     private long downTime;
     private Runnable centreTapListener;
+    private Runnable readerTouchListener;
 
     public NestedScrollableHost(@NonNull Context context) {
         this(context, null);
@@ -70,8 +71,17 @@ public class NestedScrollableHost extends FrameLayout {
         centreTapListener = listener;
     }
 
+    /** Called on every ACTION_DOWN and ACTION_MOVE that enters this view, before its children see it; null removes it. */
+    public void setOnReaderTouchListener(Runnable listener) {
+        readerTouchListener = listener;
+    }
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent e) {
+        int action = e.getActionMasked();
+        if (readerTouchListener != null && (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE)) {
+            readerTouchListener.run();
+        }
         handleInterceptTouchEvent(e);
         return false;
     }

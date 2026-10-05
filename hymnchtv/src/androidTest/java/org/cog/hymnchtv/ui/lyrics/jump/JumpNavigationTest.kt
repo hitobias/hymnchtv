@@ -104,22 +104,50 @@ class JumpNavigationTest : JumpTestBase() {
         }
     }
 
+    /** Returns to DB 5 (scrolled to [y5]) and leaves the restore window open. */
+    private fun returnToScrolledDb5(): Int {
+        val y5 = scrollTopTo(600)
+        assertWithMessage("DB 5 must scroll on a 320x640 screen").that(y5).isGreaterThan(200)
+        jump(db100)
+        back()
+        awaitSettled(db5)
+        awaitScrollY("DB 5 scrolled back", y5)
+        return y5
+    }
+
     @Test
-    fun theReadersOwnScrollEndsTheRestore() {
-        launch(MainActivity.HYMN_DB, 5).use {
-            val y5 = scrollTopTo(600)
-            assertWithMessage("DB 5 must scroll on a 320x640 screen").that(y5).isGreaterThan(200)
-            jump(db100)
-            back()
-            awaitSettled(db5)
-            awaitScrollY("DB 5 scrolled back", y5)
-            // within the restore window: the reader scrolls, then the page lays out again (e.g. an image arrives)
+    fun theReadersOwnTouchEndsTheRestore() {
+        launch(MainActivity.HYMN_DB, 5).use { s ->
+            returnToScrolledDb5()
+            // within the restore window: a real touch on the page (a tap), then the page lays out again (e.g. an image arrives)
+            val p = s.hostPoint(0.5f, 0.5f)
+            val t0 = SystemClock.uptimeMillis()
+            val down = android.view.MotionEvent.obtain(t0, t0, android.view.MotionEvent.ACTION_DOWN, p[0].toFloat(), p[1].toFloat(), 0)
+            instrumentation.sendPointerSync(down)
+            val up = android.view.MotionEvent.obtain(t0, SystemClock.uptimeMillis(), android.view.MotionEvent.ACTION_UP, p[0].toFloat(), p[1].toFloat(), 0)
+            instrumentation.sendPointerSync(up)
+            down.recycle()
+            up.recycle()
+            instrumentation.waitForIdleSync()
             onTop { a ->
                 page(a)!!.findViewById<ScrollView>(R.id.lyrics_scroll).scrollTo(0, 0)
                 page(a)!!.findViewById<View>(R.id.lyricsView).requestLayout()
             }
             SystemClock.sleep(600)
             assertThat(topScrollY()).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun aProgrammaticScrollDoesNotEndTheRestore() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            val y5 = returnToScrolledDb5()
+            // no touch: the scroll (like applyLyricsInsets') and the next layout must not end the restore
+            onTop { a ->
+                page(a)!!.findViewById<ScrollView>(R.id.lyrics_scroll).scrollTo(0, 0)
+                page(a)!!.findViewById<View>(R.id.lyricsView).requestLayout()
+            }
+            awaitScrollY("the restore applied again", y5)
         }
     }
 

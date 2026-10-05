@@ -260,14 +260,10 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         topBar = mConvertView.findViewById(R.id.lyrics_top_bar);
         buttonBar = mConvertView.findViewById(R.id.lyricsButtonBar);
         lyricsScroll = mConvertView.findViewById(R.id.lyrics_scroll);
-        // H5: the reader's own touch or scroll ends a position restore (our own restore scroll is ignored)
-        lyricsScroll.setOnTouchListener((v, event) -> {
-            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
-                onReaderScroll();
-            }
-            return false;
-        });
-        lyricsScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> onReaderScroll());
+        // H5: only the reader's own touch on the page ends a position restore. Scrolls by code (our restore, the insets
+        // follow-up scrollTo) must not. The host sees every DOWN/MOVE first: the text view inside the scroll view can
+        // consume them, so a listener on the scroll view itself would miss a touch that lands on the text.
+        ((NestedScrollableHost) mConvertView.findViewById(R.id.lyrics_scroll_host)).setOnReaderTouchListener(this::onReaderScroll);
         // Toolbar heights change with font scale and orientation: keep the lyrics padding in step
         View.OnLayoutChangeListener insetsFollowBars = (v, l, t, r, b, ol, ot, or, ob) -> {
             if (b != ob || t != ot) {
@@ -341,7 +337,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private static final long RESTORE_WINDOW_MS = 2000;
     private ReadingPosition mRestorePosition;
     private int mRestoreY;
-    /** True while this class itself scrolls for a restore; any other scroll is the reader's and ends the restore. */
+    /** True while this class itself scrolls for a restore (the reader's touch is what ends it, see the touch listener). */
     private boolean mApplyingRestore = false;
     private final View.OnLayoutChangeListener mRestoreOnLayout = (v, l, t, r, b, ol, ot, or, ob) -> applyRestorePosition();
     private final Runnable mEndRestore = this::finishRestore;
