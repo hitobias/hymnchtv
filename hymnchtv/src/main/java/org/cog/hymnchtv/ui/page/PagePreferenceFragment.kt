@@ -8,6 +8,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.annotation.StringRes
+import androidx.preference.ListPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import androidx.recyclerview.widget.RecyclerView
@@ -72,6 +74,19 @@ abstract class PagePreferenceFragment : PreferenceFragmentCompat() {
     override fun onCreateAdapter(preferenceScreen: PreferenceScreen): RecyclerView.Adapter<*> =
         PagePreferenceAdapter(preferenceScreen) { checkNotNull(palette) { "palette is read before the view exists" } }
 
+    /** List preferences open a dialog painted with the page palette (1.6.0); other dialogs stay as the library makes them. */
+    override fun onDisplayPreferenceDialog(preference: Preference) {
+        if (preference !is ListPreference) {
+            super.onDisplayPreferenceDialog(preference)
+            return
+        }
+        if (parentFragmentManager.findFragmentByTag(DIALOG_TAG) != null) return
+        val dialog = PageListPreferenceDialog.newInstance(preference.key)
+        @Suppress("DEPRECATION") // required by PreferenceDialogFragmentCompat
+        dialog.setTargetFragment(this, 0)
+        dialog.show(parentFragmentManager, DIALOG_TAG)
+    }
+
     override fun onStart() {
         super.onStart()
         settings().registerOnSharedPreferenceChangeListener(prefsListener)
@@ -107,5 +122,8 @@ abstract class PagePreferenceFragment : PreferenceFragmentCompat() {
 
     private companion object {
         const val LIST_BOTTOM_DP = 24
+
+        /** The tag PreferenceFragmentCompat itself uses for its dialogs. */
+        const val DIALOG_TAG = "androidx.preference.PreferenceFragment.DIALOG"
     }
 }
