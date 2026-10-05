@@ -50,13 +50,14 @@ class JumpPanelFragment : DialogFragment(R.layout.panel_jump), PickerHost, Searc
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NO_TITLE, 0)
-        // Starts from the book on screen; PickerMode.JUMP never writes the home tab's remembered book
-        vm.restoreSource(HymnSource.ofBook(host.currentRef().book)?.prefValue)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val prefs = requireContext().getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE)
+        // Starts from the book on screen (once per ViewModel); PickerMode.JUMP never writes the home tab's remembered book.
+        // Not in onCreate: after a recreation the FragmentManager restores this panel before the pager exists.
+        vm.restoreSource(HymnSource.ofBook(host.currentRef().book)?.prefValue)
         val pickerViews = HymnPickerViews(view)
         views = pickerViews
         controller = HymnPickerController(pickerViews, this, PickerMode.JUMP, vm, prefs, ::titleSource, ::titleTraditional)

@@ -181,4 +181,20 @@ class JumpPanelTest : JumpTestBase() {
             assertThat(onTop { it.isFinishing }).isFalse()
         }
     }
+
+    @Test
+    fun theOpenPanelSurvivesARecreationOfTheLyricsPage() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            jump(bb37)
+            openPanel()
+            val before = onTop { it }
+            onTop { it.recreate() }
+            awaitTop("the recreated page with its panel", 15_000) { it !== before && panelOf(it)?.view != null }
+            assertThat(inPanel { it.findViewById<MaterialButton>(R.id.bs_bb).isChecked }).isTrue()
+            assertThat(topStack()).containsExactly(db5)
+            inPanel { it.findViewById<View>(R.id.jump_close).performClick() }
+            awaitPanelGone()
+            assertThat(topRef()).isEqualTo(bb37)
+        }
+    }
 }
