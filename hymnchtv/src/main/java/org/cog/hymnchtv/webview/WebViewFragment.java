@@ -72,7 +72,6 @@ public class WebViewFragment extends BaseFragment implements OnKeyListener {
     private ContentHandler mContentHandler;
     private boolean onErrorUrl = false;
 
-    @SuppressLint("JavascriptInterface")
     @Override
     public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         mContentHandler = (ContentHandler) mContext;
@@ -90,13 +89,11 @@ public class WebViewFragment extends BaseFragment implements OnKeyListener {
         // String defaultUserAgent = webSettings.getUserAgentString();
         // webSettings.setUserAgentString(defaultUserAgent + agent);
 
-        // https://developer.android.com/guide/webapps/webview#BindingJavaScript
-        webView.addJavascriptInterface(HymnsApp.getInstance(), "Android");
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
-        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        webSettings.setAllowUniversalAccessFromFileURLs(true);
+        // No http content inside https pages (plain http pages still load; network_security_config decides which hosts)
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
         // https://developer.android.com/guide/webapps/webview#HandlingNavigation
         webView.setWebViewClient(new MyWebViewClient(this) {
