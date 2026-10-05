@@ -103,8 +103,8 @@ class ReadingPanelTest : LyricsTestBase() {
             assertThat(lyricsView(s).currentTextColor).isEqualTo(preset.textColor)
             assertThat(s.read { it.lyricsTokens.surface }).isNotEqualTo(before)
             // the top bar plate follows the new tokens
-            val plate = s.read { (page(it)!!.findViewById<View>(R.id.lyrics_top_bar).background as android.graphics.drawable.ColorDrawable).color }
-            assertThat(plate).isEqualTo(s.read { it.lyricsTokens.surface })
+            val plate = s.read { (page(it)!!.findViewById<View>(R.id.lyrics_top_bar).background as android.graphics.drawable.GradientDrawable).color!!.defaultColor }
+            assertThat(plate).isEqualTo(s.read { org.cog.hymnchtv.ui.lyrics.ChromeCapsuleColors.from(it.lyricsTokens).fill })
         }
     }
 

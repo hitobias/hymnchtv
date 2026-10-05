@@ -2,11 +2,15 @@
 <resources>
     <!-- Lyrics page chrome (visual redesign B): top bar, short button labels, Aa panel, toolbar hint -->
     <string name="c_lyrics_aa">Aa</string>
-    <string name="c_btn_script">简-繁</string>
-    <string name="c_btn_cn_en">中英</string>
-    <string name="c_btn_mode_both">谱词</string>
-    <string name="c_btn_mode_lyrics">词</string>
-    <string name="c_btn_mode_score">谱</string>
+    <string name="c_btn_mode_both">词＋谱</string>
+    <string name="c_btn_mode_lyrics">歌词</string>
+    <string name="c_btn_mode_score">诗谱</string>
+    <!-- Bottom capsule: the two sides of the script and language items; the side in use is drawn in the accent colour -->
+    <string name="c_pill_trad">繁</string>
+    <string name="c_pill_simp">简</string>
+    <string name="c_pill_zh">中</string>
+    <string name="c_pill_en">英</string>
+    <string name="c_cd_no_english">这首诗歌没有英文歌词</string>
     <string name="c_cd_script">切换简体与繁体歌词</string>
     <string name="c_cd_cn_en">切换中文与英文歌词</string>
     <string name="c_cd_mode">显示模式：%1$s，点一下切换</string>

@@ -2,11 +2,15 @@
 <resources>
     <!-- Lyrics page chrome (visual redesign B): top bar, short button labels, Aa panel, toolbar hint -->
     <string name="c_lyrics_aa">Aa</string>
-    <string name="c_btn_script">Simp-Trad</string>
-    <string name="c_btn_cn_en">CN/EN</string>
     <string name="c_btn_mode_both">Both</string>
     <string name="c_btn_mode_lyrics">Text</string>
     <string name="c_btn_mode_score">Score</string>
+    <!-- Bottom capsule: the two sides of the script and language items; the side in use is drawn in the accent colour -->
+    <string name="c_pill_trad">TC</string>
+    <string name="c_pill_simp">SC</string>
+    <string name="c_pill_zh">ZH</string>
+    <string name="c_pill_en">EN</string>
+    <string name="c_cd_no_english">This hymn has no English lyrics</string>
     <string name="c_cd_script">Switch between Simplified and Traditional lyrics</string>
     <string name="c_cd_cn_en">Switch between Chinese and English lyrics</string>
     <string name="c_cd_mode">Display mode: %1$s. Tap to change</string>

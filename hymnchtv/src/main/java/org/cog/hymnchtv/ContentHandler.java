@@ -132,6 +132,9 @@ import org.cog.hymnchtv.ui.lyrics.FavoriteController;
 import org.cog.hymnchtv.notebook.Notebook;
 import org.cog.hymnchtv.ui.lyrics.LyricsChromeHost;
 import org.cog.hymnchtv.ui.lyrics.LyricsWindowInsets;
+import org.cog.hymnchtv.ui.lyrics.PillAnchor;
+import org.cog.hymnchtv.ui.player.CapsuleForm;
+import org.cog.hymnchtv.ui.player.SheetDisplay;
 import org.cog.hymnchtv.ui.motion.Motion;
 import org.cog.hymnchtv.ui.motion.SharedNumberStarter;
 import org.cog.hymnchtv.ui.player.PlaybackUiListener;
@@ -662,6 +665,13 @@ public class ContentHandler extends BaseActivity {
     /** Pixels the lyrics keep clear for the player layer: the card's height, the capsule's, or 0. */
     public int getPlayerReserve() {
         return mPlayerSheet == null ? 0 : mPlayerSheet.playerReserve();
+    }
+
+    /** What the bottom toolbar capsule lines up with (player display and capsule width). */
+    public PillAnchor getPillAnchor() {
+        return mPlayerSheet == null
+                ? new PillAnchor(SheetDisplay.HIDDEN, 0, CapsuleForm.NOTE)
+                : mPlayerSheet.pillAnchor();
     }
 
     /** System bottom (or keyboard) inset in pixels, counted once for the lyrics padding. */
