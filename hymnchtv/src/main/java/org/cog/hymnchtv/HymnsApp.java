@@ -167,8 +167,9 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
             screenHeight = Math.abs(mBounds.height());
         }
 
-        // Purge all the previously old downloaded apk; DownloadManager IPC and prefs, so off the main thread (B-7)
-        AppExecutors.io("remove-old-apks", () -> UpdateServiceImpl.getInstance().removeOldDownloads());
+        // An update download the last process left: verify it if it finished, else purge old downloads (1.6.0).
+        // DownloadManager IPC and prefs, so off the main thread (B-7)
+        AppExecutors.io("resume-or-clean-apks", () -> UpdateServiceImpl.getInstance().resumeOrCleanOnStart());
         EdgeToEdgeDisable();
     }
 

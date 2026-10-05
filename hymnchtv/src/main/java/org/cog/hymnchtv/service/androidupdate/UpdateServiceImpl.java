@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.cog.hymnchtv.HymnsApp;
 import org.cog.hymnchtv.MainActivity;
@@ -64,6 +65,8 @@ import timber.log.Timber;
  * and posts a notification; the user's tap opens UpdateInstallActivity. The download receiver never starts
  * activities. Every public method except {@link #removeOldDownloads()} does network or file I/O: call off the main thread.
  * The download-id store has its own lock ({@code storeLock}), so store access never waits for {@link #fetchLatest()}'s network calls.
+ * Since 1.6.0 the release and SHA-256 of the download in progress are saved with its id (PendingDownload): a download that
+ * finished while the process was dead is verified at the next start ({@link #resumeOrCleanOnStart()}) instead of deleted.
  *
  * @author Eng Chong Meng
  */
@@ -84,6 +87,9 @@ public class UpdateServiceImpl {
 
     /** Guards {@code downloadReceiver}; separate from the instance monitor for the same reason as {@code storeLock}. */
     private final Object receiverLock = new Object();
+
+    /** The id being verified, or -1: the start-up recovery and the receiver may both see one finished download. */
+    private final AtomicLong verifyingId = new AtomicLong(-1L);
 
     private GitHubReleaseClient releaseClient = null;
     private volatile Offer latestOffer = null;
@@ -242,14 +248,39 @@ public class UpdateServiceImpl {
             HymnsApp.showToastMessage(R.string.download_failed);
             return;
         }
-        registerDownloadReceiver(release, offer.sha256);
-
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(release.getApkUrl()));
         request.setTitle(release.getApkName());
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
         request.setMimeType(APK_MIME_TYPE);
         request.setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, release.getApkName());
-        rememberDownloadId(HymnsApp.getDownloadManager().enqueue(request));
+
+        DownloadStart.run(new DownloadStart.Steps() {
+            @Override
+            public long enqueue() {
+                return HymnsApp.getDownloadManager().enqueue(request);
+            }
+
+            @Override
+            public void persist(long id) {
+                rememberDownload(new PendingDownload(id, release.getTag(), release.getApkName(), offer.sha256));
+            }
+
+            @Override
+            public void registerReceiver() {
+                registerDownloadReceiver(release, offer.sha256);
+            }
+
+            @Override
+            public int status(long id) {
+                return checkDownloadStatus(id);
+            }
+
+            @Override
+            public void verifyNow(long id) {
+                unregisterDownloadReceiver();
+                new Thread(() -> verifyFinishedDownload(id, release, offer.sha256), "hymnal-apk-verify").start();
+            }
+        });
     }
 
     private void registerDownloadReceiver(ReleaseInfo release, String sha256) {
@@ -277,6 +308,10 @@ public class UpdateServiceImpl {
      * Runs on a worker thread after the download finished. Never starts an activity.
      */
     private void verifyFinishedDownload(long id, ReleaseInfo release, String sha256) {
+        // Verify each finished download once: it is no longer listed after the first run, or another thread is on it
+        if (!getOldDownloads().contains(id) || !verifyingId.compareAndSet(-1L, id)) {
+            return;
+        }
         Context context = HymnsApp.getGlobalContext();
         try {
             if (checkDownloadStatus(id) != DownloadManager.STATUS_SUCCESSFUL || sha256 == null) {
@@ -304,6 +339,7 @@ public class UpdateServiceImpl {
         }
         finally {
             removeOldDownloads();
+            verifyingId.set(-1L);
         }
     }
 
@@ -379,10 +415,49 @@ public class UpdateServiceImpl {
         }
     }
 
-    private void rememberDownloadId(long id) {
+    /** Appends the id and saves its record in one synchronous write: the receiver must find the id once it listens. */
+    private void rememberDownload(PendingDownload pending) {
         synchronized (storeLock) {
             SharedPreferences prefs = getStore();
-            prefs.edit().putString(ENTRY_NAME, prefs.getString(ENTRY_NAME, "") + id + ",").apply();
+            prefs.edit()
+                    .putString(ENTRY_NAME, prefs.getString(ENTRY_NAME, "") + pending.getId() + ",")
+                    .putString(PendingDownload.PREF_KEY, pending.encode())
+                    .commit();
+        }
+    }
+
+    /**
+     * At start-up, on AppExecutors.io (replaces the plain {@link #removeOldDownloads()} call). A download recorded by the
+     * last process that finished meanwhile is verified now; one still running gets its receiver back; anything else is
+     * removed as before. See DownloadRecovery.
+     */
+    public void resumeOrCleanOnStart() {
+        PendingDownload pending = PendingDownload.decode(getStore().getString(PendingDownload.PREF_KEY, null));
+        if (pending == null) {
+            removeOldDownloads();
+            return;
+        }
+        List<Long> ids = getOldDownloads();
+        boolean latest = !ids.isEmpty() && ids.get(ids.size() - 1) == pending.getId();
+        ReleaseInfo release = pending.toRelease();
+        File file = expectedDownloadFile(release);
+        int status = checkDownloadStatus(pending.getId());
+        SemVer installed = SemVer.parse(VersionServiceImpl.getInstance().getCurrentVersionName());
+        switch (DownloadRecovery.decide(latest, status, file != null && file.isFile(), release.getVersion(), installed)) {
+            case VERIFY:
+                Timber.w("Verifying %s, downloaded while the app was not running", release.getApkName());
+                verifyFinishedDownload(pending.getId(), release, pending.getSha256());
+                break;
+            case WAIT:
+                registerDownloadReceiver(release, pending.getSha256());
+                // it may have finished between the query and the registration
+                if (checkDownloadStatus(pending.getId()) == DownloadManager.STATUS_SUCCESSFUL) {
+                    unregisterDownloadReceiver();
+                    verifyFinishedDownload(pending.getId(), release, pending.getSha256());
+                }
+                break;
+            default:
+                removeOldDownloads();
         }
     }
 
@@ -413,7 +488,7 @@ public class UpdateServiceImpl {
             for (long id : getOldDownloads()) {
                 downloadManager.remove(id);
             }
-            getStore().edit().remove(ENTRY_NAME).apply();
+            getStore().edit().remove(ENTRY_NAME).remove(PendingDownload.PREF_KEY).apply();
         }
 
         SemVer installed = SemVer.parse(VersionServiceImpl.getInstance().getCurrentVersionName());
