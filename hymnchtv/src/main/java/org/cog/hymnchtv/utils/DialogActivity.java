@@ -9,10 +9,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -40,6 +44,9 @@ import java.util.Map;
  * @author Eng Chong Meng
  */
 public class DialogActivity extends BaseActivity {
+    /** Long content scrolls inside the card above this share of the screen height, so the buttons stay visible. */
+    private static final float MAX_CONTENT_FRACTION = 0.45f;
+
     /**
      * Dialog title extra.
      */
@@ -145,8 +152,16 @@ public class DialogActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         Intent intent = getIntent();
         setContentView(R.layout.alert_dialog);
+        // Long messages and custom fragments scroll inside the card; the stacked buttons stay visible
+        applyContentBounds();
         mContent = findViewById(android.R.id.content);
         setTitle(intent.getStringExtra(EXTRA_TITLE));
+
+        // The card has no window title bar (AppTheme.Dialog windowNoTitle): the title is part of the layout
+        String title = intent.getStringExtra(EXTRA_TITLE);
+        TextView titleView = findViewById(R.id.alertTitle);
+        titleView.setText(title);
+        titleView.setVisibility(TextUtils.isEmpty(title) ? View.GONE : View.VISIBLE);
 
         // Message or custom content
         String contentFragment = intent.getStringExtra(EXTRA_CONTENT_FRAGMENT);
@@ -189,6 +204,14 @@ public class DialogActivity extends BaseActivity {
         ViewUtil.ensureVisible(mContent, R.id.cancelButton, confirmTxt != null);
         findViewById(R.id.cancelButton).setOnClickListener(this::onCancelClicked);
 
+        // A lone primary button keeps the same gap above it as the button pair
+        if (confirmTxt == null) {
+            View okButton = findViewById(R.id.okButton);
+            ViewGroup.MarginLayoutParams okParams = (ViewGroup.MarginLayoutParams) okButton.getLayoutParams();
+            okParams.topMargin = getResources().getDimensionPixelSize(R.dimen.dialog_button_gap_first);
+            okButton.setLayoutParams(okParams);
+        }
+
         // Sets the listener
         mListenerId = intent.getLongExtra(EXTRA_LISTENER_ID, -1);
         if (mListenerId != -1) {
@@ -219,6 +242,23 @@ public class DialogActivity extends BaseActivity {
                 displayedDialogs.notifyAll();
             }
         }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        applyContentBounds();
+    }
+
+    /**
+     * Caps the scrolling content to a share of the screen and, in landscape, drops the icon so the buttons stay on screen.
+     * Re-run on rotation because the manifest handles orientation changes itself.
+     */
+    private void applyContentBounds() {
+        BoundedScrollView scroll = findViewById(R.id.alertScroll);
+        scroll.setMaxHeightPx((int) (getResources().getDisplayMetrics().heightPixels * MAX_CONTENT_FRACTION));
+        boolean landscape = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+        findViewById(R.id.alertIcon).setVisibility(landscape ? View.GONE : View.VISIBLE);
     }
 
     /**

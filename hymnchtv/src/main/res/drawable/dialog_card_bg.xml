@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dialog card (spec rev 3 section 5): 24dp corners, 16dp clear of the screen edges; the colour follows the app theme -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="16dp"
+    android:insetTop="16dp"
+    android:insetRight="16dp"
+    android:insetBottom="16dp">
+    <shape android:shape="rectangle">
+        <corners android:radius="24dp" />
+        <solid android:color="@color/dialog_surface" />
+    </shape>
+</inset>

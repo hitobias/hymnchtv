@@ -26,5 +26,10 @@
         <item name="colorSecondary">@color/color_accent</item>
         <item name="listItemRow">@style/RowList.Light</item>
         <item name="listItemRadio">@style/RadioListItem.Light</item>
+        <item name="android:windowBackground">@drawable/dialog_card_bg</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowMinWidthMinor">@fraction/dialog_min_width</item>
+        <item name="android:windowMinWidthMajor">@fraction/dialog_min_width</item>
+        <item name="android:backgroundDimAmount">0.38</item>
     </style>
 </resources>
