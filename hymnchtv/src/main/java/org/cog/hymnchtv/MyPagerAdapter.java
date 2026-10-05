@@ -63,6 +63,11 @@ public class MyPagerAdapter extends FragmentStateAdapter {
         mHymnType = hymnType;
     }
 
+    /** The book this adapter pages through; the pager, not mHymnType, says which hymn is on screen (plan H5). */
+    public String getHymnType() {
+        return mHymnType;
+    }
+
     @Override
     public @NotNull Fragment createFragment(int index) {
         Bundle bundle = getHymnFragment(index);

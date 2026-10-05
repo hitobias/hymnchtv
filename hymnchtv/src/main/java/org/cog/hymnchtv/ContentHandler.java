@@ -96,6 +96,9 @@ import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsScript;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+import org.cog.hymnchtv.hymn.HymnRef;
+import org.cog.hymnchtv.nav.ViewingCause;
+import org.cog.hymnchtv.nav.ViewingObserver;
 import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import kotlin.jvm.functions.Function1;
@@ -327,6 +330,10 @@ public class ContentHandler extends BaseActivity {
     @VisibleForTesting
     public static org.cog.hymnchtv.ui.lyrics.ChromeTimer sChromeTimerForTest = null;
 
+    /** Tests observe the viewing entry point here (static: a path-B page is a new instance); null in production. */
+    @VisibleForTesting
+    public static ViewingObserver sViewingObserverForTest = null;
+
     /** Show/hide state of the lyrics toolbars shared by all pager pages (plan 6c). */
     private LyricsChromeHost mChromeHost;
 
@@ -453,9 +460,8 @@ public class ContentHandler extends BaseActivity {
             break;
         }
 
-        // Created before the pager so that pages built by the adapter can ask for the current state
+        // Created before the pager so that pages built by the adapter can ask for the current state (set in onViewingHymn)
         mFavorites = new FavoriteController(Notebook.async(this), mFavoriteListener);
-        mFavorites.onHymnChanged(mHymnType, mHymnNo);
 
         // The pager adapter, which provides the pages to the view pager widget.
         mPagerAdapter = new MyPagerAdapter(this, mHymnType);
@@ -481,6 +487,8 @@ public class ContentHandler extends BaseActivity {
         else
             mPager.setCurrentItem(mHymnNo, false);
 
+        // The pager is on the hymn to show: the one entry point reports it (a path-B jump target arrives here too)
+        onViewingHymn(savedInstanceState == null ? ViewingCause.OPENED : ViewingCause.RESTORED);
         mPager.registerOnPageChangeCallback(initOnPageChangeCallback());
         getOnBackPressedDispatcher().addCallback(backPressedCallback);
         setupEnterMotion(savedInstanceState != null);
@@ -1083,13 +1091,9 @@ public class ContentHandler extends BaseActivity {
              */
             @Override
             public void onPageSelected(int position) {
-                int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, position)[0];
-                if (tmp != mHymnNo) {
-                    mHymnNo = tmp;
-                    hymnIdx = position;
-                    mFavorites.onHymnChanged(mHymnType, mHymnNo);
-                    stopPlaybackForHymnChange();
-                    updateMediaPlayerInfo();
+                int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mPagerAdapter.getHymnType(), position)[0];
+                if (tmp != mHymnNo || !mPagerAdapter.getHymnType().equals(mHymnType)) {
+                    onViewingHymn(ViewingCause.CHANGED);
 
                     // Will be handled in ContentView.onCreateView()
                     // ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
@@ -1349,17 +1353,17 @@ public class ContentHandler extends BaseActivity {
                 dir = mHymnType + MEDIA_CHANGSHI;
                 if (isFileExist(dir, mHymnNo, uriList)) break;
 
+                // A bibletool download of a cross-referenced youth hymn is saved under the other book (getHymnUri sets mDir)
+                HymnRef bibleTool = bibleToolRef(mHymnType, mHymnNo);
+                if (!bibleTool.getBook().equals(mHymnType)
+                        && isFileExist(bibleTool.getBook() + MEDIA_CHANGSHI, bibleTool.getStoredNo(), uriList)) break;
+
                 if (proceedDownLoad) {
                     fileName = "Q" + fileName + ".mp3";
                     fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/yb/mp3/Q%d.mp3", mHymnNo);
 
-                    // Translate YB to other if specified.
-                    String hymnTN = ybXTable.get(mHymnNo);
-                    if (hymnTN != null) {
-                        mHymnType = MainActivity.getHymnType(hymnTN);
-                        mHymnNo = Integer.parseInt(hymnTN.substring(2));
-                    }
-                    uriList.add(Uri.parse(getHymnUri()));
+                    // Only the link is translated to the other book; the hymn on screen is never rewritten (plan H5)
+                    uriList.add(Uri.parse(getHymnUri(bibleTool.getBook(), bibleTool.getStoredNo())));
                     return uriList;
                 }
 
@@ -1477,7 +1481,8 @@ public class ContentHandler extends BaseActivity {
     public void showBibleToolHymnal() {
         if (isFinishing() || isDestroyed())
             return;
-        String url = getHymnUri();
+        HymnRef bibleTool = bibleToolRef(mHymnType, mHymnNo);
+        String url = getHymnUri(bibleTool.getBook(), bibleTool.getStoredNo());
         initWebView(ContentHandler.UrlType.hymnBibleTool, url);
     }
 
@@ -1507,20 +1512,32 @@ public class ContentHandler extends BaseActivity {
      *
      * @return the bibletool.online media url link.
      */
+    /** The hymn whose bibletool page serves [type]/[no]: a youth hymn whose lyrics live in another book is listed there. */
+    private static HymnRef bibleToolRef(String type, int no) {
+        String hymnTN = HYMN_YB.equals(type) ? ybXTable.get(no) : null;
+        return hymnTN == null ? new HymnRef(type, no)
+                : new HymnRef(MainActivity.getHymnType(hymnTN), Integer.parseInt(hymnTN.substring(2)));
+    }
+
     public String getHymnUri() {
+        return getHymnUri(mHymnType, mHymnNo);
+    }
+
+    /** The bibletool media link of [book]/[no]; also sets mDir/mFileName for a later download (startFileDownload). */
+    private String getHymnUri(String book, int no) {
         String uri = null;
-        String hymnType = HymnTypeMap.get(mHymnType);
+        String hymnType = HymnTypeMap.get(book);
         String subLink = "";
         String resName = "";
 
-        mDir = mHymnType + MEDIA_CHANGSHI;
-        String hymnTitle = getHymnTitle();
-        String fileName = mHymnNo + hymnTitle;
+        mDir = book + MEDIA_CHANGSHI;
+        String hymnTitle = getHymnTitle(book, no);
+        String fileName = no + hymnTitle;
 
-        switch (mHymnType) {
+        switch (book) {
         case HYMN_ER:
             for (int idx = 0; idx < category_er.length; idx++) {
-                if (mHymnNo < category_er[idx]) {
+                if (no < category_er[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", (idx - 1), hymnCategoryEr[idx - 1]);
                     break;
                 }
@@ -1533,7 +1550,7 @@ public class ContentHandler extends BaseActivity {
         case HYMN_XB:
             // dnlink for xB does not use the last hymn category for fetching
             for (int idx = 0; idx < category_xb.length; idx++) {
-                if (mHymnNo < category_xb[idx]) {
+                if (no < category_xb[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", idx, hymnCategoryXb[idx - 1]);
                     break;
                 }
@@ -1555,7 +1572,7 @@ public class ContentHandler extends BaseActivity {
 
         case HYMN_BB:
             for (int idx = 0; idx < category_bb.length; idx++) {
-                if (mHymnNo < category_bb[idx]) {
+                if (no < category_bb[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", (idx - 1), hymnCategoryBb[idx - 1]);
                     break;
                 }
@@ -1566,19 +1583,19 @@ public class ContentHandler extends BaseActivity {
 
         case HYMN_DB:
             for (int idx = 0; idx < category_db.length; idx++) {
-                if (mHymnNo < category_db[idx]) {
+                if (no < category_db[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", idx, hymnCategoryDb[idx - 1]);
                     break;
                 }
             }
             // Generate the resName for link creation; DB uses lyricsPhrase
-            resName = DB_Links.get(mHymnNo);
+            resName = DB_Links.get(no);
             if (resName == null) {
-                if (mHymnNo > HYMN_DB_NO_MAX) {
-                    resName = "DF" + (mHymnNo - HYMN_DB_NO_MAX) + lyricsPhrase;
+                if (no > HYMN_DB_NO_MAX) {
+                    resName = "DF" + (no - HYMN_DB_NO_MAX) + lyricsPhrase;
                 }
                 else {
-                    resName = "D" + mHymnNo + lyricsPhrase;
+                    resName = "D" + no + lyricsPhrase;
                 }
             }
             uri = String.format(Locale.CHINA, btMp3Link, hymnType, subLink, resName);
@@ -1586,7 +1603,7 @@ public class ContentHandler extends BaseActivity {
         }
 
         // Use supported filename for DB Fu hymn when saving media file.
-        resName = resName.replaceFirst("DF\\d+", "D" + mHymnNo);
+        resName = resName.replaceFirst("DF\\d+", "D" + no);
         mFileName = resName + ".mp3";
         Timber.d("bibleTool: %s", uri);
         return uri;
@@ -1705,8 +1722,12 @@ public class ContentHandler extends BaseActivity {
      * Currently use in  MP3 media fileName is: ? + hymnNo + hymnTitle + ".mp3"
      */
     private String getHymnTitle() {
+        return getHymnTitle(mHymnType, mHymnNo);
+    }
+
+    private String getHymnTitle(String book, int no) {
         String pattern = "[，、‘’！：；。？]";
-        String hymnTitle = getHymnInfo().split(":\\s|？|（")[1].replaceAll(pattern, "");
+        String hymnTitle = getHymnInfo(book, no, null).split(":\\s|？|（")[1].replaceAll(pattern, "");
         // Strip off the hymn category prefix
         int idx = hymnTitle.lastIndexOf("－");
         if (idx != -1) {
@@ -1730,44 +1751,48 @@ public class ContentHandler extends BaseActivity {
      * (null: Simplified). Only the Simplified info may be used to build media file names and search phrases.
      */
     private String getHymnInfo(HantVariant variant) {
+        return getHymnInfo(mHymnType, mHymnNo, variant);
+    }
+
+    private String getHymnInfo(String book, int no, HantVariant variant) {
         String fileName = "";
         String hymnTitle = "";
         String hymnInfo = "";
         Resources res = getResources();
 
-        if (mHymnNo == HYMN_BB_DUMMY) {
+        if (no == HYMN_BB_DUMMY) {
             return getString(R.string.hymn_no_chinese_lyrics, mHymnNoEng);
         }
 
-        switch (mHymnType) {
+        switch (book) {
         case HYMN_ER:
-            fileName = LYRICS_ER_DIR + "er" + mHymnNo + ".txt";
+            fileName = LYRICS_ER_DIR + "er" + no + ".txt";
             break;
 
         case HYMN_XG:
-            fileName = LYRICS_XG_DIR + "xg" + mHymnNo + ".txt";
+            fileName = LYRICS_XG_DIR + "xg" + no + ".txt";
             break;
 
         case HYMN_XB:
-            fileName = LYRICS_XB_DIR + "xb" + mHymnNo + ".txt";
+            fileName = LYRICS_XB_DIR + "xb" + no + ".txt";
             break;
 
         case HYMN_YB:
-            String hymnTN = ybXTable.get(mHymnNo);
+            String hymnTN = ybXTable.get(no);
             if (hymnTN != null) {
                 fileName = getHymnDir(hymnTN) + hymnTN + ".txt";
             }
             else {
-                fileName = LYRICS_YB_DIR + "yb" + mHymnNo + ".txt";
+                fileName = LYRICS_YB_DIR + "yb" + no + ".txt";
             }
             break;
 
         case HYMN_BB:
-            fileName = LYRICS_BB_DIR + "bb" + mHymnNo + ".txt";
+            fileName = LYRICS_BB_DIR + "bb" + no + ".txt";
             break;
 
         case HYMN_DB:
-            fileName = LYRICS_DB_DIR + "db" + mHymnNo + ".txt";
+            fileName = LYRICS_DB_DIR + "db" + no + ".txt";
             break;
         }
 
@@ -1819,7 +1844,7 @@ public class ContentHandler extends BaseActivity {
         }
 
         int resId = -1;
-        switch (mHymnType) {
+        switch (book) {
         case HYMN_ER:
             resId = R.string.hymn_title_mc_er;
             break;
@@ -1836,14 +1861,14 @@ public class ContentHandler extends BaseActivity {
             resId = R.string.hymn_title_mc_bb;
             break;
         case HYMN_DB:
-            resId = (mHymnNo > HYMN_DB_NO_MAX) ? R.string.hymn_title_mc_dbs : R.string.hymn_title_mc_db;
+            resId = (no > HYMN_DB_NO_MAX) ? R.string.hymn_title_mc_dbs : R.string.hymn_title_mc_db;
             break;
         }
 
         if (variant == null) {
-            mHymnSearch = res.getString(resId, mHymnNo, lyricsPhrase);
+            mHymnSearch = res.getString(resId, no, lyricsPhrase);
         }
-        hymnInfo = res.getString(resId, mHymnNo, hymnTitle);
+        hymnInfo = res.getString(resId, no, hymnTitle);
         return hymnInfo;
     }
 
@@ -1952,10 +1977,37 @@ public class ContentHandler extends BaseActivity {
         return idx < 0 ? mHymnType : MediaConfig.hymnTypeEntries(context).get(idx);
     }
 
+    /** The hymn on screen, from the pager itself (book of the adapter, page on screen). */
+    @NonNull
+    public HymnRef currentRef() {
+        String book = mPagerAdapter.getHymnType();
+        return new HymnRef(book, HymnIdx2NoConvert.hymnIdx2NoConvert(book, mPager.getCurrentItem())[0]);
+    }
+
+    /**
+     * The single entry point for the hymn on screen (plan H5): a new page (OPENED), a recreation (RESTORED) and every
+     * change (CHANGED: page turn, next, auto-next, jump, return). The viewing fields follow the pager here. D-1 hooks its
+     * sing log here: OPENED and CHANGED are readings, RESTORED is not.
+     */
+    private void onViewingHymn(@NonNull ViewingCause cause) {
+        HymnRef ref = currentRef();
+        mHymnType = ref.getBook();
+        mHymnNo = ref.getStoredNo();
+        hymnIdx = mPager.getCurrentItem();
+        mFavorites.onHymnChanged(mHymnType, mHymnNo);
+        if (cause == ViewingCause.CHANGED) {
+            stopPlaybackForHymnChange();
+            updateMediaPlayerInfo(); // a new page's player calls it itself once created (MediaGuiController)
+        }
+        if (sViewingObserverForTest != null) {
+            sViewingObserverForTest.onViewing(ref, cause);
+        }
+    }
+
     /** The "next" button and auto-next: one page forward from the page on screen (a swipe moves it too). */
     public boolean scrollNextHymn() {
         int nextIdx = mPager.getCurrentItem() + 1;
-        int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, nextIdx)[0];
+        int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mPagerAdapter.getHymnType(), nextIdx)[0];
         if (tmp != -1) {
             Timber.e("Scroll next hymn: %s: (AutoStream: %s)", tmp, mAutoStream);
             hymnIdx = nextIdx;
