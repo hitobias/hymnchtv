@@ -8,5 +8,4 @@
     <color name="dialog_on_primary">#FFFFFF</color>
     <color name="dialog_tonal">#EFE2D6</color>
     <color name="dialog_on_tonal">#5A2A18</color>
-    <color name="dialog_scrim">#61000000</color>
 </resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimum dialog card width: the whole window on phones, 65% on tablets (values-w600dp) -->
+<resources>
+    <fraction name="dialog_min_width">100%</fraction>
+</resources>

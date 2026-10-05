@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -152,8 +153,7 @@ public class DialogActivity extends BaseActivity {
         Intent intent = getIntent();
         setContentView(R.layout.alert_dialog);
         // Long messages and custom fragments scroll inside the card; the stacked buttons stay visible
-        BoundedScrollView scroll = findViewById(R.id.alertScroll);
-        scroll.setMaxHeightPx((int) (getResources().getDisplayMetrics().heightPixels * MAX_CONTENT_FRACTION));
+        applyContentBounds();
         mContent = findViewById(android.R.id.content);
         setTitle(intent.getStringExtra(EXTRA_TITLE));
 
@@ -242,6 +242,23 @@ public class DialogActivity extends BaseActivity {
                 displayedDialogs.notifyAll();
             }
         }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        applyContentBounds();
+    }
+
+    /**
+     * Caps the scrolling content to a share of the screen and, in landscape, drops the icon so the buttons stay on screen.
+     * Re-run on rotation because the manifest handles orientation changes itself.
+     */
+    private void applyContentBounds() {
+        BoundedScrollView scroll = findViewById(R.id.alertScroll);
+        scroll.setMaxHeightPx((int) (getResources().getDisplayMetrics().heightPixels * MAX_CONTENT_FRACTION));
+        boolean landscape = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+        findViewById(R.id.alertIcon).setVisibility(landscape ? View.GONE : View.VISIBLE);
     }
 
     /**

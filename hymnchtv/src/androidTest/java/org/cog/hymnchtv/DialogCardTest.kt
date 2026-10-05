@@ -133,4 +133,61 @@ class DialogCardTest {
             }
         }
     }
+
+    private fun longIntent(): Intent {
+        val long = (1..200).joinToString("\n") { "Line $it of a very long release note" }
+        return DialogActivity.getDialogIntent(ctx, "Title", long).apply {
+            putExtra(DialogActivity.EXTRA_CANCELABLE, true)
+            putExtra(DialogActivity.EXTRA_CONFIRM_TXT, "Update")
+        }
+    }
+
+    private fun assertButtonsFullyOnScreen(a: DialogActivity) {
+        val dm = a.resources.displayMetrics
+        val screen = Rect(0, 0, dm.widthPixels, dm.heightPixels)
+        for (id in listOf(R.id.okButton, R.id.cancelButton)) {
+            val v = a.findViewById<View>(id)
+            val xy = IntArray(2).also { v.getLocationOnScreen(it) }
+            assertThat(screen.contains(Rect(xy[0], xy[1], xy[0] + v.width, xy[1] + v.height))).isTrue()
+        }
+    }
+
+    private fun rotate(s: ActivityScenario<DialogActivity>, orientation: Int) {
+        s.onActivity { it.requestedOrientation = orientation }
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        Thread.sleep(1500) // rotation is asynchronous; there is no idle signal for the display change
+    }
+
+    @Test
+    fun longMessageKeepsButtonsOnScreenWhenOpenedInLandscape() {
+        ActivityScenario.launch<DialogActivity>(longIntent()).use { s ->
+            try {
+                rotate(s, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+                s.onActivity { assertButtonsFullyOnScreen(it) }
+            } finally {
+                rotate(s, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+            }
+        }
+    }
+
+    @Test
+    fun rotatingAnOpenDialogToLandscapeKeepsButtonsOnScreenAndBackToPortrait() {
+        ActivityScenario.launch<DialogActivity>(longIntent()).use { s ->
+            try {
+                s.onActivity { assertButtonsFullyOnScreen(it) }
+                rotate(s, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+                s.onActivity {
+                    assertThat(it.resources.configuration.orientation).isEqualTo(android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+                    assertButtonsFullyOnScreen(it)
+                }
+                rotate(s, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                s.onActivity {
+                    assertThat(it.findViewById<View>(R.id.alertIcon).visibility).isEqualTo(View.VISIBLE)
+                    assertButtonsFullyOnScreen(it)
+                }
+            } finally {
+                rotate(s, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+            }
+        }
+    }
 }
