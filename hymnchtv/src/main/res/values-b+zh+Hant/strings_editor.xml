@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="editor_save_failed">無法儲存檔案</string>
+    <string name="editor_draft_lost">未儲存的修改無法還原</string>
+</resources>
