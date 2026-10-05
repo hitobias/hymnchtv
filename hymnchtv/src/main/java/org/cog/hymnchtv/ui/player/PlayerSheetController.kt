@@ -73,6 +73,9 @@ class PlayerSheetController(
     private var lastReserve = -1
     private var lastSystemBottom = -1
 
+    /** The activity's root layout: its height sets the landscape card limit. */
+    private val root: View? get() = host.parent as? View
+
     init {
         capsule.onExpandGesture = { expand(animate = true) }
         expandButton.setOnClickListener { expand(animate = true) }
@@ -83,6 +86,9 @@ class PlayerSheetController(
         }
         host.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top != oldBottom - oldTop) notifyInsets()
+        }
+        root?.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) applyCardCap()
         }
         accessibility?.addTouchExplorationStateChangeListener(touchExplorationListener)
         applyDragEnabled()
@@ -140,6 +146,7 @@ class PlayerSheetController(
         applyDragEnabled()
         tokens?.let { styleHandle(it) }
         resetCardTransform()
+        applyCardCap()
         callbacks.setCardVisible(rendered == SheetDisplay.CARD)
         notifyInsets()
     }
@@ -207,6 +214,7 @@ class PlayerSheetController(
     /** Show what [state] says. [animate] runs the container transform between card and capsule. */
     @JvmOverloads
     fun render(animate: Boolean = false) {
+        applyCardCap()
         val target = target()
         val from = rendered
         animator?.cancel()
@@ -398,6 +406,12 @@ class PlayerSheetController(
     }
 
     private fun body(): SheetDragLinearLayout? = card?.findViewById(R.id.playerBody)
+
+    /** Landscape: the card's rows scroll within 60% of the screen height; portrait: no limit (1.6.0). */
+    private fun applyCardCap() {
+        val scroll = card?.findViewById<MaxHeightScrollView>(R.id.player_scroll) ?: return
+        scroll.maxHeightPx = PlayerSheetState.scrollMaxHeight(callbacks.isPortrait(), root?.height ?: 0, density)
+    }
 
     /** Whether the card's, and the capsule's, blur is running now (for tests and the performance check). */
     fun cardBlurActive(): Boolean = card?.glass?.blurActive == true

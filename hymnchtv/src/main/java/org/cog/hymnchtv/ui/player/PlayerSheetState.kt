@@ -61,6 +61,21 @@ data class PlayerSheetState(
         const val CAPSULE_HEIGHT_DP = 56
         const val CAPSULE_BOTTOM_MARGIN_DP = 16
 
+        /** Landscape card: at most this share of the screen height (1.6.0); the rows scroll inside it. */
+        const val LANDSCAPE_CARD_MAX_FRACTION = 0.6f
+
+        /** The card's fixed part around its scrolling rows: handle 4dp + margins 8dp, body padding 4dp + 12dp. */
+        const val CARD_CHROME_DP = 28
+        private const val MIN_SCROLL_DP = 48
+
+        /** Height limit of the card's scrolling rows in pixels; 0 = none (portrait, or before the first layout). */
+        @JvmStatic
+        fun scrollMaxHeight(portrait: Boolean, rootHeightPx: Int, density: Float): Int {
+            if (portrait || rootHeightPx <= 0) return 0
+            val limit = (rootHeightPx * LANDSCAPE_CARD_MAX_FRACTION - CARD_CHROME_DP * density).toInt()
+            return limit.coerceAtLeast((MIN_SCROLL_DP * density).toInt())
+        }
+
         /** What the lyrics keep clear for the player layer, in pixels (the "playerReserve" of spec section 4). */
         @JvmStatic
         fun reserve(display: SheetDisplay, cardHeightPx: Int, density: Float): Int = when (display) {

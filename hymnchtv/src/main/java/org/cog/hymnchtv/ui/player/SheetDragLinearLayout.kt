@@ -97,7 +97,7 @@ class SheetDragLinearLayout @JvmOverloads constructor(context: Context, attrs: A
         tracker = VelocityTracker.obtain().also { it.addMovement(ev) }
         downX = ev.rawX
         downY = ev.rawY
-        startedOnControl = hitsControl(this, ev.x, ev.y)
+        startedOnControl = hitsControl(this, ev.x, ev.y) || rowsScrolledAway()
     }
 
     private fun reset() {
@@ -105,6 +105,9 @@ class SheetDragLinearLayout @JvmOverloads constructor(context: Context, attrs: A
         tracker = null
         dragging = false
     }
+
+    /** Landscape rows that are scrolled down (MaxHeightScrollView): a downward drag scrolls them back before it collapses the card. */
+    private fun rowsScrolledAway(): Boolean = findViewById<View>(R.id.player_scroll)?.canScrollVertically(-1) == true
 
     /** True when the point lands on a control: the deepest view under it, or one of its parents, takes touches. */
     private fun hitsControl(group: ViewGroup, x: Float, y: Float): Boolean {

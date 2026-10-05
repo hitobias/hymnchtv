@@ -128,4 +128,21 @@ class PlayerSheetStateTest {
         assertThat(PlaybackUiState(positionMs = 500, durationMs = 200).progress).isEqualTo(1f)
         assertThat(PlaybackUiState(positionMs = 5, durationMs = 0).progress).isEqualTo(0f)
     }
+
+    @Test
+    fun theLandscapeCardScrollsWithinSixtyPercentOfTheScreen() {
+        // 320dp landscape height at density 2: 640px * 0.6 - 28dp * 2
+        assertThat(PlayerSheetState.scrollMaxHeight(portrait = false, rootHeightPx = 640, density = 2f)).isEqualTo(384 - 56)
+    }
+
+    @Test
+    fun portraitHasNoLimit() {
+        assertThat(PlayerSheetState.scrollMaxHeight(portrait = true, rootHeightPx = 640, density = 2f)).isEqualTo(0)
+    }
+
+    @Test
+    fun beforeLayoutOrOnATinyScreenTheLimitStaysUsable() {
+        assertThat(PlayerSheetState.scrollMaxHeight(portrait = false, rootHeightPx = 0, density = 2f)).isEqualTo(0)
+        assertThat(PlayerSheetState.scrollMaxHeight(portrait = false, rootHeightPx = 100, density = 2f)).isEqualTo(96) // 48dp
+    }
 }
