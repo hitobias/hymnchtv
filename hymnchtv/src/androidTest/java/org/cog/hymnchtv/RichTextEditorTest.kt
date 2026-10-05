@@ -163,4 +163,16 @@ class RichTextEditorTest {
             assertThat(file.readText()).isEqualTo(csv + added)
         }
     }
+
+    @Test
+    fun aFileThatIsNotUtf8IsNotOpenedAndStaysUntouched() {
+        val gbk = "hymn_db,1,詩歌\n".toByteArray(charset("GBK"))
+        file.writeBytes(gbk)
+        launch().use { scenario ->
+            val deadline = SystemClock.elapsedRealtime() + 10_000
+            while (scenario.state != Lifecycle.State.DESTROYED && SystemClock.elapsedRealtime() < deadline) Thread.sleep(100)
+            assertThat(scenario.state).isEqualTo(Lifecycle.State.DESTROYED)
+        }
+        assertThat(file.readBytes()).isEqualTo(gbk)
+    }
 }

@@ -3,4 +3,5 @@
     <string name="editor_save_failed">Could not save the file.</string>
     <string name="editor_draft_lost">Unsaved changes could not be restored.</string>
     <string name="editor_file_too_large">This file is too large to edit here (over %1$d KB). Edit it on a computer instead.</string>
+    <string name="editor_not_utf8">This file is not UTF-8 text, so it cannot be edited here.</string>
 </resources>

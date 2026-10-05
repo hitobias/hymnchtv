@@ -131,6 +131,12 @@ public class RichTextEditor extends BaseActivity
                 finish();
                 return;
             }
+            if (content.getNotUtf8()) {
+                // Saving would write the text back as UTF-8 and destroy it (1.6.0)
+                HymnsApp.showToastMessage(R.string.editor_not_utf8);
+                finish();
+                return;
+            }
             mEditor.setText(content.getText());
             loaded = true;
             draftPending = false;
