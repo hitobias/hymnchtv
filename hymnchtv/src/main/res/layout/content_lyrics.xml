@@ -91,6 +91,16 @@
                     android:visibility="gone" />
 
                 <!-- Shown while this hymn is a favourite; the row gravity keeps it at the end when meter_key is gone -->
+                <!-- Shown while this hymn has notes (D-1 F1); next to the favourite star -->
+                <ImageView
+                    android:id="@+id/notes_mark"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="6dp"
+                    android:contentDescription="@string/notes_marked"
+                    android:src="@drawable/ic_sym_article"
+                    android:visibility="gone" />
+
                 <ImageView
                     android:id="@+id/favorite_star"
                     android:layout_width="20dp"

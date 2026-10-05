@@ -96,6 +96,22 @@ import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsScript;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+import org.cog.hymnchtv.hymn.HymnRef;
+import androidx.annotation.Nullable;
+import org.cog.hymnchtv.hymnhistory.HistoryRecord;
+import org.cog.hymnchtv.nav.JumpEntry;
+import org.cog.hymnchtv.nav.JumpState;
+import org.cog.hymnchtv.nav.ReadingPosition;
+import org.cog.hymnchtv.ui.lyrics.jump.JumpHost;
+import org.cog.hymnchtv.ui.lyrics.jump.JumpPanelFragment;
+import org.cog.hymnchtv.ui.picker.HymnLabels;
+import org.cog.hymnchtv.nav.ViewingCause;
+import org.cog.hymnchtv.notebook.model.HymnKey;
+import org.cog.hymnchtv.ui.lyrics.NoteCountController;
+import org.cog.hymnchtv.ui.lyrics.ReadingPolicy;
+import org.cog.hymnchtv.ui.notebook.NotebookPages;
+import org.cog.hymnchtv.ui.playlist.AddToPlaylistDialog;
+import org.cog.hymnchtv.nav.ViewingObserver;
 import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import kotlin.jvm.functions.Function1;
@@ -159,7 +175,7 @@ import timber.log.Timber;
  *
  * @author Eng Chong Meng
  */
-public class ContentHandler extends BaseActivity {
+public class ContentHandler extends BaseActivity implements JumpHost {
     public static final String btAddr = "https://bibletool.online";
     public static final String btMp3Link = "https://bibletool.online/hymnal/playnew.php?file=hymns/%s/%s#%s";
 
@@ -235,6 +251,20 @@ public class ContentHandler extends BaseActivity {
     /** True while auto-next moves to the next hymn by itself: that page change must not stop the playback. */
     private boolean mAutoAdvancing = false;
 
+    /** H5: return stack and next slot of this lyrics session (plan 2026-10-05-h5-jump); cleared when the page closes. */
+    private JumpState mJumpState = JumpState.EMPTY;
+    /**
+     * The reading position a return asked for. The page it lands on takes it once (takePendingPosition) but it stays here,
+     * and in the saved state, until that page has finished restoring (onRestoreFinished): a recreation in between
+     * (the page may resume inside the return itself) must still restore it on the new page.
+     */
+    private ReadingPosition mPendingPosition = null;
+    /** The hymn the pending position belongs to: no other page may take it, and it is dropped when the reader goes elsewhere. */
+    private HymnRef mPendingRef = null;
+    private boolean mPendingTaken = false;
+    /** True while a cross-book jump swaps the pager adapter: onPageSelected must not treat it as a page turn. */
+    private boolean mSwappingBook = false;
+
     private String mDir = "";
     private String mFileName = "";
 
@@ -262,6 +292,9 @@ public class ContentHandler extends BaseActivity {
 
     /** Favourite state of the hymn on screen; created in onCreate. */
     private FavoriteController mFavorites;
+
+    /** Note count of the hymn on screen (D-1 F1); created in onCreate. A change repaints the title rows like a favourite change. */
+    private NoteCountController mNoteCount;
 
     private final FavoriteController.Listener mFavoriteListener = new FavoriteController.Listener() {
         @Override
@@ -300,6 +333,16 @@ public class ContentHandler extends BaseActivity {
     public boolean canToggleFavorite() {
         return mFavorites != null && mFavorites.canToggle();
     }
+
+    /** Notes of type/no when it is the hymn on screen and the count is known; -1 otherwise. */
+    public int noteCountFor(String type, int no) {
+        return mNoteCount == null ? -1 : mNoteCount.countFor(type, no);
+    }
+
+    /** True when the hymn on screen can have notes and be put in a playlist (not a placeholder number). */
+    public boolean hasNotebookHymn() {
+        return mNoteCount != null && mNoteCount.currentKey() != null;
+    }
     private ViewPager2 mPager;
 
     public PopupWindow pop;
@@ -322,10 +365,19 @@ public class ContentHandler extends BaseActivity {
     private static final String STATE_CHROME_VISIBLE = "state_chrome_visible"; // lyrics toolbars shown or faded away
     private static final String STATE_PLAYER_HIDDEN = "state_player_hidden"; // player bar hidden from the overflow menu
     private static final String STATE_PLAYER_COLLAPSED = "state_player_collapsed"; // portrait: capsule instead of the card
+    private static final String STATE_HYMN_TYPE = "state_hymn_type"; // H5: a jump may change the book in place
+    private static final String STATE_HYMN_NO = "state_hymn_no";
+    private static final String STATE_JUMP = "state_jump"; // JumpState.encode()
+    private static final String STATE_PENDING_POSITION = "state_pending_position"; // a return not yet restored on its page
+    private static final String STATE_PENDING_REF = "state_pending_ref"; // "book,no" of the hymn it belongs to
 
     /** Tests install a manual timer here so the idle-hide fade does not depend on emulator speed; null in production. */
     @VisibleForTesting
     public static org.cog.hymnchtv.ui.lyrics.ChromeTimer sChromeTimerForTest = null;
+
+    /** Tests observe the viewing entry point here (static: a path-B page is a new instance); null in production. */
+    @VisibleForTesting
+    public static ViewingObserver sViewingObserverForTest = null;
 
     /** Show/hide state of the lyrics toolbars shared by all pager pages (plan 6c). */
     private LyricsChromeHost mChromeHost;
@@ -441,6 +493,21 @@ public class ContentHandler extends BaseActivity {
             mAutoEnglish = false;
         }
 
+        // H5: a cross-book jump changes the book in place, so the saved hymn wins over the launch intent
+        if (savedInstanceState != null && savedInstanceState.containsKey(STATE_HYMN_TYPE)) {
+            mHymnType = savedInstanceState.getString(STATE_HYMN_TYPE);
+            mHymnNo = savedInstanceState.getInt(STATE_HYMN_NO);
+            mHymnNoEng = HymnNoCh2EngXRef.hymnNoCh2EngConvert(mHymnType, mHymnNo);
+        }
+        mJumpState = JumpState.decode(savedInstanceState == null ? null : savedInstanceState.getString(STATE_JUMP));
+        // A recreation right after a return (before its page resumed) still restores the position
+        mPendingPosition = savedInstanceState == null ? null
+                : ReadingPosition.decode(savedInstanceState.getString(STATE_PENDING_POSITION));
+        mPendingRef = decodeRef(savedInstanceState == null ? null : savedInstanceState.getString(STATE_PENDING_REF));
+        if (mPendingRef == null) {
+            mPendingPosition = null;
+        }
+
         switch (mHymnType) {
         // Convert the user input hymn number i.e: hymn #1 => #0 i.e.index number
         case HYMN_ER:
@@ -453,9 +520,9 @@ public class ContentHandler extends BaseActivity {
             break;
         }
 
-        // Created before the pager so that pages built by the adapter can ask for the current state
+        // Created before the pager so that pages built by the adapter can ask for the current state (set in onViewingHymn)
         mFavorites = new FavoriteController(Notebook.async(this), mFavoriteListener);
-        mFavorites.onHymnChanged(mHymnType, mHymnNo);
+        mNoteCount = new NoteCountController(Notebook.async(this), count -> refreshFavoriteViews());
 
         // The pager adapter, which provides the pages to the view pager widget.
         mPagerAdapter = new MyPagerAdapter(this, mHymnType);
@@ -481,6 +548,8 @@ public class ContentHandler extends BaseActivity {
         else
             mPager.setCurrentItem(mHymnNo, false);
 
+        // The pager is on the hymn to show: the one entry point reports it (a path-B jump target arrives here too)
+        onViewingHymn(savedInstanceState == null ? ViewingCause.OPENED : ViewingCause.RESTORED);
         mPager.registerOnPageChangeCallback(initOnPageChangeCallback());
         getOnBackPressedDispatcher().addCallback(backPressedCallback);
         setupEnterMotion(savedInstanceState != null);
@@ -503,8 +572,17 @@ public class ContentHandler extends BaseActivity {
                 Motion.POSTPONE_TIMEOUT_MS);
     }
 
+    /**
+     * The page on screen. Found by the tag FragmentStateAdapter gives its fragments ("f" + item id): after a recreation
+     * the adapter restores its pages from the FragmentManager without calling createFragment, so mFragments is empty.
+     */
+    @Nullable
     private ContentView currentContentView() {
-        Fragment page = mPagerAdapter == null ? null : mPagerAdapter.mFragments.get(mPager.getCurrentItem());
+        if (mPagerAdapter == null) {
+            return null;
+        }
+        long itemId = mPagerAdapter.getItemId(mPager.getCurrentItem());
+        Fragment page = getSupportFragmentManager().findFragmentByTag("f" + itemId);
         return page instanceof ContentView ? (ContentView) page : null;
     }
 
@@ -537,10 +615,13 @@ public class ContentHandler extends BaseActivity {
         else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
+        // Back from the notes page: the count may have changed. (No new sing-log reading here: only onViewingHymn starts one.)
+        mNoteCount.refresh();
     }
 
     @Override
     protected void onPause() {
+        Notebook.async(this).onHymnHidden(mHymnType, mHymnNo);
         getContentResolver().unregisterContentObserver(mHighContrastObserver);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         super.onPause();
@@ -552,6 +633,7 @@ public class ContentHandler extends BaseActivity {
         mChromeHost.stop();
         mPlayerSheet.release();
         mFavorites.destroy();
+        mNoteCount.destroy();
     }
 
     /** A lyrics page follows the toolbar show/hide state from now on (plan 6c). */
@@ -588,6 +670,16 @@ public class ContentHandler extends BaseActivity {
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(STATE_PAGE, mPager.getCurrentItem());
+        HymnRef viewing = currentRef();
+        outState.putString(STATE_HYMN_TYPE, viewing.getBook());
+        outState.putInt(STATE_HYMN_NO, viewing.getStoredNo());
+        outState.putString(STATE_JUMP, mJumpState.encode());
+        if (mPendingPosition != null) {
+            outState.putString(STATE_PENDING_POSITION, mPendingPosition.encode());
+            if (mPendingRef != null) {
+                outState.putString(STATE_PENDING_REF, mPendingRef.getBook() + "," + mPendingRef.getStoredNo());
+            }
+        }
         outState.putBoolean(STATE_CHROME_VISIBLE, mChromeHost.isVisible());
         outState.putBoolean(STATE_PLAYER_HIDDEN, mPlayerSheet.getState().getUserHidden());
         outState.putBoolean(STATE_PLAYER_COLLAPSED, mPlayerSheet.getState().getCollapsed());
@@ -792,6 +884,14 @@ public class ContentHandler extends BaseActivity {
         }
     }
 
+    /** The overflow's "Jump to..." (H5): the full-screen jump panel; a second request while it is open is ignored. */
+    private void openJumpPanel() {
+        FragmentManager fm = getSupportFragmentManager();
+        if (fm.findFragmentByTag(JumpPanelFragment.TAG) == null && !isFinishing() && !fm.isStateSaved()) {
+            new JumpPanelFragment().show(fm, JumpPanelFragment.TAG);
+        }
+    }
+
     /** "More..." of the Aa panel: the full background picker for the lyrics slot. */
     public void openBackgroundPicker() {
         mBackgroundPickerLauncher.launch(BackgroundPickerActivity.intent(this, BackgroundSlot.LYRICS));
@@ -845,7 +945,8 @@ public class ContentHandler extends BaseActivity {
     }
 
     /**
-     * Hde the HistoryList View and return to main, or pop fragment if any; else close app
+     * Back: web layer, then the video player, then the previous hymn of the jump stack (H5), then stop the audio, then
+     * leave. The jump panel handles its own back first (it is a dialog). onUserLeaveHint() runs this too: Home never pops.
      */
     OnBackPressedCallback backPressedCallback = new OnBackPressedCallback(true) {
         @Override
@@ -869,6 +970,10 @@ public class ContentHandler extends BaseActivity {
                     mMediaContentHandler.setPlayerVisible(true);
                 }
             }
+            // H5: back to the hymn before the last jump (a hymn change, so playback stops); never for the Home key
+            else if (!onUserLeaveHint && mJumpState.canReturn()) {
+                onReturnTo(0);
+            }
             // For audio player
             else if (mMediaGuiController.isPlaying()) {
                 mMediaGuiController.stopPlay();
@@ -886,13 +991,14 @@ public class ContentHandler extends BaseActivity {
     };
 
     /**
-     * The lyrics top-bar buttons and its overflow menu (plan C-4; the long-press context menu is gone).
+     * The single dispatch of the lyrics top-bar buttons and its overflow menu (plan C-4; H5 adds next and jump; D-1
+     * adds its entries here). The long-press context menu is gone.
      *
      * @param itemId a top-bar action id (ids_lyrics.xml) or an item of menu_lyrics_more
      * @return true if the action was handled
      */
     public boolean onLyricsAction(int itemId) {
-        ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
+        ContentView contentView = currentContentView();
 
         if (itemId == R.id.readingSettings) {
             openReadingSettings();
@@ -900,6 +1006,20 @@ public class ContentHandler extends BaseActivity {
         }
         else if (itemId == R.id.favorite) {
             mFavorites.toggle();
+            return true;
+        }
+        else if (itemId == R.id.notes) {
+            HymnKey key = mNoteCount.currentKey();
+            if (key != null) {
+                startActivity(NotebookPages.notes(this, key));
+            }
+            return true;
+        }
+        else if (itemId == R.id.addToPlaylist) {
+            HymnKey key = mNoteCount.currentKey();
+            if (key != null) {
+                AddToPlaylistDialog.Companion.show(getSupportFragmentManager(), key);
+            }
             return true;
         }
         else if (itemId == R.id.menutoggle) {
@@ -942,6 +1062,14 @@ public class ContentHandler extends BaseActivity {
         }
         else if (itemId == R.id.home) {
             backToHome();
+            return true;
+        }
+        else if (itemId == R.id.btn_next) {
+            onNextPressed();
+            return true;
+        }
+        else if (itemId == R.id.lyricsJump) {
+            openJumpPanel();
             return true;
         }
         return false;
@@ -1083,13 +1211,12 @@ public class ContentHandler extends BaseActivity {
              */
             @Override
             public void onPageSelected(int position) {
-                int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, position)[0];
-                if (tmp != mHymnNo) {
-                    mHymnNo = tmp;
-                    hymnIdx = position;
-                    mFavorites.onHymnChanged(mHymnType, mHymnNo);
-                    stopPlaybackForHymnChange();
-                    updateMediaPlayerInfo();
+                if (mSwappingBook) {
+                    return; // switchBook() reports the change itself, once
+                }
+                int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mPagerAdapter.getHymnType(), position)[0];
+                if (tmp != mHymnNo || !mPagerAdapter.getHymnType().equals(mHymnType)) {
+                    onViewingHymn(ViewingCause.CHANGED);
 
                     // Will be handled in ContentView.onCreateView()
                     // ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
@@ -1169,6 +1296,18 @@ public class ContentHandler extends BaseActivity {
         finally {
             mAutoAdvancing = false;
         }
+    }
+
+    /**
+     * Media of the hymn on screen played to its end (audio, ExoPlayer or YouTube). Playback stops on a hymn change, so it is
+     * this hymn: it may be logged (D-1 F4, only while the switch is on), then the usual end handling runs.
+     */
+    public void onPlaybackCompleted() {
+        if (isFinishing() || isDestroyed())
+            return;
+        HymnRef ref = currentRef(); // H5: the pager decides which hymn is on screen
+        Notebook.async(this).onMediaCompleted(ref.getBook(), ref.getStoredNo());
+        onEndOrError(getString(R.string.playback_completed));
     }
 
     // Media file playback ended or file download error
@@ -1349,17 +1488,17 @@ public class ContentHandler extends BaseActivity {
                 dir = mHymnType + MEDIA_CHANGSHI;
                 if (isFileExist(dir, mHymnNo, uriList)) break;
 
+                // A bibletool download of a cross-referenced youth hymn is saved under the other book (getHymnUri sets mDir)
+                HymnRef bibleTool = bibleToolRef(mHymnType, mHymnNo);
+                if (!bibleTool.getBook().equals(mHymnType)
+                        && isFileExist(bibleTool.getBook() + MEDIA_CHANGSHI, bibleTool.getStoredNo(), uriList)) break;
+
                 if (proceedDownLoad) {
                     fileName = "Q" + fileName + ".mp3";
                     fbLink = String.format(Locale.US, "https://mana.stmn1.com/sg/yb/mp3/Q%d.mp3", mHymnNo);
 
-                    // Translate YB to other if specified.
-                    String hymnTN = ybXTable.get(mHymnNo);
-                    if (hymnTN != null) {
-                        mHymnType = MainActivity.getHymnType(hymnTN);
-                        mHymnNo = Integer.parseInt(hymnTN.substring(2));
-                    }
-                    uriList.add(Uri.parse(getHymnUri()));
+                    // Only the link is translated to the other book; the hymn on screen is never rewritten (plan H5)
+                    uriList.add(Uri.parse(getHymnUri(bibleTool.getBook(), bibleTool.getStoredNo())));
                     return uriList;
                 }
 
@@ -1477,7 +1616,8 @@ public class ContentHandler extends BaseActivity {
     public void showBibleToolHymnal() {
         if (isFinishing() || isDestroyed())
             return;
-        String url = getHymnUri();
+        HymnRef bibleTool = bibleToolRef(mHymnType, mHymnNo);
+        String url = getHymnUri(bibleTool.getBook(), bibleTool.getStoredNo());
         initWebView(ContentHandler.UrlType.hymnBibleTool, url);
     }
 
@@ -1507,20 +1647,32 @@ public class ContentHandler extends BaseActivity {
      *
      * @return the bibletool.online media url link.
      */
+    /** The hymn whose bibletool page serves [type]/[no]: a youth hymn whose lyrics live in another book is listed there. */
+    private static HymnRef bibleToolRef(String type, int no) {
+        String hymnTN = HYMN_YB.equals(type) ? ybXTable.get(no) : null;
+        return hymnTN == null ? new HymnRef(type, no)
+                : new HymnRef(MainActivity.getHymnType(hymnTN), Integer.parseInt(hymnTN.substring(2)));
+    }
+
     public String getHymnUri() {
+        return getHymnUri(mHymnType, mHymnNo);
+    }
+
+    /** The bibletool media link of [book]/[no]; also sets mDir/mFileName for a later download (startFileDownload). */
+    private String getHymnUri(String book, int no) {
         String uri = null;
-        String hymnType = HymnTypeMap.get(mHymnType);
+        String hymnType = HymnTypeMap.get(book);
         String subLink = "";
         String resName = "";
 
-        mDir = mHymnType + MEDIA_CHANGSHI;
-        String hymnTitle = getHymnTitle();
-        String fileName = mHymnNo + hymnTitle;
+        mDir = book + MEDIA_CHANGSHI;
+        String hymnTitle = getHymnTitle(book, no);
+        String fileName = no + hymnTitle;
 
-        switch (mHymnType) {
+        switch (book) {
         case HYMN_ER:
             for (int idx = 0; idx < category_er.length; idx++) {
-                if (mHymnNo < category_er[idx]) {
+                if (no < category_er[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", (idx - 1), hymnCategoryEr[idx - 1]);
                     break;
                 }
@@ -1533,7 +1685,7 @@ public class ContentHandler extends BaseActivity {
         case HYMN_XB:
             // dnlink for xB does not use the last hymn category for fetching
             for (int idx = 0; idx < category_xb.length; idx++) {
-                if (mHymnNo < category_xb[idx]) {
+                if (no < category_xb[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", idx, hymnCategoryXb[idx - 1]);
                     break;
                 }
@@ -1555,7 +1707,7 @@ public class ContentHandler extends BaseActivity {
 
         case HYMN_BB:
             for (int idx = 0; idx < category_bb.length; idx++) {
-                if (mHymnNo < category_bb[idx]) {
+                if (no < category_bb[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", (idx - 1), hymnCategoryBb[idx - 1]);
                     break;
                 }
@@ -1566,19 +1718,19 @@ public class ContentHandler extends BaseActivity {
 
         case HYMN_DB:
             for (int idx = 0; idx < category_db.length; idx++) {
-                if (mHymnNo < category_db[idx]) {
+                if (no < category_db[idx]) {
                     subLink = String.format(Locale.CHINA, "%02d%s", idx, hymnCategoryDb[idx - 1]);
                     break;
                 }
             }
             // Generate the resName for link creation; DB uses lyricsPhrase
-            resName = DB_Links.get(mHymnNo);
+            resName = DB_Links.get(no);
             if (resName == null) {
-                if (mHymnNo > HYMN_DB_NO_MAX) {
-                    resName = "DF" + (mHymnNo - HYMN_DB_NO_MAX) + lyricsPhrase;
+                if (no > HYMN_DB_NO_MAX) {
+                    resName = "DF" + (no - HYMN_DB_NO_MAX) + lyricsPhrase;
                 }
                 else {
-                    resName = "D" + mHymnNo + lyricsPhrase;
+                    resName = "D" + no + lyricsPhrase;
                 }
             }
             uri = String.format(Locale.CHINA, btMp3Link, hymnType, subLink, resName);
@@ -1586,7 +1738,7 @@ public class ContentHandler extends BaseActivity {
         }
 
         // Use supported filename for DB Fu hymn when saving media file.
-        resName = resName.replaceFirst("DF\\d+", "D" + mHymnNo);
+        resName = resName.replaceFirst("DF\\d+", "D" + no);
         mFileName = resName + ".mp3";
         Timber.d("bibleTool: %s", uri);
         return uri;
@@ -1705,8 +1857,12 @@ public class ContentHandler extends BaseActivity {
      * Currently use in  MP3 media fileName is: ? + hymnNo + hymnTitle + ".mp3"
      */
     private String getHymnTitle() {
+        return getHymnTitle(mHymnType, mHymnNo);
+    }
+
+    private String getHymnTitle(String book, int no) {
         String pattern = "[，、‘’！：；。？]";
-        String hymnTitle = getHymnInfo().split(":\\s|？|（")[1].replaceAll(pattern, "");
+        String hymnTitle = getHymnInfo(book, no, null).split(":\\s|？|（")[1].replaceAll(pattern, "");
         // Strip off the hymn category prefix
         int idx = hymnTitle.lastIndexOf("－");
         if (idx != -1) {
@@ -1730,44 +1886,48 @@ public class ContentHandler extends BaseActivity {
      * (null: Simplified). Only the Simplified info may be used to build media file names and search phrases.
      */
     private String getHymnInfo(HantVariant variant) {
+        return getHymnInfo(mHymnType, mHymnNo, variant);
+    }
+
+    private String getHymnInfo(String book, int no, HantVariant variant) {
         String fileName = "";
         String hymnTitle = "";
         String hymnInfo = "";
         Resources res = getResources();
 
-        if (mHymnNo == HYMN_BB_DUMMY) {
+        if (no == HYMN_BB_DUMMY) {
             return getString(R.string.hymn_no_chinese_lyrics, mHymnNoEng);
         }
 
-        switch (mHymnType) {
+        switch (book) {
         case HYMN_ER:
-            fileName = LYRICS_ER_DIR + "er" + mHymnNo + ".txt";
+            fileName = LYRICS_ER_DIR + "er" + no + ".txt";
             break;
 
         case HYMN_XG:
-            fileName = LYRICS_XG_DIR + "xg" + mHymnNo + ".txt";
+            fileName = LYRICS_XG_DIR + "xg" + no + ".txt";
             break;
 
         case HYMN_XB:
-            fileName = LYRICS_XB_DIR + "xb" + mHymnNo + ".txt";
+            fileName = LYRICS_XB_DIR + "xb" + no + ".txt";
             break;
 
         case HYMN_YB:
-            String hymnTN = ybXTable.get(mHymnNo);
+            String hymnTN = ybXTable.get(no);
             if (hymnTN != null) {
                 fileName = getHymnDir(hymnTN) + hymnTN + ".txt";
             }
             else {
-                fileName = LYRICS_YB_DIR + "yb" + mHymnNo + ".txt";
+                fileName = LYRICS_YB_DIR + "yb" + no + ".txt";
             }
             break;
 
         case HYMN_BB:
-            fileName = LYRICS_BB_DIR + "bb" + mHymnNo + ".txt";
+            fileName = LYRICS_BB_DIR + "bb" + no + ".txt";
             break;
 
         case HYMN_DB:
-            fileName = LYRICS_DB_DIR + "db" + mHymnNo + ".txt";
+            fileName = LYRICS_DB_DIR + "db" + no + ".txt";
             break;
         }
 
@@ -1819,7 +1979,7 @@ public class ContentHandler extends BaseActivity {
         }
 
         int resId = -1;
-        switch (mHymnType) {
+        switch (book) {
         case HYMN_ER:
             resId = R.string.hymn_title_mc_er;
             break;
@@ -1836,14 +1996,14 @@ public class ContentHandler extends BaseActivity {
             resId = R.string.hymn_title_mc_bb;
             break;
         case HYMN_DB:
-            resId = (mHymnNo > HYMN_DB_NO_MAX) ? R.string.hymn_title_mc_dbs : R.string.hymn_title_mc_db;
+            resId = (no > HYMN_DB_NO_MAX) ? R.string.hymn_title_mc_dbs : R.string.hymn_title_mc_db;
             break;
         }
 
         if (variant == null) {
-            mHymnSearch = res.getString(resId, mHymnNo, lyricsPhrase);
+            mHymnSearch = res.getString(resId, no, lyricsPhrase);
         }
-        hymnInfo = res.getString(resId, mHymnNo, hymnTitle);
+        hymnInfo = res.getString(resId, no, hymnTitle);
         return hymnInfo;
     }
 
@@ -1952,10 +2112,52 @@ public class ContentHandler extends BaseActivity {
         return idx < 0 ? mHymnType : MediaConfig.hymnTypeEntries(context).get(idx);
     }
 
+    /** The hymn on screen, from the pager itself (book of the adapter, page on screen). */
+    @NonNull
+    @Override
+    public HymnRef currentRef() {
+        String book = mPagerAdapter.getHymnType();
+        return new HymnRef(book, HymnIdx2NoConvert.hymnIdx2NoConvert(book, mPager.getCurrentItem())[0]);
+    }
+
+    /**
+     * The single entry point for the hymn on screen (plan H5): a new page (OPENED), a recreation (RESTORED) and every
+     * change (CHANGED: page turn, next, auto-next, jump, return). The viewing fields follow the pager here. D-1 hooks its
+     * sing log here: OPENED and CHANGED are readings, RESTORED is not.
+     */
+    private void onViewingHymn(@NonNull ViewingCause cause) {
+        HymnRef ref = currentRef();
+        mHymnType = ref.getBook();
+        mHymnNo = ref.getStoredNo();
+        hymnIdx = mPager.getCurrentItem();
+        mFavorites.onHymnChanged(mHymnType, mHymnNo);
+        mNoteCount.onHymnChanged(mHymnType, mHymnNo);
+        if (ReadingPolicy.startsReading(cause)) {
+            // D-1 F4: a new reading starts the 2-minute timer (no-op while the switch is off); RESTORED is the same reading
+            Notebook.async(this).onHymnVisible(mHymnType, mHymnNo);
+        }
+        // H5: a position waits for its own hymn only; a queued next the reader has reached is used up; going back to
+        // the hymn already on screen would do nothing, so that entry goes
+        if (mPendingRef != null && !mPendingRef.equals(ref)) {
+            clearPending();
+        }
+        if (ref.equals(mJumpState.getSlot())) {
+            setSlot(null);
+        }
+        mJumpState = mJumpState.withoutTop(ref);
+        if (cause == ViewingCause.CHANGED) {
+            stopPlaybackForHymnChange();
+            updateMediaPlayerInfo(); // a new page's player calls it itself once created (MediaGuiController)
+        }
+        if (sViewingObserverForTest != null) {
+            sViewingObserverForTest.onViewing(ref, cause);
+        }
+    }
+
     /** The "next" button and auto-next: one page forward from the page on screen (a swipe moves it too). */
     public boolean scrollNextHymn() {
         int nextIdx = mPager.getCurrentItem() + 1;
-        int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mHymnType, nextIdx)[0];
+        int tmp = HymnIdx2NoConvert.hymnIdx2NoConvert(mPagerAdapter.getHymnType(), nextIdx)[0];
         if (tmp != -1) {
             Timber.e("Scroll next hymn: %s: (AutoStream: %s)", tmp, mAutoStream);
             hymnIdx = nextIdx;
@@ -1963,6 +2165,185 @@ public class ContentHandler extends BaseActivity {
             return true;
         }
         return false;
+    }
+
+    @NonNull
+    @Override
+    public JumpState getJumpState() {
+        return mJumpState;
+    }
+
+    @Override
+    public void onJump(@NonNull HymnRef target) {
+        HymnRef here = currentRef();
+        if (target.equals(here) || !target.isValid()) {
+            return;
+        }
+        // The appendix placeholder page of the supplement book (no real hymn) is never a place to return to
+        if (here.isValid()) {
+            ContentView page = currentContentView();
+            mJumpState = mJumpState.push(new JumpEntry(here, page == null ? ReadingPosition.TOP : page.readingPosition()));
+        }
+        recordHistory(target);
+        navigateTo(target, null);
+    }
+
+    /** Shows [target]: a page turn in this book, or the other book (switchBook). [position] null = as the page is. */
+    private void navigateTo(@NonNull HymnRef target, @Nullable ReadingPosition position) {
+        int idx = HymnNo2IdxConvert.hymnNo2IdxConvert(target.getBook(), target.getStoredNo());
+        if (idx < 0) {
+            return;
+        }
+        mPendingPosition = position;
+        mPendingRef = position == null ? null : target;
+        mPendingTaken = false;
+        if (target.getBook().equals(mPagerAdapter.getHymnType())) {
+            mPager.setCurrentItem(idx, false); // onPageSelected does the hymn-change work
+        }
+        else {
+            switchBook(target, idx);
+        }
+    }
+
+    /**
+     * Path A (plan Task 5): the other book in this same page, with a new adapter (book-qualified item ids, so no fragment
+     * of the old book is reused). setAdapter resets the pager to item 0 without a page callback, and setCurrentItem may
+     * or may not call back, so the change is reported here, once, after the pager is on the target page.
+     */
+    private void switchBook(@NonNull HymnRef target, int idx) {
+        mSwappingBook = true;
+        try {
+            mPagerAdapter = new MyPagerAdapter(this, target.getBook());
+            mPager.setAdapter(mPagerAdapter);
+            mPager.setCurrentItem(idx, false);
+        }
+        finally {
+            mSwappingBook = false;
+        }
+        onViewingHymn(ViewingCause.CHANGED);
+    }
+
+    /** Same history record as opening from the home page (MainActivity.showContent); written on AppExecutors.io. */
+    private void recordHistory(@NonNull HymnRef ref) {
+        final Context appContext = getApplicationContext();
+        final String type = ref.getBook();
+        final int no = ref.getStoredNo();
+        AppExecutors.io("store-history", () -> DatabaseBackend.getInstance(appContext)
+                .storeHymnHistory(new HistoryRecord(type, no, MediaRecord.isFu(type, no))));
+    }
+
+    @Override
+    public void onReturnTo(int recentIndex) {
+        HymnRef here = currentRef();
+        JumpState.Popped popped = mJumpState.popRecent(recentIndex);
+        // An entry for the hymn already on screen is no place to go back to: take the next one down
+        while (popped != null && popped.getEntry().getRef().equals(here)) {
+            mJumpState = popped.getState();
+            popped = mJumpState.popRecent(0);
+        }
+        if (popped == null) {
+            return;
+        }
+        mJumpState = popped.getState();
+        navigateTo(popped.getEntry().getRef(), popped.getEntry().getPosition());
+        mPager.post(this::deliverPendingPosition);
+    }
+
+    /** When the target page was already resumed (it never gets another onResume), hand it the position directly. */
+    private void deliverPendingPosition() {
+        ContentView page = currentContentView();
+        if (page != null && page.isResumed()) {
+            ReadingPosition position = takePendingPosition(page);
+            if (position != null) {
+                page.restoreReadingPosition(position);
+            }
+        }
+    }
+
+    /** Asked by a page when it resumes: the position a return wants restored on it, once; null for any other page. */
+    @Nullable
+    public ReadingPosition takePendingPosition(@NonNull ContentView page) {
+        if (mPendingPosition == null || mPendingTaken || page != currentContentView() || !mPendingRef.equals(refOf(page))) {
+            return null;
+        }
+        mPendingTaken = true;
+        return mPendingPosition;
+    }
+
+    /** The page finished restoring (time is up, or the reader took over): nothing is pending any more. */
+    public void onRestoreFinished(@NonNull ContentView page) {
+        if (mPendingRef != null && mPendingRef.equals(refOf(page))) {
+            clearPending();
+        }
+    }
+
+    private void clearPending() {
+        mPendingPosition = null;
+        mPendingRef = null;
+        mPendingTaken = false;
+    }
+
+    /** The hymn a lyrics page shows, from its own arguments (book and pager index). */
+    @NonNull
+    private static HymnRef refOf(@NonNull ContentView page) {
+        Bundle args = page.requireArguments();
+        String book = args.getString(ContentView.LYRICS_TYPE);
+        return new HymnRef(book, HymnIdx2NoConvert.hymnIdx2NoConvert(book, args.getInt(ContentView.LYRICS_INDEX))[0]);
+    }
+
+    /** "book,no" as written to the saved state; null for missing or damaged text. */
+    @Nullable
+    private static HymnRef decodeRef(@Nullable String text) {
+        String[] fields = text == null ? new String[0] : text.split(",");
+        if (fields.length != 2) {
+            return null;
+        }
+        try {
+            HymnRef ref = new HymnRef(fields[0], Integer.parseInt(fields[1]));
+            return ref.isValid() ? ref : null;
+        }
+        catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public void onSetNext(@Nullable HymnRef target) {
+        setSlot(target);
+        if (target != null) {
+            HymnsApp.showToastMessage(R.string.jump_next_slot, HymnLabels.INSTANCE.chip(this, target));
+        }
+    }
+
+    /** The queued hymn of the next button, or null. */
+    @Nullable
+    public HymnRef getNextSlot() {
+        return mJumpState.getSlot();
+    }
+
+    private void setSlot(@Nullable HymnRef target) {
+        mJumpState = mJumpState.withSlot(target);
+        for (ContentView page : livePages()) {
+            page.onNextSlotChanged();
+        }
+    }
+
+    /** The next button: the queued hymn once (a jump, so back returns here), else the next page of this book. */
+    private void onNextPressed() {
+        HymnRef slot = mJumpState.getSlot();
+        if (slot == null || slot.equals(currentRef())) {
+            setSlot(null); // a slot for the hymn already on screen is just used up
+            scrollNextHymn();
+            return;
+        }
+        setSlot(null);
+        onJump(slot);
+    }
+
+    /** Auto-next's own advance (it never reads the slot); for NextSlotTest. */
+    @VisibleForTesting
+    public boolean advanceForAutoNextForTest() {
+        return advanceByAutoStream();
     }
 
     /**
@@ -2004,7 +2385,7 @@ public class ContentHandler extends BaseActivity {
     @Override
     public void onConfigurationChanged(@NotNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
+        ContentView contentView = currentContentView();
         if (contentView != null)
             contentView.setLyricsTextScale();
 

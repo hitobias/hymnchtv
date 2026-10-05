@@ -3,9 +3,7 @@
     <!-- Sub-project C: modern UI -->
     <string name="c_nav_home">首頁</string>
     <string name="c_nav_toc">目錄</string>
-    <string name="c_nav_my_hymns">我的詩歌</string>
     <string name="c_nav_settings">設定</string>
-    <string name="c_add_playlist">＋歌單</string>
     <string name="c_next_hymn">下一首</string>
     <string name="c_history_delete">從歷史移除</string>
     <string name="c_toc_empty">沒有條目</string>
@@ -16,7 +14,6 @@
     <string name="c_cat_sing_log">唱詩記錄</string>
     <string name="c_cat_backup">備份</string>
     <string name="c_check_update">檢查更新</string>
-    <string name="c_myhymns_placeholder">我的詩歌將在後續更新中提供。</string>
     <string name="c_lyrics_score_color">譜色</string>
     <string name="c_lyrics_font_dec">A-</string>
     <string name="c_lyrics_font_inc">A+</string>

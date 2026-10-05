@@ -38,6 +38,11 @@ import org.junit.runner.RunWith
 /** The "recently opened" page and the recent chips on the home tab. */
 @RunWith(AndroidJUnit4::class)
 class HistoryFragmentTest {
+    private companion object {
+        /** The delete runs on the shared IO thread; on a loaded API 24 emulator 3 s was not always enough. */
+        const val DELETE_TIMEOUT_MS = 10_000L
+    }
+
     @Before fun setUp() = PickerTestSupport.prepare()
 
     @After fun tearDown() = PickerTestSupport.cleanUp()
@@ -101,7 +106,7 @@ class HistoryFragmentTest {
                 scenario.onActivity { a -> assertThat((a.findViewById<RecyclerView>(R.id.history_list).adapter as HistoryAdapter).currentList.filterIsInstance<HistoryItem.Row>()).hasSize(2) }
             }
             onView(allOf(withId(R.id.b_delete_in_list), androidx.test.espresso.matcher.ViewMatchers.hasSibling(withText(containsString("標題2"))))).perform(click())
-            FragmentHost.eventually { assertThat(DatabaseBackend.getInstance(ctx).historyRecords).hasSize(1) }
+            FragmentHost.eventually(DELETE_TIMEOUT_MS) { assertThat(DatabaseBackend.getInstance(ctx).historyRecords).hasSize(1) }
         }
     }
 
@@ -111,7 +116,7 @@ class HistoryFragmentTest {
             openHistoryPage()
             FragmentHost.eventually { onView(withText(containsString("標題2"))).check(matches(isDisplayed())) }
             onView(withText(containsString("標題2"))).perform(swipeLeft())
-            FragmentHost.eventually { assertThat(DatabaseBackend.getInstance(ctx).historyRecords.map { r -> r.hymnNo }).containsExactly(1) }
+            FragmentHost.eventually(DELETE_TIMEOUT_MS) { assertThat(DatabaseBackend.getInstance(ctx).historyRecords.map { r -> r.hymnNo }).containsExactly(1) }
         }
     }
 

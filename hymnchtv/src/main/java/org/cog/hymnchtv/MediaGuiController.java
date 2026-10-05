@@ -930,7 +930,7 @@ public class MediaGuiController extends Fragment implements AdapterView.OnItemSe
                     byHymnChange = mStoppedByHymnChange;
                     mStoppedByHymnChange = false;
                     if (!byHymnChange) {
-                        mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                        mContentHandler.onPlaybackCompleted();
                     }
                     // flow through to reset player state
 

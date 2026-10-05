@@ -12,9 +12,9 @@ import org.junit.Test
 class TypeScaleScanTest {
     private val res = File("src/main/res")
 
-    /** Old screens (about, dialogs, media config, notebook, background picker) that keep their own sizes for now. */
+    /** Old screens (about, dialogs, media config, background picker) that keep their own sizes for now. */
     private val legacy = setOf(
-        "layout/background_picker_item.xml", "layout/fragment_myhymns.xml",
+        "layout/background_picker_item.xml",
         "layout/media_config.xml", "layout-land/media_config.xml",
         "layout/custom_dialog_wv.xml", "layout/file_xfer_ui.xml", "layout/media_record_delete.xml",
         "layout/action_bar.xml", "layout/http_login_dialog.xml",
@@ -30,6 +30,7 @@ class TypeScaleScanTest {
         "layout/row_history_header.xml", "layout/media_player_audio_ui.xml", "layout/media_select.xml", "layout/content_main.xml",
         "layout/activity_main_host.xml", "layout/fragment_home.xml", "layout/alert_dialog.xml", "layout/about.xml",
         "layout/rich_text_editor.xml",
+        "layout/panel_jump.xml",
     )
 
     private val sizeAttr = Regex("""android:textSize\s*=\s*"[^"]*"""")

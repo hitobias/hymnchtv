@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- D-1 F1: personal notes (several per hymn, newest first) -->
+<resources>
+    <string name="notes_menu">Notes</string>
+    <string name="notes_menu_count">Notes (%1$d)</string>
+    <string name="notes_title">Notes</string>
+    <string name="notes_add">New note</string>
+    <string name="notes_edit">Edit note</string>
+    <string name="notes_empty">No notes yet. Tap New note to start.</string>
+    <string name="notes_hint">Type your note</string>
+    <string name="notes_save">Save</string>
+    <string name="notes_delete">Delete note</string>
+    <string name="notes_delete_confirm">Delete this note? This cannot be undone.</string>
+    <string name="notes_unsaved">Your changes are not saved yet.</string>
+    <string name="notes_dont_save">Don\'t save</string>
+    <string name="notes_save_error">Couldn\'t save the note. Please try again.</string>
+    <string name="notes_delete_error">Couldn\'t delete the note. Please try again.</string>
+    <string name="notes_load_error">Couldn\'t load the notes.</string>
+    <string name="notes_edited">Edited %1$s</string>
+    <string name="notes_sung">Sung %1$d times, last %2$s</string>
+    <string name="notes_marked">Has notes</string>
+    <string name="notes_too_long">A note can have at most %1$d characters.</string>
+</resources>

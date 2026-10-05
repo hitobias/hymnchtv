@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
+import androidx.preference.SwitchPreferenceCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
@@ -19,6 +20,8 @@ import androidx.test.runner.lifecycle.Stage
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.notebook.Notebook
+import org.cog.hymnchtv.notebook.settings.NotebookPrefs
 import org.cog.hymnchtv.reading.ReadingSettingsActivity
 import org.cog.hymnchtv.ui.FragmentHost
 import org.cog.hymnchtv.ui.theme.NightMode
@@ -87,12 +90,38 @@ class SettingsFragmentTest {
         }
     }
 
+    private fun resetAutoRecord() {
+        ctx.getSharedPreferences(NotebookPrefs.FILE_NAME, Context.MODE_PRIVATE).edit().remove(NotebookPrefs.KEY_AUTO_RECORD).commit()
+    }
+
     @Test
-    fun d1SlotCategoriesExistButAreHidden() = withSettings { fragment, scenario ->
-        for (key in listOf("c_cat_sing_log", "c_cat_backup")) {
-            val category = scenario.pref<PreferenceCategory>(fragment, key)
-            assertThat(category.isVisible).isFalse()
-            assertThat(category.preferenceCount).isEqualTo(0)
+    fun notebookCategoriesAreShownWithTheirEntries() = withSettings { fragment, scenario ->
+        val singLog = scenario.pref<PreferenceCategory>(fragment, "c_cat_sing_log")
+        val backup = scenario.pref<PreferenceCategory>(fragment, "c_cat_backup")
+        assertThat(singLog.isVisible).isTrue()
+        assertThat(singLog.preferenceCount).isEqualTo(1)
+        assertThat(backup.isVisible).isTrue()
+        assertThat(backup.preferenceCount).isEqualTo(2)
+        assertThat(scenario.pref<Preference>(fragment, SettingsFragment.KEY_EXPORT).isEnabled).isTrue()
+        assertThat(scenario.pref<Preference>(fragment, SettingsFragment.KEY_IMPORT).isEnabled).isTrue()
+    }
+
+    @Test
+    @QuickTest
+    fun autoRecordIsOffByDefaultAndTheSwitchTurnsItOn() {
+        resetAutoRecord()
+        try {
+            withSettings { fragment, scenario ->
+                assertThat(scenario.pref<SwitchPreferenceCompat>(fragment, SettingsFragment.KEY_AUTO_RECORD).isChecked).isFalse()
+                // Opening the screen wrote nothing
+                assertThat(ctx.getSharedPreferences(NotebookPrefs.FILE_NAME, Context.MODE_PRIVATE).contains(NotebookPrefs.KEY_AUTO_RECORD)).isFalse()
+                scenario.onActivity { fragment.scrollToPreference(SettingsFragment.KEY_AUTO_RECORD) }
+                onView(withText(R.string.sing_log_auto)).perform(click())
+                FragmentHost.eventually { assertThat(Notebook.async(ctx).isAutoRecordEnabled()).isTrue() }
+                assertThat(scenario.pref<SwitchPreferenceCompat>(fragment, SettingsFragment.KEY_AUTO_RECORD).isChecked).isTrue()
+            }
+        } finally {
+            resetAutoRecord()
         }
     }
 

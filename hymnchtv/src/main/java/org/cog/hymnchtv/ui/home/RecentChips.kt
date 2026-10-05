@@ -19,7 +19,7 @@ import org.cog.hymnchtv.ui.picker.HymnPickerViews
 class RecentChips(
     private val views: HymnPickerViews,
     private val onOpen: (HistoryRecord) -> Unit,
-) {
+) : RecentFit {
     private val context: Context = views.root.context
     private var released = false
     private var records: List<HistoryRecord> = emptyList()
@@ -28,10 +28,10 @@ class RecentChips(
     private var showEmpty = false
 
     /** Called when the number of records is known or changed, so the page can be fitted again. */
-    var onChanged: (() -> Unit)? = null
+    override var onChanged: (() -> Unit)? = null
 
     /** How many history records there are (at most [HomeFit.MAX_RECENT] are kept). */
-    val total: Int get() = records.size
+    override val total: Int get() = records.size
 
     fun release() {
         released = true
@@ -50,7 +50,7 @@ class RecentChips(
     }
 
     /** Shows the first [count] records, or the empty hint when there are none and [empty] says it fits. */
-    fun fit(count: Int, empty: Boolean) {
+    override fun fit(count: Int, empty: Boolean) {
         if (count == capacity && empty == showEmpty) return
         capacity = count
         showEmpty = empty

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notes_menu">笔记</string>
+    <string name="notes_menu_count">笔记（%1$d）</string>
+    <string name="notes_title">笔记</string>
+    <string name="notes_add">新增笔记</string>
+    <string name="notes_edit">编辑笔记</string>
+    <string name="notes_empty">还没有笔记。点“新增笔记”开始。</string>
+    <string name="notes_hint">输入笔记内容</string>
+    <string name="notes_save">保存</string>
+    <string name="notes_delete">删除笔记</string>
+    <string name="notes_delete_confirm">删除此笔记？删除后无法还原。</string>
+    <string name="notes_unsaved">修改还没有保存。</string>
+    <string name="notes_dont_save">不保存</string>
+    <string name="notes_save_error">无法保存笔记，请再试一次。</string>
+    <string name="notes_delete_error">无法删除笔记，请再试一次。</string>
+    <string name="notes_load_error">无法读取笔记。</string>
+    <string name="notes_edited">修改于 %1$s</string>
+    <string name="notes_sung">唱过 %1$d 次，最近 %2$s</string>
+    <string name="notes_marked">有笔记</string>
+    <string name="notes_too_long">笔记最多 %1$d 个字。</string>
+</resources>

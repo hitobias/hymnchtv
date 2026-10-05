@@ -26,9 +26,4 @@ class MainHostTabsTest {
         val ids = org.cog.hymnchtv.R.id::class.java.fields.map { it.name }
         assertThat(ids).doesNotContain("bottom_nav")
     }
-
-    @Test
-    fun releaseBuildHidesTheNotebookUi() {
-        assertThat(UiFlags.NOTEBOOK_UI_ENABLED).isFalse()
-    }
 }

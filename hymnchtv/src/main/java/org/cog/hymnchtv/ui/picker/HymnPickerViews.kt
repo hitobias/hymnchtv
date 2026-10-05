@@ -36,7 +36,6 @@ class HymnPickerViews(val root: View) {
     val delete: MaterialButton = root.findViewById(R.id.n11)
 
     val open: MaterialButton = root.findViewById(R.id.btn_open)
-    val addPlaylist: MaterialButton = root.findViewById(R.id.btn_add_playlist)
     val setNext: MaterialButton = root.findViewById(R.id.btn_set_next)
 
     val recentArea: View = root.findViewById(R.id.recentArea)

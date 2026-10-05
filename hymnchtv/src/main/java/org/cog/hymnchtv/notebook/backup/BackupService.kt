@@ -24,9 +24,15 @@ class BackupService(
         guarded<ExportResult>(onError = { error, e -> ExportResult.Failure(error, e.message.orEmpty()) }) {
             val tables = store.readAll()
             val snapshot = BackupSnapshot(BackupCodec.CURRENT_SCHEMA_VERSION, clock.nowMillis(), appVersionName, tables)
-            output.write(BackupCodec.encode(snapshot).toByteArray(Charsets.UTF_8))
-            output.flush()
-            ExportResult.Success(tables.rowCount)
+            val bytes = BackupCodec.encode(snapshot).toByteArray(Charsets.UTF_8)
+            if (bytes.size > maxBytes) {
+                // import refuses anything over maxBytes, so a file that large would be a backup that cannot be restored
+                ExportResult.Failure(BackupError.TOO_LARGE, "Backup would be ${bytes.size} bytes, over the $maxBytes limit")
+            } else {
+                output.write(bytes)
+                output.flush()
+                ExportResult.Success(tables.rowCount)
+            }
         }
     }
 

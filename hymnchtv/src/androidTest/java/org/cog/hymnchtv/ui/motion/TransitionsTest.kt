@@ -11,6 +11,8 @@ import org.cog.hymnchtv.ContentHandler
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.ui.lyrics.LyricsTestBase
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicInteger
@@ -30,11 +32,27 @@ class TransitionsTest : LyricsTestBase() {
     private fun anchorName(s: ActivityScenario<ContentHandler>): String? =
         s.read { page(it)!!.findViewById<View>(R.id.lyrics_number_anchor).transitionName }
 
+    private var originalScale: String = "1"
+
+    private fun shell(command: String): String {
+        val pfd = instrumentation.uiAutomation.executeShellCommand(command)
+        return android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { String(it.readBytes()) }.trim()
+    }
+
     private fun setAnimatorScale(value: String) {
-        val ui = instrumentation.uiAutomation
-        ui.executeShellCommand("settings put global animator_duration_scale $value").close()
+        shell("settings put global animator_duration_scale $value")
         SystemClock.sleep(300)
     }
+
+    /** Test devices usually run with animations off (scale 0), which disables the shared element: switch them on. */
+    @Before
+    fun animationsOn() {
+        originalScale = shell("settings get global animator_duration_scale").takeUnless { it.isEmpty() || it == "null" } ?: "1"
+        setAnimatorScale("1")
+    }
+
+    @After
+    fun restoreAnimations() = setAnimatorScale(originalScale)
 
     @Test
     fun headerNumberHasTheHomePreviewTransitionName() {

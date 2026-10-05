@@ -54,7 +54,8 @@ class MainActivitySendIntentTest {
     @Test
     fun reSharingAFileOfTheSameNameImportsTheNewContent() {
         // an older import of the same name is already in Download/hymnal/tmp
-        val tmpDir = FileBackend.getHymnchtvStore(FileBackend.TMP, true)!!
+        // createNew=false: the path only, without the permission check that needs a live MainActivity
+        val tmpDir = FileBackend.getHymnchtvStore(FileBackend.TMP, false)!!.apply { mkdirs() }
         File(tmpDir, name).also { cleanup += it }.writeText("old export")
         source.writeText("hymn_db,1,false,HYMN_MEDIA,https://example.org/v2,\n")
         val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", source)

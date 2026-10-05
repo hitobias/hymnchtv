@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add to playlist: "New playlist…" then the playlists (tap one to add the hymn) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/add_playlist_new"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start|center_vertical"
+        android:minHeight="48dp"
+        android:paddingHorizontal="16dp"
+        android:text="@string/playlist_new_more"
+        android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/add_playlist_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>

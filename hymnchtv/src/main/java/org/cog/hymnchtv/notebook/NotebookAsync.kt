@@ -52,6 +52,8 @@ class NotebookAsync(
     private val prefs: NotebookPrefs,
     private val tracker: SingTracker,
     private val backupIo: BackupIo,
+    /** Number of active notes of a hymn (NoteRepository.findByHymn(key).size in production). */
+    private val noteCounter: suspend (HymnKey) -> Int,
     callbackDispatcher: CoroutineDispatcher,
     private val workDispatcher: CoroutineDispatcher,
 ) {
@@ -71,6 +73,12 @@ class NotebookAsync(
 
     fun favorites(callback: NotebookCallback<List<FavoriteEntity>>): Cancellable =
         call(callback) { favorites.findAll() }
+
+    // ---- notes: the Kotlin notes page uses NoteRepository directly; Java (the lyrics page) only needs the count ----
+
+    /** Number of notes of [key], for the lyrics page's "Notes (N)" and its title-row mark. */
+    fun noteCount(key: HymnKey, callback: NotebookCallback<Int>): Cancellable =
+        call(callback) { noteCounter(key) }
 
     // ---- sing logs ----
 

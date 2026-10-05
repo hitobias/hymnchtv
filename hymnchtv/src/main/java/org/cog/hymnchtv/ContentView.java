@@ -78,6 +78,9 @@ import org.cog.hymnchtv.lyrics.HantVariant;
 import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+import org.cog.hymnchtv.nav.ReadingPosition;
+import org.cog.hymnchtv.hymn.HymnRef;
+import org.cog.hymnchtv.ui.picker.HymnLabels;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.reading.DisplayMode;
 import org.cog.hymnchtv.reading.DisplayModePolicy;
@@ -181,6 +184,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private TextView meterKeyView;
     private View infoRowView;
     private ImageView favoriteStarView;
+    private ImageView notesMarkView;
     /** Bumped by every applyFont: a background face load only applies if no newer choice was made meanwhile. */
     private int mFontRequest;
     private WebView lyricsEnglish;
@@ -256,6 +260,14 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         topBar = mConvertView.findViewById(R.id.lyrics_top_bar);
         buttonBar = mConvertView.findViewById(R.id.lyricsButtonBar);
         lyricsScroll = mConvertView.findViewById(R.id.lyrics_scroll);
+        // H5: the reader's own touch or scroll ends a position restore (our own restore scroll is ignored)
+        lyricsScroll.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                onReaderScroll();
+            }
+            return false;
+        });
+        lyricsScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> onReaderScroll());
         // Toolbar heights change with font scale and orientation: keep the lyrics padding in step
         View.OnLayoutChangeListener insetsFollowBars = (v, l, t, r, b, ol, ot, or, ob) -> {
             if (b != ob || t != ot) {
@@ -284,6 +296,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         meterKeyView = mConvertView.findViewById(R.id.meter_key);
         infoRowView = mConvertView.findViewById(R.id.lyrics_info_row);
         favoriteStarView = mConvertView.findViewById(R.id.favorite_star);
+        notesMarkView = mConvertView.findViewById(R.id.notes_mark);
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
 
         mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
@@ -312,11 +325,83 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             }
         }
         applyDisplayMode(true);
+        onNextSlotChanged();
         return mConvertView;
+    }
+
+    /** Where the reader is on this page, for the H5 return stack; the top when the page has no view. */
+    public ReadingPosition readingPosition() {
+        if (lyricsScroll == null || lyricsView == null) {
+            return ReadingPosition.TOP;
+        }
+        return ReadingPosition.of(lyricsScroll.getScrollY(), lyricsView.getHeight());
+    }
+
+    /** Score images and lyrics may still be loading: the position is re-applied on every layout for this long. */
+    private static final long RESTORE_WINDOW_MS = 2000;
+    private ReadingPosition mRestorePosition;
+    private int mRestoreY;
+    /** True while this class itself scrolls for a restore; any other scroll is the reader's and ends the restore. */
+    private boolean mApplyingRestore = false;
+    private final View.OnLayoutChangeListener mRestoreOnLayout = (v, l, t, r, b, ol, ot, or, ob) -> applyRestorePosition();
+    private final Runnable mEndRestore = this::finishRestore;
+    private final Runnable mApplyScroll = () -> {
+        mApplyingRestore = true;
+        lyricsScroll.scrollTo(0, mRestoreY);
+        mApplyingRestore = false;
+    };
+
+    /** Scrolls back to [position] (H5 return), scaled when the page now measures a different height. */
+    public void restoreReadingPosition(@NonNull ReadingPosition position) {
+        if (lyricsView == null || lyricsScroll == null) {
+            return;
+        }
+        mRestorePosition = position;
+        lyricsView.removeOnLayoutChangeListener(mRestoreOnLayout);
+        lyricsView.addOnLayoutChangeListener(mRestoreOnLayout);
+        lyricsView.removeCallbacks(mEndRestore);
+        lyricsView.postDelayed(mEndRestore, RESTORE_WINDOW_MS);
+        applyRestorePosition();
+    }
+
+    private void applyRestorePosition() {
+        ReadingPosition position = mRestorePosition;
+        if (position == null || lyricsView.getHeight() == 0) {
+            return;
+        }
+        mRestoreY = position.restoredY(lyricsView.getHeight());
+        lyricsScroll.removeCallbacks(mApplyScroll);
+        lyricsScroll.post(mApplyScroll);
+    }
+
+    /** The reader touched or scrolled the page: stop following the restore. */
+    private void onReaderScroll() {
+        if (mRestorePosition != null && !mApplyingRestore) {
+            finishRestore();
+        }
+    }
+
+    /** The restore is over for good (not a mere view teardown): the handler may forget the position. */
+    private void finishRestore() {
+        endRestore();
+        mContentHandler.onRestoreFinished(this);
+    }
+
+    /** Ends a restore: no more layout re-applies, and no scroll or timeout still queued. */
+    private void endRestore() {
+        mRestorePosition = null;
+        if (lyricsView != null) {
+            lyricsView.removeOnLayoutChangeListener(mRestoreOnLayout);
+            lyricsView.removeCallbacks(mEndRestore);
+        }
+        if (lyricsScroll != null) {
+            lyricsScroll.removeCallbacks(mApplyScroll);
+        }
     }
 
     @Override
     public void onDestroyView() {
+        endRestore();
         mContentHandler.unregisterChromePage(this);
         super.onDestroyView();
     }
@@ -338,6 +423,11 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         // ViewPager2 only resumes the visible page: re-apply toggles (script, display mode) made on another page.
         // Do not reload English lyrics that are already showing.
         applyDisplayMode(autoEnglish || !hasEnglishLyrics);
+        // H5: a return to this hymn scrolls back to where the reader left it
+        ReadingPosition restore = mContentHandler.takePendingPosition(this);
+        if (restore != null) {
+            restoreReadingPosition(restore);
+        }
     }
 
     /** The "more" button of the top bar: the entries that have no button of their own. */
@@ -393,6 +483,13 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         MenuItem favorite = popup.getMenu().findItem(R.id.favorite);
         favorite.setTitle(isFavoriteMarked() ? R.string.fav_remove : R.string.fav_add);
         favorite.setEnabled(mContentHandler.canToggleFavorite());
+        // D-1: notes of this hymn (with the count once known) and add-to-playlist; disabled for numbers the notebook does not store
+        int noteCount = mContentHandler.noteCountFor(mPageHymnType, mPageHymnNo);
+        boolean notebookHymn = mContentHandler.hasNotebookHymn();
+        MenuItem notes = popup.getMenu().findItem(R.id.notes);
+        notes.setTitle(noteCount > 0 ? getString(R.string.notes_menu_count, noteCount) : getString(R.string.notes_menu));
+        notes.setEnabled(notebookHymn);
+        popup.getMenu().findItem(R.id.addToPlaylist).setEnabled(notebookHymn);
         popup.setOnMenuItemClickListener(item -> mContentHandler.onLyricsAction(item.getItemId()));
         // The toolbars must not fade away under an open menu
         mContentHandler.setChromeHeld(true);
@@ -417,7 +514,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             mContentHandler.onLyricsAction(R.id.media_config);
         }
         else if (id == R.id.btn_next) {
-            mContentHandler.scrollNextHymn();
+            mContentHandler.onLyricsAction(R.id.btn_next);
         }
         else if (id == R.id.btn_more) {
             showMoreMenu(v);
@@ -733,6 +830,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         view.setTextColor(mPalette.getTextColor());
         meterKeyView.setTextColor(accent);
         ImageViewCompat.setImageTintList(favoriteStarView, ColorStateList.valueOf(accent));
+        ImageViewCompat.setImageTintList(notesMarkView, ColorStateList.valueOf(accent));
         view.setLinkTextColor(accent);
         view.setHighlightColor((accent & 0x00FFFFFF) | 0x40000000);
         // null for drawn backgrounds; an 85 % panel for photos
@@ -939,15 +1037,29 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         return mContentHandler.isFavoriteMarked(mPageHymnType, mPageHymnNo);
     }
 
-    /** The row shows the key and time signature and/or the favourite star; it is hidden when it has neither. */
+    /** The row shows the key and time signature, the notes mark and/or the favourite star; it is hidden when it has none. */
     private void updateInfoRow() {
         boolean marked = isFavoriteMarked();
+        boolean hasNotes = mContentHandler.noteCountFor(mPageHymnType, mPageHymnNo) > 0;
         favoriteStarView.setVisibility(marked ? View.VISIBLE : View.GONE);
+        notesMarkView.setVisibility(hasNotes ? View.VISIBLE : View.GONE);
         boolean hasKey = meterKeyView.getVisibility() == View.VISIBLE;
-        infoRowView.setVisibility(hasKey || marked ? View.VISIBLE : View.GONE);
+        infoRowView.setVisibility(hasKey || marked || hasNotes ? View.VISIBLE : View.GONE);
     }
 
-    /** Called by ContentHandler when the favourite state of the hymn on screen changed. */
+    /** The next button shows the queued hymn (H5 slot): a dot on the arrow and the hymn's name for TalkBack. */
+    public void onNextSlotChanged() {
+        if (mConvertView == null) {
+            return;
+        }
+        ImageView next = mConvertView.findViewById(R.id.btn_next);
+        HymnRef slot = mContentHandler.getNextSlot();
+        next.setImageResource(slot == null ? R.drawable.ic_sym_arrow_forward : R.drawable.ic_sym_arrow_forward_dot);
+        next.setContentDescription(slot == null ? getString(R.string.c_next_hymn)
+                : getString(R.string.jump_next_slot, HymnLabels.INSTANCE.spoken(requireContext(), slot, null)));
+    }
+
+    /** Called by ContentHandler when the favourite state or the note count of the hymn on screen changed. */
     public void onFavoriteStateChanged() {
         if (infoRowView != null) {
             updateInfoRow();

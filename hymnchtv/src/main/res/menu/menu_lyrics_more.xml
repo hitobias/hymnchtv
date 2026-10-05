@@ -6,9 +6,22 @@
         android:id="@+id/home"
         android:title="@string/home" />
 
+    <!-- H5: second on purpose (JumpPanelTest checks positions 0 and 1); D-1 adds its entries after "favorite" -->
+    <item
+        android:id="@+id/lyricsJump"
+        android:title="@string/jump_menu" />
+
     <item
         android:id="@+id/favorite"
         android:title="@string/fav_add" />
+
+    <item
+        android:id="@+id/notes"
+        android:title="@string/notes_menu" />
+
+    <item
+        android:id="@+id/addToPlaylist"
+        android:title="@string/playlist_menu_add" />
 
     <item
         android:id="@+id/scoreColorChange"
