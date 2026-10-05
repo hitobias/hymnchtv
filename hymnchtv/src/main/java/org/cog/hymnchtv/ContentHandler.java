@@ -103,6 +103,7 @@ import org.cog.hymnchtv.nav.JumpEntry;
 import org.cog.hymnchtv.nav.JumpState;
 import org.cog.hymnchtv.nav.ReadingPosition;
 import org.cog.hymnchtv.ui.lyrics.jump.JumpHost;
+import org.cog.hymnchtv.ui.lyrics.jump.JumpPanelFragment;
 import org.cog.hymnchtv.ui.picker.HymnLabels;
 import org.cog.hymnchtv.nav.ViewingCause;
 import org.cog.hymnchtv.nav.ViewingObserver;
@@ -841,6 +842,14 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         }
     }
 
+    /** The overflow's "Jump to..." (H5): the full-screen jump panel; a second request while it is open is ignored. */
+    private void openJumpPanel() {
+        FragmentManager fm = getSupportFragmentManager();
+        if (fm.findFragmentByTag(JumpPanelFragment.TAG) == null && !isFinishing() && !fm.isStateSaved()) {
+            new JumpPanelFragment().show(fm, JumpPanelFragment.TAG);
+        }
+    }
+
     /** "More..." of the Aa panel: the full background picker for the lyrics slot. */
     public void openBackgroundPicker() {
         mBackgroundPickerLauncher.launch(BackgroundPickerActivity.intent(this, BackgroundSlot.LYRICS));
@@ -1001,6 +1010,10 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         }
         else if (itemId == R.id.btn_next) {
             onNextPressed();
+            return true;
+        }
+        else if (itemId == R.id.lyricsJump) {
+            openJumpPanel();
             return true;
         }
         return false;

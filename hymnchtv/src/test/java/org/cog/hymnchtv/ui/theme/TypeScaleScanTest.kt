@@ -30,6 +30,7 @@ class TypeScaleScanTest {
         "layout/row_history_header.xml", "layout/media_player_audio_ui.xml", "layout/media_select.xml", "layout/content_main.xml",
         "layout/activity_main_host.xml", "layout/fragment_home.xml", "layout/alert_dialog.xml", "layout/about.xml",
         "layout/rich_text_editor.xml",
+        "layout/panel_jump.xml",
     )
 
     private val sizeAttr = Regex("""android:textSize\s*=\s*"[^"]*"""")

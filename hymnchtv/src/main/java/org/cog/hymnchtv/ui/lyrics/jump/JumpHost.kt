@@ -19,4 +19,7 @@ interface JumpHost {
 
     /** Queues [target] for the next button (null clears the slot); the page stays where it is. */
     fun onSetNext(target: HymnRef?)
+
+    /** True while the panel is open: the lyrics toolbars do not fade away under it. */
+    fun setChromeHeld(held: Boolean)
 }
