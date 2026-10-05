@@ -34,6 +34,7 @@ import org.cog.hymnchtv.R;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
 import org.cog.hymnchtv.update.MediaLinksUpdater;
 import org.cog.hymnchtv.update.UpdateInstallActivity;
+import org.cog.hymnchtv.utils.DeviceLock;
 
 /**
  * Online Update Service started on first HymnApp launched. It is set to check for update every 24hours
@@ -114,7 +115,7 @@ public class OnlineUpdateService extends IntentService {
             mNotificationMgr.notify(UPDATE_AVAIL_TAG, UPDATE_AVAIL_NOTIFY_ID, nBuilder.build());
 
             // Launch update dialog once if new version found.
-            if (!updateNotified && !MainActivity.isDeviceLocked() && MainActivity.isForeground) {
+            if (UpdatePromptPolicy.shouldPrompt(updateNotified, MainActivity.isForeground, () -> DeviceLock.isLocked(this))) {
                 UpdateServiceImpl.getInstance().checkForUpdates();
                 updateNotified = true;
             }
