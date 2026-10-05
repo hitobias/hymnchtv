@@ -18,6 +18,7 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.reading.background.GlassMode
 import org.cog.hymnchtv.reading.background.UiTokens
 import org.cog.hymnchtv.ui.lyrics.ContentInsets
+import org.cog.hymnchtv.ui.lyrics.PillAnchor
 
 /** What the controller needs from the activity. */
 interface PlayerSheetCallbacks {
@@ -383,7 +384,11 @@ class PlayerSheetController(
         val label = if (playback.hymnInfo.isBlank()) verb else context.getString(
             if (playback.isPlaying) R.string.c_player_pause_named else R.string.c_player_play_named, playback.hymnInfo)
         if (playButton.contentDescription != label) playButton.contentDescription = label
-        if (formChanged) capsule.requestLayout()
+        if (formChanged) {
+            capsule.requestLayout()
+            // The capsule's width changed (note <-> playback): the toolbar capsule beside it moves
+            callbacks.onPlayerInsetsChanged()
+        }
     }
 
     private fun applyDragEnabled() {
@@ -404,6 +409,14 @@ class PlayerSheetController(
     /** What the lyrics pages keep clear above the system bars: the card's real height, the capsule's, or nothing. */
     fun playerReserve(): Int =
         if (videoActive) host.height else PlayerSheetState.reserve(rendered ?: target(), host.height, density)
+
+    /** What the bottom toolbar capsule lines up with: a playing video counts as the card (it owns the layer). */
+    fun pillAnchor(): PillAnchor {
+        val shown = if (videoActive) SheetDisplay.CARD else (rendered ?: target())
+        val form = PlayerSheetState.capsuleForm(playback)
+        val widthDp = if (form == CapsuleForm.PLAYBACK) CAPSULE_PLAYBACK_WIDTH_DP else CAPSULE_HEIGHT_DP
+        return PillAnchor(shown, (widthDp * density + 0.5f).toInt(), form)
+    }
 
     private fun notifyInsets() {
         val reserve = playerReserve()
