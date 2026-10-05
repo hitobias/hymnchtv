@@ -79,6 +79,8 @@ import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
 import org.cog.hymnchtv.nav.ReadingPosition;
+import org.cog.hymnchtv.hymn.HymnRef;
+import org.cog.hymnchtv.ui.picker.HymnLabels;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.reading.DisplayMode;
 import org.cog.hymnchtv.reading.DisplayModePolicy;
@@ -321,6 +323,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             }
         }
         applyDisplayMode(true);
+        onNextSlotChanged();
         return mConvertView;
     }
 
@@ -502,7 +505,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
             mContentHandler.onLyricsAction(R.id.media_config);
         }
         else if (id == R.id.btn_next) {
-            mContentHandler.scrollNextHymn();
+            mContentHandler.onLyricsAction(R.id.btn_next);
         }
         else if (id == R.id.btn_more) {
             showMoreMenu(v);
@@ -1030,6 +1033,18 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         favoriteStarView.setVisibility(marked ? View.VISIBLE : View.GONE);
         boolean hasKey = meterKeyView.getVisibility() == View.VISIBLE;
         infoRowView.setVisibility(hasKey || marked ? View.VISIBLE : View.GONE);
+    }
+
+    /** The next button shows the queued hymn (H5 slot): a dot on the arrow and the hymn's name for TalkBack. */
+    public void onNextSlotChanged() {
+        if (mConvertView == null) {
+            return;
+        }
+        ImageView next = mConvertView.findViewById(R.id.btn_next);
+        HymnRef slot = mContentHandler.getNextSlot();
+        next.setImageResource(slot == null ? R.drawable.ic_sym_arrow_forward : R.drawable.ic_sym_arrow_forward_dot);
+        next.setContentDescription(slot == null ? getString(R.string.c_next_hymn)
+                : getString(R.string.jump_next_slot, HymnLabels.INSTANCE.chip(requireContext(), slot)));
     }
 
     /** Called by ContentHandler when the favourite state of the hymn on screen changed. */

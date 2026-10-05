@@ -103,6 +103,7 @@ import org.cog.hymnchtv.nav.JumpEntry;
 import org.cog.hymnchtv.nav.JumpState;
 import org.cog.hymnchtv.nav.ReadingPosition;
 import org.cog.hymnchtv.ui.lyrics.jump.JumpHost;
+import org.cog.hymnchtv.ui.picker.HymnLabels;
 import org.cog.hymnchtv.nav.ViewingCause;
 import org.cog.hymnchtv.nav.ViewingObserver;
 import org.cog.hymnchtv.concurrent.AppExecutors;
@@ -939,7 +940,8 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     };
 
     /**
-     * The lyrics top-bar buttons and its overflow menu (plan C-4; the long-press context menu is gone).
+     * The single dispatch of the lyrics top-bar buttons and its overflow menu (plan C-4; H5 adds next and jump; D-1
+     * adds its entries here). The long-press context menu is gone.
      *
      * @param itemId a top-bar action id (ids_lyrics.xml) or an item of menu_lyrics_more
      * @return true if the action was handled
@@ -995,6 +997,10 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         }
         else if (itemId == R.id.home) {
             backToHome();
+            return true;
+        }
+        else if (itemId == R.id.btn_next) {
+            onNextPressed();
             return true;
         }
         return false;
@@ -2167,6 +2173,44 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         if (page == currentContentView()) {
             mPendingPosition = null;
         }
+    }
+
+    @Override
+    public void onSetNext(@Nullable HymnRef target) {
+        setSlot(target);
+        if (target != null) {
+            HymnsApp.showToastMessage(R.string.jump_next_slot, HymnLabels.INSTANCE.chip(this, target));
+        }
+    }
+
+    /** The queued hymn of the next button, or null. */
+    @Nullable
+    public HymnRef getNextSlot() {
+        return mJumpState.getSlot();
+    }
+
+    private void setSlot(@Nullable HymnRef target) {
+        mJumpState = mJumpState.withSlot(target);
+        for (ContentView page : livePages()) {
+            page.onNextSlotChanged();
+        }
+    }
+
+    /** The next button: the queued hymn once (a jump, so back returns here), else the next page of this book. */
+    private void onNextPressed() {
+        HymnRef slot = mJumpState.getSlot();
+        if (slot == null) {
+            scrollNextHymn();
+            return;
+        }
+        setSlot(null);
+        onJump(slot);
+    }
+
+    /** Auto-next's own advance (it never reads the slot); for NextSlotTest. */
+    @VisibleForTesting
+    public boolean advanceForAutoNextForTest() {
+        return advanceByAutoStream();
     }
 
     /**

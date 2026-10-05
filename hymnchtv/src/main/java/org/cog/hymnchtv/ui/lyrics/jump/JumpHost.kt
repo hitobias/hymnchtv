@@ -16,4 +16,7 @@ interface JumpHost {
 
     /** Returns to the [recentIndex]-th newest stack entry (0 = what the back key does), restoring its reading position. */
     fun onReturnTo(recentIndex: Int)
+
+    /** Queues [target] for the next button (null clears the slot); the page stays where it is. */
+    fun onSetNext(target: HymnRef?)
 }

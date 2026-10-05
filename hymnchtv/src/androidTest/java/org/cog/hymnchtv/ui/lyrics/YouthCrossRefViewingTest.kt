@@ -79,4 +79,16 @@ class YouthCrossRefViewingTest : LyricsTestBase() {
             assertThat(s.read { a -> a.jumpState.recentFirst().map { it.ref } }).containsExactly(yb1)
         }
     }
+
+    @Test
+    fun theQueuedNextAfterTheLookupGoesToTheYouthHymn() {
+        launch(MainActivity.HYMN_YB, 1).use { s ->
+            lookUpBibleTool(s)
+            val queued = HymnRef(MainActivity.HYMN_YB, 20)
+            s.onActivity { it.onSetNext(queued) }
+            s.onActivity { it.onLyricsAction(R.id.btn_next) }
+            s.assertViewing(queued)
+            assertThat(s.read { it.jumpState.slot }).isNull()
+        }
+    }
 }
