@@ -16,6 +16,7 @@
  */
 package org.cog.hymnchtv;
 
+import org.cog.hymnchtv.nav.PagerItemIds;
 import static org.cog.hymnchtv.ContentView.LYRICS_INDEX;
 import static org.cog.hymnchtv.ContentView.LYRICS_TYPE;
 import static org.cog.hymnchtv.MainActivity.HYMN_BB;
@@ -66,6 +67,17 @@ public class MyPagerAdapter extends FragmentStateAdapter {
     /** The book this adapter pages through; the pager, not mHymnType, says which hymn is on screen (plan H5). */
     public String getHymnType() {
         return mHymnType;
+    }
+
+    /** Book-qualified, so the pages of two books never share an id when a jump swaps the adapter (plan H5). */
+    @Override
+    public long getItemId(int position) {
+        return PagerItemIds.itemId(mHymnType, position);
+    }
+
+    @Override
+    public boolean containsItem(long itemId) {
+        return PagerItemIds.contains(mHymnType, itemId, getItemCount());
     }
 
     @Override

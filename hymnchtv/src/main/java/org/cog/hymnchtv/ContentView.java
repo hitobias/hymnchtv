@@ -78,6 +78,7 @@ import org.cog.hymnchtv.lyrics.HantVariant;
 import org.cog.hymnchtv.lyrics.LyricsAssets;
 import org.cog.hymnchtv.lyrics.LyricsLang;
 import org.cog.hymnchtv.lyrics.LyricsLanguagePolicy;
+import org.cog.hymnchtv.nav.ReadingPosition;
 import org.cog.hymnchtv.mediaconfig.LyricsEnglishRecord;
 import org.cog.hymnchtv.reading.DisplayMode;
 import org.cog.hymnchtv.reading.DisplayModePolicy;
@@ -313,6 +314,14 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         }
         applyDisplayMode(true);
         return mConvertView;
+    }
+
+    /** Where the reader is on this page, for the H5 return stack; the top when the page has no view. */
+    public ReadingPosition readingPosition() {
+        if (lyricsScroll == null || lyricsView == null) {
+            return ReadingPosition.TOP;
+        }
+        return ReadingPosition.of(lyricsScroll.getScrollY(), lyricsView.getHeight());
     }
 
     @Override

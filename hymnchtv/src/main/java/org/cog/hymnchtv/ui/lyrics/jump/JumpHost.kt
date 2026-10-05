@@ -1,0 +1,16 @@
+package org.cog.hymnchtv.ui.lyrics.jump
+
+import org.cog.hymnchtv.hymn.HymnRef
+import org.cog.hymnchtv.nav.JumpState
+
+/** What the jump panel (and the jump tests) need from the lyrics page; ContentHandler implements it. */
+interface JumpHost {
+    /** The return stack and the next slot of this lyrics session. */
+    val jumpState: JumpState
+
+    /** The hymn on screen. */
+    fun currentRef(): HymnRef
+
+    /** Opens [target] and pushes the hymn on screen (with its reading position) onto the return stack. */
+    fun onJump(target: HymnRef)
+}

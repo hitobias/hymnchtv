@@ -68,4 +68,15 @@ class YouthCrossRefViewingTest : LyricsTestBase() {
             s.assertViewing(HymnRef(MainActivity.HYMN_YB, 3))
         }
     }
+
+    @Test
+    fun aJumpAfterTheLookupStaysInTheYouthBook() {
+        launch(MainActivity.HYMN_YB, 1).use { s ->
+            lookUpBibleTool(s)
+            val target = HymnRef(MainActivity.HYMN_YB, 10)
+            s.onActivity { it.onJump(target) }
+            s.assertViewing(target)
+            assertThat(s.read { a -> a.jumpState.recentFirst().map { it.ref } }).containsExactly(yb1)
+        }
+    }
 }
