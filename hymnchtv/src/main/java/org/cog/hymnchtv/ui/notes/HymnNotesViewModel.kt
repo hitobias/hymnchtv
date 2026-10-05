@@ -81,6 +81,9 @@ class HymnNotesViewModel(app: Application, private val handle: SavedStateHandle)
         draft = null
     }
 
+    /** False until the note list has loaded: right after process death [originalOf] cannot answer yet. */
+    fun originalKnown(): Boolean = store?.state?.value?.loading == false
+
     /** The stored text of note [id]; null for a new note or before the list has loaded. */
     fun originalOf(id: String?): String? = id?.let { wanted -> store?.state?.value?.rows?.firstOrNull { it.id == wanted }?.body }
 

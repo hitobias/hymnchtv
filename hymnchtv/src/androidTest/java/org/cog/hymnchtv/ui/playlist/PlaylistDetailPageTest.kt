@@ -133,6 +133,7 @@ class PlaylistDetailPageTest {
     }
 
     @Test fun theTalkBackMoveDownActionReorders() {
+        var movedRow: View? = null
         val p = NotebookTestSupport.playlist("主日", db5, db6, db7)
         launch(p.id).use { s ->
             FragmentHost.eventually { assertThat(shownKeys(s)).hasSize(3) }
@@ -140,9 +141,18 @@ class PlaylistDetailPageTest {
                 val row = a.findViewById<RecyclerView>(R.id.playlist_items).findViewHolderForAdapterPosition(0)!!.itemView
                 val label = a.getString(R.string.playlist_move_down)
                 val action = row.createAccessibilityNodeInfo().actionList.first { it.label?.toString() == label }
+                movedRow = row
                 assertThat(row.performAccessibilityAction(action.id, null)).isTrue()
             }
             FragmentHost.eventually { assertThat(NotebookTestSupport.items(p.id)).containsExactly(db6, db5, db7).inOrder() }
+            // the moved row is the same view at its new place (stable ids), so TalkBack focus stays on it, and it is announced
+            FragmentHost.eventually {
+                s.onActivity { a ->
+                    val list = a.findViewById<RecyclerView>(R.id.playlist_items)
+                    assertThat(list.findViewHolderForAdapterPosition(1)?.itemView).isSameInstanceAs(movedRow)
+                    assertThat(fragment(a).lastAnnouncementForTest()).isEqualTo(a.getString(R.string.playlist_moved, 2, 3))
+                }
+            }
         }
     }
 
@@ -195,5 +205,39 @@ class PlaylistDetailPageTest {
         val p = NotebookTestSupport.playlist("主日")
         NotebookTestSupport.resetPlaylists()
         launch(p.id).use { s -> FragmentHost.eventually { assertThat(s.state).isEqualTo(Lifecycle.State.DESTROYED) } }
+    }
+
+    @Test fun aStoreUpdateHeldBackDuringADragAppearsWhenTheDragEnds() {
+        fun item(key: HymnKey) = DetailItem(key.hymnNo.toString(), key, HymnRef(key.hymnType, key.hymnNo), null)
+        var adapter: PlaylistItemAdapter? = null
+        var list: RecyclerView? = null
+        instrumentation.runOnMainSync {
+            val a = PlaylistItemAdapter({}, {}, { _, _ -> }, {})
+            val l = RecyclerView(ctx).apply { layoutManager = androidx.recyclerview.widget.LinearLayoutManager(ctx) }
+            l.adapter = a
+            a.submit(listOf(item(db5)), null)
+            a.beginDrag()
+            a.submit(listOf(item(db5), item(db6)), null)
+            assertThat(a.currentItems()).hasSize(1)
+            a.endDrag(l)
+            adapter = a
+            list = l
+        }
+        FragmentHost.eventually {
+            var size = 0
+            instrumentation.runOnMainSync { size = adapter!!.currentItems().size }
+            assertThat(size).isEqualTo(2)
+        }
+    }
+
+    @Test fun theDragHandleIsHiddenFromTalkBack() {
+        val p = NotebookTestSupport.playlist("主日", db5)
+        launch(p.id).use { s ->
+            FragmentHost.eventually { assertThat(shownKeys(s)).hasSize(1) }
+            s.onActivity { a ->
+                val row = a.findViewById<RecyclerView>(R.id.playlist_items).findViewHolderForAdapterPosition(0)!!.itemView
+                assertThat(row.findViewById<View>(R.id.item_drag).importantForAccessibility).isEqualTo(View.IMPORTANT_FOR_ACCESSIBILITY_NO)
+            }
+        }
     }
 }

@@ -13,6 +13,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:contentDescription="@string/playlist_reorder"
+        android:importantForAccessibility="no"
         android:scaleType="center"
         android:src="@drawable/ic_sym_drag_handle" />
 

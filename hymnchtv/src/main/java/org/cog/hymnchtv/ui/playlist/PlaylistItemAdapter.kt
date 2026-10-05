@@ -2,10 +2,13 @@ package org.cog.hymnchtv.ui.playlist
 
 import android.annotation.SuppressLint
 import android.content.res.ColorStateList
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityEvent
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
@@ -25,11 +28,27 @@ class PlaylistItemAdapter(
     private val onRemove: (DetailItem) -> Unit,
     private val onMove: (Int, Int) -> Unit,
     private val onDragFinished: (List<String>) -> Unit,
+    /** The store's current items and "next" index; read when a drag ends (falls back to the last submitted). */
+    private val currentState: (() -> Pair<List<DetailItem>, Int?>)? = null,
 ) : RecyclerView.Adapter<PlaylistItemAdapter.Holder>() {
     private var items: List<DetailItem> = emptyList()
     private var nextIndex: Int? = null
     private var dragging = false
     private var touchHelper: ItemTouchHelper? = null
+    private var recycler: RecyclerView? = null
+
+    /** Latest data from the store, also while a drag holds it back. */
+    private var latestItems: List<DetailItem> = emptyList()
+    private var latestNext: Int? = null
+
+    /** After a TalkBack move: the moved row gets accessibility focus and its new place is spoken, once the list shows it. */
+    private var pendingFocusId: String? = null
+    private var pendingAnnouncement: String? = null
+    private var lastAnnouncement: String? = null
+
+    init {
+        setHasStableIds(true)
+    }
 
     var palette: PagePalette? = null
         set(value) {
@@ -52,11 +71,52 @@ class PlaylistItemAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     fun submit(newItems: List<DetailItem>, next: Int?) {
+        latestItems = newItems
+        latestNext = next
         if (dragging) return
+        show(newItems, next)
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private fun show(newItems: List<DetailItem>, next: Int?) {
         items = newItems
         nextIndex = next
         notifyDataSetChanged()
+        announcePendingMove()
     }
+
+    private fun announcePendingMove() {
+        val id = pendingFocusId ?: return
+        val text = pendingAnnouncement
+        if (items.none { it.itemId == id }) return
+        pendingFocusId = null
+        pendingAnnouncement = null
+        recycler?.post {
+            val view = recycler?.findViewHolderForItemId(stableId(id))?.itemView ?: return@post
+            view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED)
+            if (text != null) {
+                lastAnnouncement = text
+                view.announceForAccessibility(text)
+            }
+        }
+    }
+
+    internal fun beginDrag() {
+        dragging = true
+    }
+
+    /** The drag is over: show what the store holds now (updates that arrived during the drag were held back). */
+    internal fun endDrag(list: RecyclerView) {
+        dragging = false
+        // Handler, not View.post: a detached list would never run it
+        Handler(Looper.getMainLooper()).post {
+            if (dragging) return@post
+            val state = currentState?.invoke() ?: (latestItems to latestNext)
+            show(state.first, state.second)
+        }
+    }
+
+    internal fun lastAnnouncement(): String? = lastAnnouncement
 
     fun attachDrag(list: RecyclerView) {
         val helper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
@@ -75,22 +135,25 @@ class PlaylistItemAdapter(
 
             override fun onSelectedChanged(holder: RecyclerView.ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(holder, actionState)
-                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) dragging = true
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) beginDrag()
             }
 
             override fun clearView(rv: RecyclerView, holder: RecyclerView.ViewHolder) {
                 super.clearView(rv, holder)
                 if (dragging) {
-                    dragging = false
                     onDragFinished(items.map { it.itemId })
+                    endDrag(rv)
                 }
             }
         })
         helper.attachToRecyclerView(list)
+        recycler = list
         touchHelper = helper
     }
 
     override fun getItemCount() = items.size
+
+    override fun getItemId(position: Int): Long = stableId(items[position].itemId)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         Holder(LayoutInflater.from(parent.context).inflate(R.layout.row_playlist_item, parent, false))
@@ -146,7 +209,15 @@ class PlaylistItemAdapter(
         val from = positionOf(holder) ?: return false
         val to = from + delta
         if (to !in items.indices) return false
+        val ctx = holder.itemView.context
+        pendingFocusId = items[from].itemId
+        pendingAnnouncement = ctx.getString(R.string.playlist_moved, to + 1, items.size)
         onMove(from, to)
         return true
+    }
+
+    private companion object {
+        /** A stable 64-bit id for an item id (a UUID string), so RecyclerView keeps a moved row's view. */
+        fun stableId(itemId: String): Long = itemId.fold(1125899906842597L) { h, c -> 31 * h + c.code }
     }
 }

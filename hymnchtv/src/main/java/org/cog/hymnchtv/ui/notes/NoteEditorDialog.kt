@@ -9,7 +9,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.cog.hymnchtv.R
 
 /**
@@ -23,13 +26,16 @@ class NoteEditorDialog : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val noteId = vm.editing?.takeIf { it != HymnNotesViewModel.NEW_NOTE }
-        val original = vm.originalOf(noteId)
+        // Right after process death the list has not loaded yet: the stored text is then looked up when it is needed
+        val original = { vm.originalOf(noteId) }
         val view = layoutInflater.inflate(R.layout.dialog_note_editor, null)
         val input = view.findViewById<EditText>(R.id.note_input)
         input.filters = arrayOf(InputFilter.LengthFilter(NoteDraft.MAX_CHARS))
-        input.setText(vm.draft ?: original.orEmpty())
+        val restored = vm.draft
+        input.setText(restored ?: original().orEmpty())
         input.setSelection(input.text.length)
-        vm.draft = input.text.toString()
+        // Not yet known (stored text pending) and nothing restored: leave the draft unset, so it is filled in once loaded
+        if (restored != null || noteId == null || vm.originalKnown()) vm.draft = input.text.toString()
 
         val builder = MaterialAlertDialogBuilder(requireContext())
             .setTitle(if (noteId == null) R.string.notes_add else R.string.notes_edit)
@@ -41,22 +47,38 @@ class NoteEditorDialog : DialogFragment() {
         dialog.setCanceledOnTouchOutside(false)
         dialog.setOnShowListener {
             val save = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            val refresh = { save.isEnabled = NoteDraft.canSave(input.text.toString(), original) }
+            val refresh = {
+                save.isEnabled = (noteId == null || vm.originalKnown()) && NoteDraft.canSave(input.text.toString(), original())
+            }
             refresh()
+            if (noteId != null && !vm.originalKnown()) {
+                lifecycleScope.launch {
+                    vm.store?.state?.first { !it.loading }
+                    if (vm.draft == null) {
+                        input.setText(original().orEmpty())
+                        input.setSelection(input.text.length)
+                        vm.draft = input.text.toString()
+                    }
+                    refresh()
+                }
+            }
             input.doAfterTextChanged {
                 vm.draft = it?.toString().orEmpty()
                 refresh()
             }
             save.setOnClickListener { saveAndClose(noteId, input.text.toString()) }
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { leave(noteId, input.text.toString(), original) }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { leave(noteId, input.text.toString()) }
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener { noteId?.let(::confirmDelete) }
         }
-        dialog.onBackPressedDispatcher.addCallback(this) { leave(noteId, input.text.toString(), original) }
+        dialog.onBackPressedDispatcher.addCallback(this) { leave(noteId, input.text.toString()) }
         return dialog
     }
 
-    private fun leave(noteId: String?, text: String, original: String?) {
-        if (!NoteDraft.isDirty(text, original)) {
+    private fun leave(noteId: String?, text: String) {
+        val original = vm.originalOf(noteId)
+        // The stored text is still unknown (list not loaded): treat any text as unsaved rather than compare with nothing
+        val dirty = if (noteId != null && !vm.originalKnown()) text.isNotEmpty() else NoteDraft.isDirty(text, original)
+        if (!dirty) {
             close()
             return
         }

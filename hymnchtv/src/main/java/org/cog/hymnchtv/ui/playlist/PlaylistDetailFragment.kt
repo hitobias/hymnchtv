@@ -52,6 +52,7 @@ class PlaylistDetailFragment : Fragment(R.layout.fragment_playlist_detail) {
             onRemove = ::remove,
             onMove = { from, to -> store.move(from, to) },
             onDragFinished = { ids -> store.reorder(ids) },
+            currentState = { store.state.value.let { it.items to it.nextIndex } },
         )
         adapter = itemAdapter
         list.layoutManager = LinearLayoutManager(requireContext())
@@ -93,6 +94,9 @@ class PlaylistDetailFragment : Fragment(R.layout.fragment_playlist_detail) {
     /** The items the page shows (for tests). */
     @VisibleForTesting
     internal fun currentItemsForTest(): List<DetailItem> = adapter?.currentItems().orEmpty()
+
+    @VisibleForTesting
+    internal fun lastAnnouncementForTest(): String? = adapter?.lastAnnouncement()
 
     /** The text the share button sends: name and hymns only (built from labels and titles, never from notes). */
     @VisibleForTesting

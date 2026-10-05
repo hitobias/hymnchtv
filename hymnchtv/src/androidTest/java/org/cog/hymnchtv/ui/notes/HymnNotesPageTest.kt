@@ -214,4 +214,28 @@ class HymnNotesPageTest {
             }
         }
     }
+
+    /** After process death the editor opens before the list has loaded: the stored text must be known only once it has. */
+    @Test fun theOriginalTextOfAStoredNoteIsKnownOnlyOnceTheListHasLoaded() {
+        val note = NotebookTestSupport.addNote(db5, "原文")
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        var vm: HymnNotesViewModel? = null
+        var knownAtOnce = true
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val handle = SavedStateHandle(mapOf(NotebookPages.ARG_HYMN_TYPE to HymnTypes.DB, NotebookPages.ARG_HYMN_NO to 5))
+            vm = HymnNotesViewModel(app, handle)
+            knownAtOnce = vm!!.originalKnown()
+        }
+        assertThat(knownAtOnce).isFalse()
+        FragmentHost.eventually {
+            var known = false
+            var text: String? = null
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                known = vm!!.originalKnown()
+                text = vm!!.originalOf(note.id)
+            }
+            assertThat(known).isTrue()
+            assertThat(text).isEqualTo("原文")
+        }
+    }
 }

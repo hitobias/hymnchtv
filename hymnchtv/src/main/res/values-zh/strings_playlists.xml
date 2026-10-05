@@ -25,5 +25,6 @@
     <string name="playlist_move_down">下移</string>
     <string name="playlist_reorder">按住移动排序</string>
     <string name="playlist_position">第 %1$d 首，共 %2$d 首</string>
+    <string name="playlist_moved">已移到第 %1$d 首，共 %2$d 首</string>
     <string name="playlist_error">无法更新歌单，请再试一次。</string>
 </resources>
