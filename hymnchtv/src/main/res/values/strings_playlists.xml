@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- D-1 F2: playlists (third tab of History & favourites, add from the lyrics More menu) -->
+<resources>
+    <string name="playlist_tab">Playlists</string>
+    <string name="playlist_menu_add">Add to playlist…</string>
+    <string name="playlist_choose">Add to playlist</string>
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_new_more">New playlist…</string>
+    <string name="playlist_name_hint">Playlist name</string>
+    <string name="playlist_name_invalid">Enter a name of at most %1$d characters.</string>
+    <string name="playlist_rename">Rename</string>
+    <string name="playlist_delete">Delete playlist</string>
+    <string name="playlist_delete_confirm">Delete “%1$s”? The hymns themselves are not affected.</string>
+    <string name="playlist_empty_list">No playlists yet. Tap New playlist to start.</string>
+    <string name="playlist_empty_items">This playlist is empty. On a lyrics page, open More and choose Add to playlist.</string>
+    <string name="playlist_count">%1$d hymns</string>
+    <string name="playlist_added">Added to “%1$s”</string>
+    <string name="playlist_start">Start</string>
+    <string name="playlist_next">Next: %1$s</string>
+    <string name="playlist_restart">Start again</string>
+    <string name="playlist_share">Share</string>
+    <string name="playlist_share_chooser">Share playlist</string>
+    <string name="playlist_remove_item">Remove from playlist</string>
+    <string name="playlist_item_removed">Removed</string>
+    <string name="playlist_move_up">Move up</string>
+    <string name="playlist_move_down">Move down</string>
+    <string name="playlist_reorder">Hold and move to reorder</string>
+    <string name="playlist_position">%1$d of %2$d</string>
+    <string name="playlist_error">Couldn\'t update the playlist. Please try again.</string>
+</resources>
