@@ -35,10 +35,12 @@ class BookLabelFitter(private val views: HymnPickerViews, private val maxSp: Flo
     }
 
     private fun fit() {
-        if (cells.any { it.width == 0 }) return
+        // A cell that is not shown is never laid out (the jump panel hides the contents button): it must not hold the fit back
+        val shown = cells.filter { it.visibility != View.GONE }
+        if (shown.any { it.width == 0 }) return
         val scaled = views.root.resources.displayMetrics.scaledDensity
         val sizePx = UniformFit.pick(maxSp * scaled, MIN_SP * scaled, STEP_SP * scaled) { px ->
-            cells.all { needed(it, px) <= available(it) }
+            shown.all { needed(it, px) <= available(it) }
         }
         if (cells.all { it.textSize == sizePx }) return
         cells.forEach { it.setTextSize(TypedValue.COMPLEX_UNIT_PX, sizePx) }

@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityManager
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -31,6 +33,12 @@ class MainHost(private val activity: AppCompatActivity) {
     private val fm = activity.supportFragmentManager
     private val exitGuard = BackExitGuard()
     private var updateBadge = false
+
+    /** Top back stack entry seen by the last updateChrome(): tells when an overlay has just closed. */
+    private var lastTopName: String? = null
+
+    /** The view with the keyboard focus when the overlay opened, or View.NO_ID (lost on rotation; FocusReturn then uses the tag). */
+    private var returnFocusId = View.NO_ID
 
     /** Adds the home page (first start only) and wires the top bar; call once from onCreate. */
     fun attach(savedInstanceState: Bundle?) {
@@ -94,7 +102,16 @@ class MainHost(private val activity: AppCompatActivity) {
 
     /** Shows [fragment] full-screen over the home page; the back key closes it. */
     fun showOverlay(fragment: Fragment, tag: String) {
-        if (fm.findFragmentByTag(tag) != null) return
+        // Quick taps: the first commit may not have run yet, so findFragmentByTag alone cannot see it. Run what is pending
+        // first; an overlay already on top (this one or another) wins (1.6.0).
+        if (fm.isStateSaved) return
+        try {
+            fm.executePendingTransactions()
+        } catch (e: IllegalStateException) {
+            return
+        }
+        if (isOverlay(topName()) || fm.findFragmentByTag(tag) != null) return
+        returnFocusId = activity.currentFocus?.id ?: View.NO_ID
         fm.beginTransaction().setReorderingAllowed(true)
             .add(R.id.overlay_container, fragment, tag)
             .addToBackStack(tag)
@@ -127,6 +144,8 @@ class MainHost(private val activity: AppCompatActivity) {
 
     private fun updateChrome() {
         val name = topName()
+        val closedOverlay = lastTopName.takeIf { isOverlay(it) && !isOverlay(name) }
+        lastTopName = name
         val open = fm.backStackEntryCount > 0
         val fullPage = isFullPage(name)
         // A full page has its own title bar (PageTitleBar) and takes the whole screen; the toolbar is the home page's top bar
@@ -143,6 +162,22 @@ class MainHost(private val activity: AppCompatActivity) {
         activity.findViewById<View>(R.id.viewMain)?.let { MainChrome.setFullPageShown(it, fullPage) }
         updateButtons()
         MainChrome.apply(activity, activity.getSharedPreferences(MainActivity.PREF_SETTINGS, Context.MODE_PRIVATE))
+        if (closedOverlay != null) restoreFocus(closedOverlay)
+    }
+
+    /** After an overlay closed, its trigger gets the keyboard focus back, and the TalkBack focus when a screen reader runs (1.6.0). */
+    private fun restoreFocus(closedTag: String) {
+        val id = FocusReturn.target(returnFocusId, closedTag)
+        returnFocusId = View.NO_ID
+        if (id == View.NO_ID) return
+        val container = activity.findViewById<ViewGroup>(R.id.fragment_container) ?: return
+        container.post {
+            val view = container.findViewById<View>(id) ?: return@post
+            if (!view.isShown) return@post
+            if (!view.isInTouchMode) view.requestFocus()
+            val a11y = activity.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+            if (a11y?.isEnabled == true) view.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+        }
     }
 
     private fun updateButtons() {

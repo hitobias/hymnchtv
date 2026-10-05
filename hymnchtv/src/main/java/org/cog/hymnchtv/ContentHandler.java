@@ -119,7 +119,6 @@ import org.cog.hymnchtv.mediaconfig.HymnFileName;
 import org.cog.hymnchtv.mediaconfig.MediaConfig;
 import org.cog.hymnchtv.mediaconfig.MediaRecord;
 import org.cog.hymnchtv.mediaconfig.NotionRecord;
-import org.cog.hymnchtv.mediaconfig.QQRecord;
 import org.cog.hymnchtv.mediaconfig.ShareWith;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
@@ -281,10 +280,8 @@ public class ContentHandler extends BaseActivity implements JumpHost {
 
     public enum UrlType {
         englishLyrics,
-        hymnGoogleSearch,
         hymnYoutubeSearch,
         hymnNotionSearch,
-        hymnQqSearch,
         hymnBibleTool
     }
 
@@ -2038,11 +2035,8 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     }
 
     /**
-     * Use android default browser for all web url access except for 'englishLyrics';
-     * avoid reload webPage for englishLyrics if user accesses to the same english hymn no.
-     * <p>
-     * WebView UI is not user-friendly, and offers limited share links for youtube.com/google.com string search.
-     * i.e. The webView does not offer all the share app, and excluded hymnchtv for user selection.
+     * Shows the page of [type] in the in-app web layer; only Notion on Huawei devices opens in the external browser.
+     * An existing web fragment is reused and nothing goes on the back stack: the back callback hides the layer (1.6.0).
      *
      * @param type UrlType enum type
      */
@@ -2052,20 +2046,15 @@ public class ContentHandler extends BaseActivity implements JumpHost {
             String HymnalLink = "https://www.hymnal.net/en/hymn/h/";
             mWebUrl = (mHymnNoEng == null) ? null : HymnalLink + mHymnNoEng;
             break;
-        case hymnGoogleSearch:
-            mWebUrl = (mHymnInfo == null) ? null : "https://www.google.com/search?q=" + mHymnSearch;
-            break;
         case hymnYoutubeSearch:
             mWebUrl = (mHymnInfo == null) ? null : "https://m.youtube.com/results?search_query=" + mHymnSearch;
             break;
         case hymnNotionSearch:
             mWebUrl = ((url.length < 1) || (url[0] == null)) ? NotionRecord.HYMNCHTV_NOTION : url[0];
             break;
-        case hymnQqSearch:
-            mWebUrl = ((url.length < 1) || (url[0] == null)) ? QQRecord.HYMNCHTV_QQ_MAIN : url[0];
-            break;
         case hymnBibleTool:
-            mWebUrl = url[0];
+            // no url: the invalid-url toast below instead of an ArrayIndexOutOfBoundsException
+            mWebUrl = (url.length > 0) ? url[0] : null;
             break;
         default:
             mWebUrl = null;
@@ -2077,28 +2066,24 @@ public class ContentHandler extends BaseActivity implements JumpHost {
             return;
         }
 
-        // Proceed to use android default browser if it is not englishLyrics access
-
         if (UrlType.hymnNotionSearch == type && Build.MANUFACTURER.contains("HUAWEI")) {
             About.hymnUrlAccess(this, mWebUrl);
             return;
         }
 
-        // 20260829: Change to use this implementation; Backkey will return to parent,
+        // A new fragment loads getWebUrl() in onResume; an existing one is pointed at the new page. No back stack entry:
+        // backPressedCallback hides the layer, so entries were never popped and only piled up.
         FragmentManager fragmentManager = getSupportFragmentManager();
-        WebViewFragment mWebFragment = (WebViewFragment) fragmentManager.findFragmentById(R.id.webView);
-        if (mWebFragment == null) {
-            mWebFragment = new WebViewFragment();
+        WebViewFragment webFragment = (WebViewFragment) fragmentManager.findFragmentById(R.id.webView);
+        if (webFragment == null) {
+            fragmentManager.beginTransaction()
+                    .replace(R.id.webView, new WebViewFragment())
+                    .setReorderingAllowed(true)
+                    .commit();
         }
         else {
-            mWebFragment.initWebView(mWebUrl);
+            webFragment.initWebView(mWebUrl);
         }
-
-        fragmentManager.beginTransaction()
-                .replace(R.id.webView, mWebFragment)
-                .setReorderingAllowed(true)
-                .addToBackStack(null)
-                .commit();
         mWebView.setVisibility(View.VISIBLE);
     }
 

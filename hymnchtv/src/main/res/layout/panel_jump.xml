@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- H5 jump panel (full screen), built like the home page: the MAIN background behind the shared hymn picker (HomeColors and
-     KeypadSizer style and fit it), with a compact title row and the next-slot row above it, and the search page over the
+     KeypadSizer style and fit it), with one compact title row (the next-slot line under the title) above it, and the search page over the
      picker when opened. The recent area lists the return stack and sits below the fold. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/jump_root"
@@ -19,7 +19,10 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!-- One row: the title with the next-slot line under it, then Clear (only with a slot) and Close. Two rows would
+             not leave room for the keypad and Open on a 320 x 640dp screen (1.6.0). -->
         <LinearLayout
+            android:id="@+id/jump_slot_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -28,15 +31,39 @@
             android:paddingStart="16dp"
             android:paddingEnd="4dp">
 
-            <TextView
-                android:id="@+id/jump_title"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="@string/jump_title"
-                android:textAppearance="@style/TextAppearance.Hymnal.Title" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/jump_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/jump_title"
+                    android:textAppearance="@style/TextAppearance.Hymnal.Title" />
+
+                <TextView
+                    android:id="@+id/jump_slot_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Hymnal.Caption" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/jump_slot_clear"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/jump_slot_clear"
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                android:visibility="gone" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/jump_close"
@@ -46,36 +73,6 @@
                 android:minHeight="48dp"
                 android:text="@string/jump_close"
                 android:textAppearance="@style/TextAppearance.Hymnal.Body" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/jump_slot_row"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:minHeight="40dp"
-            android:orientation="horizontal"
-            android:paddingStart="16dp"
-            android:paddingEnd="4dp">
-
-            <TextView
-                android:id="@+id/jump_slot_text"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textAppearance="@style/TextAppearance.Hymnal.Body" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/jump_slot_clear"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="40dp"
-                android:text="@string/jump_slot_clear"
-                android:textAppearance="@style/TextAppearance.Hymnal.Body"
-                android:visibility="gone" />
         </LinearLayout>
 
         <FrameLayout
@@ -94,9 +91,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingStart="16dp"
-                    android:paddingTop="4dp"
+                    android:paddingTop="0dp"
                     android:paddingEnd="16dp"
-                    android:paddingBottom="12dp">
+                    android:paddingBottom="8dp">
 
                     <include layout="@layout/hymn_picker" />
                 </FrameLayout>
