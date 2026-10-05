@@ -103,6 +103,27 @@ class LyricsTopBarTest {
 
     @Test
     @QuickTest
+    fun topBarButtonsAreNamedIconsWithoutVisibleWords() {
+        launch().use { s ->
+            val ids = listOf(R.id.btn_home, R.id.btn_share, R.id.btn_lyrics_media, R.id.btn_next, R.id.btn_more)
+            s.onActivity { a ->
+                val page = page(a)!!
+                ids.forEach { id ->
+                    val v = page.findViewById<View>(id)
+                    assertThat(v).isInstanceOf(android.widget.ImageView::class.java)
+                    assertThat(v.contentDescription.isNullOrBlank()).isFalse()
+                }
+                val aa = page.findViewById<TextView>(R.id.btn_aa)
+                assertThat(aa.text.toString()).isEqualTo("Aa")
+                assertThat(aa.contentDescription.toString()).isEqualTo(a.getString(R.string.c_aa_title))
+                assertThat(page.findViewById<View>(R.id.btn_lyrics_media).contentDescription.toString())
+                    .isEqualTo(a.getString(R.string.c_lyrics_media))
+            }
+        }
+    }
+
+    @Test
+    @QuickTest
     fun homeButtonLeavesTheLyricsPage() {
         launch().use { scenario ->
             onView(withId(R.id.btn_home)).perform(click())

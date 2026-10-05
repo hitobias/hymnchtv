@@ -173,11 +173,20 @@ class LyricsChromeTest : LyricsTestBase() {
             // The player layer floats over the pager: its reserve and the system bottom inset are part of the padding
             val extra = dp(8) + s.read { it.playerReserve + it.systemBottomInset }
             // shown
-            val top = s.pageView(R.id.lyrics_top_bar).height
-            val bottom = s.pageView(R.id.lyricsButtonBar).height
-            assertThat(top).isGreaterThan(0)
-            assertThat(s.scroll().paddingTop).isEqualTo(top)
-            assertThat(s.scroll().paddingBottom).isEqualTo(bottom + extra)
+            val topBar = s.pageView(R.id.lyrics_top_bar)
+            val pill = s.pageView(R.id.lyricsButtonBar)
+            val pillTop = (pill.layoutParams as android.view.ViewGroup.MarginLayoutParams).bottomMargin + pill.height
+            val playerAndSystem = s.read { it.playerReserve + it.systemBottomInset }
+            assertThat(topBar.bottom).isGreaterThan(0)
+            assertThat(s.scroll().paddingTop).isEqualTo(topBar.bottom)
+            assertThat(s.scroll().paddingBottom).isEqualTo(maxOf(playerAndSystem, pillTop) + dp(8))
+            // spec: the top capsule floats 10dp below the status bar (insetTop spacer = status bar height)
+            s.onActivity { a ->
+                val bar = IntArray(2).also { page(a)!!.findViewById<View>(R.id.lyrics_top_bar).getLocationOnScreen(it) }
+                val spacer = IntArray(2).also { a.findViewById<View>(R.id.insetTop).getLocationOnScreen(it) }
+                val statusBottom = spacer[1] + a.findViewById<View>(R.id.insetTop).height
+                assertThat(bar[1] - statusBottom).isIn(com.google.common.collect.Range.closed(dp(10) - 1, dp(10) + 1))
+            }
             s.onActivity { it.setChromeHeld(false) }
             s.advance(4_000)
             s.await("padding") { page(it)!!.findViewById<android.widget.ScrollView>(R.id.lyrics_scroll).paddingTop == 0 }

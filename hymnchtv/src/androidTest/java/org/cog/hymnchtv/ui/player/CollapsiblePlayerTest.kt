@@ -298,8 +298,11 @@ class CollapsiblePlayerTest : LyricsTestBase() {
                 val reserve = a.playerReserve
                 a.supportFragmentManager.fragments.filterIsInstance<ContentView>().filter { it.view != null }.map {
                     val v = it.view!!
-                    val bar = v.findViewById<View>(R.id.lyricsButtonBar).height
-                    (bar + reserve + a.systemBottomInset + dp(8)) to v.findViewById<ScrollView>(R.id.lyrics_scroll).paddingBottom
+                    val pill = v.findViewById<View>(R.id.lyricsButtonBar)
+                    // a page whose capsule is hidden (GONE, or not shown yet) does not count it
+                    val pillTop = if (pill.visibility != View.VISIBLE) 0
+                        else (pill.layoutParams as android.view.ViewGroup.MarginLayoutParams).bottomMargin + pill.height
+                    (maxOf(reserve + a.systemBottomInset, pillTop) + dp(8)) to v.findViewById<ScrollView>(R.id.lyrics_scroll).paddingBottom
                 }
             }
             s.await("padding (card)") { a -> expectedAndActual().let { e -> e.isNotEmpty() && e.all { it.first == it.second } } }
