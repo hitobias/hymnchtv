@@ -566,8 +566,12 @@ public class MediaConfig extends BaseActivity
                 HymnsApp.showToastMessage(R.string.file_does_not_exist);
             }
             else {
-                File inFile = new File(FilePathHelper.getFilePath(this, uri));
-                if (inFile.exists()) {
+                String path = FilePathHelper.getFilePath(this, uri);
+                File inFile = (path == null) ? null : new File(path);
+                if (inFile == null || !inFile.exists()) {
+                    HymnsApp.showToastMessage(R.string.file_does_not_exist);
+                }
+                else {
                     String filename = inFile.getPath();
                     if (mViewRequest == tvImportFile) {
                         filename = copyToLocalFile(filename);

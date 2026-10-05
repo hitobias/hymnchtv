@@ -201,6 +201,21 @@ public class MediaDownloadHandler extends Fragment {
         return -1;
     }
 
+    /**
+     * The local file DownloadManager reports for a finished job.
+     *
+     * @return the file, or null if it cannot be found (null uri, unresolvable path, or nothing there)
+     */
+    @Nullable
+    public static File downloadedFile(Context context, @Nullable Uri fileUri) {
+        String path = (fileUri == null) ? null : FilePathHelper.getFilePath(context, fileUri);
+        if (path == null) {
+            return null;
+        }
+        File file = new File(path);
+        return file.exists() ? file : null;
+    }
+
     private class DownloadReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -213,10 +228,13 @@ public class MediaDownloadHandler extends Fragment {
                 String dnLink = linkDownloads.get(downloadJobId);
 
                 if (downloadJobStatus == DownloadManager.STATUS_SUCCESSFUL) {
-                    Uri fileUri = downloadManager.getUriForDownloadedFile(downloadJobId);
-                    File inFile = new File(FilePathHelper.getFilePath(context, fileUri));
-
-                    if (inFile.exists()) {
+                    File inFile = downloadedFile(context, downloadManager.getUriForDownloadedFile(downloadJobId));
+                    if (inFile == null) {
+                        // reported like every other failed download of this handler
+                        Timber.w("Downloaded file not found: %s", dnLink);
+                        onError(HymnsApp.getResString(R.string.file_download_failed, dnLink));
+                    }
+                    else {
                         // update fileSize for progress bar update, in case it is still not updated by download Manager
                         mFileSize = inFile.length();
                         File destFile = fileDownloads.get(downloadJobId);

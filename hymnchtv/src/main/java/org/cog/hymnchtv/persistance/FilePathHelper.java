@@ -25,6 +25,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.text.TextUtils;
 
 import java.io.File;
@@ -50,6 +51,9 @@ public class FilePathHelper {
      * @return real local file path of uri or newly created file
      */
     public static String getFilePath(Context ctx, Uri uri) {
+        if (ctx == null || uri == null) {
+            return null;
+        }
         String filePath = null;
         try {
             filePath = getUriRealPath(ctx, uri);
@@ -62,37 +66,49 @@ public class FilePathHelper {
     }
 
     /**
-     * To create a new file based on the given uri (usually on ContentResolver failure)
+     * Copy the shared content of uri into Download/hymnal/tmp (usually on ContentResolver failure). The sender's display
+     * name is reduced to a plain file name and an existing file of that name is replaced (see SharedImport).
      *
      * @param ctx the reference Context
      * @param uri content:// or file:// or whatever suitable Uri you want.
      *
-     * @return file name with the guessed ext if none is given.
+     * @return absolute path of the copy, or null if nothing could be copied
      */
     private static String getFilePathWithCreate(Context ctx, Uri uri) {
-        String fileName = null;
-
-        if (!TextUtils.isEmpty(uri.getPath())) {
-            Cursor cursor = ctx.getContentResolver().query(uri, null, null, null, null);
-            if (cursor == null)
-                fileName = uri.getPath();
-            else {
-                cursor.moveToFirst();
-                int idx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DISPLAY_NAME);
-                fileName = cursor.getString(idx);
-                cursor.close();
-            }
+        String rawName = queryDisplayName(ctx, uri);
+        if (TextUtils.isEmpty(rawName)) {
+            rawName = uri.getLastPathSegment();
         }
 
-        if (!TextUtils.isEmpty(fileName)) {
-            File destFile = new File(FileBackend.getHymnchtvStore(FileBackend.TMP, true), fileName);
-            if (!destFile.exists()) {
-                Timber.d("FilePath copyFile: %s", destFile);
-                copy(ctx, uri, destFile);
-            }
-            return destFile.getAbsolutePath();
+        File tmpDir = FileBackend.getHymnchtvStore(FileBackend.TMP, true);
+        if (tmpDir == null) {
+            Timber.w("Shared file not imported, no storage access: %s", uri);
+            return null;
         }
-        return null;
+
+        File destFile = SharedImport.copyInto(tmpDir, rawName, () -> ctx.getContentResolver().openInputStream(uri));
+        if (destFile == null) {
+            Timber.w("Shared file not imported: %s (name: %s)", uri, rawName);
+            return null;
+        }
+        Timber.d("FilePath copyFile: %s", destFile);
+        return destFile.getAbsolutePath();
+    }
+
+    /** The sender's display name of uri, or null if the provider gives none (no cursor, no row, no such column). */
+    private static String queryDisplayName(Context ctx, Uri uri) {
+        try (Cursor cursor = ctx.getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME},
+                null, null, null)) {
+            if (cursor == null || !cursor.moveToFirst()) {
+                return null;
+            }
+            int idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+            return (idx < 0 || cursor.isNull(idx)) ? null : cursor.getString(idx);
+        }
+        catch (RuntimeException e) { // SecurityException, IllegalArgumentException... from a foreign provider
+            Timber.w("Display name query failed for %s: %s", uri, e.getMessage());
+            return null;
+        }
     }
 
     /**

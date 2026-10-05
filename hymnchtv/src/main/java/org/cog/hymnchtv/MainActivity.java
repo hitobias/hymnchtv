@@ -203,8 +203,10 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         }
         else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && (type != null)) {
             final ArrayList<Uri> uris = IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri.class);
-            if (uris != null)
+            if (uris != null && !uris.isEmpty())
                 mediaLink = getFile(uris.get(0));
+            else
+                HymnsApp.showToastMessage(R.string.file_does_not_exist);
         }
 
         if (mediaLink != null) {
@@ -311,14 +313,13 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         return isLocked;
     }
 
+    /** @return local path of the shared file (a fresh copy for content uris), or null after telling the user */
     private String getFile(Uri uri) {
-        File inFile = new File(FilePathHelper.getFilePath(this, uri));
-        if (inFile.exists()) {
-            return inFile.getPath();
+        String path = (uri == null) ? null : FilePathHelper.getFilePath(this, uri);
+        if (path != null && new File(path).exists()) {
+            return path;
         }
-        else
-            HymnsApp.showToastMessage(R.string.file_does_not_exist);
-
+        HymnsApp.showToastMessage(R.string.file_does_not_exist);
         return null;
     }
 
