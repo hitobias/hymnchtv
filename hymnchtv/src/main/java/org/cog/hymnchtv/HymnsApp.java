@@ -362,12 +362,16 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
      * @return Android ResourceId for given defType and filename
      */
 
+    /** The namespace in build.gradle: the package of the R class. */
+    private static final String RESOURCE_NAMESPACE = "org.cog.hymnchtv";
+
     public static int getFileResId(String resName, String defType) {
         Resources res = mInstance.getResources();
         int resId = res.getIdentifier(resName, defType, mInstance.getPackageName());
         if (resId == 0) {
-            // applicationId (com.ziontkec.hymnal) differs from the namespace that may own the resource table.
-            resId = res.getIdentifier(resName, defType, R.class.getPackage().getName());
+            // applicationId (com.ziontkec.hymnal) differs from the namespace that owns the resource table. A constant:
+            // asking the R class for its package fails once R8 moves R into the default package.
+            resId = res.getIdentifier(resName, defType, RESOURCE_NAMESPACE);
         }
         return resId;
     }
