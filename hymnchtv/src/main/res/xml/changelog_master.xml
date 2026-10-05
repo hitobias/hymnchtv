@@ -2,6 +2,13 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.5.0 (10/05/2026)" versioncode="105000">
+        <change>歌詞頁 ⋮「跳轉…」：選號或搜尋直接跳到別首，按返回鍵回上一首並捲回原處，也可設為下一首。</change>
+        <change>筆記：每首詩歌可寫多則筆記。</change>
+        <change>歌單：記錄與收藏頁新增「歌單」分頁，可排序、依序開啟、分享。</change>
+        <change>設定頁可匯出／匯入筆記本。</change>
+        <change>自動唱詩紀錄（預設關閉）。</change>
+    </release>
     <release version="1.4.1 (10/05/2026)" versioncode="104010">
         <change>修正 Android 7 匯出媒體連結後按 Home 鍵閃退；匯出檔改用純文字編輯，換行不再遺失。</change>
         <change>修正青年詩歌無法分享；分享暫存檔改放 App 快取並自動清理，失敗時會提示。</change>
