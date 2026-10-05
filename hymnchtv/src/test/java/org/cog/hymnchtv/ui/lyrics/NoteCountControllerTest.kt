@@ -8,7 +8,10 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.cog.hymnchtv.notebook.Cancellable
 import org.cog.hymnchtv.notebook.NotebookAsync
+import org.cog.hymnchtv.notebook.NotebookCallback
+import org.cog.hymnchtv.notebook.Outcome
 import org.cog.hymnchtv.notebook.backup.BackupIo
 import org.cog.hymnchtv.notebook.backup.ExportResult
 import org.cog.hymnchtv.notebook.backup.ImportResult
@@ -122,5 +125,43 @@ class NoteCountControllerTest {
         runCurrent()
         assertThat(h.reported).containsExactly(-1)
         assertThat(h.controller.countFor(HymnTypes.DB, 1)).isEqualTo(-1)
+    }
+
+    /** A query whose cancel() does nothing: every callback can still arrive, so only the controller's own guards drop stale ones. */
+    private class UncancellableQuery : NoteCountController.Query {
+        val pending = mutableListOf<Pair<HymnKey, NotebookCallback<Int>>>()
+        var cancels = 0
+
+        override fun start(key: HymnKey, callback: NotebookCallback<Int>): Cancellable {
+            pending += key to callback
+            return Cancellable { cancels++ }
+        }
+
+        fun deliver(index: Int, count: Int) = pending[index].second.onResult(Outcome.Ok(count))
+    }
+
+    @Test fun aResultThatIgnoredCancellationForThePreviousHymnIsStillDropped() {
+        val query = UncancellableQuery()
+        val reported = mutableListOf<Int>()
+        val controller = NoteCountController(query) { reported += it }
+        controller.onHymnChanged(HymnTypes.DB, 1)
+        controller.onHymnChanged(HymnTypes.DB, 2)
+        assertThat(query.cancels).isAtLeast(1)
+        query.deliver(1, 1)
+        query.deliver(0, 5)
+        assertThat(reported).containsExactly(-1, -1, 1).inOrder()
+        assertThat(controller.countFor(HymnTypes.DB, 2)).isEqualTo(1)
+        assertThat(controller.countFor(HymnTypes.DB, 1)).isEqualTo(-1)
+    }
+
+    @Test fun aResultThatIgnoredCancellationAfterDestroyReportsNothing() {
+        val query = UncancellableQuery()
+        val reported = mutableListOf<Int>()
+        val controller = NoteCountController(query) { reported += it }
+        controller.onHymnChanged(HymnTypes.DB, 1)
+        controller.destroy()
+        query.deliver(0, 3)
+        assertThat(reported).containsExactly(-1)
+        assertThat(controller.countFor(HymnTypes.DB, 1)).isEqualTo(-1)
     }
 }

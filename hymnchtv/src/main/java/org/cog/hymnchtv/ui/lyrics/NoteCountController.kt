@@ -2,6 +2,7 @@ package org.cog.hymnchtv.ui.lyrics
 
 import org.cog.hymnchtv.notebook.Cancellable
 import org.cog.hymnchtv.notebook.NotebookAsync
+import org.cog.hymnchtv.notebook.NotebookCallback
 import org.cog.hymnchtv.notebook.model.HymnKey
 
 /**
@@ -9,7 +10,14 @@ import org.cog.hymnchtv.notebook.model.HymnKey
  * like [FavoriteController]: every [NotebookAsync] callback arrives on the main thread; a result for a hymn the reader has left
  * is dropped.
  */
-class NoteCountController(private val async: NotebookAsync, private val listener: Listener) {
+class NoteCountController(private val query: Query, private val listener: Listener) {
+    /** Starts the count of a hymn; the callback arrives on the main thread. Seam for tests; production uses [NotebookAsync]. */
+    fun interface Query {
+        fun start(key: HymnKey, callback: NotebookCallback<Int>): Cancellable
+    }
+
+    constructor(async: NotebookAsync, listener: Listener) : this({ key, callback -> async.noteCount(key, callback) }, listener)
+
     fun interface Listener {
         /** The count of the current hymn; -1 while it is unknown. */
         fun onCount(count: Int)
@@ -54,10 +62,10 @@ class NoteCountController(private val async: NotebookAsync, private val listener
         cancelQuery()
         val key = current ?: return
         val gen = queryGen
-        queryCancel = async.noteCount(key) { outcome ->
-            if (destroyed || gen != queryGen || key != current) return@noteCount
+        queryCancel = query.start(key) { outcome ->
+            if (destroyed || gen != queryGen || key != current) return@start
             queryCancel = null
-            val value = outcome.getOrNull() ?: return@noteCount
+            val value = outcome.getOrNull() ?: return@start
             count = value
             listener.onCount(value)
         }
