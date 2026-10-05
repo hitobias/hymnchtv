@@ -2,6 +2,13 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.4.1 (10/05/2026)" versioncode="104010">
+        <change>修正 Android 7 匯出媒體連結後按 Home 鍵閃退；匯出檔改用純文字編輯，換行不再遺失。</change>
+        <change>修正青年詩歌無法分享；分享暫存檔改放 App 快取並自動清理，失敗時會提示。</change>
+        <change>從其他 App 分享檔案進來時，檔名只取檔案本身，重新分享同名檔案會讀到新內容。</change>
+        <change>修正 Android 7 背景檢查更新時可能閃退（Android 8 以上的背景每日檢查將在之後的版本改善）。</change>
+        <change>移除用不到的權限與網頁設定。</change>
+    </release>
     <release version="1.4.0 (10/05/2026)" versioncode="104000">
         <change>歌詞頁工具列改為浮動工具列，只用圖示；下方的繁/簡、中/英、顯示模式改成小工具列，與播放鍵並排。</change>
         <change>對話框與「關於」改為置中卡片，按鈕更大、對比更清楚。</change>
