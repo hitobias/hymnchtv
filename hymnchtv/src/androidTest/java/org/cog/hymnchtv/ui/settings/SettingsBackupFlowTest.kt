@@ -128,6 +128,19 @@ class SettingsBackupFlowTest {
         }
     }
 
+    @Test fun aJobStartedOnOneVisitShowsItsResultOnTheNextAfterTheScreenIsGone() {
+        withSettings { s ->
+            // stopped, so the result cannot be shown and waits in the runner
+            s.moveToState(Lifecycle.State.CREATED)
+            s.onActivity { fragment(s)!!.onImportPicked(contentUri("missing-after-leaving.json")) }
+            FragmentHost.eventually(10_000) { assertThat(runnerState(s).message).isNotNull() }
+        }
+        // the first screen (and its ViewModel) is gone; the job belongs to the app, not to that screen
+        withSettings { s ->
+            assertShownBeforeCleared(s, ctx.getString(R.string.backup_error_io))
+        }
+    }
+
     @Test fun cancellingThePickerStartsNothing() {
         withSettings { s ->
             s.onActivity {
