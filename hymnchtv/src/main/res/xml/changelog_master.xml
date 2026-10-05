@@ -2,6 +2,14 @@
 <!-- Change log of the Hymnal distribution (com.ziontkec.hymnal), starting at 1.0.0. Shown by ckChangeLog and
      used by tools/release_notes.py for GitHub release notes. Newest release first. -->
 <changelog>
+    <release version="1.6.0 (10/05/2026)" versioncode="106000">
+        <change>App 變小：樂譜改用無損 WebP、程式精簡，安裝檔由約 116 MB 降到約 90 MB。</change>
+        <change>背景播放：播放時通知列可播放、暫停、停止，關螢幕後不會被系統中斷。</change>
+        <change>每日自動檢查更新在 Android 8 以上也會執行；更新檔下載中斷時，下次開啟會接續驗證。</change>
+        <change>跳轉面板在小螢幕上不必捲動就能按「開啟」；只有手指觸碰才會停止捲回原處。</change>
+        <change>快速連點不會疊出兩層畫面；橫向時播放卡最多佔六成畫面；設定頁清單對話框跟隨頁面配色。</change>
+        <change>分享與匯入檔案更安全：大檔在背景複製、檔名過長自動處理、SD 卡檔案可分享。</change>
+    </release>
     <release version="1.5.0 (10/05/2026)" versioncode="105000">
         <change>歌詞頁 ⋮「跳轉…」：選號或搜尋直接跳到別首，按返回鍵回上一首並捲回原處，也可設為下一首。</change>
         <change>筆記：每首詩歌可寫多則筆記。</change>
