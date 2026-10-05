@@ -184,6 +184,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
     private TextView meterKeyView;
     private View infoRowView;
     private ImageView favoriteStarView;
+    private ImageView notesMarkView;
     /** Bumped by every applyFont: a background face load only applies if no newer choice was made meanwhile. */
     private int mFontRequest;
     private WebView lyricsEnglish;
@@ -295,6 +296,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         meterKeyView = mConvertView.findViewById(R.id.meter_key);
         infoRowView = mConvertView.findViewById(R.id.lyrics_info_row);
         favoriteStarView = mConvertView.findViewById(R.id.favorite_star);
+        notesMarkView = mConvertView.findViewById(R.id.notes_mark);
         lyricsEnglish = mConvertView.findViewById(R.id.lyrics_english);
 
         mStoredDisplayMode = ReadingPrefs.displayMode(mSharedPref);
@@ -481,6 +483,13 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         MenuItem favorite = popup.getMenu().findItem(R.id.favorite);
         favorite.setTitle(isFavoriteMarked() ? R.string.fav_remove : R.string.fav_add);
         favorite.setEnabled(mContentHandler.canToggleFavorite());
+        // D-1: notes of this hymn (with the count once known) and add-to-playlist; disabled for numbers the notebook does not store
+        int noteCount = mContentHandler.noteCountFor(mPageHymnType, mPageHymnNo);
+        boolean notebookHymn = mContentHandler.hasNotebookHymn();
+        MenuItem notes = popup.getMenu().findItem(R.id.notes);
+        notes.setTitle(noteCount > 0 ? getString(R.string.notes_menu_count, noteCount) : getString(R.string.notes_menu));
+        notes.setEnabled(notebookHymn);
+        popup.getMenu().findItem(R.id.addToPlaylist).setEnabled(notebookHymn);
         popup.setOnMenuItemClickListener(item -> mContentHandler.onLyricsAction(item.getItemId()));
         // The toolbars must not fade away under an open menu
         mContentHandler.setChromeHeld(true);
@@ -821,6 +830,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         view.setTextColor(mPalette.getTextColor());
         meterKeyView.setTextColor(accent);
         ImageViewCompat.setImageTintList(favoriteStarView, ColorStateList.valueOf(accent));
+        ImageViewCompat.setImageTintList(notesMarkView, ColorStateList.valueOf(accent));
         view.setLinkTextColor(accent);
         view.setHighlightColor((accent & 0x00FFFFFF) | 0x40000000);
         // null for drawn backgrounds; an 85 % panel for photos
@@ -1027,12 +1037,14 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         return mContentHandler.isFavoriteMarked(mPageHymnType, mPageHymnNo);
     }
 
-    /** The row shows the key and time signature and/or the favourite star; it is hidden when it has neither. */
+    /** The row shows the key and time signature, the notes mark and/or the favourite star; it is hidden when it has none. */
     private void updateInfoRow() {
         boolean marked = isFavoriteMarked();
+        boolean hasNotes = mContentHandler.noteCountFor(mPageHymnType, mPageHymnNo) > 0;
         favoriteStarView.setVisibility(marked ? View.VISIBLE : View.GONE);
+        notesMarkView.setVisibility(hasNotes ? View.VISIBLE : View.GONE);
         boolean hasKey = meterKeyView.getVisibility() == View.VISIBLE;
-        infoRowView.setVisibility(hasKey || marked ? View.VISIBLE : View.GONE);
+        infoRowView.setVisibility(hasKey || marked || hasNotes ? View.VISIBLE : View.GONE);
     }
 
     /** The next button shows the queued hymn (H5 slot): a dot on the arrow and the hymn's name for TalkBack. */
@@ -1047,7 +1059,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
                 : getString(R.string.jump_next_slot, HymnLabels.INSTANCE.chip(requireContext(), slot)));
     }
 
-    /** Called by ContentHandler when the favourite state of the hymn on screen changed. */
+    /** Called by ContentHandler when the favourite state or the note count of the hymn on screen changed. */
     public void onFavoriteStateChanged() {
         if (infoRowView != null) {
             updateInfoRow();

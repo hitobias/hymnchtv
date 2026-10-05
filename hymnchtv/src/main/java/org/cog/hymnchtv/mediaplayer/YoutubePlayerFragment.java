@@ -190,7 +190,7 @@ public class YoutubePlayerFragment extends BaseFragment {
             public void onStateChange(@NonNull YouTubePlayer youTubePlayer, @NonNull PlayerConstants.PlayerState state) {
                 // Timber.w("Youtube state change: %s (%s)", state, mediaUrl);
                 if (state == PlayerConstants.PlayerState.ENDED && mContentHandler != null) {
-                    mContentHandler.onEndOrError(getString(R.string.playback_completed));
+                    mContentHandler.onPlaybackCompleted();
                 }
             }
         });
