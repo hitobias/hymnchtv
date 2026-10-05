@@ -6,19 +6,22 @@ import org.junit.Test
 /** Plan 6c: the lyrics layer padding follows the overlays that are shown right now. */
 class LyricsInsetsTest {
     @Test
-    fun topPaddingIsTheTopBarOnlyWhileItIsShown() {
-        assertThat(LyricsInsets.padding(48, true, 52, true, 0, 0, 8).top).isEqualTo(48)
-        assertThat(LyricsInsets.padding(48, false, 52, true, 0, 0, 8).top).isEqualTo(0)
+    fun topPaddingIsTheTopCapsuleBottomEdgeWhileShown() {
+        assertThat(LyricsInsets.padding(106, true, 100, true, 0, 0, 8).top).isEqualTo(106) // 5dp + 48dp at density 2
+        assertThat(LyricsInsets.padding(106, false, 100, true, 0, 0, 8).top).isEqualTo(0)
     }
 
     @Test
-    fun bottomPaddingAddsEveryShownPieceAndTheExtra() {
-        assertThat(LyricsInsets.padding(48, true, 52, true, 100, 24, 8).bottom).isEqualTo(52 + 100 + 24 + 8)
+    fun bottomPaddingIsTheHigherOfPlayerAndCapsulePlusExtra() {
+        // capsule beside the player: the player (reserve 144 + system 48) is higher than the capsule (136)
+        assertThat(LyricsInsets.padding(106, true, 136, true, 144, 48, 16).bottom).isEqualTo(144 + 48 + 16)
+        // capsule above the card: the capsule is higher
+        assertThat(LyricsInsets.padding(106, true, 552, true, 400, 48, 16).bottom).isEqualTo(552 + 16)
     }
 
     @Test
-    fun hiddenButtonsShrinkBackToSafeAreaPlusExtra() {
-        assertThat(LyricsInsets.padding(48, true, 52, false, 0, 24, 8).bottom).isEqualTo(24 + 8)
+    fun hiddenCapsuleShrinksBackToPlayerPlusExtra() {
+        assertThat(LyricsInsets.padding(106, true, 552, false, 400, 48, 16).bottom).isEqualTo(400 + 48 + 16)
     }
 
     @Test
