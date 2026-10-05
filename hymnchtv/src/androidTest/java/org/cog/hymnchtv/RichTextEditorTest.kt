@@ -33,20 +33,25 @@ class RichTextEditorTest {
     private fun launch(): ActivityScenario<RichTextEditor> = ActivityScenario.launch(
         Intent(ctx, RichTextEditor::class.java).putExtra(RichTextEditor.ATTR_FILE_URI, file.absolutePath))
 
-    /** Writes ASCII CSV lines until the file holds at least [bytes] bytes, without keeping the text; returns its length. */
-    private fun writeCsv(bytes: Int): Int {
+    /** Writes ASCII CSV lines while the file stays within [maxBytes] bytes, without keeping the text; returns its length. */
+    private fun writeCsv(maxBytes: Long): Int {
         var written = 0
         file.bufferedWriter().use { out ->
-            var i = 0
-            while (written < bytes) {
-                i++
-                val line = "hymn_db,$i,false,HYMN_MEDIA,https://example.org/media/$i,\n"
+            var i = 1
+            var line = csvLine(i)
+            while (written + line.length <= maxBytes) {
                 out.write(line)
                 written += line.length
+                line = csvLine(++i)
             }
         }
         return written
     }
+
+    private fun csvLine(i: Int) = "hymn_db,$i,false,HYMN_MEDIA,https://example.org/media/$i,\n"
+
+    /** The largest export the editor opens (EditorStore.MAX_EDIT_BYTES), whole lines only. */
+    private fun writeLargestEditableCsv(): Int = writeCsv(EditorStore.MAX_EDIT_BYTES)
 
     private fun ActivityScenario<RichTextEditor>.editorLength(): Int {
         var n = -1
@@ -79,8 +84,8 @@ class RichTextEditorTest {
      * transaction, so the criterion is the size of the saved state itself, written to a Parcel the way the system does.
      */
     @Test
-    fun aDirtyTwoMegabyteDocumentLeavesTheSavedStateSmall() {
-        val length = writeCsv(2 * 1024 * 1024)
+    fun aDirtyLargeDocumentLeavesTheSavedStateSmall() {
+        val length = writeLargestEditableCsv()
         launch().use { scenario ->
             assertThat(scenario.awaitLength(length)).isEqualTo(length)
             scenario.append("hymn_bb,1,false,HYMN_MEDIA,https://example.org/x,\n")
@@ -102,10 +107,22 @@ class RichTextEditorTest {
         }
     }
 
+    /** API 24 (32 MB heap) ran out of memory with a 2 MB export in the EditText: a file over the limit is refused. */
+    @Test
+    fun aFileOverTheEditLimitIsRefusedAndTheScreenCloses() {
+        writeCsv(EditorStore.MAX_EDIT_BYTES + 1024)
+        assertThat(file.length()).isGreaterThan(EditorStore.MAX_EDIT_BYTES)
+        launch().use { scenario ->
+            val deadline = SystemClock.elapsedRealtime() + 10_000
+            while (scenario.state != Lifecycle.State.DESTROYED && SystemClock.elapsedRealtime() < deadline) Thread.sleep(100)
+            assertThat(scenario.state).isEqualTo(Lifecycle.State.DESTROYED)
+        }
+    }
+
     /** Restore coverage only (not the crash criterion, see above): a large file is shown again after recreate. */
     @Test
     fun aLargeFileIsShownAgainAfterStopAndRecreate() {
-        val length = writeCsv(2 * 1024 * 1024)
+        val length = writeLargestEditableCsv()
         launch().use { scenario ->
             assertThat(scenario.awaitLength(length)).isEqualTo(length)
             scenario.moveToState(Lifecycle.State.CREATED)
