@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Test APK manifest: merged into the instrumentation that AGP generates. The meta-data "listener" is read by
+     AndroidJUnitRunner (RunnerArgs.fromManifest), so every `am instrument` run gets HymnalTestListener. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <instrumentation
+        android:name="androidx.test.runner.AndroidJUnitRunner"
+        android:targetPackage="com.ziontkec.hymnal">
+        <meta-data
+            android:name="listener"
+            android:value="org.cog.hymnchtv.HymnalTestListener" />
+    </instrumentation>
+
+    <application>
+        <!-- Lying provider for FilePathHelperTrustTest: reports an arbitrary _data path -->
+        <provider
+            android:name="org.cog.hymnchtv.persistance.LyingProvider"
+            android:authorities="com.ziontkec.hymnal.test.lying"
+            android:exported="true" />
+    </application>
+</manifest>

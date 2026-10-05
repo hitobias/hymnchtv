@@ -50,7 +50,10 @@ import androidx.lifecycle.ProcessLifecycleOwner;
 import org.cog.hymnchtv.concurrent.AppExecutors;
 import org.cog.hymnchtv.impl.timberlog.TimberLogImpl;
 import org.cog.hymnchtv.perf.DebugStrictMode;
+import org.cog.hymnchtv.share.ShareFiles;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
+import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.persistance.SharedImport;
 import org.cog.hymnchtv.persistance.LegacyDatabaseCleanup;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
 import org.cog.hymnchtv.service.androidupdate.OnlineUpdateService;
@@ -127,6 +130,13 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
         // 1.0 is the first release: delete the files of the superseded databases (no migration), see
         // LegacyDatabaseCleanup. Off the main thread; the legacy names never collide with the unified database file.
         AppExecutors.io("legacy-db-cleanup", () -> LegacyDatabaseCleanup.deleteLegacyFiles(this));
+
+        // Shares older than a day (cacheDir/share/<dir>/): younger ones may still be read by the receiving app
+        AppExecutors.io("share-cache-cleanup",
+                () -> ShareFiles.cleanOlderThan(getCacheDir(), System.currentTimeMillis(), ShareFiles.MAX_AGE_MS));
+        // Half-copied shared imports (".import-*.part") of a process killed mid-copy
+        AppExecutors.io("import-part-cleanup", () -> SharedImport.cleanStaleParts(
+                FileBackend.getHymnchtvStore(FileBackend.TMP, false), System.currentTimeMillis(), SharedImport.PART_MAX_AGE_MS));
 
         // The Room database itself is opened lazily on the first query.
         DatabaseBackend.getInstance(this);

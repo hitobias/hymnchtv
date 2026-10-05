@@ -23,14 +23,18 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.text.TextUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import timber.log.Timber;
 
@@ -50,49 +54,83 @@ public class FilePathHelper {
      * @return real local file path of uri or newly created file
      */
     public static String getFilePath(Context ctx, Uri uri) {
+        if (ctx == null || uri == null) {
+            return null;
+        }
         String filePath = null;
         try {
             filePath = getUriRealPath(ctx, uri);
         } catch (Exception e) {
             Timber.d("FilePath Catch: %s", uri.toString());
         }
+        // The path came from the sending app (or a provider): never use one that leads into our private data or off
+        // external storage; copy the content instead
+        if (!TextUtils.isEmpty(filePath) && !isPathAcceptable(ctx, filePath)) {
+            Timber.w("Rejected path of %s", uri);
+            filePath = null;
+        }
         if (TextUtils.isEmpty(filePath))
             filePath = getFilePathWithCreate(ctx, uri);
         return filePath;
     }
 
+    private static boolean isPathAcceptable(Context ctx, String path) {
+        List<File> forbidden = new ArrayList<>();
+        forbidden.add(ctx.getDataDir());
+        File filesParent = ctx.getFilesDir().getParentFile();
+        if (filesParent != null) {
+            forbidden.add(filesParent);
+        }
+        List<File> allowed = new ArrayList<>();
+        allowed.add(Environment.getExternalStorageDirectory());
+        allowed.add(new File("/storage"));
+        return PathTrust.isAcceptable(path, forbidden, allowed);
+    }
+
     /**
-     * To create a new file based on the given uri (usually on ContentResolver failure)
+     * Copy the shared content of uri into Download/hymnal/tmp (usually on ContentResolver failure). The sender's display
+     * name is reduced to a plain file name and an existing file of that name is replaced (see SharedImport).
      *
      * @param ctx the reference Context
      * @param uri content:// or file:// or whatever suitable Uri you want.
      *
-     * @return file name with the guessed ext if none is given.
+     * @return absolute path of the copy, or null if nothing could be copied
      */
     private static String getFilePathWithCreate(Context ctx, Uri uri) {
-        String fileName = null;
-
-        if (!TextUtils.isEmpty(uri.getPath())) {
-            Cursor cursor = ctx.getContentResolver().query(uri, null, null, null, null);
-            if (cursor == null)
-                fileName = uri.getPath();
-            else {
-                cursor.moveToFirst();
-                int idx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DISPLAY_NAME);
-                fileName = cursor.getString(idx);
-                cursor.close();
-            }
+        String rawName = queryDisplayName(ctx, uri);
+        if (TextUtils.isEmpty(rawName)) {
+            rawName = uri.getLastPathSegment();
         }
 
-        if (!TextUtils.isEmpty(fileName)) {
-            File destFile = new File(FileBackend.getHymnchtvStore(FileBackend.TMP, true), fileName);
-            if (!destFile.exists()) {
-                Timber.d("FilePath copyFile: %s", destFile);
-                copy(ctx, uri, destFile);
-            }
-            return destFile.getAbsolutePath();
+        File tmpDir = FileBackend.getHymnchtvStore(FileBackend.TMP, true);
+        if (tmpDir == null) {
+            Timber.w("Shared file not imported, no storage access: %s", uri);
+            return null;
         }
-        return null;
+
+        File destFile = SharedImport.copyInto(tmpDir, rawName, () -> ctx.getContentResolver().openInputStream(uri));
+        if (destFile == null) {
+            Timber.w("Shared file not imported: %s (name: %s)", uri, rawName);
+            return null;
+        }
+        Timber.d("FilePath copyFile: %s", destFile);
+        return destFile.getAbsolutePath();
+    }
+
+    /** The sender's display name of uri, or null if the provider gives none (no cursor, no row, no such column). */
+    private static String queryDisplayName(Context ctx, Uri uri) {
+        try (Cursor cursor = ctx.getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME},
+                null, null, null)) {
+            if (cursor == null || !cursor.moveToFirst()) {
+                return null;
+            }
+            int idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+            return (idx < 0 || cursor.isNull(idx)) ? null : cursor.getString(idx);
+        }
+        catch (RuntimeException e) { // SecurityException, IllegalArgumentException... from a foreign provider
+            Timber.w("Display name query failed for %s: %s", uri, e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -131,7 +169,11 @@ public class FilePathHelper {
             String uriAuthority = uri.getAuthority();
 
             if (isContentUri(uri)) {
-                if (isGooglePhotoDoc(uriAuthority)) {
+                if (!PathTrust.isTrustedAuthority(uriAuthority)) {
+                    // a foreign provider's _data column is not to be believed: the caller copies the content
+                    filePath = "";
+                }
+                else if (isGooglePhotoDoc(uriAuthority)) {
                     filePath = uri.getLastPathSegment();
                 }
                 else {
@@ -139,7 +181,8 @@ public class FilePathHelper {
                 }
             }
             else if (isFileUri(uri)) {
-                filePath = uri.getPath();
+                // file:// from ACTION_SEND names any path the sender likes: copy the content instead
+                filePath = "";
             }
             else if (isDocumentUri(ctx, uri)) {
                 // Get uri related document id.

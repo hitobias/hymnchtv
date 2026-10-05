@@ -22,6 +22,13 @@
 2. 安裝 RELEASE apk，在 API 24 與 API 34 手動冒煙測試：啟動、splash、桌面圖示。
 3. 之後若有修正：只重跑失敗的測試 + 受影響測試（腳本）。
 
+## 測試基礎
+
+- 每次 instrumented 執行開始前，`HymnalTestListener`（由 `hymnchtv/src/androidTest/AndroidManifest.xml` 的
+  meta-data `listener` 註冊，runner 仍是 `androidx.test.runner.AndroidJUnitRunner`）把預設 SharedPreferences 的
+  `ckChangeLog_last_version_code` 設成目前 versionCode，「變更歷史」對話框不會在測試中跳出。
+- 要測變更歷史對話框的測試：開始時 `ChangeLogSeen.clear(ctx)`，結束時（`finally`／`@After`）`ChangeLogSeen.mark(ctx)`。
+
 ## 模擬器
 
 啟動（API 34 埠 5580；API 24 用 `-avd api24b -port 5582`）：

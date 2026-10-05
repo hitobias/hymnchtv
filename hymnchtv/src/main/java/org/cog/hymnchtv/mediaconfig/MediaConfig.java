@@ -110,6 +110,7 @@ import org.cog.hymnchtv.RichTextEditor;
 import org.cog.hymnchtv.mediaplayer.MediaExoPlayerFragment;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.persistance.PathTrust;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.utils.DialogActivity;
 import org.cog.hymnchtv.utils.HymnNoValidate;
@@ -566,8 +567,12 @@ public class MediaConfig extends BaseActivity
                 HymnsApp.showToastMessage(R.string.file_does_not_exist);
             }
             else {
-                File inFile = new File(FilePathHelper.getFilePath(this, uri));
-                if (inFile.exists()) {
+                String path = FilePathHelper.getFilePath(this, uri);
+                File inFile = (path == null) ? null : new File(path);
+                if (inFile == null || !inFile.exists()) {
+                    HymnsApp.showToastMessage(R.string.file_does_not_exist);
+                }
+                else {
                     String filename = inFile.getPath();
                     if (mViewRequest == tvImportFile) {
                         filename = copyToLocalFile(filename);
@@ -592,7 +597,7 @@ public class MediaConfig extends BaseActivity
      * @return original uri path or newly copied uri path
      */
     private String copyToLocalFile(String uriPath) {
-        if (uriPath.contains(FileBackend.TMP)) {
+        if (PathTrust.isUnder(uriPath, FileBackend.getHymnchtvStore(FileBackend.TMP, false))) {
             File inFile = new File(uriPath);
 
             File outFile;
@@ -852,7 +857,7 @@ public class MediaConfig extends BaseActivity
         boolean isSuccess = true;
 
         if (filePath != null) {
-            if (filePath.contains(FileBackend.TMP)) {
+            if (PathTrust.isUnder(filePath, FileBackend.getHymnchtvStore(FileBackend.TMP, false))) {
                 File inFile = new File(filePath);
 
                 File subDir = FileBackend.getHymnchtvStore(hymnType + mediaDir.get(mediaType), true);
