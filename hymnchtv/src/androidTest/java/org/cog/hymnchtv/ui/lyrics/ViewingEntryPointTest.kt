@@ -34,7 +34,9 @@ class ViewingEntryPointTest : LyricsTestBase() {
 
     @Test
     fun aColdOpenReportsTheFirstHymnOnceAsOpened() {
-        launch(MainActivity.HYMN_DB, 5).use {
+        launch(MainActivity.HYMN_DB, 5).use { s ->
+            s.awaitPage()
+            instrumentation.waitForIdleSync()
             assertThat(events.toList()).containsExactly(db5 to ViewingCause.OPENED)
         }
     }

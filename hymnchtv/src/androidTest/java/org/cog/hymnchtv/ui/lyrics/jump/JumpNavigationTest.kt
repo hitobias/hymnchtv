@@ -10,6 +10,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import org.cog.hymnchtv.MainActivity
+import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.QuickTest
 import org.cog.hymnchtv.R
 import org.cog.hymnchtv.nav.ReadingPosition
@@ -135,6 +136,83 @@ class JumpNavigationTest : JumpTestBase() {
             awaitSettled(db100)
             back()
             awaitSettled(db5)
+        }
+    }
+
+    @Test
+    fun afterARecreationTheJumpStillRemembersAndRestoresThePosition() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            val before = onTop { it }
+            onTop { it.recreate() }
+            awaitTop("the recreated lyrics page", 15_000) { it !== before }
+            awaitSettled(db5)
+            val y5 = scrollTopTo(600)
+            assertWithMessage("DB 5 must scroll on a 320x640 screen").that(y5).isGreaterThan(200)
+            jump(db100)
+            assertThat(onTop { it.jumpState.recentFirst().single().position.scrollY }).isEqualTo(y5)
+            back()
+            awaitSettled(db5)
+            awaitScrollY("DB 5 scrolled back after a recreation", y5)
+        }
+    }
+
+    @Test
+    fun aReturnToARestoredAdjacentPageAfterARecreationRestoresThePosition() {
+        val db6 = HymnRef(MainActivity.HYMN_DB, 6)
+        launch(MainActivity.HYMN_DB, 6).use {
+            val before = onTop { it }
+            onTop { it.recreate() }
+            awaitTop("the recreated lyrics page", 15_000) { it !== before }
+            awaitSettled(db6)
+            val y6 = scrollTopTo(500)
+            assertWithMessage("DB 6 must scroll on a 320x640 screen").that(y6).isGreaterThan(150)
+            jump(db5) // the neighbour: the restored page 6 stays in the pager, it is not created again
+            back()
+            awaitSettled(db6)
+            awaitScrollY("DB 6 scrolled back", y6)
+        }
+    }
+
+    @Test
+    fun aReturnPositionNeverLandsOnAnotherHymn() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            val y5 = scrollTopTo(600)
+            assertWithMessage("DB 5 must scroll on a 320x640 screen").that(y5).isGreaterThan(200)
+            jump(db100)
+            // back and an immediate page turn in one main-thread turn: the page for DB 5 is not even created yet
+            onTop { a ->
+                a.onBackPressedDispatcher.onBackPressed()
+                a.findViewById<ViewPager2>(R.id.viewPager).setCurrentItem(idx(db5) + 1, false)
+            }
+            awaitSettled(HymnRef(MainActivity.HYMN_DB, 6))
+            SystemClock.sleep(2_500) // past the restore window
+            assertThat(topScrollY()).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun theSavedPendingPositionNamesItsHymn() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            scrollTopTo(600)
+            jump(db100)
+            val saved = Bundle()
+            onTop { a ->
+                a.onBackPressedDispatcher.onBackPressed()
+                instrumentation.callActivityOnSaveInstanceState(a, saved)
+            }
+            assertThat(saved.getString("state_pending_position")).isNotNull()
+            assertThat(saved.getString("state_pending_ref")).isEqualTo("hymn_db,5")
+        }
+    }
+
+
+    @Test
+    fun aStackEntryForTheHymnOnScreenIsDroppedSoBackIsNeverANoOp() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            jump(db100)
+            onTop { it.findViewById<ViewPager2>(R.id.viewPager).setCurrentItem(idx(db5), false) } // swiped back by hand
+            awaitSettled(db5)
+            assertThat(topStack()).isEmpty()
         }
     }
 }
