@@ -9,6 +9,7 @@ class DailyUpdateCheckTest {
         val latest: Boolean = false,
         val foreground: Boolean = true,
         val locked: Boolean = false,
+        val mainThreadCheckPasses: Boolean = true,
     ) : DailyUpdateCheck.Source {
         var dialogs = 0
         var lockReads = 0
@@ -22,8 +23,8 @@ class DailyUpdateCheckTest {
             lockReads++
             return locked
         }
-        override fun openUpdateDialog() {
-            dialogs++
+        override fun openUpdateDialog(claim: () -> Boolean) {
+            if (mainThreadCheckPasses && claim()) dialogs++
         }
     }
 
@@ -77,5 +78,15 @@ class DailyUpdateCheckTest {
         val source = FakeSource()
         DailyUpdateCheck(source, { false }, AtomicBoolean()).run()
         assertThat(source.dialogs).isEqualTo(1)
+    }
+
+    @Test
+    fun aFailedMainThreadCheckDoesNotUseUpTheOncePerProcessDialog() {
+        val prompted = AtomicBoolean()
+        DailyUpdateCheck(FakeSource(mainThreadCheckPasses = false), notifier, prompted).run()
+        assertThat(prompted.get()).isFalse()
+        val later = FakeSource()
+        DailyUpdateCheck(later, notifier, prompted).run()
+        assertThat(later.dialogs).isEqualTo(1)
     }
 }

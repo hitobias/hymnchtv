@@ -170,7 +170,8 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
 
         // An update download the last process left: verify it if it finished, else purge old downloads (1.6.0).
         // DownloadManager IPC and prefs, so off the main thread (B-7)
-        AppExecutors.io("resume-or-clean-apks", () -> UpdateServiceImpl.getInstance().resumeOrCleanOnStart());
+        // on its own thread: verifying a 116 MB apk must not hold the shared io thread
+        new Thread(() -> UpdateServiceImpl.getInstance().resumeOrCleanOnStart(), "hymnal-apk-resume").start();
         EdgeToEdgeDisable();
     }
 

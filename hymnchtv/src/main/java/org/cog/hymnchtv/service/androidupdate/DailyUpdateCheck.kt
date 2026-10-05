@@ -41,8 +41,12 @@ class DailyUpdateCheck(
 
         fun isLocked(): Boolean
 
-        /** Opens the dialog for the release [check] found, on the main thread, if an activity is still resumed then. */
-        fun openUpdateDialog()
+        /**
+         * Opens the dialog for the release [check] found, on the main thread, if an activity is still resumed and the device
+         * unlocked then; right before opening it calls [claim], and opens only if that returned true (once per process).
+         * When the main-thread check fails, [claim] is never called and a later run may try again.
+         */
+        fun openUpdateDialog(claim: () -> Boolean)
     }
 
     fun interface Notifier {
@@ -53,10 +57,8 @@ class DailyUpdateCheck(
     fun run() {
         val text = source.check() ?: return
         notifier.showAvailable(text)
-        if (UpdatePromptPolicy.shouldPrompt(prompted.get(), source.isForeground(), BooleanSupplier { source.isLocked() }) &&
-            prompted.compareAndSet(false, true)
-        ) {
-            source.openUpdateDialog()
+        if (UpdatePromptPolicy.shouldPrompt(prompted.get(), source.isForeground(), BooleanSupplier { source.isLocked() })) {
+            source.openUpdateDialog { prompted.compareAndSet(false, true) }
         }
     }
 
@@ -77,10 +79,10 @@ class DailyUpdateCheck(
         override fun isLocked(): Boolean = DeviceLock.isLocked(context)
 
         /** The worker thread decided; the main thread checks again that an activity is resumed and the device unlocked. */
-        override fun openUpdateDialog() {
+        override fun openUpdateDialog(claim: () -> Boolean) {
             AppExecutors.MAIN.post {
                 val resumed = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-                if (resumed && MainActivity.isForeground && !DeviceLock.isLocked(context)) service.offerLatest()
+                if (resumed && MainActivity.isForeground && !DeviceLock.isLocked(context) && claim()) service.offerLatest()
             }
         }
     }

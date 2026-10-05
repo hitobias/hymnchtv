@@ -37,7 +37,11 @@ object UpdateScheduler {
 
     @JvmStatic
     fun dailyRequest(): PeriodicWorkRequest =
-        PeriodicWorkRequestBuilder<UpdateCheckWorker>(INTERVAL_HOURS, TimeUnit.HOURS).setConstraints(network()).build()
+        PeriodicWorkRequestBuilder<UpdateCheckWorker>(INTERVAL_HOURS, TimeUnit.HOURS)
+            // the first run is the launch work 30 s after start: do not fetch twice at the first launch
+            .setInitialDelay(INTERVAL_HOURS, TimeUnit.HOURS)
+            .setConstraints(network())
+            .build()
 
     @JvmStatic
     fun launchRequest(): OneTimeWorkRequest =

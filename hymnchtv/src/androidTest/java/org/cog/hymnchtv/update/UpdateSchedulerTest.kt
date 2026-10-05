@@ -43,6 +43,7 @@ class UpdateSchedulerTest {
         assertThat(daily.state).isEqualTo(WorkInfo.State.ENQUEUED)
         assertThat(daily.constraints.requiredNetworkType).isEqualTo(NetworkType.CONNECTED)
         assertThat(daily.periodicityInfo!!.repeatIntervalMillis).isEqualTo(TimeUnit.HOURS.toMillis(24))
+        assertThat(daily.initialDelayMillis).isEqualTo(TimeUnit.HOURS.toMillis(24))
     }
 
     @Test
@@ -78,7 +79,7 @@ class UpdateSchedulerTest {
         }
         override fun isForeground() = false
         override fun isLocked() = true
-        override fun openUpdateDialog() = Unit
+        override fun openUpdateDialog(claim: () -> Boolean) = Unit
     }
 
     @Test
