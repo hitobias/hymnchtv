@@ -1,6 +1,7 @@
 package org.cog.hymnchtv.resources
 
 import com.google.common.truth.Truth.assertThat
+import org.cog.hymnchtv.share.MediaShareFiles
 import org.junit.Test
 import java.io.File
 
@@ -13,14 +14,16 @@ class FileProviderPathsTest {
         assertThat(xml).containsMatch("""<cache-path\s+name="share"\s+path="share/"\s*/>""")
     }
 
-    /**
-     * Not narrowed: MediaConfig shares the user's import file and media files from any external path (an SD card
-     * too), LogUploadServiceImpl shares Download/hymnal/logs, and the updater hands files/updates/ to the installer.
-     */
+    /** 1.6.0: no broad roots; media config copies files outside Download/hymnal/ into the share cache (MediaShareFiles). */
+    @Test
+    fun noBroadRootsAreLeft() {
+        assertThat(xml).doesNotContainMatch("""<external-path[^>]*path="/"""")
+        assertThat(xml).doesNotContain("<root-path")
+    }
+
     @Test
     fun theRootsOtherFeaturesNeedAreKept() {
-        assertThat(xml).containsMatch("""<external-path\s+name="external"\s+path="/"\s*/>""")
-        assertThat(xml).containsMatch("""<root-path\s+name="storage"\s+path="/storage/"\s*/>""")
+        assertThat(xml).containsMatch("""<external-path\s+name="hymnal"\s+path="${MediaShareFiles.HYMNAL_ROOT}"\s*/>""")
         assertThat(xml).containsMatch("""<files-path\s+name="updates"\s+path="updates/"\s*/>""")
     }
 }

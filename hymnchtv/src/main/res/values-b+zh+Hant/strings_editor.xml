@@ -3,4 +3,5 @@
     <string name="editor_save_failed">無法儲存檔案</string>
     <string name="editor_draft_lost">未儲存的修改無法還原</string>
     <string name="editor_file_too_large">檔案太大，無法在此編輯（超過 %1$d KB），請改用其他裝置編輯。</string>
+    <string name="editor_not_utf8">此檔案不是 UTF-8 文字，無法在此編輯</string>
 </resources>

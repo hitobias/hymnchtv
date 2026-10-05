@@ -123,4 +123,27 @@ class EditorStoreTest {
         val source = tmp.newFile("source.csv").apply { writeBytes(ByteArray(EditorStore.MAX_EDIT_BYTES.toInt() + 1)) }
         assertThat(EditorStore.load(source, cache, source.absolutePath, false)).isEqualTo(EditorStore.Loaded("", false, false, true))
     }
+
+    @Test
+    fun aFileThatIsNotUtf8IsRefusedAndLeftAlone() {
+        val gbk = "hymn_db,1,詩歌".toByteArray(charset("GBK"))
+        val file = tmp.newFile("gbk.csv").apply { writeBytes(gbk) }
+        val loaded = EditorStore.load(file, tmp.root, file.path, preferDraft = false)
+        assertThat(loaded.notUtf8).isTrue()
+        assertThat(loaded.text).isEmpty()
+        assertThat(file.readBytes()).isEqualTo(gbk)
+    }
+
+    @Test
+    fun utf8WithABomAndAnEmptyFileAreFine() {
+        val bom = tmp.newFile("bom.csv").apply { writeBytes(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) + "a".toByteArray()) }
+        assertThat(EditorStore.load(bom, tmp.root, bom.path, preferDraft = false).notUtf8).isFalse()
+        val empty = tmp.newFile("empty.csv")
+        assertThat(EditorStore.load(empty, tmp.root, empty.path, preferDraft = false).notUtf8).isFalse()
+    }
+
+    @Test(expected = EditorStore.NotUtf8Exception::class)
+    fun readRefusesMalformedUtf8() {
+        EditorStore.read(tmp.newFile("bad.csv").apply { writeBytes(byteArrayOf(0xC3.toByte(), 0x28)) })
+    }
 }

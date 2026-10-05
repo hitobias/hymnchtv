@@ -1,5 +1,6 @@
 package org.cog.hymnchtv.share
 
+import android.graphics.BitmapFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
@@ -25,12 +26,18 @@ class LyricsShareFilesTest {
 
     private fun assetBytes(path: String) = ctx.assets.open(path).use { it.readBytes() }
 
+    private val pngSignature = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+
+    private fun assetBitmap(path: String) = ctx.assets.open(path).use { BitmapFactory.decodeStream(it)!! }
+
     @Test
     fun aYouthHymnSharesItsScoreAndLyricsFromTheCache() {
         val files = LyricsShareFiles.prepare(ctx, MainActivity.HYMN_YB, 102)
         assertThat(files.map { it.name }).containsExactly("yb102.png", "yb102.txt").inOrder()
         files.forEach { assertThat(it.parentFile!!.parentFile).isEqualTo(shareRoot) }
-        assertThat(files[0].readBytes()).isEqualTo(assetBytes("lyrics_yb_score/yb102.png"))
+        // the WebP asset goes out as a PNG with the very same pixels
+        assertThat(files[0].readBytes().copyOf(8)).isEqualTo(pngSignature)
+        assertThat(BitmapFactory.decodeFile(files[0].path).sameAs(assetBitmap("lyrics_yb_score/yb102.webp"))).isTrue()
         assertThat(files[1].readBytes()).isEqualTo(assetBytes("lyrics_yb_text/yb102.txt"))
         // file_paths.xml must expose cacheDir/share/, or the share intent cannot be built
         files.forEach { assertThat(FileBackend.getUriForFile(ctx, it).authority).isEqualTo(ctx.packageName + ".files") }
@@ -66,5 +73,16 @@ class LyricsShareFilesTest {
     @Test(expected = IOException::class)
     fun anUnknownHymnFails() {
         LyricsShareFiles.prepare(ctx, "hymn_zz", 1)
+    }
+
+    /** xb157 (1429 x 2055) is the largest page: it must still be shared on API 24's 32 MB heap. */
+    @Test
+    fun theLargestScorePageIsShared() {
+        val files = LyricsShareFiles.prepare(ctx, MainActivity.HYMN_XB, 157)
+        assertThat(files[0].name).isEqualTo("xb157.png")
+        assertThat(files[0].readBytes().copyOf(8)).isEqualTo(pngSignature)
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(files[0].path, bounds)
+        assertThat(bounds.outWidth to bounds.outHeight).isEqualTo(1429 to 2055)
     }
 }

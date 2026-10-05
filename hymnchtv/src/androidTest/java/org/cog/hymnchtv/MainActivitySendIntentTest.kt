@@ -75,4 +75,24 @@ class MainActivitySendIntentTest {
             instrumentation.removeMonitor(monitor)
         }
     }
+
+    @Test
+    fun aSharedFileIsCopiedOffTheMainThread() {
+        MainActivity.sharedImportThreadForTest = null
+        source.writeText("hymn_db,2,false,HYMN_MEDIA,https://example.org/v3,\n")
+        val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", source)
+        val monitor = instrumentation.addMonitor(MediaConfig::class.java.name, null, false)
+        try {
+            val intent = send().putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            ActivityScenario.launch<MainActivity>(intent).use {
+                val config = instrumentation.waitForMonitorWithTimeout(monitor, 10_000)
+                assertThat(config).isNotNull()
+                cleanup += File(config!!.intent.getStringExtra(MainActivity.ATTR_MEDIA_URI)!!)
+                config.finish()
+            }
+            assertThat(MainActivity.sharedImportThreadForTest).isEqualTo("hymn-io")
+        } finally {
+            instrumentation.removeMonitor(monitor)
+        }
+    }
 }

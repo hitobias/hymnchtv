@@ -85,12 +85,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -110,6 +113,7 @@ import org.cog.hymnchtv.RichTextEditor;
 import org.cog.hymnchtv.mediaplayer.MediaExoPlayerFragment;
 import org.cog.hymnchtv.persistance.DatabaseBackend;
 import org.cog.hymnchtv.persistance.FileBackend;
+import org.cog.hymnchtv.share.MediaShareFiles;
 import org.cog.hymnchtv.persistance.PathTrust;
 import org.cog.hymnchtv.persistance.FilePathHelper;
 import org.cog.hymnchtv.utils.DialogActivity;
@@ -565,25 +569,29 @@ public class MediaConfig extends BaseActivity
         return registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
             if (uri == null) {
                 HymnsApp.showToastMessage(R.string.file_does_not_exist);
+                return;
             }
-            else {
-                String path = FilePathHelper.getFilePath(this, uri);
-                File inFile = (path == null) ? null : new File(path);
-                if (inFile == null || !inFile.exists()) {
+            // A picked content:// file may be copied in full (FilePathHelper): on AppExecutors.io, never the main thread (1.6.0)
+            final TextView request = mViewRequest;
+            final Context appContext = getApplicationContext();
+            AppExecutors.ioThenMain("picked-file", this, () -> {
+                String path = FilePathHelper.getFilePath(appContext, uri);
+                return (path != null && new File(path).exists()) ? path : "";
+            }, path -> {
+                if (path.isEmpty()) {
                     HymnsApp.showToastMessage(R.string.file_does_not_exist);
+                    return;
+                }
+                String filename = path;
+                if (request == tvImportFile) {
+                    filename = copyToLocalFile(filename);
+                    editFile(filename);
                 }
                 else {
-                    String filename = inFile.getPath();
-                    if (mViewRequest == tvImportFile) {
-                        filename = copyToLocalFile(filename);
-                        editFile(filename);
-                    }
-                    else {
-                        isAutoFilled = false;
-                    }
-                    mViewRequest.setText(filename);
+                    isAutoFilled = false;
                 }
-            }
+                request.setText(filename);
+            }, () -> HymnsApp.showToastMessage(R.string.file_does_not_exist));
         });
     }
 
@@ -977,33 +985,93 @@ public class MediaConfig extends BaseActivity
     }
 
     /**
-     * check for any unsaved changes and alert user before the exit.
+     * Shares the import file, or the media record with its media file (see shareFiles).
      */
     private void shareMediaRecord() {
-        ArrayList<Uri> imageUris = new ArrayList<>();
         String importFile = ViewUtil.toString(tvImportFile);
-
         if (importFile != null) {
-            imageUris.add(FileBackend.getUriForFile(this, new File(importFile)));
-            ShareWith.share(this, null, imageUris);
+            shareFiles(null, Collections.singletonList(new File(importFile)));
             return;
         }
 
         final MediaRecord mRecord = createMediaRecord();
         if (mRecord != null) {
+            List<File> files = new ArrayList<>();
             String mediaFile = mRecord.getMediaFilePath();
             if (!TextUtils.isEmpty(mediaFile)) {
                 File mFile = new File(mediaFile);
                 if (mFile.exists()) {
-                    imageUris.add(FileBackend.getUriForFile(this, new File(mediaFile)));
+                    files.add(mFile);
                 }
                 else {
-                    HymnsApp.showToastMessage(R.string.share_file_missing,
-                            mediaFile.substring(mediaFile.indexOf("Download")));
+                    HymnsApp.showToastMessage(R.string.share_file_missing, mFile.getName());
                 }
             }
-            ShareWith.share(this, mRecord.toExportString(), imageUris);
+            shareFiles(mRecord.toExportString(), files);
         }
+    }
+
+    /** The app's own directories: a media record's file path (imported from anywhere) must never share these. */
+    private static List<File> privateDirs(Context context) {
+        List<File> dirs = new ArrayList<>();
+        dirs.add(context.getDataDir());
+        dirs.add(context.getFilesDir());
+        dirs.add(context.getCacheDir());
+        dirs.add(context.getNoBackupFilesDir());
+        dirs.add(context.getCodeCacheDir());
+        for (File dir : context.getExternalFilesDirs(null)) {
+            if (dir != null) {
+                dirs.add(dir.getParentFile());
+            }
+        }
+        for (File dir : context.getExternalCacheDirs()) {
+            if (dir != null) {
+                dirs.add(dir.getParentFile());
+            }
+        }
+        return dirs;
+    }
+
+    /**
+     * Shares [text] and [files]; files outside Download/hymnal/ are copied to cacheDir/share/ first (MediaShareFiles, the
+     * FileProvider has no other external root since 1.6.0), on AppExecutors.io.
+     */
+    private void shareFiles(String text, List<File> files) {
+        if (files.isEmpty()) {
+            ShareWith.share(this, text, new ArrayList<>());
+            return;
+        }
+        final Context appContext = getApplicationContext();
+        AppExecutors.ioThenMain("media-share", this, () -> {
+            try {
+                return MediaShareFiles.prepare(appContext.getCacheDir(),
+                        MediaShareFiles.volumeRoots(Arrays.asList(appContext.getExternalFilesDirs(null))),
+                        privateDirs(appContext), files, System.currentTimeMillis());
+            }
+            catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, prepared -> {
+            // a refused file never stops the text from being shared
+            for (File refused : prepared.getRefused()) {
+                HymnsApp.showToastMessage(R.string.share_file_missing, refused.getName());
+            }
+            ArrayList<Uri> uris = new ArrayList<>();
+            try {
+                for (File file : prepared.getFiles()) {
+                    uris.add(FileBackend.getUriForFile(this, file));
+                }
+            }
+            catch (SecurityException e) {
+                Timber.e(e, "No FileProvider uri for a media config share");
+                HymnsApp.showToastMessage(R.string.share_failed);
+                return;
+            }
+            if (text == null && uris.isEmpty()) {
+                return;
+            }
+            ShareWith.share(this, text, uris);
+        }, () -> HymnsApp.showToastMessage(R.string.share_failed));
     }
 
     /**
