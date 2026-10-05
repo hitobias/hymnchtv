@@ -69,6 +69,10 @@ public class AudioBgService extends Service implements MediaPlayer.OnCompletionL
     public static final String ACTION_PLAYBACK_LOOP = "playback_loop";
     public static final String ACTION_PLAYBACK_SPEED = "playback_speed";
 
+    // Keys of the foreground playback notification (1.6.0, PlaybackNotification)
+    public static final String ACTION_NOTIFY_TOGGLE = "notify_toggle";
+    public static final String ACTION_NOTIFY_STOP = "notify_stop";
+
     // Media player broadcast status parameters
     public static final String PLAYBACK_STATE = "playback_state";
     public static final String PLAYBACK_STATUS = "playback_status";
