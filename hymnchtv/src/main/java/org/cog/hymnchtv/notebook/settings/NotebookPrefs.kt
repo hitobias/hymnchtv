@@ -25,6 +25,7 @@ interface NotebookPrefs : DeviceIdProvider {
         const val KEY_AUTO_RECORD = "auto_record_enabled"
         const val KEY_LAST_OCCASION = "last_chosen_occasion"
         const val KEY_DEVICE_ID = "device_id"
-        const val DEFAULT_AUTO_RECORD = true
+        /** Off until the user turns it on (Settings > Singing log); D-1 F4, user decision 2026-10-05. */
+        const val DEFAULT_AUTO_RECORD = false
     }
 }

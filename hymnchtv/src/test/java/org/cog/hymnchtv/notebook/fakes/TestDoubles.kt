@@ -21,9 +21,13 @@ class SequentialIds(private val start: Int = 0) : IdGenerator {
     override fun newId(): String = testUuid(counter.incrementAndGet())
 }
 
-/** Backing fields are private: a public `var autoRecordEnabled` would clash with setAutoRecordEnabled() on the JVM. */
+/**
+ * Backing fields are private: a public `var autoRecordEnabled` would clash with setAutoRecordEnabled() on the JVM.
+ * [autoRecord] defaults to true so tests exercise recording unless they say otherwise; the production default
+ * (NotebookPrefs.DEFAULT_AUTO_RECORD, off) is pinned by NotebookPrefsDefaultsTest.
+ */
 class FakeNotebookPrefs(
-    autoRecord: Boolean = NotebookPrefs.DEFAULT_AUTO_RECORD,
+    autoRecord: Boolean = true,
     lastChosen: Occasion? = null,
     private val device: String = TEST_DEVICE,
 ) : NotebookPrefs {

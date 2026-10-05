@@ -46,6 +46,25 @@ class BackupServiceTest {
     }
 
     @Test
+    fun anExportOverTheCapFailsAsTooLargeAndWritesNothing() = runTest {
+        val size = service(InMemoryBackupStore(SampleTables.full())).exportBytes().size
+        val out = ByteArrayOutputStream()
+        val result = service(InMemoryBackupStore(SampleTables.full()), maxBytes = size - 1).exportTo(out)
+        assertThat((result as ExportResult.Failure).error).isEqualTo(BackupError.TOO_LARGE)
+        assertThat(out.size()).isEqualTo(0)
+    }
+
+    @Test
+    fun anExportAtTheCapSucceedsAndImportsBackWithTheSameCap() = runTest {
+        val size = service(InMemoryBackupStore(SampleTables.full())).exportBytes().size
+        val capped = service(InMemoryBackupStore(SampleTables.full()), maxBytes = size)
+        val bytes = capped.exportBytes()
+        val target = InMemoryBackupStore()
+        val result = service(target, maxBytes = size).importFrom(ByteArrayInputStream(bytes))
+        assertThat(result).isEqualTo(ImportResult.Success(MergeStats(10, 0, 0), SkippedRows.NONE))
+    }
+
+    @Test
     fun exportThenImportIntoAnEmptyStoreRestoresEverything() = runTest {
         val bytes = service(InMemoryBackupStore(SampleTables.full())).exportBytes()
         val target = InMemoryBackupStore()

@@ -12,9 +12,9 @@ import org.junit.Test
 class TypeScaleScanTest {
     private val res = File("src/main/res")
 
-    /** Old screens (about, dialogs, media config, notebook, background picker) that keep their own sizes for now. */
+    /** Old screens (about, dialogs, media config, background picker) that keep their own sizes for now. */
     private val legacy = setOf(
-        "layout/background_picker_item.xml", "layout/fragment_myhymns.xml",
+        "layout/background_picker_item.xml",
         "layout/media_config.xml", "layout-land/media_config.xml",
         "layout/custom_dialog_wv.xml", "layout/file_xfer_ui.xml", "layout/media_record_delete.xml",
         "layout/action_bar.xml", "layout/http_login_dialog.xml",

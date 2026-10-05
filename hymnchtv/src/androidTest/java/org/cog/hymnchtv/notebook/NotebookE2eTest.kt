@@ -78,7 +78,7 @@ class NotebookE2eTest {
         graph.playlists.addItem(playlist.id, FU1)
         // A legacy-table row (not part of the notebook JSON backup); only Auto Backup carries it across a restore.
         withContext(Dispatchers.IO) { graph.database.hymnHistoryDao().insert(LEGACY_HISTORY) }
-        graph.prefs.setAutoRecordEnabled(false)
+        graph.prefs.setAutoRecordEnabled(true)
         // apply() writes asynchronously and the instrumentation process may exit first; an empty commit() queues behind it.
         context.getSharedPreferences(NotebookPrefs.FILE_NAME, Context.MODE_PRIVATE).edit().commit()
         settings().edit().putString(SETTINGS_MARKER_KEY, SETTINGS_MARKER_VALUE).commit()
@@ -120,7 +120,7 @@ class NotebookE2eTest {
         val playlist = graph.playlists.findAll().single()
         assertThat(graph.playlists.items(playlist.id).map { it.hymn }).containsExactly(DB1, FU1).inOrder()
         if (checkPrefs) {
-            assertThat(graph.prefs.autoRecordEnabled).isFalse()
+            assertThat(graph.prefs.autoRecordEnabled).isTrue()
             assertThat(settings().getString(SETTINGS_MARKER_KEY, null)).isEqualTo(SETTINGS_MARKER_VALUE)
         }
     }
