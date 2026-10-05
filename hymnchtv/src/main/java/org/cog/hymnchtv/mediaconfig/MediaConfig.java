@@ -52,7 +52,6 @@ import android.content.res.AssetManager;
 import android.database.SQLException;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.text.Editable;
@@ -93,6 +92,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -1044,22 +1044,30 @@ public class MediaConfig extends BaseActivity
         final Context appContext = getApplicationContext();
         AppExecutors.ioThenMain("media-share", this, () -> {
             try {
-                return MediaShareFiles.prepare(appContext.getCacheDir(), Environment.getExternalStorageDirectory(),
+                return MediaShareFiles.prepare(appContext.getCacheDir(),
+                        MediaShareFiles.volumeRoots(Arrays.asList(appContext.getExternalFilesDirs(null))),
                         privateDirs(appContext), files, System.currentTimeMillis());
             }
             catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-        }, ready -> {
+        }, prepared -> {
+            // a refused file never stops the text from being shared
+            for (File refused : prepared.getRefused()) {
+                HymnsApp.showToastMessage(R.string.share_file_missing, refused.getName());
+            }
             ArrayList<Uri> uris = new ArrayList<>();
             try {
-                for (File file : ready) {
+                for (File file : prepared.getFiles()) {
                     uris.add(FileBackend.getUriForFile(this, file));
                 }
             }
             catch (SecurityException e) {
                 Timber.e(e, "No FileProvider uri for a media config share");
                 HymnsApp.showToastMessage(R.string.share_failed);
+                return;
+            }
+            if (text == null && uris.isEmpty()) {
                 return;
             }
             ShareWith.share(this, text, uris);

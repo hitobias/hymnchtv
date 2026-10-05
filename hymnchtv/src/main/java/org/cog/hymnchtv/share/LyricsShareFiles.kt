@@ -3,9 +3,8 @@ package org.cog.hymnchtv.share
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -33,7 +32,7 @@ object LyricsShareFiles {
             } catch (e: FileNotFoundException) {
                 null
             }
-            score?.use { files += ShareFiles.write(shareDir, paths.scoreName, ByteArrayInputStream(pngBytes(it, paths.score))) }
+            score?.use { files += writePng(shareDir, paths.scoreName, it, paths.score) }
             assets.open(paths.lyrics).use { files += ShareFiles.write(shareDir, paths.lyricsName, it) }
             return files
         } catch (e: IOException) {
@@ -44,18 +43,25 @@ object LyricsShareFiles {
 
     /**
      * The score assets are lossless WebP since 1.6.0; receivers still get a PNG (some messengers turn a WebP into a
-     * sticker) with the same pixels. A page too large for the heap (API 24: 32 MB) is decoded again as RGB_565.
+     * sticker) with the same pixels, compressed straight into the file. A page too large for the heap (API 24: 32 MB) is
+     * decoded again as RGB_565; any OutOfMemoryError of the conversion surfaces as an IOException.
      */
     @Throws(IOException::class)
-    internal fun pngBytes(input: InputStream, name: String): ByteArray {
-        val encoded = input.readBytes()
-        val bitmap = decode(encoded, Bitmap.Config.ARGB_8888) ?: throw IOException("Cannot decode $name")
+    internal fun writePng(shareDir: File, fileName: String, input: InputStream, name: String): File {
         try {
-            val out = ByteArrayOutputStream(encoded.size * 2)
-            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) throw IOException("Cannot encode $name as PNG")
-            return out.toByteArray()
-        } finally {
-            bitmap.recycle()
+            val encoded = input.readBytes()
+            val bitmap = decode(encoded, Bitmap.Config.ARGB_8888) ?: throw IOException("Cannot decode $name")
+            val file = File(shareDir, fileName)
+            try {
+                FileOutputStream(file).use { out ->
+                    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) throw IOException("Cannot encode $name as PNG")
+                }
+            } finally {
+                bitmap.recycle()
+            }
+            return file
+        } catch (e: OutOfMemoryError) {
+            throw IOException("Score page too large to share: $name", e)
         }
     }
 
