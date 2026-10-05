@@ -16,175 +16,164 @@
  */
 package org.cog.hymnchtv;
 
-import android.graphics.Color;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
+import android.widget.EditText;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.UncheckedIOException;
 
-import org.apache.http.util.EncodingUtils;
+import org.cog.hymnchtv.concurrent.AppExecutors;
+import org.cog.hymnchtv.editor.EditorStore;
 import org.cog.hymnchtv.utils.DialogActivity;
-import org.jetbrains.annotations.NotNull;
 
-import jp.wasabeef.richeditor.RichEditor;
 import timber.log.Timber;
 
 /**
- * Rich text editor implementation based on jp.wasabeef:richeditor-android
- * for import_export file: view, make changes and save to apply
+ * Plain-text editor of the media links import/export file (a CSV): view, change and save it.
+ * The text never goes into the saved-state Bundle (a large export exceeds the binder limit and crashed API 24+ when the
+ * screen was stopped); unsaved changes are kept in a draft file in the cache directory instead, see EditorStore.
  *
  * @author Eng Chong Meng
  */
 public class RichTextEditor extends BaseActivity
         implements View.OnClickListener, DialogActivity.DialogListener {
-    // Tags for the onSaveInstanceState bundle.
+    /** Intent extra and saved-state key: absolute path of the file under edit. */
     public static final String ATTR_FILE_URI = "attr_file_uUri";
-    private static final String URI_CONTENT = "uri_content";
+    /** Saved-state key: the unsaved text was written to the draft file. */
+    private static final String STATE_HAS_DRAFT = "has_draft";
 
-    /* filename under edit*/
+    /* filename under edit */
     private String fileUri = null;
 
-    /* Flag indicates if there were any uncommitted changes that shall be applied on exit */
-    private static boolean hasChanges = false;
+    /* Uncommitted changes to apply on save; per screen (it was static, so one editor's state leaked into the next) */
+    private boolean hasChanges = false;
 
-    private RichEditor mEditor;
-    private TextView mPreview;
-    private Button cmdSave;
+    /* The text is still being loaded from the draft: say so again if this screen is saved before it arrives */
+    private boolean draftPending = false;
+
+    /* The file (or draft) text is in the editor; edits before that are not the user's */
+    private boolean loaded = false;
+
+    /* A save is running on AppExecutors.io */
+    private boolean saving = false;
+
+    private EditText mEditor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.rich_text_editor);
         mEditor = findViewById(R.id.editor);
-        mEditor.setEditorHeight(200);
-        mEditor.setEditorFontSize(15);
-        mEditor.setEditorFontColor(Color.DKGRAY);
-        //mEditor.setEditorBackgroundColor(Color.BLUE);
-        //mEditor.setBackgroundColor(Color.BLUE);
-        //mEditor.setBackgroundResource(R.drawable.bg);
-        //mEditor.setBackground("https://raw.githubusercontent.com/wasabeef/art/master/chip.jpg");
-        mEditor.setPadding(10, 10, 10, 10);
-        mEditor.setPlaceholder("Insert text here...");
-        //mEditor.setInputEnabled(false);
-
-        mPreview = findViewById(R.id.preview);
-        mEditor.setOnTextChangeListener(text -> {
-            hasChanges = true;
-            mPreview.setText(text);
-        });
-
-        findViewById(R.id.action_undo).setOnClickListener(v -> mEditor.undo());
-        findViewById(R.id.action_redo).setOnClickListener(v -> mEditor.redo());
-
-        findViewById(R.id.action_bold).setOnClickListener(v -> mEditor.setBold());
-        findViewById(R.id.action_italic).setOnClickListener(v -> mEditor.setItalic());
-        findViewById(R.id.action_subscript).setOnClickListener(v -> mEditor.setSubscript());
-        findViewById(R.id.action_superscript).setOnClickListener(v -> mEditor.setSuperscript());
-        findViewById(R.id.action_strikethrough).setOnClickListener(v -> mEditor.setStrikeThrough());
-        findViewById(R.id.action_underline).setOnClickListener(v -> mEditor.setUnderline());
-
-        findViewById(R.id.action_heading1).setOnClickListener(v -> mEditor.setHeading(1));
-        findViewById(R.id.action_heading2).setOnClickListener(v -> mEditor.setHeading(2));
-        findViewById(R.id.action_heading3).setOnClickListener(v -> mEditor.setHeading(3));
-        findViewById(R.id.action_heading4).setOnClickListener(v -> mEditor.setHeading(4));
-        findViewById(R.id.action_heading5).setOnClickListener(v -> mEditor.setHeading(5));
-        findViewById(R.id.action_heading6).setOnClickListener(v -> mEditor.setHeading(6));
-
-        findViewById(R.id.action_txt_color).setOnClickListener(new View.OnClickListener() {
-            private boolean isChanged;
+        mEditor.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
-            public void onClick(View v) {
-                mEditor.setTextColor(isChanged ? Color.BLACK : Color.RED);
-                isChanged = !isChanged;
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
             }
-        });
-
-        findViewById(R.id.action_bg_color).setOnClickListener(new View.OnClickListener() {
-            private boolean isChanged;
 
             @Override
-            public void onClick(View v) {
-                mEditor.setTextBackgroundColor(isChanged ? Color.TRANSPARENT : Color.YELLOW);
-                isChanged = !isChanged;
-            }
-        });
-
-        findViewById(R.id.action_indent).setOnClickListener(v -> mEditor.setIndent());
-        findViewById(R.id.action_outdent).setOnClickListener(v -> mEditor.setOutdent());
-
-        findViewById(R.id.action_align_left).setOnClickListener(v -> mEditor.setAlignLeft());
-        findViewById(R.id.action_align_center).setOnClickListener(v -> mEditor.setAlignCenter());
-        findViewById(R.id.action_align_right).setOnClickListener(v -> mEditor.setAlignRight());
-
-        findViewById(R.id.action_blockquote).setOnClickListener(v -> mEditor.setBlockquote());
-        findViewById(R.id.action_insert_bullets).setOnClickListener(v -> mEditor.setBullets());
-        findViewById(R.id.action_insert_numbers).setOnClickListener(v -> mEditor.setNumbers());
-
-        findViewById(R.id.action_insert_image).setOnClickListener(
-                v -> mEditor.insertImage("https://raw.githubusercontent.com/wasabeef/art/master/chip.jpg", "dachshund", 320));
-
-        findViewById(R.id.action_insert_youtube).setOnClickListener(
-                v -> mEditor.insertYoutubeVideo("https://www.youtube.com/embed/pS5peqApgUA"));
-
-        findViewById(R.id.action_insert_audio).setOnClickListener(
-                v -> mEditor.insertAudio("https://file-examples-com.github.io/uploads/2017/11/file_example_MP3_5MG.mp3"));
-
-        findViewById(R.id.action_insert_video).setOnClickListener(
-                v -> mEditor.insertVideo("https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_10MB.mp4", 360));
-
-        findViewById(R.id.action_insert_link).setOnClickListener(
-                v -> mEditor.insertLink("https://github.com/wasabeef", "wasabeef"));
-        findViewById(R.id.action_insert_checkbox).setOnClickListener(v -> mEditor.insertTodo());
-
-        (cmdSave = findViewById(R.id.saveButton)).setOnClickListener(this);
-        findViewById(R.id.endButton).setOnClickListener(this);
-
-        /* updte the content text for edit either via savedInstanceState on screen rotate or given file uri on first entry */
-        if (savedInstanceState != null) {
-            fileUri = savedInstanceState.getString(ATTR_FILE_URI);
-            mEditor.setHtml(savedInstanceState.getString(URI_CONTENT));
-        }
-        else {
-            hasChanges = false;
-            Bundle bundle = getIntent().getExtras();
-            if (bundle != null) {
-                fileUri = bundle.getString(ATTR_FILE_URI);
-                if (!TextUtils.isEmpty(fileUri)) {
-                    editFile(fileUri);
+            public void afterTextChanged(Editable s) {
+                if (loaded) {
+                    hasChanges = true;
                 }
             }
+        });
+        findViewById(R.id.saveButton).setOnClickListener(this);
+        findViewById(R.id.endButton).setOnClickListener(this);
+
+        if (savedInstanceState != null) {
+            fileUri = savedInstanceState.getString(ATTR_FILE_URI);
+            draftPending = savedInstanceState.getBoolean(STATE_HAS_DRAFT, false);
+        }
+        else {
+            // A draft left by an editor that was closed without saving belongs to no one now
+            EditorStore.clearDraft(getCacheDir());
+            Bundle extras = getIntent().getExtras();
+            fileUri = (extras == null) ? null : extras.getString(ATTR_FILE_URI);
+        }
+
+        if (TextUtils.isEmpty(fileUri)) {
+            HymnsApp.showToastMessage(R.string.file_does_not_exist);
+            finish();
+            return;
         }
         setTitle(new File(fileUri).getName());
+        loadText();
+    }
+
+    /** Reads the file, or the draft of a recreated screen, on AppExecutors.io. */
+    private void loadText() {
+        final File source = new File(fileUri);
+        final File cacheDir = getCacheDir();
+        final boolean preferDraft = draftPending;
+        AppExecutors.ioThenMain("editor-load", this, () -> {
+            try {
+                return EditorStore.load(source, cacheDir, preferDraft);
+            }
+            catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, content -> {
+            mEditor.setText(content.getText());
+            loaded = true;
+            draftPending = false;
+            hasChanges = content.getFromDraft();
+        }, () -> {
+            HymnsApp.showToastMessage(R.string.file_does_not_exist);
+            finish();
+        });
     }
 
     /**
-     * Save a copy of the current edited fileName and its content to the instance state bundle.
+     * Only the file path and a draft flag go into the Bundle; unsaved text is written to the draft file.
      *
      * @param outState Bundle
      */
     @Override
-    protected void onSaveInstanceState(@NotNull Bundle outState) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(ATTR_FILE_URI, fileUri);
-        outState.putString(URI_CONTENT, mEditor.getHtml());
+        boolean hasDraft = draftPending;
+        if (loaded && hasChanges) {
+            try {
+                EditorStore.saveDraft(getCacheDir(), mEditor.getText().toString());
+                hasDraft = true;
+            }
+            catch (IOException e) {
+                Timber.w(e, "Editor draft not saved");
+            }
+        }
+        outState.putBoolean(STATE_HAS_DRAFT, hasDraft);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (isFinishing()) {
+            EditorStore.clearDraft(getCacheDir());
+        }
+        super.onDestroy();
+    }
+
+    @VisibleForTesting
+    public boolean hasUnsavedChanges() {
+        return hasChanges;
     }
 
     @Override
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.saveButton) {
-            if (hasChanges) {
-                saveFile();
-            }
-            finish();
+            saveOrFinish();
         }
         else if (id == R.id.endButton) {
             checkUnsavedChanges();
@@ -212,51 +201,48 @@ public class RichTextEditor extends BaseActivity
      * @param dialog source <tt>DialogActivity</tt>.
      */
     public boolean onConfirmClicked(DialogActivity dialog) {
-        return cmdSave.performClick();
+        saveOrFinish();
+        return true;
     }
 
     /**
-     * Fired when user dismisses the dialog.
+     * Fired when user dismisses the dialog: the changes are discarded.
      *
      * @param dialog source <tt>DialogActivity</tt>
      */
     public void onDialogCancelled(DialogActivity dialog) {
+        EditorStore.clearDraft(getCacheDir());
         finish();
     }
 
-    /**
-     * Extract the export file content for edit in RichText Editor
-     *
-     * @param fileName The file for editing
-     */
-    private void editFile(String fileName) {
-        try {
-            InputStream in2 = new FileInputStream(fileName);
-            byte[] buffer2 = new byte[in2.available()];
-            if (in2.read(buffer2) == -1)
-                return;
-
-            String mResult = EncodingUtils.getString(buffer2, "utf-8");
-            mEditor.setHtml(mResult);
-
-        } catch (IOException e) {
-            Timber.w("Content file not available: %s", e.getMessage());
-            HymnsApp.showToastMessage(R.string.file_does_not_exist);
+    /** Writes the text back to its file on AppExecutors.io (byte for byte, line breaks kept), then closes. */
+    private void saveOrFinish() {
+        if (!hasChanges) {
+            finish();
+            return;
         }
-    }
-
-    /**
-     * Save the changed file content to its original given fileName
-     */
-    private void saveFile() {
-        try {
-            File outFile = new File(fileUri);
-            FileWriter fileWriter = new FileWriter(outFile.getAbsolutePath());
-            fileWriter.write(mEditor.getHtml());
-            fileWriter.close();
+        if (saving) {
+            return;
+        }
+        saving = true;
+        final File target = new File(fileUri);
+        final String text = mEditor.getText().toString();
+        AppExecutors.ioThenMain("editor-save", this, () -> {
+            try {
+                EditorStore.write(target, text);
+                return Boolean.TRUE;
+            }
+            catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, saved -> {
+            saving = false;
+            hasChanges = false;
             HymnsApp.showToastMessage(R.string.file_saved);
-        } catch (IOException e) {
-            Timber.w("Save file exception: %s", e.getMessage());
-        }
+            finish();
+        }, () -> {
+            saving = false;
+            HymnsApp.showToastMessage(R.string.editor_save_failed);
+        });
     }
 }
