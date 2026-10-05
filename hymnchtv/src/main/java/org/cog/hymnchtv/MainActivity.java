@@ -29,13 +29,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.os.PowerManager;
-import android.app.KeyguardManager;
 import android.view.View;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.ActionBar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.IntentCompat;
@@ -119,6 +118,10 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
      */
     public static boolean isForeground = false;
 
+    /** For tests: the thread that copied the last shared file (1.6.0: never the main thread). */
+    @VisibleForTesting
+    static volatile String sharedImportThreadForTest = null;
+
     private static MainActivity mInstance;
 
     private MainHost mainHost;
@@ -192,32 +195,56 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
         final String action = intent.getAction();
         final String type = intent.getType();
 
-        String mediaLink = null;
         if (Intent.ACTION_SEND.equals(action) && (type != null)) {
             if ("text/plain".equals(type)) {
-                mediaLink = intent.getStringExtra(Intent.EXTRA_TEXT);
+                openMediaConfig(intent.getStringExtra(Intent.EXTRA_TEXT));
             }
             else {
-                mediaLink = getFile(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri.class));
+                importShared(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri.class));
             }
         }
         else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && (type != null)) {
             final ArrayList<Uri> uris = IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri.class);
-            if (uris != null && !uris.isEmpty())
-                mediaLink = getFile(uris.get(0));
-            else
-                HymnsApp.showToastMessage(R.string.file_does_not_exist);
+            importShared((uris != null && !uris.isEmpty()) ? uris.get(0) : null);
         }
+    }
 
-        if (mediaLink != null) {
-            intent = new Intent(this, MediaConfig.class);
-            Bundle bundle = new Bundle();
-            bundle.putString(ATTR_MEDIA_URI, mediaLink);
-            bundle.putString(ATTR_HYMN_TYPE, mHymnType);
-            bundle.putInt(ATTR_HYMN_NUMBER, mHymnNo);
-            intent.putExtras(bundle);
-            startActivity(intent);
+    /** Opens the media config screen with the shared link or the local copy of a shared file. */
+    private void openMediaConfig(String mediaLink) {
+        if (mediaLink == null) {
+            return;
         }
+        Intent intent = new Intent(this, MediaConfig.class);
+        Bundle bundle = new Bundle();
+        bundle.putString(ATTR_MEDIA_URI, mediaLink);
+        bundle.putString(ATTR_HYMN_TYPE, mHymnType);
+        bundle.putInt(ATTR_HYMN_NUMBER, mHymnNo);
+        intent.putExtras(bundle);
+        startActivity(intent);
+    }
+
+    /**
+     * Copies a shared file (FilePathHelper; a content uri is copied in full) on AppExecutors.io, then opens the media config
+     * screen on the main thread (1.6.0: a large file no longer blocks the screen).
+     */
+    private void importShared(Uri uri) {
+        if (uri == null) {
+            HymnsApp.showToastMessage(R.string.file_does_not_exist);
+            return;
+        }
+        final Context appContext = getApplicationContext();
+        AppExecutors.ioThenMain("shared-import", this, () -> {
+            sharedImportThreadForTest = Thread.currentThread().getName();
+            String path = FilePathHelper.getFilePath(appContext, uri);
+            return (path != null && new File(path).exists()) ? path : "";
+        }, path -> {
+            if (path.isEmpty()) {
+                HymnsApp.showToastMessage(R.string.file_does_not_exist);
+            }
+            else {
+                openMediaConfig(path);
+            }
+        }, () -> HymnsApp.showToastMessage(R.string.file_does_not_exist));
     }
 
     @Override
@@ -288,39 +315,6 @@ public class MainActivity extends BaseActivity implements LifecycleEventObserver
             isForeground = false;
             Timber.d("APP BACKGROUNDED");
         }
-    }
-
-    /**
-     * Returns true if the device is locked or screen turned off (in case password not set)
-     */
-    public static boolean isDeviceLocked() {
-        boolean isLocked;
-
-        // First we check the locked state
-        KeyguardManager keyguardManager = (KeyguardManager) mInstance.getSystemService(Context.KEYGUARD_SERVICE);
-        boolean inKeyguardRestrictedInputMode = keyguardManager.isKeyguardLocked();
-
-        if (inKeyguardRestrictedInputMode) {
-            isLocked = true;
-        }
-        else {
-            // If password is not set in the settings, the inKeyguardRestrictedInputMode() returns false,
-            // so we need to check if screen on for this case
-            PowerManager powerManager = (PowerManager) mInstance.getSystemService(Context.POWER_SERVICE);
-            isLocked = !powerManager.isInteractive();
-        }
-        Timber.d("Android device is %s.", isLocked ? "locked" : "unlocked");
-        return isLocked;
-    }
-
-    /** @return local path of the shared file (a fresh copy for content uris), or null after telling the user */
-    private String getFile(Uri uri) {
-        String path = (uri == null) ? null : FilePathHelper.getFilePath(this, uri);
-        if (path != null && new File(path).exists()) {
-            return path;
-        }
-        HymnsApp.showToastMessage(R.string.file_does_not_exist);
-        return null;
     }
 
     /**

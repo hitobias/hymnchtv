@@ -565,25 +565,29 @@ public class MediaConfig extends BaseActivity
         return registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
             if (uri == null) {
                 HymnsApp.showToastMessage(R.string.file_does_not_exist);
+                return;
             }
-            else {
-                String path = FilePathHelper.getFilePath(this, uri);
-                File inFile = (path == null) ? null : new File(path);
-                if (inFile == null || !inFile.exists()) {
+            // A picked content:// file may be copied in full (FilePathHelper): on AppExecutors.io, never the main thread (1.6.0)
+            final TextView request = mViewRequest;
+            final Context appContext = getApplicationContext();
+            AppExecutors.ioThenMain("picked-file", this, () -> {
+                String path = FilePathHelper.getFilePath(appContext, uri);
+                return (path != null && new File(path).exists()) ? path : "";
+            }, path -> {
+                if (path.isEmpty()) {
                     HymnsApp.showToastMessage(R.string.file_does_not_exist);
+                    return;
+                }
+                String filename = path;
+                if (request == tvImportFile) {
+                    filename = copyToLocalFile(filename);
+                    editFile(filename);
                 }
                 else {
-                    String filename = inFile.getPath();
-                    if (mViewRequest == tvImportFile) {
-                        filename = copyToLocalFile(filename);
-                        editFile(filename);
-                    }
-                    else {
-                        isAutoFilled = false;
-                    }
-                    mViewRequest.setText(filename);
+                    isAutoFilled = false;
                 }
-            }
+                request.setText(filename);
+            }, () -> HymnsApp.showToastMessage(R.string.file_does_not_exist));
         });
     }
 
