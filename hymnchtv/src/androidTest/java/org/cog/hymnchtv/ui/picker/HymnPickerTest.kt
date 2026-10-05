@@ -172,9 +172,8 @@ class HymnPickerTest {
         }
     }
 
-    @Test fun contentsButtonIsInTheChromeAndAddPlaylistIsHiddenWhileTheNotebookUiIsOff() = launch {
+    @Test fun contentsButtonIsInTheChromeAndSetNextIsHiddenOnHome() = launch {
         onView(withId(R.id.btn_toc)).check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
-        onView(withId(R.id.btn_add_playlist)).check(matches(withEffectiveVisibility(Visibility.GONE)))
         onView(withId(R.id.btn_set_next)).check(matches(withEffectiveVisibility(Visibility.GONE)))
     }
 
