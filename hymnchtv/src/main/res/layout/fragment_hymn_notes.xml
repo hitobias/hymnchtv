@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notes of one hymn (D-1 F1): title bar, the hymn, its sing summary, "New note", the notes newest first -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/notes_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <org.cog.hymnchtv.ui.page.PageTitleBar
+        android:id="@+id/notes_title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:pageTitle="@string/notes_title" />
+
+    <TextView
+        android:id="@+id/notes_hymn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="8dp"
+        android:textAppearance="@style/TextAppearance.Hymnal.Heading" />
+
+    <TextView
+        android:id="@+id/notes_hymn_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:textAppearance="@style/TextAppearance.Hymnal.Body"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/notes_sung"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="4dp"
+        android:textAppearance="@style/TextAppearance.Hymnal.Caption"
+        android:visibility="gone" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/notes_add"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="8dp"
+        android:minHeight="48dp"
+        android:text="@string/notes_add"
+        android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/notes_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="24dp" />
+
+        <TextView
+            android:id="@+id/notes_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="24dp"
+            android:text="@string/notes_empty"
+            android:textAppearance="@style/TextAppearance.Hymnal.Body"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>

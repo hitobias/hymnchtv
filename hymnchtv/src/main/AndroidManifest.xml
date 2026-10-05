@@ -120,6 +120,10 @@
             android:name=".reading.ReadingSettingsActivity"
             android:label="@string/reading_settings"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".ui.notebook.NotebookPageActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar" />
 
         <activity android:name=".reading.BackgroundPickerActivity" />
 

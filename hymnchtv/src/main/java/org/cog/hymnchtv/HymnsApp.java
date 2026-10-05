@@ -134,6 +134,9 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
         // Shares older than a day (cacheDir/share/<dir>/): younger ones may still be read by the receiving app
         AppExecutors.io("share-cache-cleanup",
                 () -> ShareFiles.cleanOlderThan(getCacheDir(), System.currentTimeMillis(), ShareFiles.MAX_AGE_MS));
+        // D-1: note editor drafts nobody saved or discarded go after 7 days (noBackupFilesDir is not evicted like the cache)
+        AppExecutors.io("note-draft-cleanup", () -> org.cog.hymnchtv.ui.notes.NoteDraftFiles.inApp(this)
+                .deleteOlderThan(System.currentTimeMillis(), org.cog.hymnchtv.ui.notes.NoteDraftFiles.MAX_AGE_MS));
         // Half-copied shared imports (".import-*.part") of a process killed mid-copy
         AppExecutors.io("import-part-cleanup", () -> SharedImport.cleanStaleParts(
                 FileBackend.getHymnchtvStore(FileBackend.TMP, false), System.currentTimeMillis(), SharedImport.PART_MAX_AGE_MS));
