@@ -1,105 +1,116 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- H5 jump panel (full screen): title row with close, the next-slot row, the shared hymn picker in jump mode (its recent
-     area lists the return stack), and the search page over all of it when opened. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- H5 jump panel (full screen), built like the home page: the MAIN background behind the shared hymn picker (HomeColors and
+     KeypadSizer style and fit it), with a compact title row and the next-slot row above it, and the search page over the
+     picker when opened. The recent area lists the return stack and sits below the fold. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/jump_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/mainBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:minHeight="56dp"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="4dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/jump_title"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="@string/jump_title"
-            android:textAppearance="@style/TextAppearance.Hymnal.Title" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/jump_close"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:minHeight="48dp"
-            android:text="@string/jump_close"
-            android:textAppearance="@style/TextAppearance.Hymnal.Body" />
-    </LinearLayout>
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="4dp">
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <androidx.core.widget.NestedScrollView
-            android:id="@+id/jump_scroll"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/jump_title"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="16dp">
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/jump_title"
+                android:textAppearance="@style/TextAppearance.Hymnal.Title" />
 
-                <LinearLayout
-                    android:id="@+id/jump_slot_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:minHeight="48dp"
-                    android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/jump_close"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/jump_close"
+                android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+        </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/jump_slot_text"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="2"
-                        android:textAppearance="@style/TextAppearance.Hymnal.Body" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/jump_slot_clear"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:minHeight="48dp"
-                        android:text="@string/jump_slot_clear"
-                        android:textAppearance="@style/TextAppearance.Hymnal.Body"
-                        android:visibility="gone" />
-                </LinearLayout>
-
-                <include
-                    layout="@layout/hymn_picker"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" />
-            </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
-
-        <!-- SearchFragment (child of the panel) goes here; shown only while it is on the panel's back stack -->
-        <FrameLayout
-            android:id="@+id/jump_search_container"
+        <LinearLayout
+            android:id="@+id/jump_slot_row"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="?attr/colorSurface"
-            android:clickable="true"
-            android:focusable="false"
-            android:visibility="gone" />
-    </FrameLayout>
-</LinearLayout>
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="40dp"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="4dp">
+
+            <TextView
+                android:id="@+id/jump_slot_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.Hymnal.Body" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/jump_slot_clear"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="40dp"
+                android:text="@string/jump_slot_clear"
+                android:textAppearance="@style/TextAppearance.Hymnal.Body"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <org.cog.hymnchtv.ui.home.HomeScrollView
+                android:id="@+id/viewMain"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <FrameLayout
+                    android:id="@+id/home_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="12dp">
+
+                    <include layout="@layout/hymn_picker" />
+                </FrameLayout>
+            </org.cog.hymnchtv.ui.home.HomeScrollView>
+
+            <!-- SearchFragment (child of the panel) goes here; shown only while it is on the panel's back stack -->
+            <FrameLayout
+                android:id="@+id/jump_search_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="?attr/colorSurface"
+                android:clickable="true"
+                android:focusable="false"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

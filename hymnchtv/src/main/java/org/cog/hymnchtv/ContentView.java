@@ -1044,7 +1044,7 @@ public class ContentView extends Fragment implements ZoomTextView.ZoomTextListen
         HymnRef slot = mContentHandler.getNextSlot();
         next.setImageResource(slot == null ? R.drawable.ic_sym_arrow_forward : R.drawable.ic_sym_arrow_forward_dot);
         next.setContentDescription(slot == null ? getString(R.string.c_next_hymn)
-                : getString(R.string.jump_next_slot, HymnLabels.INSTANCE.chip(requireContext(), slot)));
+                : getString(R.string.jump_next_slot, HymnLabels.INSTANCE.spoken(requireContext(), slot, null)));
     }
 
     /** Called by ContentHandler when the favourite state of the hymn on screen changed. */

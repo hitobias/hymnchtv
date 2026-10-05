@@ -10,6 +10,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import androidx.activity.ComponentDialog
 import androidx.activity.addCallback
+import androidx.core.view.ViewCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
@@ -19,6 +20,13 @@ import org.cog.hymnchtv.R
 import org.cog.hymnchtv.hymn.HymnRef
 import org.cog.hymnchtv.hymn.HymnSource
 import org.cog.hymnchtv.lyrics.LyricsScript
+import org.cog.hymnchtv.reading.background.BackgroundChoice
+import org.cog.hymnchtv.reading.background.BackgroundPrefs
+import org.cog.hymnchtv.reading.background.BackgroundSlot
+import org.cog.hymnchtv.ui.home.HomeColors
+import org.cog.hymnchtv.ui.home.HomeScrollView
+import org.cog.hymnchtv.ui.home.KeypadSizer
+import org.cog.hymnchtv.ui.home.RecentFit
 import org.cog.hymnchtv.ui.picker.HymnLabels
 import org.cog.hymnchtv.ui.picker.HymnPickerController
 import org.cog.hymnchtv.ui.picker.HymnPickerViewModel
@@ -43,6 +51,7 @@ class JumpPanelFragment : DialogFragment(R.layout.panel_jump), PickerHost, Searc
     private var slotText: TextView? = null
     private var slotClear: View? = null
     private var searchContainer: View? = null
+    private var keypadSizer: KeypadSizer? = null
     private val backStackListener = FragmentManager.OnBackStackChangedListener { syncSearchContainer() }
 
     private val host: JumpHost get() = requireActivity() as JumpHost
@@ -61,6 +70,18 @@ class JumpPanelFragment : DialogFragment(R.layout.panel_jump), PickerHost, Searc
         val pickerViews = HymnPickerViews(view)
         views = pickerViews
         controller = HymnPickerController(pickerViews, this, PickerMode.JUMP, vm, prefs, ::titleSource, ::titleTraditional)
+        // The home page's look: the MAIN background and its tokens style the picker, and the same fitter sizes it
+        val background = checkNotNull(pickerViews.background) { "the jump panel needs its background view" }
+        val applied = BackgroundPrefs.applyWithTokens(background, prefs, BackgroundSlot.MAIN)
+        HomeColors(requireContext(), applied.tokens, applied.choice, applied.palette).apply(pickerViews)
+        val onBackground = if (applied.choice is BackgroundChoice.Photo) applied.tokens.onSurface else applied.palette.textColor
+        listOf<TextView>(
+            view.findViewById(R.id.jump_title), view.findViewById(R.id.jump_slot_text),
+            view.findViewById(R.id.jump_close), view.findViewById(R.id.jump_slot_clear),
+        ).forEach { it.setTextColor(onBackground) }
+        ViewCompat.setAccessibilityHeading(view.findViewById(R.id.jump_title), true)
+        keypadSizer = KeypadSizer(pickerViews, view.findViewById<HomeScrollView>(R.id.viewMain), NoRecentRows, alwaysScrollable = true)
+            .also { it.attach() }
         pickerViews.recentLabel.setText(R.string.jump_recent_label)
         pickerViews.recentEmptyText.setText(R.string.jump_recent_empty)
         view.findViewById<View>(R.id.jump_close).setOnClickListener { dismiss() }
@@ -83,6 +104,7 @@ class JumpPanelFragment : DialogFragment(R.layout.panel_jump), PickerHost, Searc
 
     override fun onStart() {
         super.onStart()
+        dialog?.setTitle(R.string.jump_title) // what TalkBack announces when the window opens
         dialog?.window?.let { window ->
             window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             window.setBackgroundDrawable(ColorDrawable(MaterialColors.getColor(requireView(), com.google.android.material.R.attr.colorSurface)))
@@ -103,6 +125,8 @@ class JumpPanelFragment : DialogFragment(R.layout.panel_jump), PickerHost, Searc
 
     override fun onDestroyView() {
         childFragmentManager.removeOnBackStackChangedListener(backStackListener)
+        keypadSizer?.detach()
+        keypadSizer = null
         controller?.release()
         controller = null
         views = null
@@ -164,6 +188,7 @@ class JumpPanelFragment : DialogFragment(R.layout.panel_jump), PickerHost, Searc
         item.findViewById<TextView>(R.id.tv_recent_label_item).text = HymnLabels.chip(ctx, ref)
         item.findViewById<View>(R.id.tv_recent_when).visibility = View.GONE
         item.contentDescription = getString(R.string.jump_back_to, HymnLabels.spoken(ctx, ref, null))
+        v.styleRecent(item)
         item.setOnClickListener {
             host.onReturnTo(index)
             dismiss()
@@ -174,6 +199,13 @@ class JumpPanelFragment : DialogFragment(R.layout.panel_jump), PickerHost, Searc
     private fun titleTraditional(): Boolean = LyricsScript.hantVariant(requireContext()) != null
 
     private fun titleSource(): HymnTitleSource = AssetHymnTitles.from(requireContext(), LyricsScript.hantVariant(requireContext()))
+
+    /** The return stack is not fitted into the screen (it lists up to ten rows below the fold and the panel scrolls). */
+    private object NoRecentRows : RecentFit {
+        override val total: Int = 0
+        override var onChanged: (() -> Unit)? = null
+        override fun fit(count: Int, empty: Boolean) = Unit
+    }
 
     companion object {
         const val TAG = "jump_panel"

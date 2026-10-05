@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NextSlotTest : JumpTestBase() {
     private fun nextDescription(): String = onTop { page(it)!!.findViewById<View>(R.id.btn_next).contentDescription.toString() }
-    private fun slotDescription(ref: HymnRef) = ctx.getString(R.string.jump_next_slot, HymnLabels.chip(ctx, ref))
+    private fun slotDescription(ref: HymnRef) = ctx.getString(R.string.jump_next_slot, HymnLabels.spoken(ctx, ref, null))
     private fun topSlot(): HymnRef? = onTop { it.jumpState.slot }
 
     @Test
@@ -83,6 +83,29 @@ class NextSlotTest : JumpTestBase() {
             awaitSettled(db5)
             assertThat(topSlot()).isEqualTo(xg12)
             assertThat(nextDescription()).isEqualTo(slotDescription(xg12))
+        }
+    }
+
+    @Test
+    fun aSlotEqualToTheHymnOnScreenIsClearedAndNextTurnsThePage() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            onTop { it.onSetNext(db5) }
+            onTop { it.onLyricsAction(R.id.btn_next) }
+            awaitSettled(HymnRef(MainActivity.HYMN_DB, 6))
+            assertThat(topSlot()).isNull()
+            assertThat(topStack()).isEmpty()
+        }
+    }
+
+    @Test
+    fun theSlotClearsWhenTheReaderArrivesThereByAnyWay() {
+        val db6 = HymnRef(MainActivity.HYMN_DB, 6)
+        launch(MainActivity.HYMN_DB, 5).use {
+            onTop { it.onSetNext(db6) }
+            onTop { it.findViewById<ViewPager2>(R.id.viewPager).setCurrentItem(idx(db6), false) }
+            awaitSettled(db6)
+            assertThat(topSlot()).isNull()
+            assertThat(nextDescription()).isEqualTo(ctx.getString(R.string.c_next_hymn))
         }
     }
 }

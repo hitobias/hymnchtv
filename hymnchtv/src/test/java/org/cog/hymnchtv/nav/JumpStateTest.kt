@@ -91,4 +91,12 @@ class JumpStateTest {
         assertThat(state.stack).hasSize(JumpState.MAX_STACK)
         assertThat(state.recentFirst().first().ref).isEqualTo(HymnRef(HymnTypes.DB, 15))
     }
+
+    @Test fun withoutTopDropsOnlyTheTopEntryForThatHymn() {
+        val state = JumpState.EMPTY.push(entry(db5)).push(entry(db100)).withSlot(xg12)
+        assertThat(state.withoutTop(db100).recentFirst()).containsExactly(entry(db5))
+        assertThat(state.withoutTop(db100).slot).isEqualTo(xg12)
+        assertThat(state.withoutTop(db5)).isEqualTo(state) // not on top: untouched
+        assertThat(JumpState.EMPTY.withoutTop(db5)).isEqualTo(JumpState.EMPTY)
+    }
 }

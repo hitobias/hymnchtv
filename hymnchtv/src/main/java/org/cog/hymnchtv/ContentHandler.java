@@ -254,6 +254,8 @@ public class ContentHandler extends BaseActivity implements JumpHost {
      * (the page may resume inside the return itself) must still restore it on the new page.
      */
     private ReadingPosition mPendingPosition = null;
+    /** The hymn the pending position belongs to: no other page may take it, and it is dropped when the reader goes elsewhere. */
+    private HymnRef mPendingRef = null;
     private boolean mPendingTaken = false;
     /** True while a cross-book jump swaps the pager adapter: onPageSelected must not treat it as a page turn. */
     private boolean mSwappingBook = false;
@@ -349,6 +351,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     private static final String STATE_HYMN_NO = "state_hymn_no";
     private static final String STATE_JUMP = "state_jump"; // JumpState.encode()
     private static final String STATE_PENDING_POSITION = "state_pending_position"; // a return not yet restored on its page
+    private static final String STATE_PENDING_REF = "state_pending_ref"; // "book,no" of the hymn it belongs to
 
     /** Tests install a manual timer here so the idle-hide fade does not depend on emulator speed; null in production. */
     @VisibleForTesting
@@ -482,6 +485,10 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         // A recreation right after a return (before its page resumed) still restores the position
         mPendingPosition = savedInstanceState == null ? null
                 : ReadingPosition.decode(savedInstanceState.getString(STATE_PENDING_POSITION));
+        mPendingRef = decodeRef(savedInstanceState == null ? null : savedInstanceState.getString(STATE_PENDING_REF));
+        if (mPendingRef == null) {
+            mPendingPosition = null;
+        }
 
         switch (mHymnType) {
         // Convert the user input hymn number i.e: hymn #1 => #0 i.e.index number
@@ -546,8 +553,17 @@ public class ContentHandler extends BaseActivity implements JumpHost {
                 Motion.POSTPONE_TIMEOUT_MS);
     }
 
+    /**
+     * The page on screen. Found by the tag FragmentStateAdapter gives its fragments ("f" + item id): after a recreation
+     * the adapter restores its pages from the FragmentManager without calling createFragment, so mFragments is empty.
+     */
+    @Nullable
     private ContentView currentContentView() {
-        Fragment page = mPagerAdapter == null ? null : mPagerAdapter.mFragments.get(mPager.getCurrentItem());
+        if (mPagerAdapter == null) {
+            return null;
+        }
+        long itemId = mPagerAdapter.getItemId(mPager.getCurrentItem());
+        Fragment page = getSupportFragmentManager().findFragmentByTag("f" + itemId);
         return page instanceof ContentView ? (ContentView) page : null;
     }
 
@@ -637,6 +653,9 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         outState.putString(STATE_JUMP, mJumpState.encode());
         if (mPendingPosition != null) {
             outState.putString(STATE_PENDING_POSITION, mPendingPosition.encode());
+            if (mPendingRef != null) {
+                outState.putString(STATE_PENDING_REF, mPendingRef.getBook() + "," + mPendingRef.getStoredNo());
+            }
         }
         outState.putBoolean(STATE_CHROME_VISIBLE, mChromeHost.isVisible());
         outState.putBoolean(STATE_PLAYER_HIDDEN, mPlayerSheet.getState().getUserHidden());
@@ -956,7 +975,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
      * @return true if the action was handled
      */
     public boolean onLyricsAction(int itemId) {
-        ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
+        ContentView contentView = currentContentView();
 
         if (itemId == R.id.readingSettings) {
             openReadingSettings();
@@ -2063,6 +2082,15 @@ public class ContentHandler extends BaseActivity implements JumpHost {
         mHymnNo = ref.getStoredNo();
         hymnIdx = mPager.getCurrentItem();
         mFavorites.onHymnChanged(mHymnType, mHymnNo);
+        // H5: a position waits for its own hymn only; a queued next the reader has reached is used up; going back to
+        // the hymn already on screen would do nothing, so that entry goes
+        if (mPendingRef != null && !mPendingRef.equals(ref)) {
+            clearPending();
+        }
+        if (ref.equals(mJumpState.getSlot())) {
+            setSlot(null);
+        }
+        mJumpState = mJumpState.withoutTop(ref);
         if (cause == ViewingCause.CHANGED) {
             stopPlaybackForHymnChange();
             updateMediaPlayerInfo(); // a new page's player calls it itself once created (MediaGuiController)
@@ -2113,6 +2141,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
             return;
         }
         mPendingPosition = position;
+        mPendingRef = position == null ? null : target;
         mPendingTaken = false;
         if (target.getBook().equals(mPagerAdapter.getHymnType())) {
             mPager.setCurrentItem(idx, false); // onPageSelected does the hymn-change work
@@ -2151,7 +2180,13 @@ public class ContentHandler extends BaseActivity implements JumpHost {
 
     @Override
     public void onReturnTo(int recentIndex) {
+        HymnRef here = currentRef();
         JumpState.Popped popped = mJumpState.popRecent(recentIndex);
+        // An entry for the hymn already on screen is no place to go back to: take the next one down
+        while (popped != null && popped.getEntry().getRef().equals(here)) {
+            mJumpState = popped.getState();
+            popped = mJumpState.popRecent(0);
+        }
         if (popped == null) {
             return;
         }
@@ -2174,7 +2209,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     /** Asked by a page when it resumes: the position a return wants restored on it, once; null for any other page. */
     @Nullable
     public ReadingPosition takePendingPosition(@NonNull ContentView page) {
-        if (mPendingPosition == null || mPendingTaken || page != currentContentView()) {
+        if (mPendingPosition == null || mPendingTaken || page != currentContentView() || !mPendingRef.equals(refOf(page))) {
             return null;
         }
         mPendingTaken = true;
@@ -2183,8 +2218,38 @@ public class ContentHandler extends BaseActivity implements JumpHost {
 
     /** The page finished restoring (time is up, or the reader took over): nothing is pending any more. */
     public void onRestoreFinished(@NonNull ContentView page) {
-        if (page == currentContentView()) {
-            mPendingPosition = null;
+        if (mPendingRef != null && mPendingRef.equals(refOf(page))) {
+            clearPending();
+        }
+    }
+
+    private void clearPending() {
+        mPendingPosition = null;
+        mPendingRef = null;
+        mPendingTaken = false;
+    }
+
+    /** The hymn a lyrics page shows, from its own arguments (book and pager index). */
+    @NonNull
+    private static HymnRef refOf(@NonNull ContentView page) {
+        Bundle args = page.requireArguments();
+        String book = args.getString(ContentView.LYRICS_TYPE);
+        return new HymnRef(book, HymnIdx2NoConvert.hymnIdx2NoConvert(book, args.getInt(ContentView.LYRICS_INDEX))[0]);
+    }
+
+    /** "book,no" as written to the saved state; null for missing or damaged text. */
+    @Nullable
+    private static HymnRef decodeRef(@Nullable String text) {
+        String[] fields = text == null ? new String[0] : text.split(",");
+        if (fields.length != 2) {
+            return null;
+        }
+        try {
+            HymnRef ref = new HymnRef(fields[0], Integer.parseInt(fields[1]));
+            return ref.isValid() ? ref : null;
+        }
+        catch (NumberFormatException e) {
+            return null;
         }
     }
 
@@ -2212,7 +2277,8 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     /** The next button: the queued hymn once (a jump, so back returns here), else the next page of this book. */
     private void onNextPressed() {
         HymnRef slot = mJumpState.getSlot();
-        if (slot == null) {
+        if (slot == null || slot.equals(currentRef())) {
+            setSlot(null); // a slot for the hymn already on screen is just used up
             scrollNextHymn();
             return;
         }
@@ -2265,7 +2331,7 @@ public class ContentHandler extends BaseActivity implements JumpHost {
     @Override
     public void onConfigurationChanged(@NotNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        ContentView contentView = (ContentView) mPagerAdapter.mFragments.get(mPager.getCurrentItem());
+        ContentView contentView = currentContentView();
         if (contentView != null)
             contentView.setLyricsTextScale();
 

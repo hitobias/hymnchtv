@@ -35,6 +35,9 @@ data class JumpState(val stack: List<JumpEntry> = emptyList(), val slot: HymnRef
 
     fun withSlot(ref: HymnRef?): JumpState = copy(slot = ref)
 
+    /** Without the newest entries that name [ref]: going back to the hymn already on screen would do nothing. */
+    fun withoutTop(ref: HymnRef): JumpState = copy(stack = stack.dropLastWhile { it.ref == ref })
+
     /** "j1|slot|book,no,y,h|..." (slot is "-" when empty); small enough for a Bundle or an Intent extra. */
     fun encode(): String = buildString {
         append(VERSION)

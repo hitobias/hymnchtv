@@ -17,6 +17,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.button.MaterialButton
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.cog.hymnchtv.ContentHandler
 import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.QuickTest
@@ -48,6 +49,8 @@ class JumpPanelTest : JumpTestBase() {
     private fun <T> inPanel(block: (View) -> T): T = onTop { a ->
         block((a.supportFragmentManager.findFragmentByTag(JumpPanelFragment.TAG) as JumpPanelFragment).requireView())
     }
+
+    private fun tap(id: Int) = onView(withId(id)).inRoot(isDialog()).perform(click())
 
     private fun press(vararg ids: Int) = ids.forEach { onView(withId(it)).inRoot(isDialog()).perform(scrollTo(), click()) }
 
@@ -122,7 +125,7 @@ class JumpPanelTest : JumpTestBase() {
             openPanel()
             assertThat(inPanel { it.findViewById<TextView>(R.id.jump_slot_text).text.toString() })
                 .isEqualTo(ctx.getString(R.string.jump_next_slot, HymnLabels.chip(ctx, xg12)))
-            press(R.id.jump_slot_clear)
+            tap(R.id.jump_slot_clear)
             assertThat(onTop { it.jumpState.slot }).isNull()
             assertThat(inPanel { it.findViewById<TextView>(R.id.jump_slot_text).text.toString() }).isEqualTo(ctx.getString(R.string.jump_slot_none))
             assertThat(inPanel { it.findViewById<View>(R.id.jump_slot_clear).visibility }).isEqualTo(View.GONE)
@@ -196,5 +199,35 @@ class JumpPanelTest : JumpTestBase() {
             awaitPanelGone()
             assertThat(topRef()).isEqualTo(bb37)
         }
+    }
+
+    @Test
+    fun thePanelHasAWindowTitleAndAHeading() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            openPanel()
+            val title = onTop { a -> panelOf(a)!!.dialog!!.window!!.attributes.title?.toString() }
+            assertThat(title).isEqualTo(ctx.getString(R.string.jump_title))
+            assertThat(inPanel { androidx.core.view.ViewCompat.isAccessibilityHeading(it.findViewById(R.id.jump_title)) }).isTrue()
+        }
+    }
+
+
+    @Test
+    fun openIsTheFilledPrimaryButtonLikeTheHomePicker() {
+        launch(MainActivity.HYMN_DB, 5).use {
+            openPanel()
+            press(R.id.n1)
+            inPanel { v ->
+                val open = v.findViewById<MaterialButton>(R.id.btn_open)
+                assertThat(open.isEnabled).isTrue()
+                assertThat(open.backgroundTintList).isNotNull()
+                assertThat(open.backgroundTintList!!.defaultColor).isNotEqualTo(android.graphics.Color.TRANSPARENT)
+                assertThat(open.width).isAtLeast(v.findViewById<View>(R.id.btn_set_next).width)
+            }
+        }
+    }
+
+    private companion object {
+        val BOOK_IDS = listOf(R.id.bs_db, R.id.bs_bb, R.id.bs_xb, R.id.bs_xg, R.id.bs_yb, R.id.bs_er, R.id.bs_english)
     }
 }

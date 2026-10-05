@@ -116,7 +116,8 @@ abstract class JumpTestBase : LyricsTestBase() {
 
     /**
      * Waits until every fragment in [refs] is gone or DESTROYED (pending transactions run first). A page that was queued
-     * by the adapter swap but removed before it ever started (INITIALIZED, not added) holds nothing and counts as gone.
+     * by the adapter swap but removed before it ever started is INITIALIZED and not added: it was never created, so it
+     * holds no view or resources and counts as gone.
      */
     fun awaitDestroyed(refs: List<WeakReference<ContentView>>) {
         onTop { it.supportFragmentManager.executePendingTransactions() }
