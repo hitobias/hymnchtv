@@ -138,6 +138,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun open(result: SearchResult) {
         val ref = result.ref
+        val host = (parentFragment as? SearchHost) ?: (activity as? SearchHost)
+        if (host != null) {
+            host.onSearchResult(ref)
+            return
+        }
         MainActivity.setHymnTypeNo(ref.book, ref.storedNo)
         MainActivity.showContent(requireContext(), ref.book, ref.storedNo, false)
     }

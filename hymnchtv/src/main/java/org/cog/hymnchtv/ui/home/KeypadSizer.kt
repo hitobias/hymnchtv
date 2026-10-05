@@ -16,7 +16,9 @@ import org.cog.hymnchtv.ui.picker.HymnPickerViews
 class KeypadSizer(
     private val views: HymnPickerViews,
     private val viewport: HomeScrollView,
-    private val recent: RecentChips,
+    private val recent: RecentFit,
+    /** The jump panel: its list sits below the fold and must stay reachable, so the page may always scroll. */
+    private val alwaysScrollable: Boolean = false,
 ) {
     private val rows: List<View> = listOf(R.id.key_row0, R.id.key_row1, R.id.key_row2, R.id.key_row3).map { views.root.findViewById(it) }
     private val column: ViewGroup? = views.keypadArea.parent as? ViewGroup
@@ -83,7 +85,7 @@ class KeypadSizer(
         }
         // Landscape has its own column for the recent list: it shows all it can and the page may scroll
         recent.fit(if (portrait) plan.recentCount else HomeFit.MAX_RECENT, plan.showEmpty || (!portrait && recent.total == 0))
-        viewport.scrollingAllowed = plan.scrollable || !portrait
+        viewport.scrollingAllowed = plan.scrollable || !portrait || alwaysScrollable
         setCompact(plan.compact, density)
         pinned = plan.pinAction
         views.actionArea.post { pinAction() }

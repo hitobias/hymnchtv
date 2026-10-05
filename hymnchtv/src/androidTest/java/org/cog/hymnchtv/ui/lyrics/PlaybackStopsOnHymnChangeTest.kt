@@ -1,6 +1,7 @@
 package org.cog.hymnchtv.ui.lyrics
 
 import android.net.Uri
+import android.os.SystemClock
 import android.view.View
 import androidx.core.net.toUri
 import androidx.test.core.app.ActivityScenario
@@ -8,11 +9,15 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import androidx.viewpager2.widget.ViewPager2
 import com.google.common.truth.Truth.assertThat
 import org.cog.hymnchtv.ContentHandler
+import org.cog.hymnchtv.MainActivity
 import org.cog.hymnchtv.MediaGuiController
 import org.cog.hymnchtv.R
+import org.cog.hymnchtv.hymn.HymnRef
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -105,6 +110,85 @@ class PlaybackStopsOnHymnChangeTest : LyricsTestBase() {
             Thread.sleep(1500)
             assertThat(ctl.playerStateForTest()).isEqualTo(PLAY)
             ctl.stopPlay()
+        }
+    }
+
+    /** Polls on the main thread without the scenario: on plan path B the launched page is gone after a cross-book jump. */
+    private fun awaitOnMain(what: String, timeoutMs: Long = 15_000, condition: () -> Boolean) {
+        val end = SystemClock.uptimeMillis() + timeoutMs
+        while (true) {
+            var ok = false
+            instrumentation.runOnMainSync { ok = condition() }
+            if (ok) return
+            check(SystemClock.uptimeMillis() < end) { "timed out waiting for $what" }
+            SystemClock.sleep(50)
+        }
+    }
+
+    private fun finishLyricsPages() = instrumentation.runOnMainSync {
+        ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)
+            .filterIsInstance<ContentHandler>().forEach { it.finish() }
+    }
+
+    private fun resumedLyricsPage(): ContentHandler? = ActivityLifecycleMonitorRegistry.getInstance()
+        .getActivitiesInStage(Stage.RESUMED).filterIsInstance<ContentHandler>().singleOrNull()
+
+    /** The bar of the lyrics page in front (path A: the same page; path B: the page the jump opened) is reset. */
+    private fun assertFrontBarIsReset(expected: HymnRef) {
+        awaitOnMain("$expected in front") { resumedLyricsPage()?.currentRef() == expected }
+        var position = ""
+        var progress = -1
+        var play = ""
+        var expectedPlay = ""
+        instrumentation.runOnMainSync {
+            val a = resumedLyricsPage()!!
+            position = a.findViewById<android.widget.TextView>(R.id.playback_position).text.toString()
+            progress = a.findViewById<android.widget.SeekBar>(R.id.playback_seekbar).progress
+            play = a.findViewById<View>(R.id.playback_play).contentDescription.toString()
+            expectedPlay = a.getString(R.string.c_play)
+        }
+        assertThat(position).isEqualTo("00:00")
+        assertThat(progress).isEqualTo(0)
+        assertThat(play).isEqualTo(expectedPlay)
+    }
+
+    @Test
+    fun jumpingWithinTheBookStopsPlaybackAndResetsTheBar() {
+        launch().use { s ->
+            val ctl = playing(s)
+            val target = HymnRef(MainActivity.HYMN_DB, 100)
+            s.onActivity { it.onJump(target) }
+            s.await("the jump target") { it.currentRef() == target }
+            awaitState(s, ctl, STOP, "playback to stop")
+            assertBarIsReset(s, ctl)
+        }
+    }
+
+    @Test
+    fun jumpingToAnotherBookStopsPlaybackAndResetsTheBar() {
+        launch().use { s ->
+            val ctl = playing(s)
+            val target = HymnRef(MainActivity.HYMN_BB, 37)
+            s.onActivity { it.onJump(target) }
+            awaitOnMain("playback to stop") { ctl.playerStateForTest() == STOP }
+            assertFrontBarIsReset(target)
+        }
+        finishLyricsPages()
+    }
+
+    @Test
+    fun backToThePreviousHymnStopsPlaybackBeforeAnythingElse() {
+        launch().use { s ->
+            val target = HymnRef(MainActivity.HYMN_DB, 100)
+            s.onActivity { it.onJump(target) }
+            s.await("the jump target") { it.currentRef() == target }
+            s.awaitPage()
+            val ctl = playing(s)
+            // one back press: returns to DB 5 (and stops by the hymn-change rule), it does not merely stop the audio
+            s.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            s.await("the previous hymn") { it.currentRef() == HymnRef(MainActivity.HYMN_DB, 5) }
+            awaitState(s, ctl, STOP, "playback to stop")
+            assertBarIsReset(s, ctl)
         }
     }
 
