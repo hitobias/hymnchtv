@@ -101,13 +101,17 @@ class PlaylistDetailStore(
     /** Shows [orderedIds] (must be exactly the shown items, in a new order) at once and stores it; anything else is ignored. */
     fun reorder(orderedIds: List<String>) {
         val byId = mutable.value.items.associateBy { it.itemId }
-        if (orderedIds.size != byId.size || orderedIds.toSet() != byId.keys) return
-        mutable.update { s -> s.copy(items = orderedIds.map(byId::getValue)) }
+        // Known ids keep the given order, shown ids it left out follow in screen order; ids the screen never showed are
+        // left to the write below (they are merged against storage there)
+        val known = orderedIds.filter { it in byId }.distinct()
+        val shown = known + byId.keys.filterNot { it in known }
+        if (shown.isEmpty()) return
+        mutable.update { s -> s.copy(items = shown.map(byId::getValue)) }
         enqueue(write = {
             // Recomputed against storage inside the lock: rows the screen knows keep the screen's order, rows it has not seen
             // yet (e.g. an undo whose reload is still queued) stay after them in stored order, so the permutation is valid
             val stored = repo.items(playlistId).map { it.id }
-            val wanted = orderedIds.filter { it in stored } + stored.filterNot { it in orderedIds }
+            val wanted = shown.filter { it in stored } + stored.filterNot { it in shown }
             if (wanted != stored) repo.reorder(playlistId, wanted)
             true
         })
@@ -120,20 +124,23 @@ class PlaylistDetailStore(
     private fun enqueue(write: (suspend () -> Boolean)?, after: (Boolean) -> Unit = {}) {
         if (write != null) pending++
         scope.launch {
-            lock.withLock {
-                val ok = write?.let { writeNow(it) } ?: true
-                if (write != null) pending--
-                if (!ok) mutable.update { it.copy(message = PlaylistMessage.WRITE_FAILED) }
-                val snapshot = try {
-                    Result.success(readNow())
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.w(e, "Loading playlist %s failed", playlistId)
-                    Result.failure(e)
+            // NonCancellable: a write still waiting for the lock must not be dropped when the ViewModel is cleared
+            withContext(NonCancellable) {
+                lock.withLock {
+                    val ok = write?.let { writeNow(it) } ?: true
+                    if (write != null) pending--
+                    if (!ok) mutable.update { it.copy(message = PlaylistMessage.WRITE_FAILED) }
+                    val snapshot = try {
+                        Result.success(readNow())
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.w(e, "Loading playlist %s failed", playlistId)
+                        Result.failure(e)
+                    }
+                    if (pending == 0) apply(snapshot)
+                    after(ok)
                 }
-                if (pending == 0) apply(snapshot)
-                after(ok)
             }
         }
     }

@@ -21,6 +21,7 @@ private class DelayedPlaylistRepository(private val inner: InMemoryPlaylistRepos
     val removeGates = ArrayDeque<CompletableDeferred<Unit>>()
     val reorderGates = ArrayDeque<CompletableDeferred<Unit>>()
     val addGates = ArrayDeque<CompletableDeferred<Unit>>()
+    var addCalls = 0
 
     override suspend fun removeItem(itemId: String): Boolean {
         removeGates.removeFirstOrNull()?.await()
@@ -33,6 +34,7 @@ private class DelayedPlaylistRepository(private val inner: InMemoryPlaylistRepos
     }
 
     override suspend fun addItem(playlistId: String, key: HymnKey): PlaylistItemEntity? {
+        addCalls++
         addGates.removeFirstOrNull()?.await()
         return inner.addItem(playlistId, key)
     }
@@ -153,7 +155,8 @@ class PlaylistDetailStoreTest {
         val removed = checkNotNull(store.remove(store.state.value.items[1].itemId))
         store.undoRemove(removed)
         runCurrent()
-        // the remove is held: nothing has been reloaded over the screen
+        // the remove is held: the undo waits behind it (never started) and nothing has been reloaded over the screen
+        assertThat(slow.addCalls).isEqualTo(0)
         assertThat(store.state.value.items.map { it.key }).containsExactly(db5, db7).inOrder()
         gate.complete(Unit)
         runCurrent()
@@ -170,13 +173,13 @@ class PlaylistDetailStoreTest {
         store.move(0, 2) // 6, 7, 5
         store.move(0, 1) // 7, 6, 5
         runCurrent()
-        first.complete(Unit)
-        runCurrent()
-        // storage holds the first order now; its reload must not replace the newer screen
-        assertThat(repo.items(id).map { it.hymn }).containsExactly(db6, db7, db5).inOrder()
-        assertThat(store.state.value.items.map { it.key }).containsExactly(db7, db6, db5).inOrder()
+        // the second gate opens first: without the lock the second write would finish before the first and be overwritten
         second.complete(Unit)
         runCurrent()
+        assertThat(repo.items(id).map { it.hymn }).containsExactly(db5, db6, db7).inOrder()
+        first.complete(Unit)
+        runCurrent()
+        // both writes ran in call order; the older one's reload must not have replaced the newer screen
         assertThat(repo.items(id).map { it.hymn }).containsExactly(db7, db6, db5).inOrder()
         assertThat(store.state.value.items.map { it.key }).containsExactly(db7, db6, db5).inOrder()
         assertThat(store.state.value.message).isNull()
@@ -197,5 +200,45 @@ class PlaylistDetailStoreTest {
         assertThat(stored).containsExactly(db7, db5, db6).inOrder()
         assertThat(store.state.value.items.map { it.key }).isEqualTo(stored)
         assertThat(store.state.value.message).isNull()
+    }
+
+    @Test fun aQueuedWriteSurvivesTheViewModelBeingCleared() = runTest {
+        val id = seeded()
+        val job = kotlinx.coroutines.Job()
+        val scope = kotlinx.coroutines.CoroutineScope(job + UnconfinedTestDispatcher(testScheduler))
+        val store = PlaylistDetailStore(id, slow, { null }, scope, UnconfinedTestDispatcher(testScheduler))
+        store.load()
+        runCurrent()
+        val items = store.state.value.items
+        val gate = CompletableDeferred<Unit>().also { slow.removeGates += it }
+        store.remove(items[0].itemId) // holds the lock at the gate
+        store.remove(items[1].itemId) // waits for the lock
+        runCurrent()
+        job.cancel() // the ViewModel is cleared
+        gate.complete(Unit)
+        runCurrent()
+        assertThat(repo.items(id).map { it.hymn }).containsExactly(db7)
+    }
+
+    @Test fun aReorderWithNewIdsKeepsTheDraggedOrderAndAppendsTheRest() = runTest {
+        val id = seeded()
+        val store = store(id)
+        val shown = store.state.value.items
+        // a drag finished while the screen had been refreshed with one more item: ids differ from the shown set
+        val extra = repo.addItem(id, HymnKey.of(HymnTypes.DB, 8))!!
+        store.reorder(listOf(shown[2].itemId, shown[0].itemId, shown[1].itemId))
+        runCurrent()
+        assertThat(repo.items(id).map { it.hymn }.take(3)).containsExactly(db7, db5, db6).inOrder()
+        assertThat(repo.items(id).last().id).isEqualTo(extra.id)
+    }
+
+    @Test fun aDraggedOrderMissingAShownItemIsMergedNotDropped() = runTest {
+        val id = seeded()
+        val store = store(id)
+        val shown = store.state.value.items
+        // the order lists only two of the three shown items (the third was removed meanwhile): known ids keep their order
+        store.reorder(listOf(shown[2].itemId, shown[0].itemId))
+        runCurrent()
+        assertThat(repo.items(id).map { it.hymn }).containsExactly(db7, db5, db6).inOrder()
     }
 }
