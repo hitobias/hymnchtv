@@ -19,6 +19,10 @@
 # The APK signer certificate must equal expectedCertSha256 exactly, otherwise the script refuses to continue (also on --resume).
 # This script never reads or prints the passwords.
 #
+# Since 1.6.0 the release build is minified (R8): its mapping.txt is copied to dist/vX.Y.Z/mapping.txt and to
+# $HYMNAL_MAPPING_DIR (default ~/.hymnal-release/mappings/hymnal-X.Y.Z-mapping.txt). Without it, stack traces of that
+# release cannot be retraced: keep both copies.
+#
 # Usage: tools/release.sh X.Y.Z [--dry-run | --resume]
 set -euo pipefail
 
@@ -37,6 +41,7 @@ tag="v$version"
 dist="dist/$tag"
 apk_name="hymnal-$version.apk"
 sha_name="$apk_name.sha256"
+MAPPING_ARCHIVE="${HYMNAL_MAPPING_DIR:-$HOME/.hymnal-release/mappings}"
 
 # ---------- remote state ----------
 remote_state() {
@@ -124,6 +129,11 @@ build() {
   local apk_src=hymnchtv/build/outputs/apk/release/hymnchtv-release.apk
   [[ -f "$apk_src" ]] || die "$apk_src missing (an unsigned build is named *-release-unsigned.apk: check settings.signing)"
   cp "$apk_src" "$dist/$apk_name"
+  local mapping_src=hymnchtv/build/outputs/mapping/release/mapping.txt
+  [[ -f "$mapping_src" ]] || die "$mapping_src missing: R8 is on since 1.6.0 and its mapping must be kept with the release"
+  cp "$mapping_src" "$dist/mapping.txt"
+  mkdir -p "$MAPPING_ARCHIVE"
+  cp "$mapping_src" "$MAPPING_ARCHIVE/hymnal-$version-mapping.txt"
 
   verify_apk
 
@@ -132,7 +142,7 @@ build() {
 }
 
 if [[ "$mode" == "--resume" ]]; then
-  [[ -f "$dist/$apk_name" && -f "$dist/$sha_name" && -f "$dist/notes.md" && -f "$dist/commit" ]] \
+  [[ -f "$dist/$apk_name" && -f "$dist/$sha_name" && -f "$dist/notes.md" && -f "$dist/commit" && -f "$dist/mapping.txt" ]] \
     || die "--resume needs the artifacts in $dist from the earlier run"
   (cd "$dist" && shasum -a 256 -c "$sha_name") || die "$dist/$apk_name does not match its checksum"
   verify_apk

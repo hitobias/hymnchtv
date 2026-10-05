@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Foreground playback notification (1.6.0, PlaybackNotification) -->
+<resources>
+    <string name="playback_notify_playing">Playing</string>
+    <string name="playback_notify_paused">Paused</string>
+    <string name="playback_notify_pause">Pause</string>
+    <string name="playback_notify_play">Play</string>
+    <string name="playback_notify_stop">Stop</string>
+</resources>

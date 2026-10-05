@@ -56,7 +56,8 @@ import org.cog.hymnchtv.persistance.FileBackend;
 import org.cog.hymnchtv.persistance.SharedImport;
 import org.cog.hymnchtv.persistance.LegacyDatabaseCleanup;
 import org.cog.hymnchtv.service.androidnotification.NotificationHelper;
-import org.cog.hymnchtv.service.androidupdate.OnlineUpdateService;
+import org.cog.hymnchtv.service.androidupdate.UpdateScheduler;
+import org.cog.hymnchtv.update.MediaLinksUpdater;
 import org.cog.hymnchtv.service.androidupdate.UpdateServiceImpl;
 import org.cog.hymnchtv.locale.LocaleStore;
 
@@ -167,8 +168,10 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
             screenHeight = Math.abs(mBounds.height());
         }
 
-        // Purge all the previously old downloaded apk; DownloadManager IPC and prefs, so off the main thread (B-7)
-        AppExecutors.io("remove-old-apks", () -> UpdateServiceImpl.getInstance().removeOldDownloads());
+        // An update download the last process left: verify it if it finished, else purge old downloads (1.6.0).
+        // DownloadManager IPC and prefs, so off the main thread (B-7)
+        // on its own thread: verifying a 116 MB apk must not hold the shared io thread
+        new Thread(() -> UpdateServiceImpl.getInstance().resumeOrCleanOnStart(), "hymnal-apk-resume").start();
         EdgeToEdgeDisable();
     }
 
@@ -269,7 +272,7 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
     }
 
     /**
-     * Start online service only when app is in the foreground, before going back to background upon detect
+     * Schedules the update checks (UpdateScheduler) only when app is in the foreground, before going back to background upon detect
      * the device screen is locked. Deferred until the main thread is idle (after the first frame); the
      * foreground check uses ProcessLifecycleOwner on the main thread right before startService (B-7).
      */
@@ -295,15 +298,11 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
             // Went to the background before the main thread became idle; the next ON_START retries.
             return;
         }
-        Intent dailyCheckupIntent = new Intent(mInstance, OnlineUpdateService.class);
-        dailyCheckupIntent.setAction(OnlineUpdateService.ACTION_AUTO_UPDATE_START);
-        try {
-            mInstance.startService(dailyCheckupIntent);
-            isUpdateServerStarted = true;
-            Timber.d("### Online hymnchtv app update service started!");
-        } catch (IllegalStateException e) {
-            Timber.w("Update service not started: %s", e.getMessage());
-        }
+        // First run, or an upgrade with a newer bundled list: import the media links off the main thread
+        AppExecutors.io("media-links-import", () -> MediaLinksUpdater.importBundledIfNeeded(mInstance));
+        // Daily and on-launch update checks with WorkManager (1.6.0; the alarm + IntentService never ran in the background on API 26+)
+        UpdateScheduler.schedule(mInstance);
+        isUpdateServerStarted = true;
     }
 
     /**
@@ -364,12 +363,16 @@ public class HymnsApp extends Application implements LifecycleEventObserver {
      * @return Android ResourceId for given defType and filename
      */
 
+    /** The namespace in build.gradle: the package of the R class. */
+    private static final String RESOURCE_NAMESPACE = "org.cog.hymnchtv";
+
     public static int getFileResId(String resName, String defType) {
         Resources res = mInstance.getResources();
         int resId = res.getIdentifier(resName, defType, mInstance.getPackageName());
         if (resId == 0) {
-            // applicationId (com.ziontkec.hymnal) differs from the namespace that may own the resource table.
-            resId = res.getIdentifier(resName, defType, R.class.getPackage().getName());
+            // applicationId (com.ziontkec.hymnal) differs from the namespace that owns the resource table. A constant:
+            // asking the R class for its package fails once R8 moves R into the default package.
+            resId = res.getIdentifier(resName, defType, RESOURCE_NAMESPACE);
         }
         return resId;
     }
