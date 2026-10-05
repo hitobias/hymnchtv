@@ -38,7 +38,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled = false
+            // R8 (1.6.0): dex about -4..6 MB. Resource shrinking stays off: MIDI and drawables are looked up by name
+            // (HymnsApp.getFileResId -> Resources.getIdentifier), which shrinkResources cannot see.
+            minifyEnabled = true
+            shrinkResources = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
 
