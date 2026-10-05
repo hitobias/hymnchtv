@@ -97,9 +97,11 @@ public class RichTextEditor extends BaseActivity
         }
         else {
             // A draft left by an editor that was closed without saving belongs to no one now
-            EditorStore.clearDraft(getCacheDir());
             Bundle extras = getIntent().getExtras();
             fileUri = (extras == null) ? null : extras.getString(ATTR_FILE_URI);
+            if (!TextUtils.isEmpty(fileUri)) {
+                EditorStore.clearDraft(getCacheDir(), fileUri);
+            }
         }
 
         if (TextUtils.isEmpty(fileUri)) {
@@ -118,7 +120,7 @@ public class RichTextEditor extends BaseActivity
         final boolean preferDraft = draftPending;
         AppExecutors.ioThenMain("editor-load", this, () -> {
             try {
-                return EditorStore.load(source, cacheDir, preferDraft);
+                return EditorStore.load(source, cacheDir, fileUri, preferDraft);
             }
             catch (IOException e) {
                 throw new UncheckedIOException(e);
@@ -128,6 +130,9 @@ public class RichTextEditor extends BaseActivity
             loaded = true;
             draftPending = false;
             hasChanges = content.getFromDraft();
+            if (content.getDraftMissing()) {
+                HymnsApp.showToastMessage(R.string.editor_draft_lost);
+            }
         }, () -> {
             HymnsApp.showToastMessage(R.string.file_does_not_exist);
             finish();
@@ -146,7 +151,7 @@ public class RichTextEditor extends BaseActivity
         boolean hasDraft = draftPending;
         if (loaded && hasChanges) {
             try {
-                EditorStore.saveDraft(getCacheDir(), mEditor.getText().toString());
+                EditorStore.saveDraft(getCacheDir(), fileUri, mEditor.getText().toString());
                 hasDraft = true;
             }
             catch (IOException e) {
@@ -158,8 +163,8 @@ public class RichTextEditor extends BaseActivity
 
     @Override
     protected void onDestroy() {
-        if (isFinishing()) {
-            EditorStore.clearDraft(getCacheDir());
+        if (isFinishing() && !TextUtils.isEmpty(fileUri)) {
+            EditorStore.clearDraft(getCacheDir(), fileUri);
         }
         super.onDestroy();
     }
@@ -211,7 +216,7 @@ public class RichTextEditor extends BaseActivity
      * @param dialog source <tt>DialogActivity</tt>
      */
     public void onDialogCancelled(DialogActivity dialog) {
-        EditorStore.clearDraft(getCacheDir());
+        EditorStore.clearDraft(getCacheDir(), fileUri);
         finish();
     }
 

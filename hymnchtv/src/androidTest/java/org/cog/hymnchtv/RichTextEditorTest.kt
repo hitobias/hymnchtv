@@ -27,7 +27,7 @@ class RichTextEditorTest {
     @After
     fun tearDown() {
         file.delete()
-        EditorStore.clearDraft(ctx.cacheDir)
+        EditorStore.clearDraft(ctx.cacheDir, file.absolutePath)
     }
 
     private fun launch(): ActivityScenario<RichTextEditor> = ActivityScenario.launch(
@@ -98,7 +98,7 @@ class RichTextEditorTest {
             }
             assertThat(size).isLessThan(50_000)
             // the unsaved text went to the draft file instead
-            assertThat(EditorStore.draftFile(ctx.cacheDir).length()).isAtLeast(length.toLong())
+            assertThat(EditorStore.draftFile(ctx.cacheDir, file.absolutePath).length()).isAtLeast(length.toLong())
         }
     }
 
